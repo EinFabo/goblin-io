@@ -1,0 +1,57 @@
+import { frand } from '../core/rng.js';
+import { sfx, tickGemCombo } from '../core/audio.js';
+import { $, TAU } from '../core/util.js';
+import { hurt } from './combat.js';
+import { addNum, part, ring } from './fx.js';
+import { P, onScreen, pR, run, xpNeed } from './state.js';
+import { GEM_COL } from '../render/proc.js';
+
+export const gemTier = v => v >= 100 ? 3 : v >= 20 ? 2 : v >= 5 ? 1 : 0;
+export function updItems(dt) {
+  tickGemCombo(dt);
+  for (const it of run.items) {
+    it.t += dt;
+    if (it.z > 0) {
+      it.vz -= 900 * dt; it.z += it.vz * dt; it.x += it.vx * dt; it.y += it.vy * dt;
+      if (it.z <= 0) { it.z = 0; it.vz = 0; }
+      continue;
+    }
+    const dx = P.x - it.x, dy = P.y - 6 - it.y, d = Math.hypot(dx, dy) || 1;
+    if (!it.mag && (it.k === 'gem' || it.k === 'coin' || it.k === 'gear') && d < P.magnet) it.mag = true;
+    if (it.mag) {
+      it.sp = Math.min(1300, it.sp + 1500 * dt);
+      const s = Math.min(d, it.sp * dt); it.x += dx / d * s; it.y += dy / d * s;
+      if (it.k === 'gem' && Math.random() < .5) part(it.x, it.y, 0, 0, .18, GEM_COL[gemTier(it.v)][0], 3);
+    }
+    if (d < pR() + 12) collect(it);
+  }
+  run.items = run.items.filter(i => !i.got);
+}
+export let xpPulseT = 0;
+export function collect(it) {
+  it.got = true;
+  switch (it.k) {
+    case 'gem': {
+      addXp(it.v); sfx.gem();
+      const col = GEM_COL[gemTier(it.v)][0];
+      for (let i = 0; i < 5; i++) { const a = Math.random() * TAU; part(P.x + Math.cos(a) * 8, P.y - 10 + Math.sin(a) * 8, Math.cos(a) * 110, Math.sin(a) * 110 - 30, .3, col, 2.6); }
+      if (performance.now() - xpPulseT > 110) { xpPulseT = performance.now(); const b = $('#xpBar'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+      break;
+    }
+    case 'coin': run.gold++; sfx.coin(); break;
+    case 'gear':
+      if (P.mechT <= 0) P.scrap = Math.min(100, P.scrap + 7); sfx.gear();
+      for (let i = 0; i < 4; i++) part(P.x, P.y - 10, frand(-90, 90), frand(-120, -20), .3, '#c9d1d8', 2.5);
+      break;
+    case 'heal': P.hp = Math.min(P.maxHp, P.hp + 35); addNum(P.x, P.y - 40, '+35', '#7dff7a'); sfx.heal(); break;
+    case 'magnet': for (const i of run.items) if (i.k === 'gem' || i.k === 'coin' || i.k === 'gear') i.mag = true; sfx.heal(); ring(P.x, P.y, 10, 300, .5, 'rgba(110,220,255,.8)', 6); break;
+    case 'bomb':
+      for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999);
+      run.flashT = .3; run.shake = 14; sfx.boom(); sfx.ult(); break;
+    case 'chest': run.pendingChest++; break;
+  }
+}
+export function addXp(v) {
+  P.xp += v * P.xpMult;
+  while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); run.pendingLv++; }
+}

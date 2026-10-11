@@ -1,0 +1,36 @@
+import { audioInit } from './audio.js';
+import { $ } from './util.js';
+import { doDash, doUlt, startMech } from '../game/abilities.js';
+import { run } from '../game/state.js';
+import { cv } from '../render/canvas.js';
+import { openPause, resume } from '../ui/pause.js';
+
+// ---------- Eingabe ----------
+export const keys = {};
+export const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
+export let sprintHeld = false;
+export function setSprintHeld(v) { sprintHeld = v; }
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  audioInit();
+  if (!run || run.over) return;
+  if (e.code === 'Space') { e.preventDefault(); doDash(); }
+  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();
+  if (e.code === 'KeyQ') doUlt();
+  if (e.code === 'KeyF' || e.code === 'KeyE') startMech();
+  if (e.code === 'Escape' || e.code === 'KeyP') { if (!$('#pause').hidden) resume(); else if (!run.paused) openPause(); }
+  if (!$('#levelup').hidden && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) { const b = $('#cards').children[+e.code.slice(5) - 1]; if (b) b.click(); }
+  if (!$('#levelup').hidden && e.code === 'KeyR') $('#rerollBtn').click();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+cv.addEventListener('pointerdown', e => {
+  audioInit();
+  if (joy.id !== null) return;
+  joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY;
+  try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+});
+cv.addEventListener('pointermove', e => { if (e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; } });
+export const joyEnd = e => { if (e.pointerId === joy.id) joy.id = null; };
+cv.addEventListener('pointerup', joyEnd); cv.addEventListener('pointercancel', joyEnd);
+window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joy.id = null; setSprintHeld(false); if (run && !run.paused && !run.over) openPause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && run && !run.paused && !run.over) openPause(); });

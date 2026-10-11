@@ -2,7 +2,7 @@
 
 Plan für die nächste große Version: neue Magierschulen mit eigenen Modellen, weniger Zufall beim Gewinnen, freischaltbare Fähigkeiten, Profil mit Shop, Truhen, Karten-Upgrades und Kosmetik, 8-Richtungs-Sprites, bessere Sprint- und Dash-Animationen und stärkere Bosse.
 
-Der Plan geht vom Stand **v2** aus (eine HTML-Datei, gebaut aus `game.js`, `style.css`, `index.tpl.html` und `build.py`). Die Abschnitte 11 bis 13 enthalten eine Reihenfolge zum Abarbeiten, Testkriterien und offene Entscheidungen.
+Der Plan geht vom Stand **v2** aus (eine HTML-Datei, gebaut aus `game.js`, `style.css`, `index.tpl.html` und `build.py`). Seit Phase 0 liegt der Code modular in `src/` (siehe README). Die Abschnitte 11 bis 13 enthalten eine Reihenfolge zum Abarbeiten, Testkriterien und offene Entscheidungen.
 
 ---
 
@@ -683,14 +683,33 @@ Wie v2 (Hover, Klick), dazu: Tab-Wechsel (Wisch), Karte aufwerten (aufsteigende 
 
 Jede Phase endet mit einem spielbaren Stand. Die Reihenfolge ist so gewählt, dass frühe Phasen späteren die Arbeit erleichtern.
 
-### Phase 0 – Umbau (Grundlage)
-- [ ] Projektstruktur aus 3.1 anlegen, esbuild-Build (`npm run build`), Ausgabe weiterhin eine HTML-Datei
-- [ ] `game.js` nach Modulen aufteilen, Verhalten unverändert
-- [ ] Seeded RNG, fester Zeitschritt, Event-Bus, Szenen-Statemachine
-- [ ] Save v2 + Migration von v1
-- [ ] Bot und Simulation auf die neue Struktur umziehen, `npm run sim`
+### Phase 0 – Umbau (Grundlage) ✅ erledigt 2026-10-11
+- [x] Projektstruktur aus 3.1 anlegen, esbuild-Build (`npm run build`), Ausgabe weiterhin eine HTML-Datei
+- [x] `game.js` nach Modulen aufteilen, Verhalten unverändert
+- [x] Seeded RNG, fester Zeitschritt, Event-Bus, Szenen-Statemachine
+- [x] Save v2 + Migration von v1
+- [x] Bot und Simulation auf die neue Struktur umziehen, `npm run sim`
 
 **Fertig, wenn:** v2-Gameplay identisch läuft und die Simulation gleiche Siegquoten liefert (±5 %).
+
+**Ergebnis** (je 100 Läufe, Bot mit 30 Hz wie in v2): alle 6 Konfigurationen innerhalb ±5 %.
+
+| Konfiguration | v2 | v3 @ 30 Hz | v3 @ 60 Hz |
+|---|---|---|---|
+| Stage 1 | 100 % | 100 % | 100 % |
+| Stage 2 | 94 % | 93 % | 95 % |
+| Stage 3 | 14 % | 19 % | 20 % |
+| Stage 3, atk/hp 4 | 47 % | 49 % | 61 % |
+| Stage 4, atk/hp 6 | 15 % | 12 % | 12 % |
+| Stage 5, atk/hp 8, spd 3 | 6 % | 3 % | 3 % |
+
+**Abweichungen vom Plan / Hinweise für später:**
+- Die Simulation läuft jetzt standardmäßig mit 60 Hz wie das Spiel (`--hz 30` für den alten Takt). Der Bot reagiert dabei doppelt so oft und gewinnt Stage 3 mit Werkstatt öfter. Zielwerte in 7.6 gelten ab jetzt für 60 Hz.
+- Save v2 speichert die Werkstatt-Stufen vorerst 1:1 unter `talents`. Die Umrechnung ×2 aus 14.1 kommt erst mit Phase 5 (Talente ersetzen die Werkstatt) als Migration v2 → v3. Ebenso die rückwirkenden Siegtruhen (Phase 6).
+- `stats` (Läufe, Siege, Kills, Spielzeit) werden schon jetzt über den Event-Bus gezählt.
+- Zufall: Spiellogik nur über die Seed-Streams (`game`, `spawn`, `loot`, `lvl`), Optik über `frand`. Gleicher Seed + gleiche Eingabe = gleicher Lauf (geprüft).
+- Rendern interpoliert Spieler, Gegner und Kumpel zwischen den 60-Hz-Schritten.
+- Neu: `npm test` (Save-Migration, RNG), `npm run lint` (ESLint), `window.GOBLIN` als Schnittstelle für Bot und Tests.
 
 ### Phase 1 – Sprites und Animation
 - [ ] `mages.py`: Schul-System (Palette + Kopf + Stabspitze + FX), 8 Richtungen
