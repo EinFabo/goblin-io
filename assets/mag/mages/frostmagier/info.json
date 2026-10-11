@@ -1,0 +1,49 @@
+{
+  "sprite_size": 96,
+  "note": "SVG ist 96x96 (fx 48x48), frei skalierbar; spawn_offset_px gilt bei 256px Darstellung",
+  "prefix": "e_",
+  "frames": {
+    "idle": 4,
+    "walk": 6,
+    "cast": 8
+  },
+  "cast_release_frame": 6,
+  "projectile": "fx/e_frostbolt_1..4.svg (48x48, zeigt nach rechts / +x)",
+  "impact": "fx/e_frostbolt_hit_1..5.svg (48x48)",
+  "spawn_offset_px_from_sprite_center": {
+    "down": [
+      -17.9,
+      56.3
+    ],
+    "up": [
+      67.8,
+      -75.4
+    ],
+    "left": [
+      -90.3,
+      -4.2
+    ],
+    "right": [
+      90.3,
+      -4.2
+    ]
+  },
+  "scratch_spawn_offset_at_size_100": {
+    "down": [
+      -6.7,
+      -21.1
+    ],
+    "up": [
+      25.4,
+      28.3
+    ],
+    "left": [
+      -33.9,
+      1.6
+    ],
+    "right": [
+      33.9,
+      1.6
+    ]
+  }
+}

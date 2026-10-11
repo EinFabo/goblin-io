@@ -1,0 +1,121 @@
+<title>Goblin.io</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800;900&display=swap">
+<style>/*CSS*/</style>
+
+<canvas id="cv" aria-label="Spielfeld"></canvas>
+
+<div id="hud" hidden>
+  <div class="xpbar" id="xpBar"><div class="xpfill" id="xpFill"></div><span class="lv" id="lvTxt">Lv 1</span></div>
+  <div class="hudrow">
+    <div class="hudleft">
+      <div class="stat"><span class="k">Besiegt</span><b id="killTxt">0</b></div>
+      <div class="slots" id="wSlots"></div>
+      <div class="slots" id="pSlots"></div>
+    </div>
+    <div class="hudmid"><b id="timeTxt">00:00</b><span id="stageTxt">Goblinwiese</span></div>
+    <div class="hudright">
+      <div class="stat gold"><span class="coin"></span><b id="goldTxt">0</b></div>
+      <button class="iconbtn" id="pauseBtn" aria-label="Pause">II</button>
+    </div>
+  </div>
+  <div class="bossbar" id="bossBar" hidden><span id="bossName">Boss</span><div class="bossfill" id="bossFill"></div></div>
+</div>
+
+<div id="ctrl" hidden>
+  <button class="abil" id="ultBtn" aria-label="Goblin-Wut"><img alt="" data-icon="rage"><span class="lbl">Wut</span><span class="key">Q</span></button>
+  <button class="abil" id="mechBtn" aria-label="Goblin-Maschine"><img alt="" data-icon="mech"><span class="lbl">Maschine</span><span class="key">F</span></button>
+  <button class="abil" id="dashBtn" aria-label="Rolle"><img alt="" data-icon="dash"><span class="lbl">Rolle</span><span class="key">Leer</span></button>
+  <button class="abil" id="sprintBtn" aria-label="Sprint (gedrückt halten)"><img alt="" data-icon="boots"><span class="lbl">Sprint</span><span class="key">Shift</span></button>
+</div>
+
+<div id="banner" aria-live="polite"></div>
+<div id="hint" aria-live="polite" hidden></div>
+
+<section class="screen" id="menu" hidden>
+  <div class="menubox">
+    <canvas id="mascot" width="240" height="240" aria-hidden="true"></canvas>
+    <h1 class="logo">Goblin<span>.io</span></h1>
+    <p class="tag">Überlebe die Magier-Horde. Sammle Kristalle, bau deine Kampfmaschine, besiege die Erzmagier.</p>
+    <div class="goldline"><span class="coin"></span><b id="menuGold">0</b> Gold</div>
+    <div class="menubtns">
+      <button class="btn primary" id="playBtn">Spielen</button>
+      <button class="btn" id="shopBtn">Werkstatt</button>
+      <button class="btn" id="howBtn">So spielst du</button>
+      <div class="togglerow">
+        <button class="btn ghost small" id="muteBtn">Ton: an</button>
+        <button class="btn ghost small" id="musicBtn">Musik: an</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="stages" hidden>
+  <div class="panel wide">
+    <div class="phead"><h2>Wähle eine Stage</h2><button class="iconbtn" data-back aria-label="Zurück">✕</button></div>
+    <div class="stagegrid" id="stageGrid"></div>
+  </div>
+</section>
+
+<section class="screen" id="shop" hidden>
+  <div class="panel wide">
+    <div class="phead"><h2>Werkstatt</h2><div class="goldline"><span class="coin"></span><b id="shopGold">0</b></div><button class="iconbtn" data-back aria-label="Zurück">✕</button></div>
+    <p class="note">Dauerhafte Verbesserungen. Gold bekommst du von besiegten Magiern, auch wenn du verlierst.</p>
+    <div class="shoplist" id="shopList"></div>
+  </div>
+</section>
+
+<section class="screen" id="howto" hidden>
+  <div class="panel wide">
+    <div class="phead"><h2>So spielst du</h2><button class="iconbtn" data-back aria-label="Zurück">✕</button></div>
+    <dl class="keys">
+      <dt>Laufen</dt><dd>WASD oder Pfeiltasten · am Handy irgendwo hintippen und ziehen</dd>
+      <dt>Angreifen</dt><dd>passiert automatisch</dd>
+      <dt>Rolle</dt><dd>Leertaste · kurzer Sprung, dabei unverwundbar</dd>
+      <dt>Sprint</dt><dd>Shift gedrückt halten · verbraucht Ausdauer (gelbe Leiste)</dd>
+      <dt>Goblin-Wut</dt><dd>Q, wenn die Leiste voll ist · Schockwelle und 6 s Raserei</dd>
+      <dt>Maschine</dt><dd>F, wenn genug Schrott gesammelt ist · 12 s Dampf-Mech mit MG, Raketen und Stampfer</dd>
+      <dt>Pause</dt><dd>Esc oder P</dd>
+    </dl>
+    <p class="note">Magier lassen <b>Kristalle</b> fallen. Genug Kristalle = Level-Up, du wählst eine Waffe oder Verbesserung. Waffe auf Stufe 5 plus passendes Passiv = <b>Entwicklung</b>. Graue <b>Zahnräder</b> füllen die Maschinen-Leiste. Glühende Stäbe heißen: gleich kommt ein Zauber, also ausweichen! Goldene Elite-Magier lassen Schatztruhen fallen. Nach 4 Minuten kommt der Boss.</p>
+  </div>
+</section>
+
+<div class="overlay" id="levelup" hidden>
+  <div class="lvbox">
+    <h2 id="lvTitle">Level-Up!</h2>
+    <div class="cards" id="cards"></div>
+    <button class="btn ghost small" id="rerollBtn">Neu würfeln (2)</button>
+  </div>
+</div>
+
+<div class="overlay" id="pause" hidden>
+  <div class="panel">
+    <div class="phead"><h2>Pause</h2></div>
+    <div class="build" id="buildList"></div>
+    <div class="menubtns row">
+      <button class="btn primary" id="resumeBtn">Weiter</button>
+      <button class="btn ghost" id="pMuteBtn">Ton: an</button>
+      <button class="btn ghost" id="pMusicBtn">Musik: an</button>
+      <button class="btn danger" id="quitBtn">Aufgeben</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="over" hidden>
+  <div class="panel">
+    <h2 id="overTitle">Besiegt!</h2>
+    <div class="results" id="overStats"></div>
+    <div class="menubtns row">
+      <button class="btn primary" id="againBtn">Nochmal</button>
+      <button class="btn" id="nextBtn" hidden>Nächste Stage</button>
+      <button class="btn ghost" id="menuBtn">Menü</button>
+    </div>
+  </div>
+</div>
+
+<div id="loading">Lade Goblin …</div>
+
+<script>/*ASSETS*/</script>
+<script>/*GAME*/</script>

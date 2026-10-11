@@ -1,0 +1,911 @@
+# Goblin.io – Ausbauplan v3
+
+Plan für die nächste große Version: neue Magierschulen mit eigenen Modellen, weniger Zufall beim Gewinnen, freischaltbare Fähigkeiten, Profil mit Shop, Truhen, Karten-Upgrades und Kosmetik, 8-Richtungs-Sprites, bessere Sprint- und Dash-Animationen und stärkere Bosse.
+
+Der Plan geht vom Stand **v2** aus (eine HTML-Datei, gebaut aus `game.js`, `style.css`, `index.tpl.html` und `build.py`). Die Abschnitte 11 bis 13 enthalten eine Reihenfolge zum Abarbeiten, Testkriterien und offene Entscheidungen.
+
+---
+
+## Inhalt
+
+1. [Ausgangslage v2](#1-ausgangslage-v2)
+2. [Leitlinien](#2-leitlinien)
+3. [Architektur-Umbau](#3-architektur-umbau)
+4. [Sprites, Animation und Polish](#4-sprites-animation-und-polish)
+5. [Magierschulen und Gegner](#5-magierschulen-und-gegner)
+6. [Stages und Bosse](#6-stages-und-bosse)
+7. [Balancing: weniger Zufall, mehr Können](#7-balancing-weniger-zufall-mehr-können)
+8. [Fähigkeiten-System mit 2 Slots](#8-fähigkeiten-system-mit-2-slots)
+9. [Meta-Fortschritt: Profil, Karten, Truhen, Shop, Kosmetik](#9-meta-fortschritt-profil-karten-truhen-shop-kosmetik)
+10. [UI und Screens](#10-ui-und-screens)
+11. [Roadmap in Phasen](#11-roadmap-in-phasen)
+12. [Testen und Qualität](#12-testen-und-qualität)
+13. [Offene Entscheidungen](#13-offene-entscheidungen)
+14. [Anhang: Datenformate und Formeln](#14-anhang-datenformate-und-formeln)
+
+---
+
+## 1. Ausgangslage v2
+
+| Teil | Datei | Inhalt |
+|---|---|---|
+| Spiellogik | `game.js` (~1950 Zeilen) | alles in einer Datei: Sprites, Stages, Waffen, Gegner, Bosse, Sound, Musik, HUD, Menüs |
+| Aussehen | `style.css` | HUD, Fähigkeiten-Knöpfe, Panels, Level-Up-Karten |
+| Gerüst | `index.tpl.html` | DOM für HUD, Menüs, Overlays; Platzhalter für CSS/Assets/JS |
+| Build | `build.py` | packt alle SVGs (dedupliziert) + Gras-PNG + Code in `goblin-io.html` |
+| Sprite-Generator | `mages.py` (aus dem Sprite-Paket) | erzeugt Feuer- und Frostmagier, 4 Richtungen (right = gespiegeltes left) |
+| Test | `sim.js` (Playwright) | Bot spielt Stages im Zeitraffer, misst Siege und Schadensquellen |
+
+**Was v2 schon hat:** 9 Magierarten (über Einfärbung derselben 2 Modelle), 10 Waffen mit Entwicklungen, 10 Passive, Rolle, Sprint, Goblin-Wut, Goblin-Maschine, 5 Stages + Endlos, Werkstatt mit Gold, Musik, Hover-Sounds.
+
+**Schwächen, die dieser Plan angeht:**
+
+- Alle Magier teilen sich 2 Modelle, nur eingefärbt. Schulen sind optisch kaum unterscheidbar.
+- Nur 4 Blickrichtungen, Dash ist nur ein Nachbild, Sprint nur schnellere Laufanimation.
+- Level-Up-Karten sind rein gewichteter Zufall. Ein Lauf kann ohne passende Waffe "verhungern".
+- Kein Profil, keine Sammlung, kein Grund für viele Läufe außer Gold.
+- Bosse haben eine feste Angriffsrotation ohne Phasen.
+- Der Code ist eine Datei. Neue Systeme lassen sich so schlecht anbauen.
+
+---
+
+## 2. Leitlinien
+
+1. **Können vor Glück.** Jeder Treffer gegen den Spieler ist vorher sichtbar (Mindest-Warnzeit 0,6 s). Level-Ups haben Garantien statt reinem Zufall.
+2. **Jede Schule erkennt man in 0,5 s** an Silhouette, Farbe und Telegraph, nicht nur an der Farbe.
+3. **Daten statt Code.** Waffen, Gegner, Bosse, Karten, Truhen und Kosmetik stehen als Datenobjekte in `src/data/`. Neue Inhalte brauchen möglichst keine neue Logik.
+4. **Fortschritt fühlt sich gut an, ist aber fair.** Truhen gibt es nur mit Spielwährung, die Wahrscheinlichkeiten stehen sichtbar im Spiel, und es gibt Pity-Garantien. Kein Echtgeld.
+5. **Mobil zuerst.** Alles muss mit Daumen bedienbar sein, Knöpfe mindestens 56 px.
+6. **60 FPS** mit 300 Gegnern auf einem Mittelklasse-Handy.
+
+---
+
+## 3. Architektur-Umbau
+
+Vor allen neuen Features: `game.js` in Module zerlegen und mit **esbuild** zu einer Datei bündeln. Das Ergebnis bleibt eine einzelne HTML-Datei, die überall läuft.
+
+### 3.1 Ordnerstruktur
+
+```
+goblin-io/
+├─ tools/
+│  ├─ build.mjs          # esbuild-Bundle + Assets inline → dist/goblin-io.html
+│  ├─ atlas.mjs          # SVG → PNG-Spritesheets (optional, für Performance)
+│  └─ gen/
+│     ├─ mages.py        # erweitert: Schulen, 8 Richtungen, neue Animationen
+│     ├─ goblin.py       # NEU: Goblin mit Kosmetik-Ebenen, 8 Richtungen
+│     └─ minions.py      # NEU: Skelette, Geister, Golems, Ratten
+├─ assets/               # generierte SVGs/PNGs + Gras-Kacheln
+├─ src/
+│  ├─ main.js            # Start, Szenenwechsel
+│  ├─ core/              # loop.js, rng.js, input.js, audio.js, music.js, save.js, events.js
+│  ├─ render/            # sprites.js, tint.js, camera.js, fx.js, particles.js, draw-world.js
+│  ├─ game/
+│  │  ├─ run.js          # Lauf-Zustand, Start/Ende
+│  │  ├─ player.js       # Bewegung, Sprint, Rolle, Schaden
+│  │  ├─ director.js     # Wellen-Skript pro Stage (siehe 7.4)
+│  │  ├─ enemies/        # ai-*.js pro Rolle, schools.js, affixes.js
+│  │  ├─ bosses/         # boss-runner.js + eine Datei pro Boss
+│  │  ├─ weapons/        # eine Datei pro Waffe, gemeinsame Projektil-Logik
+│  │  ├─ abilities/      # eine Datei pro aktiver Fähigkeit
+│  │  ├─ levelup.js      # Kartenauswahl mit Garantien
+│  │  └─ balance.js      # alle Formeln an einem Ort
+│  ├─ meta/              # profile.js, inventory.js, upgrades.js, chests.js, shop.js, cosmetics.js, quests.js
+│  ├─ data/              # weapons, passives, enemies, schools, bosses, stages, abilities, cards, chests, cosmetics, shop, achievements
+│  └─ ui/                # screens/*.js, hud.js, components.js, sfx-ui.js
+├─ sim/                  # bot.js, run-sims.mjs, report.mjs
+└─ dist/goblin-io.html
+```
+
+### 3.2 Grundbausteine
+
+| Baustein | Zweck |
+|---|---|
+| **Szenen-Statemachine** | `boot → hub → loadout → run → results → hub`. Jede Szene hat `enter/exit/update/render`. |
+| **Event-Bus** | `emit('enemyKilled', e)`, `on('levelUp', …)`. Quests, Erfolge, Sounds und Statistiken hängen sich ein, ohne die Spiellogik zu ändern. |
+| **Seeded RNG** (`mulberry32`) | Ein Seed pro Lauf. Ermöglicht Tageschallenge, reproduzierbare Bugs und faire Simulationen. Getrennte Streams für Spawns, Loot und Level-Up. |
+| **Fester Zeitschritt** | Update mit 60 Hz fix, Rendern interpoliert. Simulation und Spiel verhalten sich dann gleich. |
+| **Save v2 mit Migration** | Ein Schema mit Versionsnummer; `migrate(v1 → v2)` übernimmt Gold, freigeschaltete Stages und Bestzeiten (siehe 14.1). |
+| **Asset-Registry** | `sprite('mage.necro.walk.downleft', frame)`. Lädt SVG oder Atlas transparent. |
+
+### 3.3 Performance
+
+- Gefärbte Varianten nicht mehr zur Laufzeit erzeugen: jede Schule hat eigene Sprites.
+- Optional ein **Atlas**: `atlas.mjs` rastert alle Frames in PNG-Spritesheets (2× Auflösung). Das spart Speicher und Ladezeit gegenüber 1000+ einzelnen Canvas-Objekten.
+- Gegner-Projektile und Partikel in festen Pools (keine `filter()`-Kopien pro Frame).
+- Einen Spatial-Hash wie in v2 beibehalten, aber Zellen wiederverwenden statt jedes Frame neue Arrays.
+
+---
+
+## 4. Sprites, Animation und Polish
+
+### 4.1 Acht Blickrichtungen
+
+Neue Richtungen: `down, downleft, left, upleft, up` + gespiegelt `downright, right, upright`.
+
+**Im Generator (`mages.py`):**
+
+- `BASE_HANDS` und `mage(P, d, p)` um `downleft` und `upleft` erweitern. Eine 3/4-Ansicht entsteht aus:
+  - Körper: `robe_front` horizontal auf 85 % gestaucht und 3 Einheiten zur Blickrichtung verschoben.
+  - Kopf: Gesicht 40 % zur Seite verschoben, das abgewandte Ohr/Hutkante verdeckt.
+  - Stab: Hand-Position zwischen `down` und `left` interpoliert.
+- `build()` schreibt für jede Richtung mit `left` im Namen zusätzlich die gespiegelte `right`-Version, wie heute schon.
+- `info.json` bekommt Spawn-Offsets für alle 8 Richtungen.
+
+**Im Spiel:**
+
+```js
+const DIRS8 = ['right','downright','down','downleft','left','upleft','up','upright'];
+const face8 = (dx, dy) => DIRS8[(Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8];
+```
+
+Wechsel der Blickrichtung mit kleiner Hysterese (erst ab 10° über der Sektorgrenze), sonst flackert das Sprite.
+
+### 4.2 Neuer Goblin-Generator `goblin.py`
+
+Der Goblin besteht heute aus einfachen Ellipsen und Polygonen um `translate(48 52)`. Das lässt sich gut parametrisieren:
+
+| Ebene (von hinten nach vorn) | Kosmetik-Slot |
+|---|---|
+| Schatten | – |
+| Umhang (optional) | `back` |
+| Füße / Schuhe | `shoes` |
+| Körper / Kleidung | `outfit` |
+| Arme, Hände | `skin` |
+| Ohren | `skin` |
+| Kopf | `skin` |
+| Gesicht (Augen, Zähne) | `face` |
+| Hut | `hat` |
+| Accessoire (Brille, Ohrring) | `accessory` |
+
+Jede Ebene ist ein eigenes `<g id="…">`. Kosmetik tauscht entweder die Palette (Hautfarbe, Outfit-Farben) oder hängt eine andere Ebene ein (anderer Hut). Für jede Richtung und jeden Frame gibt es einen **Ankerpunkt** für Hut und Accessoire, damit Hüte auch beim Laufen richtig sitzen.
+
+**Animationen des Goblins (je 8 Richtungen):**
+
+| Animation | Frames | Beschreibung |
+|---|---|---|
+| idle | 4 | wie heute, Ohren wippen leicht |
+| walk | 6 | wie heute |
+| sprint | 6 | Oberkörper 15° nach vorn, längere Schritte, Ohren nach hinten, Arme pumpen |
+| roll (Dash) | 6 | zusammenrollen → Kugel mit 2 Drehframes → aufrollen |
+| hurt | 2 | zurückzucken, Augen zu |
+| victory | 6 | Dolch hochreißen, Hut fliegt kurz hoch |
+| death | 6 | umkippen, Sterne um den Kopf |
+
+### 4.3 Sprint und Dash besser animieren
+
+**Sprint**
+- Eigene Sprint-Frames (siehe oben), Animationstempo an die echte Geschwindigkeit gekoppelt.
+- Staubwolken genau auf den Schritt-Frames 2 und 5, nicht zufällig.
+- Speed-Lines hinter dem Goblin, Kamera zoomt um 4 % heraus und schaut 40 px in Laufrichtung voraus.
+- Sound: weiche Schritt-Klicks im Takt, Atmen wenn Ausdauer < 25 %.
+- Leere Ausdauer: kurzer "Puh"-Sound, Schweißtropfen-Partikel, 0,4 s langsamer.
+
+**Rolle (Dash)**
+- Roll-Animation statt Nachbild-Spur.
+- Squash & Stretch: Start 1,25 × 0,8 in Bewegungsrichtung, Ende 0,85 × 1,15, dann zurück.
+- 3 farbige Nachbilder (Farbe aus der Kosmetik-Spur), Staubstoß am Start, Landewölkchen am Ende.
+- Unverwundbar sichtbar machen: weißer Rand um den Goblin während der i-Frames.
+- Rolle durch Projektile = "Perfekte Rolle": Zeitlupe 0,15 s, kleiner Glitzer, +5 Wut. Das belohnt Können.
+
+### 4.4 Allgemeiner Polish
+
+| Polish | Umsetzung |
+|---|---|
+| Hitstop | 40 ms Pause bei Elite-Kill und kritischem Treffer, 80 ms bei Boss-Phasenwechsel |
+| Gegner-Spawn | Kurzes Portal (0,4 s) statt Aufploppen am Rand |
+| Gegner-Tod | Auflösen in Schulfarbe statt grauer Wolke |
+| Kamera | weiches Nachziehen (Lerp 0,15), Vorausschauen in Laufrichtung |
+| Off-Screen-Pfeile | für Elite, Boss, Truhe, Schatztruhe |
+| Silhouette | Goblin bekommt Umriss, wenn er hinter Gegnern steht |
+| Schadenszahlen | gestapelt pro Gegner, Krits größer mit Schwung |
+| Level-Up | goldener Lichtstrahl von oben, Karten fliegen einzeln ein |
+| Musik | eigene Schleife pro Stage, Boss-Musik mit Intro |
+
+---
+
+## 5. Magierschulen und Gegner
+
+### 5.1 Acht Schulen mit eigenen Modellen
+
+Jede Schule bekommt im Generator eine **eigene Palette, Kopf-/Hutfunktion, Stabspitze und eigene Effekte** (heute nur `head_fire` und `head_frost`). Die Silhouette muss sich unterscheiden, nicht nur die Farbe.
+
+| Schule | Modell-Merkmale | Stabspitze | Farben | Element-Effekt |
+|---|---|---|---|---|
+| **Feuer** (Pyromanten) | Spitzhut mit Stern, weißer Bart | Klaue mit Feuerkugel | rot, gold | Brennen (Schaden über Zeit) |
+| **Frost** (Kryomanten) | Kapuze mit Fellrand, leuchtende Augen | Eiskristall | blau, weiß | Verlangsamen, Einfrieren |
+| **Sturm** (Sturmrufer) | breiter Federhut, Schal flattert | Gabel mit Funken | gelb, violett | Blitzkreise, Kettenblitz |
+| **Gift** (Alchemisten) | Pestmaske mit Schnabel, Flaschengürtel | Kolben mit grüner Brühe | grün, braun | Pfützen, Gaswolken |
+| **Schatten** (Illusionisten) | Maske, Umhang mit Sternenmuster | schwebende Halbmondsichel | lila, schwarz | Teleport, Klone, Portale |
+| **Nekromantie** (Nekromanten) | Schädelkapuze, zerrissene Robe | Knochenstab mit grünem Schädel | knochenweiß, giftgrün, schwarz | Beschwören, Wiederbeleben, Lebensraub |
+| **Erde** (Geomanten) | Steinhelm, breite Schultern, Moos | Felsbrocken an Wurzeln | braun, ocker, moosgrün | Felswürfe, Erdspieße, Rüstung |
+| **Licht** (Kleriker) | Heiligenschein, Mitra | Sonnenscheibe | weiß, gold, himmelblau | Heilen, Schilde, Stärkung |
+
+### 5.2 Rollen innerhalb jeder Schule
+
+Jede Schule hat 3 Stufen. So wirken Wellen abwechslungsreich, ohne für jede Variante neue Logik zu brauchen.
+
+| Rolle | Größe | Verhalten | Beispiel Feuer | Beispiel Nekro |
+|---|---|---|---|---|
+| **Lehrling** | 0,7 | schneller Schwärmer, Nahkampf | Funkenwichtel (explodiert) | Knochenlehrling |
+| **Magier** | 1,0 | hält Abstand, zaubert mit Warnung | Pyromant (Feuerball) | Knochenrufer (beschwört 3 Skelette) |
+| **Meister** | 1,4 | selten, starke Spezialfähigkeit | Aschemeister (Feuerwand quer übers Feld) | Lich (Lebensraub-Strahl, heilt sich) |
+
+### 5.3 Alle Gegner im Überblick
+
+| Gegner | Schule | Angriff | Warnung (Telegraph) | Konter für den Spieler |
+|---|---|---|---|---|
+| Funkenwichtel | Feuer | rennt hin, explodiert | blinkt rot, roter Kreis 0,85 s | vorher töten → sprengt andere Magier |
+| Pyromant | Feuer | Feuerball | glühender Stab + Ziellinie | seitlich ausweichen |
+| Aschemeister | Feuer | Feuerwand (Linie, 3 s) | orange Linie am Boden 1 s | Lücke suchen, Rolle durch die Wand |
+| Eiswichtel | Frost | Nahkampf, verlangsamt beim Treffer | – | Abstand |
+| Kryomant | Frost | Eisspeer | Ziellinie | ausweichen |
+| Gletscherwächter | Frost | Eisschild vorne, blockt Geschosse | Schild sichtbar | von hinten / Flächenschaden |
+| Funkler | Sturm | schnelle Zickzack-Bewegung | – | Flächenwaffen |
+| Sturmrufer | Sturm | Blitzkreis am Boden | gelber Kreis 0,9 s | raus aus dem Kreis |
+| Donnerpriester | Sturm | Blitzstrahl zwischen zwei Priestern | gestrichelte Linie 1 s | Linie nicht kreuzen, einen Priester töten |
+| Giftmischer | Gift | Giftpfütze werfen | Zielkreis am Boden | nicht reinlaufen |
+| Seuchendoktor | Gift | Gaswolke im Kegel | grüner Kegel 0,8 s | seitlich raus |
+| Sumpfhexe | Gift | teilt sich beim Tod in 2 kleine | – | Flächenschaden |
+| Blinzler | Schatten | teleportiert neben dich, Schattenbolzen | lila Wirbel 0,5 s | direkt nach dem Auftauchen angreifen |
+| Spiegelmagier | Schatten | erzeugt 2 Klone (1 Treffer) | Klone ohne Schatten am Boden | echten am Schatten erkennen |
+| Leerenwandler | Schatten | öffnet Portal, aus dem Lehrlinge kommen | Portal wächst 2 s | Portal zerstören (hat HP) |
+| Knochenlehrling | Nekro | Nahkampf, steht 1× wieder auf | Knochenhaufen zuckt | Knochen mit Flächenschaden zerstören |
+| Knochenrufer | Nekro | beschwört 3 Skelette | grüne Runen am Boden 1 s | Rufer zuerst |
+| Lich | Nekro | Lebensraub-Strahl, belebt tote Magier als Geister | grüner Strahl baut sich auf | Strahl unterbrechen durch Ausweichen hinter Gegner |
+| Felsenwerfer | Erde | Felsbrocken im Bogen | Schatten wächst am Zielpunkt | Schatten verlassen |
+| Erdbeber | Erde | Stachellinie Richtung Spieler | Risse im Boden 0,8 s | quer zur Linie ausweichen |
+| Golem-Beschwörer | Erde | Steingolem (Tank, langsam) | – | Golem umgehen, Beschwörer töten |
+| Heiler | Licht | heilt Magier im Umkreis | grüne Ringe | zuerst töten |
+| Schildpriester | Licht | gibt Verbündeten Schild (absorbiert 30 % HP) | goldene Blase | Schild zuerst brechen |
+| Paladin-Magier | Licht | Sturmangriff in Linie | weiße Linie 0,7 s | ausweichen |
+
+Neue Nicht-Magier für Beschwörungen (Generator `minions.py`): **Skelett, Geist, Steingolem, Ratte** (für eine Spieler-Fähigkeit).
+
+### 5.4 Elite-Affixe
+
+Elites bekommen statt nur Gold-Färbung **Eigenschaften** (wie in Diablo oder Brotato). Ab Stage 3 eine, ab Stage 6 zwei.
+
+| Affix | Wirkung | Erkennbar an |
+|---|---|---|
+| Schnell | +50 % Tempo | Speed-Lines |
+| Gepanzert | −40 % Schaden von Geschossen | Metallglanz |
+| Vampirisch | heilt sich bei Treffern | rote Partikel |
+| Teilend | zerfällt in 3 kleinere Kopien | Riss im Körper |
+| Explosiv | explodiert beim Tod (Warnkreis 1 s) | glühende Risse |
+| Schildträger | Schild alle 8 s, bricht nach 3 Treffern | rotierende Schildplatten |
+| Beschwörer | ruft alle 6 s 2 Lehrlinge | Runenkreis |
+
+### 5.5 KI-Bausteine
+
+Alle Gegner setzen sich aus wenigen Verhalten zusammen (`src/game/enemies/ai-*.js`):
+
+- **Chase** (direkt hin), **Kite** (Abstand halten, seitlich laufen), **Flank** (zur Seite des Spielers laufen), **Blink** (teleportieren), **Charge** (Anlauf in Linie)
+- **Cast** mit einheitlichem Ablauf: `windup (Telegraph) → release → recover`. Telegraph-Zeit nie unter 0,6 s (Lehrlinge ausgenommen, die zaubern nicht).
+- **Globale Grenzen:** maximal 6 + Stage×2 gegnerische Geschosse, maximal 4 Bodenwarnungen gleichzeitig. So entsteht nie unfairer Kugelhagel.
+
+---
+
+## 6. Stages und Bosse
+
+### 6.1 Stages
+
+8 Stages + Endlos. Jede Stage hat eine Hauptschule und eine Nebenschule, eigenes Boden-Tileset (Gras eingefärbt + eigene Deko-Objekte wie Grabsteine, Pilze, Kristalle) und eigene Musik.
+
+| # | Stage | Hauptschule | Nebenschule | Boss | Deko |
+|---|---|---|---|---|---|
+| 1 | Goblinwiese | Feuer | – | Ignaz der Funkenmeister | Blumen, Steine |
+| 2 | Frostlichtung | Frost | Feuer | Frostbart der Eisweber | Schneeflecken, Eiszapfen |
+| 3 | Giftsumpf | Gift | Erde | Morgra die Seuchenmutter | Pilze, Blasen |
+| 4 | Knochenacker | Nekro | Gift | Graf Knochenhand | Grabsteine, Knochen |
+| 5 | Spiegelhain | Schatten | Licht | Der Spiegelmeister | Spiegel, Sternenstaub |
+| 6 | Sturmklippen | Sturm | Frost | Tempestra | Felsen, Blitzspuren |
+| 7 | Felsenschlund | Erde | Nekro | Golemfürst Gromm | Kristalle, Lava-Risse |
+| 8 | Turm der Magier | alle | – | Erzmagier Malvorn | Bücherregale, Runen |
+| ∞ | Endlose Nacht | rotierend | – | alle 4 min ein zufälliger Boss | – |
+
+**Sterne pro Stage** (wie in vielen Mobile-Games): ★ geschafft, ★★ geschafft mit über 50 % Leben, ★★★ Boss ohne Treffer durch Spezialangriffe *oder* in unter 60 s. Sterne geben einmalig Juwelen.
+
+**Albtraum-Modus** nach dem Abschluss einer Stage: +80 % Gegner-HP, Elites mit 2 Affixen, bessere Truhen.
+
+### 6.2 Bosse: Aufbau
+
+Jeder Boss hat **3 Phasen** (bei 100 %, 66 % und 33 % HP). Beim Phasenwechsel:
+
+1. Boss wird 1,5 s unverwundbar, Hitstop, Zoom auf den Boss, Text "Phase 2".
+2. Alle gegnerischen Geschosse verschwinden (Fairness).
+3. Neue Angriffe kommen dazu, alte werden schneller.
+
+| Regel | Wert |
+|---|---|
+| Ziel-Kampfdauer | 45 bis 75 s bei erwarteter Stärke (siehe 7.3) |
+| Boss-HP | `erwarteteDPS(Stage, 4:00) × 60 s` |
+| Wut-Timer | nach 120 s: +50 % Tempo und Schaden |
+| Arena | Kreis wie in v2; ab Phase 3 schrumpft er bei einigen Bossen |
+| Belohnung | garantierte Truhe der Stage-Stufe + Fähigkeits-Splitter beim Erstsieg |
+| HP-Leiste | in 3 Segmente geteilt, Phasen-Markierungen sichtbar |
+
+### 6.3 Die acht Bosse
+
+| Boss | Phase 1 | Phase 2 | Phase 3 | Besonderheit |
+|---|---|---|---|---|
+| **Ignaz der Funkenmeister** (Feuer) | Feuerball-Fächer, Ansturm | + rotierende Feuerwände (2 Arme) | + Meteorregen, Arena brennt am Rand | Lehr-Boss: alle Warnungen extra deutlich |
+| **Frostbart der Eisweber** (Frost) | Eisspeer-Salven, Eisboden-Flecken (rutschig) | + Eisschild: nur durch 3 Treffer am Rücken zerstörbar | + Schneesturm: Sicht eingeschränkt, Eissplitter-Spiralen | Schild-Mechanik |
+| **Morgra die Seuchenmutter** (Gift) | Giftpfützen-Regen, Gaskegel | + teilt sich in 2 Hälften (gemeinsame HP) | + 3 Teile, Arena füllt sich langsam mit Gift von außen | Teilungs-Mechanik |
+| **Graf Knochenhand** (Nekro) | Skelett-Wellen, Knochengefängnis (Käfig um den Spieler) | + 3 Seelengefäße erscheinen: Boss unverwundbar, bis alle zerstört | + belebt besiegte Skelette als Geister, Lebensraub-Strahl | Objektiv-Phase |
+| **Der Spiegelmeister** (Schatten) | Teleport + Schattenbolzen | + 3 Klone, nur der echte (mit Schatten) nimmt Schaden | + Portale, durch die seine Geschosse wandern | Erkennen statt Zufall |
+| **Tempestra** (Sturm) | Blitzkreise, Kettenblitz | + 4 Blitzsäulen mit Strahlen dazwischen (sichere Zonen wechseln) | + Sturm schiebt den Spieler in eine Richtung | Positionsspiel |
+| **Golemfürst Gromm** (Erde) | reitet Golem: Schockwellen-Linien, Felsregen | + Rüstungsplatten (4) müssen abgeschlagen werden | + Golem zerbricht, Gromm zu Fuß: schnell, Erdspieße | Rüstungs-Mechanik |
+| **Erzmagier Malvorn** (alle) | wechselt alle 15 s die Schule | + ruft 2 frühere Bosse als Schatten (50 % HP) | + alle Schulen gleichzeitig, letzte Phase mit Wut-Timer 60 s | Finale, 4. Phase "Verzweiflung" bei 10 % |
+
+**Mini-Boss bei 2:00** in jeder Stage: Meister-Magier der Hauptschule mit 2 Affixen und eigener HP-Leiste. Er droppt die erste Truhe des Laufs.
+
+---
+
+## 7. Balancing: weniger Zufall, mehr Können
+
+### 7.1 Wie andere Spiele das lösen
+
+| Spiel | Technik | Übernehmen wir |
+|---|---|---|
+| Vampire Survivors | Bannen, Überspringen, Neu-Würfeln; Entwicklungen garantiert, sobald möglich | ✓ alles |
+| Survivor.io | feste Wellen-Skripte statt Zufalls-Spawns, Ausrüstung skaliert Grundwerte | ✓ Wellen-Skripte |
+| Brotato | Sperren (Lock) einzelner Angebote für die nächste Runde, Shop zeigt Seltenheit | ✓ Sperren |
+| Hades | Pity: lange nicht gesehene Gaben werden wahrscheinlicher | ✓ Pity-Zähler |
+| Clash Royale | Karten + Gold zum Aufwerten, Truhen mit festen Garantien | ✓ Meta (Abschnitt 9) |
+| Slay the Spire | Seltenheits-Pity: seltene Karten werden mit jeder Auswahl ohne sie wahrscheinlicher | ✓ für Entwicklungs-Passive |
+
+### 7.2 Level-Up-Regeln
+
+Statt reinem gewichteten Zufall gelten **feste Regeln in dieser Reihenfolge**:
+
+1. **Entwicklung möglich?** → Sie ist immer eine der Karten (wie heute).
+2. **Startphase:** Bis du 3 Waffen hast, enthält jede Auswahl mindestens 1 neue Waffe.
+3. **Fokus:** Jede Auswahl enthält mindestens 1 Aufwertung einer Waffe, die du schon hast (solange eine unter Stufe 5 ist).
+4. **Passendes Passiv:** Hast du eine Waffe auf Stufe ≥3, aber nicht ihr Entwicklungs-Passiv, steigt dessen Gewicht pro Level-Up ohne Angebot um +50 % (Pity). Spätestens nach 4 Level-Ups kommt es garantiert.
+5. **Rest** wird gewichtet gezogen: eigene Gegenstände ×2,5 gegenüber neuen. So entstehen fokussierte Builds statt Streuung.
+6. **Keine Doppelten**, und keine Karte, die zwei Level-Ups hintereinander abgelehnt wurde (es sei denn, sonst fehlen Karten).
+
+**Werkzeuge für den Spieler** (Anzahl pro Lauf, über Talente erhöhbar):
+
+| Werkzeug | Start | Wirkung |
+|---|---|---|
+| Neu würfeln | 2 | alle 3 Karten neu |
+| Bannen | 1 | Karte kommt in diesem Lauf nie wieder |
+| Sperren | 1 | eine Karte bleibt fürs nächste Level-Up liegen |
+| Überspringen | ∞ | +15 Gold oder +20 % Heilung |
+
+**Vierte Karte:** über das Talent "Goblin-Schläue" ab Konto-Level 10.
+
+### 7.3 Kraftkurve statt Bauchgefühl
+
+Alle Formeln stehen in `src/game/balance.js`. Grundidee: **erwartete Spielerstärke** und **Gegnerstärke** werden gegeneinander geplant.
+
+**Ziel-Level im Lauf** (bei normalem Sammeln):
+
+| Zeit | 0:30 | 1:00 | 2:00 | 3:00 | 4:00 (Boss) |
+|---|---|---|---|---|---|
+| Ziel-Level | 3 | 6 | 11 | 16 | 20 |
+
+**Aufhol-Regel für XP** (sanftes Gummiband, wie in Rennspielen):
+
+```js
+const diff = targetLevel(time) - player.level;
+const xpMult = diff >= 3 ? 1.35 : diff >= 2 ? 1.2 : diff <= -3 ? 0.85 : 1.0;
+```
+
+So entscheidet nicht Glück beim Kristallfinden über den Sieg, aber gutes Sammeln bleibt ein Vorteil.
+
+**Waffen-Budget:** Jede Waffe hat pro Stufe einen Ziel-DPS gegen einen Einzelgegner und gegen eine Gruppe (5 Gegner in 100 px). Neue Waffen werden gegen diese Tabelle eingestellt, nicht nach Gefühl.
+
+| Waffenstufe | DPS Einzelziel | DPS Gruppe | Beispiel |
+|---|---|---|---|
+| 1 | 15 | 15 | Wurfdolch Lv1 |
+| 3 | 35 | 50 | |
+| 5 | 60 | 90 | |
+| Entwicklung | 120 | 220 | |
+
+Waffen haben eine **Rolle**: Einzelziel (Dolch), Fläche (Feuerball, Fass), Kontrolle (Eisspeer), Verteidigung (Klingenkreis), Begleiter (Goblin-Bande). Die Karten zeigen die Rolle als kleines Symbol, damit man bewusst einen ausgewogenen Build baut.
+
+**Gegner-HP-Kurve** passend dazu:
+
+```js
+enemyHp(base, stage, t) = base * STAGE_HP[stage] * (1 + 0.012 * t + 0.000035 * t * t)
+// t in Sekunden; ergibt für Stage 1 ca. ×1,8 bei 1:00, ×2,9 bei 2:00, ×5,9 bei 4:00
+```
+
+Die Konstanten werden so eingestellt, dass die **Time-to-Kill** eines normalen Magiers mit Ziel-Build zu jedem Zeitpunkt bei 0,6 bis 1,0 s liegt.
+
+**Gegner-Schaden:** Kontakt höchstens 8 % der Max-HP pro Treffer, Geschosse höchstens 12 %, Boss-Spezialangriffe höchstens 25 %. Nach jedem Treffer 0,5 s Unverwundbarkeit. Damit stirbt niemand in einer Sekunde durch Pech.
+
+### 7.4 Wellen-Skripte (Director)
+
+Statt nur "Spawnrate steigt" bekommt jede Stage ein **Skript** mit festen Momenten, plus etwas Zufall innerhalb der Wellen:
+
+```js
+// src/data/stages.js (Ausschnitt Stage 1)
+waves: [
+  { at: 0,   dur: 30, mix: { fire_apprentice: 3, fire_mage: 1 }, rate: 0.8 },
+  { at: 30,  dur: 30, mix: { fire_apprentice: 2, fire_mage: 2 }, rate: 1.4 },
+  { at: 60,  event: 'elite', type: 'fire_mage', affixes: 1 },
+  { at: 90,  event: 'swarm', type: 'fire_apprentice', count: 30, shape: 'ring' },
+  { at: 120, event: 'miniboss', type: 'fire_master' },
+  { at: 150, dur: 45, mix: { fire_mage: 3, frost_mage: 1, fire_master: 0.3 }, rate: 3 },
+  { at: 195, event: 'swarm', shape: 'wall', side: 'random', count: 40 },
+  { at: 222, event: 'warn' },
+  { at: 240, event: 'boss', id: 'ignaz' },
+]
+```
+
+Formen für Schwärme: `ring` (umzingeln), `wall` (Linie von einer Seite), `stream` (Strom aus einer Richtung), `pincer` (von zwei Seiten). Dazwischen 5 bis 8 Sekunden ruhigere Phasen zum Kristallsammeln. Das gibt dem Lauf einen Rhythmus und macht ihn planbarer.
+
+### 7.5 Sicherheitsnetze gegen Pech
+
+- **Heilungs-Pity:** Liegt dein Leben 20 s unter 30 %, droppt der nächste Elite-Kill garantiert ein Herz.
+- **Wiederbelebung:** 1× pro Lauf, wenn man "Goblin-Amulett" ausgerüstet hat (Fähigkeits-Slot oder Talent).
+- **Truhen im Lauf** haben feste Inhalte nach Stufe statt Zufall: Mini-Boss-Truhe = 1 Wahl aus 3, Elite-Truhe = 1 garantierte Aufwertung einer eigenen Waffe, Boss-Truhe = 3 Aufwertungen.
+
+### 7.6 Zielwerte für die Simulation
+
+Der Bot (siehe 12.1) spielt jede Stage 50× pro Konfiguration. Zielwerte:
+
+| Stage | Siegquote ohne Upgrades | mit "erwarteten" Upgrades für diese Stage |
+|---|---|---|
+| 1 | ≥ 85 % | ≥ 95 % |
+| 2 | ≥ 60 % | ≥ 90 % |
+| 3–4 | 20–40 % | 75–85 % |
+| 5–6 | < 15 % | 65–75 % |
+| 7–8 | < 5 % | 55–65 % |
+
+"Erwartete Upgrades" = was ein Spieler nach den vorherigen Stages typischerweise an Karten und Gold hat (Tabelle in `sim/expected-progress.js`).
+
+---
+
+## 8. Fähigkeiten-System mit 2 Slots
+
+### 8.1 Aufbau
+
+| Slot | Inhalt | Taste | Handy |
+|---|---|---|---|
+| fest | **Rolle** | Leertaste | Knopf |
+| fest | **Sprint** (Ausdauer) | Shift halten | Knopf halten |
+| Slot 1 | frei wählbare Fähigkeit | Q | Knopf |
+| Slot 2 | frei wählbare Fähigkeit (ab Konto-Level 3) | E | Knopf |
+
+Goblin-Wut und Goblin-Maschine werden zu normalen Fähigkeiten, die man in einen Slot legt. Vor jedem Lauf wählt man im **Ausrüstungs-Screen** zwei Fähigkeiten.
+
+### 8.2 Aufladearten
+
+| Art | Wie | Beispiele |
+|---|---|---|
+| Abklingzeit | lädt mit der Zeit | Bärenfalle, Rauchbombe |
+| Kills | lädt durch besiegte Gegner | Goblin-Wut, Großer Knall |
+| Schrott | lädt durch Zahnräder | Goblin-Maschine, Katapult |
+
+### 8.3 Fähigkeiten und wie man sie freischaltet
+
+| Fähigkeit | Aufladung | Wirkung | Freischaltung |
+|---|---|---|---|
+| **Goblin-Wut** | 80 Kills | Schockwelle + 6 s Raserei (+60 % Angriffstempo) | Start |
+| **Bärenfalle** | 9 s | legt 3 Fallen, halten Gegner 2 s fest, Schaden | Start |
+| **Goblin-Maschine** | Schrott | 12 s Dampf-Mech (MG, Raketen, Stampfer, −70 % Schaden) | Konto-Level 3 |
+| **Rauchbombe** | 14 s | 3 s unsichtbar, Gegner verlieren dich und greifen sich teilweise gegenseitig an | Stage 1 gewonnen |
+| **Goblin-Katapult** | Schrott (50 %) | 5 Felsen schlagen auf die dichteste Gegnergruppe | Konto-Level 5 |
+| **Enterhaken** | 7 s | zieht dich zu einem Gegner/Punkt, kleine Gegner werden zu dir gezogen | Stage 2 gewonnen |
+| **Pilzring** | 18 s | Heilzone 5 s (+4 % HP/s), Gegner darin verlangsamt | Konto-Level 8 |
+| **Schrottschild** | 16 s | Schild absorbiert 40 % Max-HP für 6 s, wirft Geschosse zurück | Stage 3 gewonnen |
+| **Rattenflut** | 100 Kills | 30 Ratten rennen über den Bildschirm und knabbern alles an | Stage 4 gewonnen |
+| **Goblin-Ruf** | 20 s | 6 Goblin-Krieger für 8 s | Konto-Level 12 |
+| **Totem der Gier** | 25 s | saugt alle Kristalle an, 10 s doppeltes Gold | Stage 5 gewonnen |
+| **Zeitbombe** | 22 s | Gegner im Umkreis 3 s eingefroren, danach Explosion mit gesammeltem Schaden | Stage 6 gewonnen |
+| **Großer Knall** | 150 Kills | alle Gegner auf dem Bildschirm nehmen massiven Schaden | Stage 8 gewonnen |
+
+Jede Fähigkeit lässt sich mit **Karten + Gold** aufwerten (Abschnitt 9.3). Stufe 5 und 10 schalten ein Extra frei, z. B.:
+
+- Bärenfalle Lv5: 4 Fallen; Lv10: Fallen explodieren.
+- Goblin-Maschine Lv5: Flammenwerfer statt MG; Lv10: 2 Raketensalven gleichzeitig.
+- Rolle: Lv5 zwei Aufladungen; Lv10 Rolle hinterlässt Krähenfüße.
+
+---
+
+## 9. Meta-Fortschritt: Profil, Karten, Truhen, Shop, Kosmetik
+
+### 9.1 Profil
+
+| Feld | Inhalt |
+|---|---|
+| Name | frei wählbar, 3–16 Zeichen |
+| Avatar | Goblin mit aktueller Kosmetik, im Menü animiert |
+| Konto-Level | 1–50, XP aus jedem Lauf (`Kills/10 + Sekunden/4 + 100 × Sieg`) |
+| Statistiken | Läufe, Siege, Kills, Bestzeiten, Lieblingswaffe, meiste Kills in einem Lauf |
+| Erfolge | ~40 Stück, geben Juwelen und Kosmetik |
+| Titel | aus Erfolgen, z. B. "Magierschreck", "Fassbinder" |
+
+Konto-Level schaltet frei: Fähigkeiten (siehe 8.3), Slot 2 (Lv3), Talente, Shop-Bereiche, die vierte Level-Up-Karte (Lv10).
+
+### 9.2 Währungen
+
+| Währung | Bekommt man durch | Ausgeben für |
+|---|---|---|
+| **Gold** | Läufe, Truhen, Aufgaben | Karten-Upgrades, Holztruhen, Talente, Tagesangebote |
+| **Juwelen** | Erfolge, Sterne, Konto-Level, Tagesaufgaben, Boss-Erstsiege | bessere Truhen, Kosmetik, Gold-Pakete |
+| **Karten** | Truhen, Tagesangebote, Boss-Siege | Aufwerten des passenden Gegenstands |
+| **Schrott** (nur im Lauf) | Zahnräder | Maschine, Katapult |
+
+Alles nur im Spiel verdienbar. **Kein Echtgeld.**
+
+### 9.3 Karten und Aufwertungen
+
+Jede Waffe, jedes Passiv und jede Fähigkeit hat eine **Kartensammlung** und eine **Seltenheit**.
+
+| Seltenheit | Farbe | Beispiele |
+|---|---|---|
+| Gewöhnlich | grau | Wurfdolch, Wetzstein, Bärenfalle |
+| Selten | blau | Feuerball, Klingenkreis, Rauchbombe |
+| Episch | lila | Kreissäge, Goblin-Bande, Goblin-Maschine |
+| Legendär | gold | Großer Knall, (später) legendäre Waffen |
+
+**Aufwertungskosten** (Karten / Gold), angelehnt an Clash Royale:
+
+| Stufe | Gewöhnlich | Selten | Episch | Legendär |
+|---|---|---|---|---|
+| 1 → 2 | 2 / 20 | 2 / 50 | – | – |
+| 2 → 3 | 4 / 50 | 4 / 150 | – | – |
+| 3 → 4 | 10 / 150 | 10 / 400 | 2 / 400 | – |
+| 4 → 5 | 20 / 400 | 20 / 1 000 | 4 / 1 000 | – |
+| 5 → 6 | 50 / 1 000 | 50 / 2 000 | 10 / 2 000 | 1 / 2 000 |
+| 6 → 7 | 100 / 2 000 | 100 / 4 000 | 20 / 4 000 | 2 / 4 000 |
+| 7 → 8 | 200 / 4 000 | 200 / 8 000 | 50 / 8 000 | 4 / 8 000 |
+| 8 → 9 | 400 / 8 000 | 400 / 15 000 | 100 / 15 000 | 10 / 15 000 |
+| 9 → 10 | 800 / 15 000 | 800 / 25 000 | 200 / 25 000 | 20 / 25 000 |
+
+Epische Karten starten auf Stufe 3, legendäre auf Stufe 5. So sind alle Gegenstände bei gleicher Stufe gleich stark.
+
+**Was eine Kartenstufe bringt:**
+
+- Waffen: +6 % Grundschaden pro Stufe. Stufe 5: startet im Lauf auf Waffenstufe 2, wenn gewählt. Stufe 10: eigener Bonus (z. B. Dolch: +1 Dolch dauerhaft).
+- Passive: +10 % Wirkung pro Stufe.
+- Fähigkeiten: −4 % Abklingzeit und +8 % Wirkung pro Stufe; Extras bei 5 und 10.
+
+Überschüssige Karten (Stufe 10) werden automatisch in Gold umgewandelt.
+
+### 9.4 Talente (ersetzt die heutige Werkstatt)
+
+Die Werkstatt aus v2 wird zu **Talenten**: kontoweite Grundwerte, mit Gold aufwertbar und an Konto-Level gebunden. Die heutigen Stufen werden bei der Migration übernommen.
+
+| Talent | pro Stufe | max | ab Konto-Lv |
+|---|---|---|---|
+| Scharfe Klingen | +3 % Schaden | 20 | 1 |
+| Dicke Haut | +8 max. Leben | 20 | 1 |
+| Flinke Füße | +2 % Tempo | 10 | 2 |
+| Gierige Finger | +8 % Sammelradius | 10 | 2 |
+| Zähe Lunge | +10 % Ausdauer | 10 | 4 |
+| Goblin-Schläue | +4 % XP; Stufe 10: 4. Level-Up-Karte | 10 | 6 |
+| Gezinkte Würfel | +1 Neu-Würfeln | 3 | 8 |
+| Bannfluch | +1 Bannen | 2 | 12 |
+
+### 9.5 Truhen (Lootboxen)
+
+| Truhe | Preis | Gold | Karten | Verteilung (Gew./Selten/Episch/Legendär) | Garantie |
+|---|---|---|---|---|---|
+| **Holztruhe** | 150 Gold | 80–120 | 6 | 88 / 12 / 0 / 0 | – |
+| **Eisentruhe** | 60 Juwelen | 300–400 | 18 | 72 / 24 / 4 / 0 | 1 Selten |
+| **Goldtruhe** | 160 Juwelen | 900–1 200 | 45 | 62 / 28 / 9 / 1 | 2 Selten |
+| **Magiertruhe** | 420 Juwelen | 2 500–3 000 | 110 | 55 / 30 / 13 / 2 | 1 Episch |
+| **Kosmetiktruhe** | 120 Juwelen | – | – | 1 Kosmetik: 70 / 22 / 7 / 1 | keine Doppelten, solange es Neue gibt |
+
+**Weitere Quellen:** Gratis-Holztruhe alle 4 Stunden (max. 2 gespeichert), Siegtruhe nach jedem Boss (Stufe nach Stage: 1–2 Holz, 3–4 Eisen, 5–6 Gold, 7–8 Magier), Erfolge.
+
+**Pity-Regeln** (gespeichert im Profil):
+
+- Spätestens jede **10.** Gold- oder Magiertruhe enthält eine epische Karte.
+- Spätestens jede **40.** Gold- oder Magiertruhe enthält eine legendäre Karte.
+- Der Zähler wird zurückgesetzt, sobald die Seltenheit vorkommt.
+
+**Transparenz:** Ein ⓘ-Knopf an jeder Truhe zeigt die Wahrscheinlichkeiten und den Pity-Stand.
+
+**Öffnen-Animation:** Truhe wackelt (mehr bei besserem Inhalt) → Deckel springt auf, Lichtsäule in der Farbe der besten Seltenheit → Karten fliegen einzeln heraus (Tippen = nächste) → Zusammenfassung. Bei Legendär: Bildschirm wird kurz dunkel, goldene Partikel, eigener Sound.
+
+### 9.6 Shop
+
+| Bereich | Inhalt | Aktualisierung |
+|---|---|---|
+| Tagesangebote | 6 Plätze: 1 Gratis-Gold, 3 Kartenpakete (Gold), 1 Kosmetik (Juwelen), 1 Truhe mit Rabatt | täglich, mit Datum als Seed (alle sehen dasselbe) |
+| Truhen | alle Truhen aus 9.5 | fest |
+| Kosmetik | 4 rotierende Kosmetik-Teile | alle 2 Tage |
+| Gold | Gold gegen Juwelen in 3 Größen | fest |
+
+### 9.7 Kosmetik für den Goblin
+
+| Slot | Beispiele | Umsetzung |
+|---|---|---|
+| Hautfarbe | Grün (Start), Moos, Höhlengrau, Sumpfblau, Feuerrot, Gold | Palette im Generator |
+| Hut | Lila Zipfelmütze (Start), Piratenhut, Krone, Kochmütze, Topf, Wikingerhelm, Magierhut (Trophäe von Malvorn) | eigene Ebene + Ankerpunkte |
+| Outfit | Lederweste (Start), Ritterrüstung, Lumpen, Anzug, Mechaniker-Overall | Ebene + Palette |
+| Dolch-Skin | Bronze, Knochen, Kristall, Fischgräte, Feuerklinge | eigenes Dolch-SVG |
+| Roll-Spur | Staub, Funken, Blätter, Regenbogen, Fledermäuse | Partikelfarbe/-form |
+| Maschinen-Lackierung | Messing, Rost, Polizeiblau, Flammen, Gold | Palette der Mech-Zeichnung |
+| Sieg-Pose | Dolch hoch, Tanz, Hut ziehen, Zunge raus | Victory-Animation |
+
+Kosmetik hat **keine Spielwerte**. Quellen: Kosmetiktruhe, Shop, Erfolge (z. B. Krone für alle Stages mit 3 Sternen), Boss-Trophäen.
+
+### 9.8 Aufgaben und Erfolge
+
+- **Tagesaufgaben** (3 pro Tag, z. B. "Besiege 300 Giftmagier", "Gewinne mit dem Sprengfass", "Rolle 50× durch Geschosse") → Gold, Juwelen, Truhen.
+- **Erfolge** (~40, mehrstufig Bronze/Silber/Gold) → Juwelen, Titel, Kosmetik.
+
+---
+
+## 10. UI und Screens
+
+### 10.1 Hub mit Tab-Leiste (wie Mobile-Games)
+
+```
+┌───────────────────────────────────────────┐
+│ [Avatar] Name  Lv 12 ▓▓▓░░   🪙 3 420  💎 85 │
+│                                           │
+│        großer animierter Goblin           │
+│            [  SPIELEN  ]                  │
+│   Stage 4: Knochenacker  ★★☆   ‹  ›       │
+│                                           │
+├──────┬────────┬────────┬────────┬─────────┤
+│ Shop │Sammlung│ Spielen│Fähigk. │ Profil  │
+└──────┴────────┴────────┴────────┴─────────┘
+```
+
+| Screen | Inhalt |
+|---|---|
+| **Spielen** | Stage-Karussell, Sterne, Albtraum-Schalter, Schnellstart |
+| **Ausrüstung / Loadout** (vor dem Lauf) | 2 Fähigkeits-Slots, Startwaffe wählen (aus freigeschalteten), Vorschau der Werte |
+| **Sammlung** | alle Waffen/Passive/Fähigkeiten als Karten, Fortschrittsbalken Karten/Benötigt, Aufwerten-Knopf, Details mit Werten pro Stufe |
+| **Fähigkeiten** | freischaltbare Fähigkeiten mit Bedingung ("Stage 3 gewinnen"), Slot-Belegung |
+| **Shop** | Abschnitte aus 9.6 |
+| **Truhen öffnen** | Vollbild-Animation |
+| **Kosmetik / Garderobe** | Goblin dreht sich, Slots links, Auswahl rechts |
+| **Profil** | Statistiken, Erfolge, Titel, Name ändern |
+| **Einstellungen** | Ton, Musik, Bildschirmwackeln an/aus, Schadenszahlen an/aus, Linkshänder-Modus (Knöpfe links) |
+| **Ergebnis** | Zeit, Kills, Schaden pro Waffe (Balkendiagramm), Belohnungen fliegen in die Leiste |
+
+### 10.2 HUD im Lauf
+
+- Oben: XP-Leiste, Zeit, Kills, Gold; Boss-Leiste mit Phasen-Segmenten.
+- Links oben: Waffen- und Passiv-Slots (wie v2), dazu Rollen-Symbol pro Waffe.
+- Rechts unten: Rolle, Sprint, Fähigkeit 1, Fähigkeit 2 in einem Bogen. Linkshänder-Modus spiegelt.
+- Off-Screen-Pfeile am Bildschirmrand.
+
+### 10.3 UI-Sounds
+
+Wie v2 (Hover, Klick), dazu: Tab-Wechsel (Wisch), Karte aufwerten (aufsteigende Töne + Amboss), Truhe wackeln (Holzknarren), Seltenheit enthüllen (eigener Ton pro Seltenheit), nicht genug Gold (Brummen + Wackeln des Preises).
+
+---
+
+## 11. Roadmap in Phasen
+
+Jede Phase endet mit einem spielbaren Stand. Die Reihenfolge ist so gewählt, dass frühe Phasen späteren die Arbeit erleichtern.
+
+### Phase 0 – Umbau (Grundlage)
+- [ ] Projektstruktur aus 3.1 anlegen, esbuild-Build (`npm run build`), Ausgabe weiterhin eine HTML-Datei
+- [ ] `game.js` nach Modulen aufteilen, Verhalten unverändert
+- [ ] Seeded RNG, fester Zeitschritt, Event-Bus, Szenen-Statemachine
+- [ ] Save v2 + Migration von v1
+- [ ] Bot und Simulation auf die neue Struktur umziehen, `npm run sim`
+
+**Fertig, wenn:** v2-Gameplay identisch läuft und die Simulation gleiche Siegquoten liefert (±5 %).
+
+### Phase 1 – Sprites und Animation
+- [ ] `mages.py`: Schul-System (Palette + Kopf + Stabspitze + FX), 8 Richtungen
+- [ ] `goblin.py`: Ebenen, Ankerpunkte, 8 Richtungen, Sprint/Roll/Hurt/Victory/Death
+- [ ] `minions.py`: Skelett, Geist, Golem, Ratte
+- [ ] Atlas-Build (optional), `face8()` mit Hysterese
+- [ ] Sprint- und Dash-Polish aus 4.3, Hitstop, Spawn-Portale, Tod-Auflösen
+
+**Fertig, wenn:** alle 8 Richtungen sauber wechseln und Rolle/Sprint die neuen Animationen zeigen.
+
+### Phase 2 – Magierschulen
+- [ ] KI-Bausteine (5.5) mit einheitlichem Cast-Ablauf
+- [ ] 8 Schulen × 3 Rollen aus 5.3 als Daten + Verhalten
+- [ ] Elite-Affixe (5.4)
+- [ ] Hinweis-Toast beim ersten Auftauchen (gibt es schon) auf neue Gegner erweitern
+
+### Phase 3 – Balancing-System
+- [ ] Level-Up-Regeln (7.2) inkl. Bannen und Sperren
+- [ ] Kraftkurve, XP-Aufholregel, Gegner-HP-Formel (7.3) in `balance.js`
+- [ ] Wellen-Skripte für alle Stages (7.4)
+- [ ] Sicherheitsnetze (7.5)
+- [ ] Simulationen gegen die Zielwerte (7.6), Bericht als Tabelle
+
+### Phase 4 – Fähigkeiten
+- [ ] 2 Slots + Loadout-Screen
+- [ ] die 13 Fähigkeiten aus 8.3
+- [ ] Freischaltung über Konto-Level und Stage-Siege
+
+### Phase 5 – Meta: Profil, Karten, Talente
+- [ ] Profil, Konto-Level, Statistiken
+- [ ] Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3)
+- [ ] Talente statt Werkstatt (9.4)
+- [ ] Hub mit Tab-Leiste (10.1)
+
+### Phase 6 – Truhen, Shop, Kosmetik
+- [ ] Truhen mit Drop-Tabellen, Pity und Wahrscheinlichkeits-Anzeige (9.5)
+- [ ] Öffnen-Animation
+- [ ] Shop mit Tagesangeboten (9.6)
+- [ ] Garderobe, Kosmetik im Generator und im Spiel (9.7)
+- [ ] Tagesaufgaben und Erfolge (9.8)
+
+### Phase 7 – Stages und Bosse
+- [ ] 8 Stages mit Deko und Musik (6.1), Sterne, Albtraum-Modus
+- [ ] Boss-Runner mit Phasen, Wut-Timer, Phasenwechsel-Regeln (6.2)
+- [ ] 8 Bosse (6.3) + Mini-Bosse
+
+### Phase 8 – Feinschliff und Test
+- [ ] Performance-Budget prüfen (12.3)
+- [ ] Linkshänder-Modus, Einstellungen
+- [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
+
+---
+
+## 12. Testen und Qualität
+
+### 12.1 Simulations-Bot
+
+Aus v2 übernehmen (`sim.js`) und ausbauen:
+
+- Bot weicht Geschossen, Bodenwarnungen und Explosionen aus, sammelt Kristalle, nutzt Fähigkeiten, sobald sie bereit sind.
+- **Drei Bot-Stärken:** "Anfänger" (weicht nur 50 % aus, wählt Karten zufällig), "Normal", "Profi". Zielwerte in 7.6 gelten für "Normal".
+- Läuft headless im Zeitraffer (eine Stage dauert ~1 s Rechenzeit).
+- `npm run sim -- --stage 3 --runs 50 --profile mid` → Tabelle mit Siegquote, Ø Level bei 1/2/3/4 min, Schaden nach Quelle, DPS nach Waffe.
+- Jede Balance-Änderung bekommt einen Vorher-/Nachher-Bericht.
+
+### 12.2 Automatische Tests
+
+| Test | Prüft |
+|---|---|
+| `balance.test.js` | Formeln: Ziel-Level, HP-Kurve, Kosten-Tabellen sind monoton und stimmen mit den Tabellen hier überein |
+| `levelup.test.js` | Garantien aus 7.2 (10 000 zufällige Läufe, keine Regel verletzt) |
+| `chests.test.js` | Drop-Raten über 100 000 Öffnungen im erwarteten Bereich, Pity greift |
+| `save.test.js` | Migration v1 → v2, beschädigte Saves werden repariert statt zu crashen |
+| Screenshot-Test | Playwright macht Bilder von jedem Screen in Desktop- und Handygröße |
+
+### 12.3 Performance-Budget
+
+| Messwert | Ziel |
+|---|---|
+| FPS mit 300 Gegnern, Mittelklasse-Handy | ≥ 55 |
+| Ladezeit bis Hub | < 2 s |
+| Größe `goblin-io.html` | < 4 MB (mit Atlas) |
+| Speicher | < 250 MB |
+
+---
+
+## 13. Offene Entscheidungen
+
+| Frage | Vorschlag |
+|---|---|
+| Ausrüstung (Rüstung, Ringe) wie in Survivor.io zusätzlich zu Karten? | Erst nach Phase 8, sonst zu viele Systeme auf einmal |
+| Mehrere spielbare Figuren (z. B. Kobold, Troll)? | Später; die Ebenen-Struktur des Goblin-Generators macht das möglich |
+| Online-Bestenliste? | Braucht einen Server. Vorerst nur lokale Bestzeiten und Tageschallenge mit Seed |
+| Speicherort | Ein einzelnes Browser-Save ist leicht verloren (privates Fenster, Cache leeren). Export/Import als Code-Text in den Einstellungen anbieten |
+| Sprache | Deutsch bleibt Hauptsprache; Texte trotzdem in `src/data/i18n/de.js` sammeln, dann ist Englisch später leicht |
+
+---
+
+## 14. Anhang: Datenformate und Formeln
+
+### 14.1 Save v2
+
+```json
+{
+  "version": 2,
+  "profile": { "name": "Grubnik", "level": 7, "xp": 340, "title": "Fassbinder", "created": "2026-10-11" },
+  "wallet": { "gold": 3420, "gems": 85 },
+  "cards": { "dagger": { "level": 4, "count": 12 }, "fireball": { "level": 2, "count": 3 } },
+  "talents": { "atk": 6, "hp": 4, "spd": 2 },
+  "abilities": { "unlocked": ["rage", "trap", "mech"], "loadout": ["mech", "trap"] },
+  "stages": { "1": { "cleared": true, "stars": 3, "best": 251, "nightmare": false } },
+  "chests": { "pending": [{ "type": "iron", "from": "boss:2" }], "freeAt": 1791750000000, "pity": { "epic": 3, "legendary": 12 } },
+  "cosmetics": { "owned": ["hat_zipfel", "skin_green", "outfit_vest"], "equipped": { "hat": "hat_zipfel", "skin": "skin_green", "outfit": "outfit_vest" } },
+  "quests": { "date": "2026-10-11", "list": [{ "id": "kill_toxic", "goal": 300, "progress": 120, "claimed": false }] },
+  "achievements": { "boss_ignaz": "gold" },
+  "stats": { "runs": 41, "wins": 12, "kills": 30211, "playSeconds": 9520 },
+  "settings": { "mute": false, "musicOff": false, "shake": true, "numbers": true, "lefty": false }
+}
+```
+
+**Migration v1 → v2:** `gold → wallet.gold`, `unlocked/cleared/best → stages`, `shop.* → talents.*` (Stufen ×2, weil Talente halb so stark sind), `mute/musicOff → settings`. Jede abgeschlossene Stage gibt rückwirkend ihre Siegtruhe.
+
+### 14.2 Datenobjekte (Beispiele)
+
+```js
+// src/data/enemies.js
+export const ENEMIES = {
+  necro_caller: {
+    school: 'necro', role: 'mage', sprite: 'mage.necro',
+    hp: 12, speed: 44, contact: 5, radius: 15, scale: 1, xp: 3,
+    ai: ['kite', { keep: 220 }],
+    casts: [{ id: 'summon_skeletons', every: [6, 9], windup: 1.0, telegraph: 'runes', count: 3 }],
+    drops: { gear: 0.1, coin: 0.05 },
+  },
+};
+
+// src/data/weapons.js
+export const WEAPONS = {
+  barrel: {
+    name: 'Sprengfass', rarity: 'rare', role: 'area', evolveWith: 'powder', evo: 'grand_fireworks',
+    levels: [
+      { cd: 3.0, count: 1, dmg: 35, radius: 80 },
+      { cd: 2.8, count: 1, dmg: 44, radius: 85 },
+      { cd: 2.7, count: 2, dmg: 44, radius: 85 },
+      { cd: 2.6, count: 2, dmg: 50, radius: 100 },
+      { cd: 2.1, count: 3, dmg: 55, radius: 105 },
+    ],
+    cardBonus: { perLevel: { dmg: 0.06 }, at5: 'startLevel2', at10: { count: +1 } },
+  },
+};
+
+// src/data/chests.js
+export const CHESTS = {
+  gold: { price: { gems: 160 }, gold: [900, 1200], cards: 45,
+          odds: { common: 0.62, rare: 0.28, epic: 0.09, legendary: 0.01 },
+          guarantee: { rare: 2 }, pity: true },
+};
+
+// src/data/bosses.js
+export const BOSSES = {
+  knochenhand: {
+    name: 'Graf Knochenhand', school: 'necro', sprite: 'boss.necro', scale: 2.8,
+    hpFactor: 60, enrageAt: 120,
+    phases: [
+      { at: 1.00, attacks: ['skeleton_wave', 'bone_prison'] },
+      { at: 0.66, attacks: ['skeleton_wave', 'bone_prison'], objective: { type: 'destroy', target: 'phylactery', count: 3 } },
+      { at: 0.33, attacks: ['raise_ghosts', 'life_drain', 'bone_prison'], speed: 1.3 },
+    ],
+  },
+};
+```
+
+### 14.3 Wichtige Formeln
+
+```js
+// Ziel-Level nach Zeit (Sekunden) – stückweise linear zwischen den Tabellenpunkten aus 7.3
+targetLevel(t) = interp([[0,1],[30,3],[60,6],[120,11],[180,16],[240,20]], t)
+
+// XP pro Level
+xpNeed(L) = round(4 + 3*L + 0.3*L*L)            // wie v2, bleibt
+
+// Gegner-HP
+enemyHp(base, stage, t) = base * STAGE_HP[stage] * (1 + 0.012*t + 0.000035*t*t)
+STAGE_HP = [1, 1.25, 1.5, 1.8, 2.1, 2.4, 2.8, 3.2]
+
+// Boss-HP
+bossHp(stage) = expectedDps(stage, 240) * 60 * BOSS_FACTOR[stage]   // BOSS_FACTOR 0.9 … 1.3
+
+// Spielerschaden durch Gegner, gedeckelt
+hitDamage(raw, maxHp, kind) = min(raw, maxHp * CAP[kind])   // CAP: contact .08, proj .12, special .25
+
+// Karten-Schadensbonus
+cardDmgMult(level) = 1 + 0.06 * (level - 1)
+
+// Konto-XP pro Lauf
+accountXp = floor(kills/10 + seconds/4) + (win ? 100 : 0) + (firstClear ? 200 : 0)
+accountXpNeed(L) = 200 + 60*L + 8*L*L
+```
+
+### 14.4 Generator-Erweiterung (Skizze `mages.py`)
+
+```python
+SCHOOLS = {
+  "fire":  dict(pal=FIRE,  head=head_fire,  tip=tip_claw_orb,   fx=("fireball", fireball, fire_hit)),
+  "frost": dict(pal=FROST, head=head_frost, tip=tip_crystal,    fx=("frostbolt", frost_bolt, frost_hit)),
+  "necro": dict(pal=NECRO, head=head_skull_hood, tip=tip_skull, fx=("soulbolt", soul_bolt, soul_hit)),
+  "toxic": dict(pal=TOXIC, head=head_plague_mask, tip=tip_flask, fx=("glob", toxic_glob, toxic_hit)),
+  # … storm, shadow, earth, light
+}
+DIRS = ("down", "downleft", "left", "upleft", "up")   # *left wird zu *right gespiegelt
+ROLES = {"apprentice": 0.7, "mage": 1.0, "master": 1.4}  # Meister bekommt Zusatzteile (Schulterplatten, größerer Hut)
+
+for school, cfg in SCHOOLS.items():
+    for role in ROLES:
+        build(cfg, f"{school}_{role}", dirs=DIRS)
+```
+
+Neue Kopf-Funktionen folgen dem Muster von `head_fire`/`head_frost` (Parameter `P, d, b, lean`), damit `mage()` unverändert bleibt; nur `BASE_HANDS` braucht Einträge für die Diagonalen.
