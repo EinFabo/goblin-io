@@ -1,7 +1,7 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { newSeed, seedRun } from '../core/rng.js';
-import { gainAccountXp, persist, recordStage, save, stageCleared, talent } from '../core/save.js';
+import { abilState, gainAbilXp, gainAccountXp, persist, recordStage, save, stageCleared, talent } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
@@ -26,7 +26,7 @@ export function newRun(si, seed = newSeed()) {
     rerolls: 2 + talent('reroll'), bans: 1, locks: 1, cardN: 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
-    hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, shieldT: 0, shieldHp: 0, slowT: 0, trail: [], trailT: 0,
+    hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, shieldT: 0, shieldHp: 0, shieldMax: 1, shieldShard: 0, mechArmor: .3, mechPow: 1, mechRocket: 1.4, slowT: 0, trail: [], trailT: 0,
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
     mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
@@ -133,10 +133,12 @@ export function endRun(win) {
   const xp = accountXp({ kills: run.kills, seconds: run.time, win, firstClear }), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
+  // Fähigkeiten-XP durch Benutzen
+  const abil = Object.entries(run.abXp).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, next: win && run.si + 1 < STAGES.length, xp, level: save.profile.level, up, unlocked };
+  run.result = { win, bonus, gold: run.gold + bonus, next: win && run.si + 1 < STAGES.length, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
 }
 

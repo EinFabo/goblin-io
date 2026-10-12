@@ -506,6 +506,24 @@ Jede Fähigkeit lässt sich mit **Karten + Gold** aufwerten (Abschnitt 9.3). Stu
 - Goblin-Maschine Lv5: Flammenwerfer statt MG; Lv10: 2 Raketensalven gleichzeitig.
 - Rolle: Lv5 zwei Aufladungen; Lv10 Rolle hinterlässt Krähenfüße.
 
+### 8.4 Fähigkeiten-Level und Skill Trees (Wunsch Fabi, 2026-10-12)
+
+Ersetzt das Aufwerten von Fähigkeiten mit Karten + Gold aus 8.3/9.3. Karten gibt es nur noch für Waffen und Passive.
+
+- **XP durch Benutzen:** Jeder Einsatz bringt der Fähigkeit XP. Die Menge hängt von der Aufladung ab, damit ein voller Lauf (Fähigkeit eingesetzt, sobald bereit) jeder Fähigkeit etwa gleich viel bringt (~100 XP). Gutgeschrieben wird am Ende des Laufs, auch bei Niederlage.
+- **Level:** Bedarf 60 + 40 × Level, höchstens Level 18. Jedes Level = 1 Skillpunkt.
+- **Skill Tree je Fähigkeit:**
+
+| Stufe | Knoten | Ränge | Wirkung pro Rang |
+|---|---|---|---|
+| unten | Kraft | 5 | +8 % Schaden/Heilung/Schild |
+| unten | Tempo | 5 | −5 % Abklingzeit bzw. Kill-/Schrott-Bedarf |
+| unten | Reichweite | 3 | +8 % Fläche bzw. Dauer |
+| Mitte (ab 3 Punkten unten) | Extra A | 1 (2 Punkte) | eigenes Extra der Fähigkeit |
+| oben (ab 6 Punkten unten) | Extra B | 1 (2 Punkte) | stärkeres eigenes Extra |
+
+Voll ausgebaut sind das 17 Punkte. Punkte lassen sich jederzeit kostenlos zurücksetzen.
+
 ---
 
 ## 9. Meta-Fortschritt: Profil, Karten, Truhen, Shop, Kosmetik
@@ -818,8 +836,13 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 - Neue Spieler haben bis Konto-Level 3 nur einen Slot (vorher immer Wut + Maschine). Ein erster Sieg auf Stage 1 bringt ~390 XP, Level 3 ist nach 2–3 Läufen erreicht.
 
 ### Phase 5 – Meta: Profil, Karten, Talente
+- [x] Fähigkeiten-XP und Skill Trees (8.4)
+  - Skill Tree über den Knopf „Skill Tree“ an jeder Fähigkeit im Ausrüstungs-Screen; die Karte zeigt Level und XP-Balken, im Ergebnis steht „+XP · Level N! +1 Skillpunkt“.
+  - Gespeichert in `save.abilities`. Baum-Werte gelten für den ganzen Lauf (`run.abMods`), XP wird am Laufende gutgeschrieben (auch bei Niederlage).
+  - Balance: ohne gelernte Punkte unverändert (Stage 3 mit Upgrades 74 %). Ein voll ausgebauter Baum (+40 % Kraft, −25 % Abklingzeit, Extras) macht eine Fähigkeit deutlich stärker – das ist der Langzeit-Fortschritt und muss mit den Zielwerten in Phase 8 noch einmal geprüft werden.
+  - Der Ausrüstungs-Screen bleibt vorerst vor jedem Lauf; Fabi schaut sich an, ob er in den Hub wandern soll.
 - [ ] Profil, Konto-Level, Statistiken
-- [ ] Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3)
+- [ ] Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3) – nur Waffen und Passive
 - [ ] Talente statt Werkstatt (9.4)
 - [ ] Hub mit Tab-Leiste (10.1)
 

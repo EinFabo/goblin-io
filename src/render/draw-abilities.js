@@ -47,7 +47,7 @@ export function drawAbilTop(t) {
     ctx.restore();
   }
   if (P.shieldT > 0) {
-    const a = Math.min(1, P.shieldT / .4), f = P.shieldHp / (P.maxHp * .4);
+    const a = Math.min(1, P.shieldT / .4), f = P.shieldHp / P.shieldMax;
     ctx.strokeStyle = `rgba(210,220,230,${(.5 + .3 * f) * a})`; ctx.lineWidth = 3 + 2 * f;
     ctx.fillStyle = `rgba(190,205,215,${.12 * a})`;
     ctx.beginPath(); ctx.ellipse(P.x, P.y - 10, 30, 34, 0, 0, TAU); ctx.fill(); ctx.stroke();

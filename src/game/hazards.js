@@ -18,7 +18,7 @@ export function updTele(dt) {
     } else if (t.k === 'boulder') {
       // Katapult-Fels: fliegt im Bogen, schlägt ein
       t.t += dt;
-      if (t.t >= t.dur) { explode(t.x, t.y, t.rad, t.dmg, 'fire'); run.shake = Math.max(run.shake, 7); t.done = true; for (let i = 0; i < 10; i++) part(t.x, t.y, frand(-120, 120), frand(-140, -20), .5, i % 2 ? '#8a7a66' : '#5d5246', 5); }
+      if (t.t >= t.dur) { explode(t.x, t.y, t.rad, t.dmg, 'fire'); run.shake = Math.max(run.shake, 7); t.done = true; if (t.burn) run.zones.push({ k: 'burn', x: t.x, y: t.y, r: t.rad * .65, t: 2.6, dur: 2.6, tick: 0, dmg: t.dmg * .12 }); for (let i = 0; i < 10; i++) part(t.x, t.y, frand(-120, 120), frand(-140, -20), .5, i % 2 ? '#8a7a66' : '#5d5246', 5); }
     } else if (t.k === 'flask') {
       t.t += dt;
       if (t.t >= t.dur) { run.zones.push({ k: 'poison', x: t.x, y: t.y, r: t.rad, t: t.zdur, dur: t.zdur, tick: 0, dmg: t.dmg }); t.done = true; for (let i = 0; i < 8; i++) part(t.x, t.y, frand(-80, 80), frand(-90, -20), .5, 'rgba(140,230,80,.9)', 5); }

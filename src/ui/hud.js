@@ -38,7 +38,7 @@ export function updHud(dt) {
 const abilActive = id => id === 'rage' ? P.rageT > 0 : id === 'mech' ? P.mechT > 0 : id === 'smoke' ? P.smokeT > 0 : id === 'shield' ? P.shieldT > 0 : id === 'totem' ? run.goldT > 0 : false;
 function abilFill(s) {
   if (s.id === 'mech' && P.mechT > 0) return P.mechT / P.mechMax;
-  if (s.id === 'shield' && P.shieldT > 0) return P.shieldHp / (P.maxHp * .4);
+  if (s.id === 'shield' && P.shieldT > 0) return P.shieldHp / P.shieldMax;
   return s.ch / s.need;
 }
 // Knöpfe passend zur Ausrüstung beschriften (beim Start eines Laufs)

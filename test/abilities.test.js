@@ -38,3 +38,27 @@ test('Konto-XP nach 14.3', () => {
   assert.equal(accountXpNeed(1), 268);
   for (let l = 2; l < 50; l++) assert.ok(accountXpNeed(l) > accountXpNeed(l - 1));
 });
+
+test('Skill Tree: Punkte, Maximum, Voraussetzungen', async () => {
+  const { canLearn, spentPoints, abilMods, xpPerUse, ABILITY_IDS: ids } = await import('../src/data/abilities.js');
+  const st = { lv: 1, xp: 0, pts: {} };
+  assert.ok(!canLearn(st, 'pow'), 'Level 1 hat keine Punkte');
+  st.lv = 4; assert.ok(canLearn(st, 'pow'));
+  assert.ok(!canLearn(st, 'a'), 'Extra A braucht 3 Punkte unten');
+  st.pts = { pow: 3 }; assert.ok(!canLearn(st, 'a'), 'keine Punkte mehr frei');
+  st.lv = 6; assert.ok(canLearn(st, 'a'));
+  st.pts = { pow: 5 }; assert.ok(!canLearn(st, 'pow'), 'Maximum 5');
+  st.lv = 18; st.pts = { pow: 5, cd: 5, area: 3, a: 1, b: 1 };
+  assert.equal(spentPoints(st.pts), 17);
+  const m = abilMods(st);
+  assert.ok(Math.abs(m.pow - 1.4) < 1e-9 && Math.abs(m.spd - .75) < 1e-9 && Math.abs(m.area - 1.24) < 1e-9 && m.a && m.b);
+  for (const id of ids) assert.ok(xpPerUse(id) >= 2, id);
+});
+
+test('Fähigkeiten-Stand im Spielstand wird repariert', () => {
+  const s = normalize({ abilities: { trap: { lv: 5, xp: 30, pts: { pow: 2, cd: 2 } }, gibtsnicht: { lv: 3 }, rage: { lv: 2, pts: { pow: 5 } }, mech: 'kaputt' } });
+  assert.deepEqual(s.abilities.trap, { lv: 5, xp: 30, pts: { pow: 2, cd: 2 } });
+  assert.equal(s.abilities.gibtsnicht, undefined);
+  assert.deepEqual(s.abilities.rage.pts, {}, 'mehr Punkte als Level → zurückgesetzt');
+  assert.deepEqual(s.abilities.mech, { lv: 1, xp: 0, pts: {} });
+});

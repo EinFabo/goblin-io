@@ -19,7 +19,7 @@ export async function startStage(si) {
   go('run', { si });
 }
 const SCREENS = ['#menu', '#stages', '#loadout', '#shop', '#howto'];
-const OVERLAYS = ['#levelup', '#pause', '#over'];
+const OVERLAYS = ['#levelup', '#pause', '#over', '#tree'];
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
 export function showScreen(id) {
   for (const s of SCREENS) $(s).hidden = s !== id;
