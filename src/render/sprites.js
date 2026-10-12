@@ -26,14 +26,43 @@ function raster(im, svg, flip = false, scale = 0) {
   CACHE.push(e);
   return e;
 }
-export async function loadAssets() {
-  const imgs = await Promise.all(SVGS.map(s => loadImg(svgUrl(s))));
-  const fixed = imgs.map((im, i) => raster(im, SVGS[i]));
-  for (const [name, i] of Object.entries(SPRMAP)) SPR[name] = fixed[i];
-  await Promise.all([loadGoblin(DEFAULT_LOOK), loadFx()]);
-  await loadMenuMages();
-  GRASS_IMG = await loadImg(GRASS);
-  makeProc();
+// Dem Browser kurz Luft lassen, damit der Ladebildschirm zwischen den Schritten weiter animiert
+const breathe = () => new Promise(r => setTimeout(r, 0));
+
+// Alles laden, was das Spiel braucht. onStep(Anteil 0…1, Text) meldet den Fortschritt.
+// Erst die Lauf-Bilder des Goblins (für den Ladebildschirm), dann der Rest, zuletzt alle Magier –
+// danach lädt nichts mehr im Hintergrund nach und das Menü ruckelt nicht.
+export async function loadAssets(onStep = () => {}, wantStage = () => true) {
+  const steps = [
+    ['Goblin schnürt die Stiefel …', 1, () => loadGoblinRun()],
+    ['Waffen werden geschliffen …', 2, async () => {
+      const imgs = await Promise.all(SVGS.map(s => loadImg(svgUrl(s))));
+      const fixed = imgs.map((im, i) => raster(im, SVGS[i]));
+      for (const [name, i] of Object.entries(SPRMAP)) SPR[name] = fixed[i];
+    }],
+    ['Feuerbälle werden geknetet …', 2, () => loadFx()],
+    ['Goblin übt Rollen …', 5, () => loadGoblin(DEFAULT_LOOK)],
+    ['Wiese wird gemäht …', 1, async () => { GRASS_IMG = await loadImg(GRASS); makeProc(); }],
+    ['Magier ziehen ihre Roben an …', 3, () => loadMenuMages()],
+    // nur freigeschaltete Stages; der Rest lädt beim ersten Start der Stage
+    ...STAGES.map((st, si) => [`Magier für ${st.name} …`, 3, () => ensureStage(si)]).filter((_, si) => wantStage(si)),
+  ];
+  const total = steps.reduce((a, s) => a + s[1], 0);
+  let done = 0;
+  for (const [txt, w, fn] of steps) {
+    onStep(done / total, txt);
+    await fn(); await breathe();
+    done += w;
+  }
+  onStep(1, 'Fertig!');
+}
+// Nur Sprint (seitlich) und ein Magier zum Hinterherlaufen – reicht für den Ladebildschirm
+async function loadGoblinRun() {
+  const jobs = [];
+  for (let i = 0; i < ANIMS.sprint; i++) jobs.push([i, goblinSvg('left', 'sprint', i, DEFAULT_LOOK)]);
+  const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[1]))));
+  jobs.forEach(([i, svg], j) => { SPR[`gob.sprint.right.${i + 1}`] = raster(imgs[j], svg, true); });
+  await loadUnit('fire', 'walk');
 }
 
 // Goblin aus dem Generator: gob.<anim>.<richtung>.<n> für alle 8 Richtungen.
@@ -122,7 +151,7 @@ export const MENU_MAGES = ['fire', 'frost', 'storm', 'toxic', 'shadow', 'light',
 export async function loadMenuMages() {
   await Promise.all([...MENU_MAGES.map(k => loadUnit(k, 'walk')), ...STAGES.map(st => loadUnit(st.boss.school + '.m', 'idle'))]);
 }
-// Rest nacheinander im Hintergrund, damit das Menü flüssig bleibt
+// Alle Stages (für Bot und Tests; im Spiel lädt eine gesperrte Stage erst beim ersten Start)
 export async function preloadAllMages() {
   for (let si = 0; si < STAGES.length; si++) await ensureStage(si);
 }

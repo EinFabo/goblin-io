@@ -13,10 +13,10 @@ import { cleanLoadout, renderArmory } from './armory.js';
 // ---------- Menüs ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
 export async function startStage(si) {
-  const t = setTimeout(() => { $('#loading').textContent = 'Lade Magier …'; $('#loading').hidden = false; }, 120);
+  const t = setTimeout(() => { $('#loadMsg').textContent = 'Lade Magier …'; $('#loading').classList.add('solo'); $('#loading').hidden = false; }, 120);
   cleanLoadout();
   await ensureStage(si);
-  clearTimeout(t); $('#loading').hidden = true;
+  clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
   go('run', { si });
 }
 const SCREENS = ['#menu', '#stages', '#armory', '#shop', '#howto'];

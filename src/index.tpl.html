@@ -155,7 +155,12 @@
   </div>
 </div>
 
-<div id="loading">Lade Goblin …</div>
+<div id="loading" role="status" aria-live="polite">
+  <h1 class="logo">Goblin<span>.io</span></h1>
+  <div class="loadbar"><i id="loadFill"></i></div>
+  <p id="loadMsg">Goblin wacht auf …</p>
+  <p class="loadtip" id="loadTip"></p>
+</div>
 
 <script>/*ASSETS*/</script>
 <script>/*GAME*/</script>

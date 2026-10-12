@@ -304,6 +304,14 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 .results span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .results b{font-family:var(--font-display);font-weight:400;font-size:26px;font-variant-numeric:tabular-nums}
 
-#loading{position:fixed;inset:0;display:grid;place-items:center;font-family:var(--font-display);font-size:28px;z-index:20;background:var(--moss)}
+/* Ladebildschirm: Logo oben, darunter rennt der Goblin auf dem Canvas, Balken unten */
+#loading{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 7vh) 16px calc(env(safe-area-inset-bottom,0px) + 6vh);pointer-events:none;text-align:center}
+#loading.solo{background:rgba(10,15,6,.75);justify-content:center}
+#loading.solo .logo,#loading.solo .loadbar,#loading.solo .loadtip{display:none}
+#loading .logo{font-size:clamp(52px,13vw,104px)}
+.loadbar{margin-top:auto;width:min(420px,86vw);height:22px;border:3px solid var(--edge);border-radius:12px;background:repeating-linear-gradient(90deg,#4a2d16 0 18px,#3e2612 18px 20px);box-shadow:0 5px 0 var(--edge);overflow:hidden}
+.loadbar i{display:block;height:100%;width:0;background:linear-gradient(180deg,#a6ec6e,var(--leaf) 55%,var(--leaf-d));border-right:3px solid var(--edge);transition:width .25s}
+#loadMsg{margin:14px 0 0;font-family:var(--font-display);font-size:20px;letter-spacing:.02em;text-shadow:0 2px 0 var(--edge)}
+.loadtip{margin:6px 0 0;max-width:42ch;color:var(--muted);font-weight:700;font-size:14px;line-height:1.4;min-height:2.8em}
 
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition:none!important}}

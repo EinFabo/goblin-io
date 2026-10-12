@@ -21,6 +21,6 @@ const api = {
   newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES,
 };
 Object.defineProperties(api, {
-  run: { get: () => run }, allLoaded: { get: () => allLoaded }, P: { get: () => P }, save: { get: () => save }, scene: { get: () => sceneName },
+  run: { get: () => run }, allLoaded: { get: () => allLoaded() }, P: { get: () => P }, save: { get: () => save }, scene: { get: () => sceneName },
 });
 window.GOBLIN = api;
