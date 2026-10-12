@@ -20,8 +20,8 @@ export function newRun(si, seed = newSeed()) {
   seedRun(seed);
   const r = {
     si, st, seed, time: 0, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
-    weapons: [], passives: {}, spawnAcc: 0, ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
-    rerolls: 2 + talent('reroll'), bans: 1, locks: 1, cardN: 3, pendingLv: 0, pendingChest: 0, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
+    weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
+    rerolls: 2 + talent('reroll'), bans: 1, locks: 1, cardN: 3, pendingLv: 0, pendingChest: 0, lowT: 0, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
     hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), ult: 0, rageT: 0, slowT: 0, trail: [], trailT: 0,
@@ -38,9 +38,10 @@ export function newRun(si, seed = newSeed()) {
   if (si === 0 && !stageCleared(0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. Rechts unten: Rolle, Sprint, Wut und Maschine.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q Wut · F Maschine');
   emit('runStart', run);
 }
+// Feste Momente aus dem Wellen-Skript in die Zeitleiste (Endlos: je Runde erneut)
 export function addEvents(loop) {
   const o = loop * STAGE_LEN;
-  run.events.push({ t: o + 60, k: 'elite' }, { t: o + 120, k: 'elite' }, { t: o + 150, k: 'swarm' }, { t: o + 180, k: 'elite' }, { t: o + 222, k: 'warn' }, { t: o + STAGE_LEN, k: 'boss' });
+  for (const w of run.st.waves) if (w.event) run.events.push({ ...w, t: o + w.at });
 }
 export function recalc() {
   const pl = id => run.passives[id] || 0, sh = talent;

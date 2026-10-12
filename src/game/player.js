@@ -2,7 +2,7 @@ import { frand } from '../core/rng.js';
 import { joy, keys, sprintHeld } from '../core/input.js';
 import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
-import { damagePlayer } from './combat.js';
+import { LOW_HP, damagePlayer } from './combat.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { part } from './fx.js';
 import { hint } from './run.js';
@@ -57,6 +57,7 @@ export function updPlayer(dt) {
   }
   P.vx = (P.x - ox) / Math.max(dt, 1e-4); P.vy = (P.y - oy) / Math.max(dt, 1e-4);
   P.inv -= dt; P.dashCd -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
+  if (P.hp < P.maxHp * LOW_HP) run.lowT += dt;
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
   query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {

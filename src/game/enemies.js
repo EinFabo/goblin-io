@@ -2,6 +2,7 @@ import { RNG, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { DIR8, TAU, face8 } from '../core/util.js';
 import { ETYPES, SCHOOL_COL } from '../data/enemies.js';
+import { H, W, ZOOM } from '../render/canvas.js';
 import { MAGE_OFF, U } from '../render/sprites.js';
 import { STAGE_LEN } from '../data/stages.js';
 import { enemyHp } from './balance.js';
@@ -42,10 +43,11 @@ export function spawnEnemy(type, opt = {}) {
     kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, spr: null, dead: false, shield: 0,
   };
   if (opt.mini) { e.sc *= .65; e.r *= .7; e.hp *= .3; e.xp = Math.ceil(e.xp / 3); e.mini = true; }
-  if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; rollAffixes(e); }
+  if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; rollAffixes(e, opt.affixes); }
+  if (opt.miniboss) { e.miniboss = true; e.hp *= 5; e.sc *= 1.3; e.r *= 1.3; e.xp = 40; e.spd *= .9; }
   e.maxHp = e.hp;
   // Sichtbare Spawns kommen durch ein Portal (0,4 s, solange nicht angreifbar)
-  if (opt.x !== undefined || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (onScreen(x, y)) sfx.portal(); }
+  if ((opt.x !== undefined && opt.portal !== false) || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (onScreen(x, y)) sfx.portal(); }
   run.enemies.push(e);
   if (!run.seen.has(type) && T.tip) { run.seen.add(type); if (type !== 'fire_mage' || run.si === 0) hint(`<b>${T.name}</b> ${T.tip}`); }
   return e;
@@ -59,33 +61,79 @@ function spawnGroup(type) {
   }
 }
 
-export function doEvent(ev) {
-  if (ev.k === 'elite') {
-    // Elite: nur normale Magier (Meister mit ×14 Leben wären zu viel)
-    const types = run.st.mix.filter(m => ETYPES[m[0]].role === 'mage' && run.time >= m[2]).map(m => m[0]);
-    const el = spawnEnemy(RNG.spawn.pick(types.length ? types : ['fire_mage']), { elite: true });
-    banner(el.affixes.length ? 'Elite: ' + affixNames(el) + '!' : 'Elite-Magier!', '');
-  } else if (ev.k === 'swarm') {
-    const n = 36, R = viewR() * .85, [main, extra] = run.st.swarm;
-    for (let i = 0; i < n; i++) { const a = i * TAU / n; spawnEnemy(i % 6 === 0 && extra ? extra : main, { x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R }); }
-    banner('Ansturm!', 'danger');
-  } else if (ev.k === 'warn') { banner('Der Boss naht …', 'danger'); sfx.warn(); }
-  else if (ev.k === 'boss') spawnBoss();
+// ---------- Director: Wellen-Skript der Stage (data/stages.js) ----------
+// Lokale Zeit innerhalb der aktuellen Runde (Endlos: jede Runde spielt das Skript erneut)
+const localT = () => run.time - run.loop * STAGE_LEN;
+// Aktive Phase, in Ruhepausen die letzte (für Elite-Typen)
+function phaseAt(t, active) {
+  let cur = null;
+  for (const w of run.st.waves) if (w.mix && w.at <= t) cur = w;
+  return active && cur && t >= cur.at + cur.dur ? null : cur;
 }
+const pickMix = mix => {
+  let tot = 0; for (const k in mix) tot += mix[k];
+  let r = RNG.spawn.next() * tot;
+  for (const k in mix) { r -= mix[k]; if (r <= 0) return k; }
+  return Object.keys(mix)[0];
+};
+
+export function doEvent(ev) {
+  if (ev.event === 'elite') {
+    // Elite: nur normale Magier (Meister mit ×14 Leben wären zu viel)
+    const mix = (phaseAt(localT()) || {}).mix || {};
+    const types = Object.keys(mix).filter(k => ETYPES[k].role === 'mage');
+    const el = spawnEnemy(ev.type || RNG.spawn.pick(types.length ? types : ['fire_mage']), { elite: true, affixes: ev.affixes });
+    banner(el.affixes.length ? 'Elite: ' + affixNames(el) + '!' : 'Elite-Magier!', '');
+  } else if (ev.event === 'miniboss') {
+    const e = spawnEnemy(ev.type, { miniboss: true });
+    banner('Mini-Boss: ' + ETYPES[ev.type].name + '!', 'danger'); sfx.warn();
+    return e;
+  } else if (ev.event === 'swarm') { swarm(ev); banner('Ansturm!', 'danger'); }
+  else if (ev.event === 'warn') { banner('Der Boss naht …', 'danger'); sfx.warn(); }
+  else if (ev.event === 'boss') spawnBoss();
+}
+
+// Schwarm-Formen. Jeder sechste Gegner ist "extra", falls angegeben.
+function swarm({ type, extra, count = 30, shape = 'ring', side }) {
+  const n = Math.round(count * (1 + run.loop * .25)), kind = i => i % 6 === 0 && extra ? extra : type;
+  const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
+  // Linie außerhalb des Bildschirms auf Seite s (0 rechts, 1 unten, 2 links, 3 oben), läuft dann herein
+  const wall = (s, m, k0) => {
+    for (let i = 0; i < m; i++) {
+      const f = m > 1 ? i / (m - 1) * 2 - 1 : 0;
+      const x = s === 0 ? hw + 50 : s === 2 ? -hw - 50 : f * hw * 1.1, y = s === 1 ? hh + 50 : s === 3 ? -hh - 50 : f * hh * 1.1;
+      spawnEnemy(kind(k0 + i), { x: P.x + x, y: P.y + y, portal: false });
+    }
+  };
+  const pickSide = () => side === undefined ? (RNG.spawn.next() * 4) | 0 : side;
+  if (shape === 'ring') {
+    const R = viewR() * .85;
+    for (let i = 0; i < n; i++) { const a = i * TAU / n; spawnEnemy(kind(i), { x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R }); }
+  } else if (shape === 'wall') wall(pickSide(), n, 0);
+  else if (shape === 'pincer') { const s = pickSide() % 2; wall(s, n >> 1, 0); wall(s + 2, n - (n >> 1), n >> 1); }
+  else if (shape === 'stream') {
+    // Strom: über 4 s aus einer Richtung, die Richtung bleibt fest, auch wenn du läufst
+    const a = RNG.spawn.next() * TAU;
+    for (let i = 0; i < n; i++) run.spawnQ.push({ t: run.time + i * 4 / n, type: kind(i), a: a + RNG.spawn.range(-.25, .25) });
+  }
+}
+
 export function spawnTick(dt) {
+  // Warteschlange (Ströme) läuft auch während Ereignissen weiter
+  while (run.spawnQ.length && run.spawnQ[0].t <= run.time) {
+    const q = run.spawnQ.shift(), R = viewR() + 40;
+    if (!run.boss) spawnEnemy(q.type, { x: P.x + Math.cos(q.a) * R, y: P.y + Math.sin(q.a) * R, portal: false });
+  }
   if (run.boss) return;
-  const t = run.time - run.loop * STAGE_LEN;
-  const rate = (.55 + t * .026 + run.loop * 2) * run.st.rate;
+  const t = localT(), w = phaseAt(t, true);
+  if (!w) return;   // Ruhepause
+  const f = (t - w.at) / w.dur, rate = (w.rate[0] + (w.rate[1] - w.rate[0]) * f + run.loop * 2) * run.st.rate;
   const cap = Math.min(280, 70 + t * .9 + run.loop * 60);
   run.spawnAcc += rate * dt;
   while (run.spawnAcc >= 1) {
     run.spawnAcc -= 1;
     if (run.enemies.length >= cap) continue;
-    const opts = run.st.mix.filter(m => t >= m[2] || run.loop > 0);
-    let tot = 0; for (const m of opts) tot += m[1];
-    let r = RNG.spawn.next() * tot, type = opts[0][0];
-    for (const m of opts) { r -= m[1]; if (r <= 0) { type = m[0]; break; } }
-    spawnGroup(type);
+    spawnGroup(pickMix(w.mix));
   }
 }
 
@@ -164,7 +212,7 @@ export function updEnemy(e, dt) {
     if (c.t > 0 || e.state === 'cast') continue;
     if (d < c.range && onScreen(e.x, e.y, -20)) { if (castAllowed(e, c)) startCast(e, c); else c.t = .6; }
   }
-  if (d > viewR() * 1.9 && !e.elite) { e.px = e.x = P.x + dx / d * viewR() * 1.1; e.py = e.y = P.y + dy / d * viewR() * 1.1; }
+  if (d > viewR() * 1.9 && !e.elite && !e.miniboss) { e.px = e.x = P.x + dx / d * viewR() * 1.1; e.py = e.y = P.y + dy / d * viewR() * 1.1; }
 }
 
 // Objekte: Portal spuckt Lehrlinge, Knochenhaufen steht wieder auf

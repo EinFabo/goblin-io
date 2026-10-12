@@ -29,12 +29,13 @@ export function kill(e) {
   if (!e.boss) { P.ult = Math.min(P.ultNeed, P.ult + 1); if (P.mechT <= 0) P.scrap = Math.min(100, P.scrap + .35); }
   dropGem(e.x, e.y, e.xp);
   dissolve(e);
-  if (e.elite) run.hitstop = Math.max(run.hitstop, .04);
+  if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);
   if (e.boss) run.hitstop = Math.max(run.hitstop, .08);
   sfx.kill();
   if (e.bomber && !e.boomed) bomberBoom(e, false);
   deathRules(e);
-  if (e.elite) { for (let i = 0; i < 8; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y); }
+  if (e.miniboss) { for (let i = 0; i < 12; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'mini'); healPity(e); }
+  else if (e.elite) { for (let i = 0; i < 8; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'elite'); healPity(e); }
   else if (!e.boss) {
     const r = RNG.loot.next();
     if (r < .05) addItem('coin', e.x, e.y);
@@ -44,12 +45,15 @@ export function kill(e) {
   }
   if (e.boss) bossDown(e);
 }
+// Heilungs-Pity (7.5): wer 20 s unter 30 % Leben war, bekommt vom nächsten Elite/Mini-Boss garantiert ein Herz
+export const LOW_HP = .3, LOW_T = 20;
+function healPity(e) { if (run.lowT >= LOW_T) { run.lowT = 0; addItem('heal', e.x, e.y); } }
 export function bossDown(b) {
   run.boss = null; run.arena = null; emit('bossDown', b);
   $('#bossBar').hidden = true;
   for (let i = 0; i < 25; i++) addItem('coin', b.x, b.y);
   for (let i = 0; i < 6; i++) setTimeout(() => { if (run && !run.over) { animFx('f_fireball_hit_', 5, b.x + frand(-60, 60), b.y + frand(-60, 60), 3.5); sfx.boom(); } }, i * 150);
-  addItem('chest', b.x, b.y);
+  addItem('chest', b.x, b.y, 'boss');
   run.shake = 18; run.haz.length = 0;
   banner(b.name + ' besiegt!', '');
   if (run.st.endless) { run.loop++; addEvents(run.loop); }

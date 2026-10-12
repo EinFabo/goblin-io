@@ -2,6 +2,7 @@ import { frand } from '../core/rng.js';
 import { sfx, tickGemCombo } from '../core/audio.js';
 import { $, TAU } from '../core/util.js';
 import { xpCatchUp } from './balance.js';
+import { autoChest } from './levelup.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
 import { P, onScreen, pR, run, xpNeed } from './state.js';
@@ -49,7 +50,8 @@ export function collect(it) {
     case 'bomb':
       for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999);
       run.flashT = .3; run.shake = 14; sfx.boom(); sfx.ult(); break;
-    case 'chest': run.pendingChest++; break;
+    // Truhen mit festem Inhalt (7.5): Mini-Boss = Wahl aus 3, Elite = 1 Aufwertung, Boss = 3 Aufwertungen
+    case 'chest': if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1); else run.pendingChest++; break;
   }
 }
 export function addXp(v) {

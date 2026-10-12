@@ -233,9 +233,9 @@ export function drawGem(it, bob) {
   }
 }
 export function drawEnemy(e, t) {
-  if (e.elite || e.boss) {
+  if (e.elite || e.boss || e.miniboss) {
     const R = e.r * 1.6 + Math.sin(t * 5) * 3;
-    ctx.fillStyle = e.boss ? 'rgba(255,60,60,.28)' : 'rgba(255,210,60,.3)';
+    ctx.fillStyle = e.elite ? 'rgba(255,210,60,.3)' : e.boss ? 'rgba(255,60,60,.28)' : 'rgba(200,90,255,.3)';
     ctx.beginPath(); ctx.ellipse(e.x, e.y + 26 * e.sc, R, R * .4, 0, 0, TAU); ctx.fill();
   } else if (e.type === 'light_apprentice') { ctx.fillStyle = `rgba(160,255,150,${.18 + .08 * Math.sin(t * 4)})`; ctx.beginPath(); ctx.ellipse(e.x, e.y + 24 * e.sc, 26, 10, 0, 0, TAU); ctx.fill(); }
   else if (e.type === 'shadow_apprentice') { ctx.fillStyle = 'rgba(140,60,220,.25)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 24 * e.sc, 24, 9, 0, 0, TAU); ctx.fill(); }

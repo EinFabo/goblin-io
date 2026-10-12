@@ -750,12 +750,38 @@ Jede Phase endet mit einem spielbaren Stand. Die Reihenfolge ist so gewählt, da
 - Der Lich holt Geister aus "Gräbern" (Orte, an denen zuletzt Magier starben).
 - Balance (Bot, 60 Hz, je 60–100 Läufe): Stage 1 100 %, 2 98 %, 3 15–22 %, 3+Werkstatt 49–58 %, 4+Werkstatt 25–30 % (vorher 12 %), 5+Werkstatt 0 % (vorher 3–5 %). Stage 4 ist also leichter, Stage 5 schwerer geworden → in Phase 3 mit Wellen-Skripten und Kraftkurve angleichen. In Stage 4 machen Giftpfützen den meisten Schaden.
 
-### Phase 3 – Balancing-System
-- [ ] Level-Up-Regeln (7.2) inkl. Bannen und Sperren
-- [ ] Kraftkurve, XP-Aufholregel, Gegner-HP-Formel (7.3) in `balance.js`
-- [ ] Wellen-Skripte für alle Stages (7.4)
-- [ ] Sicherheitsnetze (7.5)
-- [ ] Simulationen gegen die Zielwerte (7.6), Bericht als Tabelle
+### Phase 3 – Balancing-System ✅ erledigt 2026-10-12
+- [x] Level-Up-Regeln (7.2) inkl. Bannen und Sperren
+- [x] Kraftkurve, XP-Aufholregel, Gegner-HP-Formel (7.3) in `balance.js`
+- [x] Wellen-Skripte für alle Stages (7.4)
+- [x] Sicherheitsnetze (7.5) – bis auf die Wiederbelebung (siehe unten)
+- [x] Simulationen gegen die Zielwerte (7.6), Bericht als Tabelle
+
+**Umsetzung:**
+- `src/game/offer.js`: Level-Up-Regeln als reine Funktionen (Reihenfolge: gesperrte Karte, Entwicklung, Startphase, Fokus, Pity-Passiv, Rest gewichtet). Jede Karte trägt ein `why`; "Gesperrt" und "Passt zu deiner Waffe" stehen auf der Karte. `test/levelup.test.js` prüft die Garantien in 10 000 Zufallsläufen.
+- Level-Up-Fenster: Neu würfeln (R), Bannen (B), Sperren (L), Überspringen mit +15 Gold oder +20 % Leben. Bannen/Sperren: erst Knopf, dann Karte. Eine vierte Karte geht schon (`run.cardN`), freigeschaltet wird sie in Phase 5.
+- `src/game/balance.js`: Ziel-Level, XP-Aufholregel, `enemyHp` mit `STAGE_HP`, Schadensdeckel je Art (Kontakt 8 %, Geschoss 12 %, alles andere 25 %). `stages.js` hat kein eigenes `hp` mehr.
+- `src/data/stages.js`: Wellen-Skripte aus Phasen (`ph`) und Ereignissen (`ev`), 4–7 s Ruhe zwischen Phasen. Neu: Mini-Boss bei 2:00 (Meister mit ×5 Leben, violette Aura, Truhe), Schwarm-Formen ring/wall/stream/pincer. Endlos spielt das Skript je Runde erneut (+2/s Spawnrate, +25 % Schwarmgröße pro Runde).
+- Truhen: Mini-Boss = Wahl aus 3, Elite = 1 Aufwertung, Boss = 3 Aufwertungen (automatisch, mit Banner). Heilungs-Pity: 20 s unter 30 % Leben (aufsummiert) → nächster Elite/Mini-Boss lässt ein Herz fallen.
+- Simulation: `npm run sim` spielt jede Stage ohne und mit erwarteten Upgrades (`sim/expected-progress.js`) und zeigt Ziel und ✓/↑/↓. Läuft parallel (`--par`, Standard 3) und nimmt nie mehr Seiten, als freier Speicher da ist: Am 2026-10-12 hat `--par 6` WSL per OOM-Kill komplett abstürzen lassen. WSL hat jetzt 8 GB.
+
+**Ergebnis** (Bot "Normal", 60 Hz, je 100 Läufe; Streuung ca. ±7 Punkte):
+
+| Stage | ohne Upgrades | Ziel | mit erwarteten | Ziel |
+|---|---|---|---|---|
+| 1 | 100 % | ≥ 85 % ✓ | – | |
+| 2 | 100 % | ≥ 60 % ✓ | 100 % | ≥ 90 % ✓ |
+| 3 | 30 % | 20–40 % ✓ | 72 % | 75–85 % (knapp) |
+| 4 | 35 % | 20–40 % ✓ | 97 % | 75–85 % ✗ zu leicht |
+| 5 | 4 % | < 15 % ✓ | 66 % | 65–75 % ✓ |
+
+Stellschrauben je Stage: `dmg` und `rate` (Stage 3: 1,5/1,32 · 4: 1,8/1,58 · 5: 1,2/1,05).
+
+**Abweichungen / Hinweise für später:**
+- Stage 4 mit Upgrades ist zu leicht, und dichtere späte Wellen ändern daran nichts. Die Werkstatt-Stufen sind sehr stark (hp=6 sind +72 Leben), und die Bosse sterben in ~12 s statt in ~60 s. Lösung in Phase 5 (Talente statt Werkstatt, Erwartungstabelle neu) und Phase 7 (`bossHp` nach 14.3).
+- Time-to-Kill (0,6–1,0 s) wird noch nicht gemessen; eingestellt ist nach Siegquoten.
+- Wiederbelebung (Goblin-Amulett) fehlt noch → Phase 4 als Fähigkeit.
+- Drei Bot-Stärken (12.1) gibt es noch nicht, nur "Normal".
 
 ### Phase 4 – Fähigkeiten
 - [ ] 2 Slots + Loadout-Screen

@@ -4,7 +4,7 @@ import { MAGE_ANIMS, castOffsets, mageSvg } from '../gen/mages.js';
 import { MINION_ANIMS, minionSvg } from '../gen/minions.js';
 import { FX_KINDS, fxHitSvg, fxSvg } from '../gen/fx.js';
 import { ETYPES } from '../data/enemies.js';
-import { STAGES } from '../data/stages.js';
+import { STAGES, stageTypes } from '../data/stages.js';
 import { makeProc } from './proc.js';
 
 // ---------- Sprites ----------
@@ -108,7 +108,7 @@ function typeNeeds(type, out = { mages: new Set(), minions: new Set() }, seen = 
 }
 function stageNeeds(si) {
   const st = STAGES[si], out = { mages: new Set([st.boss.school + '.m']), minions: new Set() }, seen = new Set();
-  for (const t of [...st.mix.map(m => m[0]), ...st.swarm.filter(Boolean), st.boss.minion]) typeNeeds(t, out, seen);
+  for (const t of stageTypes(st)) typeNeeds(t, out, seen);
   return out;
 }
 export const stageMageKeys = si => [...stageNeeds(si).mages];

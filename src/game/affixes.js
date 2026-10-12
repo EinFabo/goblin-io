@@ -17,7 +17,8 @@ export const AFFIXES = {
 export const hasAffix = (e, a) => !!(e.affixes && e.affixes.includes(a));
 export const affixCount = () => (run.st.endless || run.loop > 0 ? 2 : run.si >= 2 ? 1 : 0);
 
-export function rollAffixes(e, n = affixCount()) {
+export function rollAffixes(e, n) {
+  if (n === undefined) n = affixCount();
   const pool = Object.keys(AFFIXES), out = [];
   while (out.length < n) { const a = RNG.spawn.pick(pool); if (!out.includes(a)) out.push(a); }
   e.affixes = out;
