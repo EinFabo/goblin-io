@@ -106,6 +106,8 @@ function renderNodes() {
       ${done && !n.endless ? '<span class="flag"></span>' : ''}${!n.endless && open ? hatsHtml(hats) : ''}</button>`;
   }).join('');
 }
+// Markierung umsetzen, ohne die Punkte neu aufzubauen (sonst spielt ihre Einblend-Animation erneut)
+function markSel() { document.querySelectorAll('#mapNodes .mnode').forEach((b, i) => b.classList.toggle('sel', i === M.gob.sel)); }
 function renderNote(show = true) {
   const n = M.nodes[M.gob.sel], note = $('#lvNote');
   if (!show || !n) { note.hidden = true; return; }
@@ -129,12 +131,12 @@ function renderNote(show = true) {
 // Goblin zu Punkt i schicken (nur über freie Wegstücke)
 function goTo(i) {
   const n = M.nodes[i]; if (!n) return;
-  if (!nodeOpen(n)) { M.gob.sel = i; sfx.buzz(); renderNodes(); renderNote(); return; }
+  if (!nodeOpen(n)) { M.gob.sel = i; sfx.buzz(); markSel(); renderNote(); return; }
   if (M.reveal) return;
   if (i === M.gob.sel && Math.abs(M.gob.d - n.d) < 1) { renderNote(); return; }
   M.gob.sel = i; M.gob.to = n.d; sfx.hover();
   save.map = { si: n.si, li: n.li, fresh: false }; persist();
-  renderNodes(); renderNote(false);
+  markSel(); renderNote(false);
 }
 function stepNode(d) {
   let i = M.gob.sel + d;
@@ -142,6 +144,7 @@ function stepNode(d) {
   if (i < 0 || i >= M.nodes.length) { sfx.buzz(); return; }
   goTo(i);
 }
+let popT = 0;
 function switchWorld(d) {
   const w = M.wi + d; if (w < 0 || w >= WORLDS.length) return;
   M.wi = w; sfx.tab();
@@ -152,6 +155,7 @@ function switchWorld(d) {
   M.gob.sel = sel; M.gob.d = M.gob.to = M.nodes[sel].d; M.reveal = null; M.open = openDist();
   if (stageUnlocked(worldSi())) { save.map = { si: M.nodes[sel].si, li: M.nodes[sel].li, fresh: false }; persist(); }
   $('#mapNodes').classList.remove('pop'); void $('#mapNodes').offsetWidth; $('#mapNodes').classList.add('pop');
+  clearTimeout(popT); popT = setTimeout(() => $('#mapNodes').classList.remove('pop'), 500);
   renderNodes(); renderNote();
 }
 

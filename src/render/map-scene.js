@@ -1,4 +1,4 @@
-import { face8 } from '../core/util.js';
+import { $, face8 } from '../core/util.js';
 import { WORLDS } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
 import { stageUnlocked } from '../core/save.js';
@@ -67,7 +67,12 @@ export function renderMapScene(t, dt) {
     if (g.walking && g.vx !== undefined) g.face = face8(g.vx, g.vy, g.face);
     else if (!g.walking) g.face = 'down';
     const e = g.walking ? SPR[`gob.walk.${g.face}.${(Math.floor(g.at * 12) % 6) + 1}`] : SPR[`gob.idle.down.${(Math.floor(t * 5) % 4) + 1}`];
-    ctx.fillStyle = 'rgba(10,15,6,.35)'; ctx.beginPath(); ctx.ellipse(p.x, p.y - 22, 20, 7, 0, 0, 7); ctx.fill();
-    if (e) img(e, p.x, p.y - 58, 84);
-  } else { ctx.fillStyle = 'rgba(40,44,48,.45)'; ctx.fillRect(0, 0, cv.width, cv.height); }
+    // Der Goblin hat eine eigene Ebene über den Level-Punkten (DOM), damit er vor den Siegeln steht
+    const gc = $('#mapGob'), g2 = gc.getContext('2d'), S = gc.width;
+    gc.hidden = false;
+    gc.style.transform = `translate(${p.x - 48}px,${p.y - 106}px)`;
+    g2.clearRect(0, 0, S, S);
+    g2.fillStyle = 'rgba(10,15,6,.35)'; g2.beginPath(); g2.ellipse(S / 2, S * .86, S * .2, S * .07, 0, 0, 7); g2.fill();
+    if (e) { g2.save(); g2.translate(S / 2, S * .5); if (e.flip) g2.scale(-1, 1); g2.drawImage(e.c, -S * .44, -S * .44, S * .88, S * .88); g2.restore(); }
+  } else { $('#mapGob').hidden = true; ctx.fillStyle = 'rgba(40,44,48,.45)'; ctx.fillRect(0, 0, cv.width, cv.height); }
 }
