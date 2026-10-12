@@ -10,12 +10,13 @@ import { doDash, doUlt, startMech } from './game/abilities.js';
 import { applyChoice, genChoices } from './game/levelup.js';
 import { newRun, update } from './game/run.js';
 import { P, run } from './game/state.js';
+import { allLoaded } from './scenes/boot.js';
 
 const api = {
   STEP, STAGES, events, joy, keys, RNG,
   newRun, update, genChoices, applyChoice, doDash, doUlt, startMech, go, setSave,
 };
 Object.defineProperties(api, {
-  run: { get: () => run }, P: { get: () => P }, save: { get: () => save }, scene: { get: () => sceneName },
+  run: { get: () => run }, allLoaded: { get: () => allLoaded }, P: { get: () => P }, save: { get: () => save }, scene: { get: () => sceneName },
 });
 window.GOBLIN = api;

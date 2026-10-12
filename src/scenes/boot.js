@@ -2,8 +2,11 @@ import { defineScene, go } from '../core/scenes.js';
 import { save } from '../core/save.js';
 import { $ } from '../core/util.js';
 import { icon } from '../render/icons.js';
-import { loadAssets } from '../render/sprites.js';
+import { loadAssets, preloadAllMages } from '../render/sprites.js';
 import { setMusic, setMute } from '../ui/settings.js';
+
+// Promise, das erfüllt ist, sobald alle Magier geladen sind (für Bot und Tests)
+export let allLoaded = null;
 
 defineScene('boot', {
   async enter() {
@@ -13,6 +16,7 @@ defineScene('boot', {
     setMute(save.settings.mute); setMusic(save.settings.musicOff);
     $('#loading').hidden = true;
     go('menu');
+    allLoaded = preloadAllMages();
   },
   render() {},
 });

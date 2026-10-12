@@ -5,11 +5,18 @@ import { $, fmtTime } from '../core/util.js';
 import { SHOP, shopCost } from '../data/shop.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from '../render/icons.js';
-import { SPR, tinted } from '../render/sprites.js';
+import { SPR, ensureStage, tinted } from '../render/sprites.js';
 import { stageTile } from '../render/tiles.js';
 import { setMusic, setMute } from './settings.js';
 
 // ---------- Menüs ----------
+// Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
+export async function startStage(si) {
+  const t = setTimeout(() => { $('#loading').textContent = 'Lade Magier …'; $('#loading').hidden = false; }, 120);
+  await ensureStage(si);
+  clearTimeout(t); $('#loading').hidden = true;
+  go('run', { si });
+}
 const SCREENS = ['#menu', '#stages', '#shop', '#howto'];
 const OVERLAYS = ['#levelup', '#pause', '#over'];
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
@@ -30,11 +37,11 @@ export function renderStages() {
       <div class="info"><b>${st.name}</b><small>${locked ? 'Gesperrt. Schaffe zuerst Stage ' + i + '.' : st.sub}</small>${best ? `<small>${best}</small>` : ''}</div>`;
     const tc = document.createElement('canvas'); tc.width = 300; tc.height = 110;
     const tg = tc.getContext('2d'); tg.drawImage(stageTile(i).c, 0, 60, 300, 110, 0, 0, 300, 110);
-    const e = SPR[st.boss.pre + 'idle_left_1'];
+    const e = SPR[`m.${st.boss.school}.m.idle.left.1`];
     if (e) tg.drawImage(st.boss.tint ? tinted(e, st.boss.tint) : e.c, 190, -6, 120, 120);
     if (SPR.idle_right_1) tg.drawImage(SPR.idle_right_1.c, 100, 18, 90, 90);
     b.querySelector('.thumb').prepend(tc);
-    b.addEventListener('click', () => { audioInit(); sfx.pickCard(); go('run', { si: i }); });
+    b.addEventListener('click', () => { audioInit(); sfx.pickCard(); startStage(i); });
     g.appendChild(b);
   });
 }

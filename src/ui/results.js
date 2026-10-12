@@ -1,4 +1,5 @@
 import { go } from '../core/scenes.js';
+import { startStage } from './menus.js';
 import { $, fmtTime } from '../core/util.js';
 import { P, run } from '../game/state.js';
 
@@ -13,6 +14,6 @@ export function showResults(r) {
   showT = setTimeout(() => { $('#over').hidden = false; }, r.win ? 200 : 700);
 }
 export function hideResults() { clearTimeout(showT); $('#over').hidden = true; }
-$('#againBtn').addEventListener('click', () => go('run', { si: run.si }));
-$('#nextBtn').addEventListener('click', () => go('run', { si: run.si + 1 }));
+$('#againBtn').addEventListener('click', () => startStage(run.si));
+$('#nextBtn').addEventListener('click', () => startStage(run.si + 1));
 $('#menuBtn').addEventListener('click', () => go('menu'));

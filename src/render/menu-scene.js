@@ -1,4 +1,4 @@
-import { $, TAU, faceOf } from '../core/util.js';
+import { $, TAU, face8 } from '../core/util.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawSpr } from './canvas.js';
 import { drawGround } from './tiles.js';
 import { SPR } from './sprites.js';
@@ -14,14 +14,15 @@ export function renderMenuScene(t) {
   const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
   drawGround(0, cx - hw, cy - hh, hw * 2, hh * 2);
   if (!demo.length) {
-    const kinds = [['f_', null], ['e_', null], ['e_', 'storm'], ['f_', 'toxic'], ['e_', 'void'], ['e_', 'holy'], ['f_', null], ['e_', null], ['f_', 'ember'], ['e_', 'storm'], ['f_', 'toxic'], ['e_', null]];
-    kinds.forEach(([pre, tint], i) => demo.push({ a: i * TAU / kinds.length, r: 190 + (i % 3) * 70, pre, tint, s: .35 + Math.random() * .2 }));
+    const kinds = ['fire', 'frost', 'storm', 'toxic', 'shadow', 'light', 'fire', 'frost', 'fire.m', 'storm', 'toxic', 'shadow'];
+    kinds.forEach((sc, i) => demo.push({ a: i * TAU / kinds.length, r: 190 + (i % 3) * 70, pre: 'm.' + sc, s: .35 + Math.random() * .2, face: 'down' }));
   }
   const items = demo.map(d => { const a = d.a + t * d.s * (d.r > 230 ? -1 : 1) * .5; return { x: cx + Math.cos(a) * d.r, y: cy + Math.sin(a) * d.r * .7, d, a }; });
   items.sort((a, b) => a.y - b.y);
   for (const it of items) {
     const dir = it.d.r > 230 ? -1 : 1, vx = -Math.sin(it.a) * dir, vy = Math.cos(it.a) * .7 * dir;
-    drawSpr(it.d.pre + 'walk_' + faceOf(vx, vy) + '_' + ((Math.floor(t * 8 + it.d.a * 3) % 6) + 1), it.x, it.y, 1, 0, it.d.tint);
+    it.d.face = face8(vx, vy, it.d.face);
+    drawSpr(`${it.d.pre}.walk.${it.d.face}.${(Math.floor(t * 8 + it.d.a * 3) % 6) + 1}`, it.x, it.y, 1);
   }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = 'rgba(10,15,6,.25)'; ctx.fillRect(0, 0, W, H);

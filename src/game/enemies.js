@@ -1,7 +1,8 @@
 import { RNG, rnd, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
-import { TAU, faceOf } from '../core/util.js';
-import { CCOL, CHARGE, ETYPES, OFF } from '../data/enemies.js';
+import { TAU, face8 } from '../core/util.js';
+import { CCOL, CHARGE, ETYPES } from '../data/enemies.js';
+import { MAGE_OFF } from '../render/sprites.js';
 import { STAGE_LEN } from '../data/stages.js';
 import { bossAI, spawnBoss } from './boss.js';
 import { damagePlayer, hurt } from './combat.js';
@@ -18,10 +19,10 @@ export function spawnEnemy(type, opt = {}) {
   const tf = 1 + (run.time / 85) * (1 + run.si * .15), lf = 1 + run.loop * 1.2;
   let x = opt.x, y = opt.y;
   if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60; x = P.x + Math.cos(a) * R; y = P.y + Math.sin(a) * R; }
-  const pre = type === 'imp' ? (RNG.spawn.next() < .5 ? 'f_' : 'e_') : (['frost', 'storm', 'void', 'healer'].includes(type) ? 'e_' : 'f_');
+  const pre = mageKey(T.school, T.master);
   const e = {
     type, pre, x, y, r: T.r, sc: T.sc, spd: T.spd * RNG.spawn.range(.9, 1.1), dmg: T.dmg * st.dmg * (1 + run.time / 400) * lf,
-    hp: T.hp * st.hp * tf * lf, cast: T.cast, cd: T.cd, range: T.range, castCd: T.cd ? RNG.spawn.range(1.5, T.cd[1]) : 0, xp: T.xp, tint: T.tint || null,
+    hp: T.hp * st.hp * tf * lf, cast: T.cast, cd: T.cd, range: T.range, castCd: T.cd ? RNG.spawn.range(1.5, T.cd[1]) : 0, xp: T.xp, tint: null,
     keep: T.keep || 0, bomber: !!T.bomber, side: RNG.spawn.next() < .5 ? 1 : -1,
     state: 'walk', face: 'down', at: RNG.spawn.next() * 5, ft: 0, fired: false, ck: null, charge: 0, chain: null, fuse: 0,
     kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, spr: null, dead: false,
@@ -63,7 +64,11 @@ export function spawnTick(dt) {
     spawnEnemy(type);
   }
 }
-export const tipPos = e => { const o = OFF[e.face], s = U * e.sc; return [e.x + o[0] * s, e.y + o[1] * s]; };
+// Stabspitze im Abschuss-Frame (aus dem Generator), skaliert wie das Sprite
+export const tipPos = e => { const o = MAGE_OFF[e.pre][e.face], s = U * e.sc; return [e.x + o[0] * s, e.y + o[1] * s]; };
+// Sprite-Name: m.<schule>[.m].<anim>.<richtung>.<n>
+export const mageKey = (school, master) => 'm.' + school + (master ? '.m' : '');
+export const mspr = (e, anim, n, face = e.face) => `${e.pre}.${anim}.${face}.${n}`;
 export function canCast(e) {
   if (e.cast === 'heal') { let ok = false; query(e.x, e.y, 170, o => { if (o !== e && !o.boss && o.hp < o.maxHp * .9) { ok = true; return false; } }); return ok; }
   if (e.cast === 'blink') return Math.hypot(P.x - e.x, P.y - e.y) > 230;
@@ -71,11 +76,11 @@ export function canCast(e) {
 }
 export function startCast(e, kind) {
   e.state = 'cast'; e.ft = 0; e.fired = false; e.ck = kind; e.charge = CHARGE[kind] || .7;
-  e.face = faceOf(P.x - e.x, P.y - e.y);
+  e.face = face8(P.x - e.x, P.y - e.y, e.face);
   if (onScreen(e.x, e.y)) sfx.charge();
 }
 export function updEnemy(e, dt) {
-  if (e.spawnT > 0) { e.spawnT -= dt; e.spr = e.pre + 'idle_' + faceOf(P.x - e.x, P.y - e.y) + '_1'; return; }
+  if (e.spawnT > 0) { e.spawnT -= dt; e.face = face8(P.x - e.x, P.y - e.y, e.face); e.spr = mspr(e, 'idle', 1); return; }
   if (e.flash > 0) e.flash -= dt;
   if (e.slowT > 0) e.slowT -= dt;
   e.x += e.kx * dt; e.y += e.ky * dt;
@@ -87,14 +92,14 @@ export function updEnemy(e, dt) {
   if (e.state === 'cast') {
     e.ft += dt * (e.slowT > 0 ? .6 : 1);
     if (e.ft < e.charge) {
-      e.spr = e.pre + 'cast_' + e.face + '_' + (1 + Math.floor(e.ft * 10) % 4);
-      if (e.ck !== 'heal' && e.ck !== 'blink') e.face = faceOf(dx, dy);
+      e.spr = mspr(e, 'cast', (1 + Math.floor(e.ft * 10) % 4));
+      if (e.ck !== 'heal' && e.ck !== 'blink') e.face = face8(dx, dy, e.face);
       if (Math.random() < dt * 25) { const [tx, ty] = tipPos(e), a = Math.random() * TAU; part(tx + Math.cos(a) * 22 * e.sc, ty + Math.sin(a) * 22 * e.sc, -Math.cos(a) * 70, -Math.sin(a) * 70, .28, CCOL[e.ck], 2.5); }
     } else {
       const f = Math.floor((e.ft - e.charge) * 14);
       if (!e.fired) { e.fired = true; enemyAct(e); }
       if (f >= 4) { e.state = 'walk'; e.castCd = rand(e.cd[0], e.cd[1]); if (e.chain) { const k = e.chain; e.chain = null; startCast(e, k); } }
-      else e.spr = e.pre + 'cast_' + e.face + '_' + (5 + f);
+      else e.spr = mspr(e, 'cast', (5 + f));
     }
     return;
   }
@@ -102,8 +107,8 @@ export function updEnemy(e, dt) {
   if (e.keep && d < e.keep) { mx = -dx / d * .5 - dy / d * .8 * e.side; my = -dy / d * .5 + dx / d * .8 * e.side; }
   const sp = e.spd * (e.slowT > 0 ? .5 : 1);
   e.x += mx * sp * dt; e.y += my * sp * dt;
-  e.face = faceOf(dx, dy); e.at += dt * (e.slowT > 0 ? .5 : 1);
-  e.spr = e.pre + 'walk_' + e.face + '_' + ((Math.floor(e.at * 9) % 6) + 1);
+  e.face = face8(dx, dy, e.face); e.at += dt * (e.slowT > 0 ? .5 : 1);
+  e.spr = mspr(e, 'walk', ((Math.floor(e.at * 9) % 6) + 1));
   if (e.cast) {
     e.castCd -= dt;
     if (e.castCd <= 0 && d < e.range && onScreen(e.x, e.y, -20)) { if (canCast(e)) startCast(e, e.cast); else e.castCd = .6; }
@@ -112,15 +117,15 @@ export function updEnemy(e, dt) {
 }
 export function updBomber(e, dt, dx, dy, d) {
   if (e.fuse > 0) {
-    e.fuse -= dt; e.spr = e.pre + 'idle_' + e.face + '_' + (1 + Math.floor(e.fuse * 12) % 4);
+    e.fuse -= dt; e.spr = mspr(e, 'idle', (1 + Math.floor(e.fuse * 12) % 4));
     if (Math.random() < .5) part(e.x + frand(-6, 6), e.y - 26 * e.sc, frand(-40, 40), frand(-80, -30), .3, '#ffd84a', 2.5);
     if (e.fuse <= 0) bomberBoom(e, true);
     return;
   }
   const sp = e.spd * (e.slowT > 0 ? .5 : 1);
   e.x += dx / d * sp * dt; e.y += dy / d * sp * dt;
-  e.face = faceOf(dx, dy); e.at += dt;
-  e.spr = e.pre + 'walk_' + e.face + '_' + ((Math.floor(e.at * 12) % 6) + 1);
+  e.face = face8(dx, dy, e.face); e.at += dt;
+  e.spr = mspr(e, 'walk', ((Math.floor(e.at * 12) % 6) + 1));
   if (d < 70) { e.fuse = .85; sfx.fuse(); }
   if (d > viewR() * 1.9) { e.px = e.x = P.x + dx / d * viewR() * 1.1; e.py = e.y = P.y + dy / d * viewR() * 1.1; }
 }

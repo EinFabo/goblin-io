@@ -15,7 +15,7 @@ export function drawSpr(name, x, y, sc = 1, rot = 0, tint = null, alpha = 1, fla
   const e = SPR[name]; if (!e) return;
   const img = tint ? tinted(e, tint) : e.c;
   const w = e.uw * U * sc, h = e.uh * U * sc;
-  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); if (rot) ctx.rotate(rot);
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); if (rot) ctx.rotate(rot); if (e.flip) ctx.scale(-1, 1);
   ctx.drawImage(img, -w / 2, -h / 2, w, h);
   if (flash) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .75 * alpha; ctx.drawImage(img, -w / 2, -h / 2, w, h); }
   ctx.restore();

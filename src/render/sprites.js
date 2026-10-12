@@ -1,5 +1,8 @@
 import { ANIMS, DEFAULT_LOOK, goblinSvg } from '../gen/goblin.js';
 import { DRAWN, MIRROR } from '../gen/svg.js';
+import { MAGE_ANIMS, castOffsets, mageSvg } from '../gen/mages.js';
+import { ETYPES } from '../data/enemies.js';
+import { STAGES } from '../data/stages.js';
 import { makeProc } from './proc.js';
 
 // ---------- Sprites ----------
@@ -10,9 +13,9 @@ export function svgSize(s) { const p = s.match(/viewBox="([^"]+)"/)[1].split(/[\
 export function loadImg(src) { return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
 const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
 // SVG-Bild in eine Canvas rastern (größer als nötig, damit es beim Zoomen scharf bleibt)
-function raster(im, svg, flip = false) {
+function raster(im, svg, flip = false, scale = 0) {
   const [w, h] = svgSize(svg);
-  const k = w < 40 ? 4 : w <= 48 ? 2 : 1.5;
+  const k = scale || (w < 40 ? 4 : w <= 48 ? 2 : 1.5);
   const c = document.createElement('canvas'); c.width = Math.ceil(w * k); c.height = Math.ceil(h * k);
   const g = c.getContext('2d');
   if (flip) { g.translate(c.width, 0); g.scale(-1, 1); }
@@ -26,6 +29,7 @@ export async function loadAssets() {
   const fixed = imgs.map((im, i) => raster(im, SVGS[i]));
   for (const [name, i] of Object.entries(SPRMAP)) SPR[name] = fixed[i];
   await loadGoblin(DEFAULT_LOOK);
+  await loadMenuMages();
   GRASS_IMG = await loadImg(GRASS);
   makeProc();
 }
@@ -59,4 +63,57 @@ export function tinted(entry, tint) {
     TINT.set(key, c);
   }
   return c;
+}
+
+// Magier aus dem Generator: m.<schule>[.m].<anim>.<richtung>.<n>.
+// Geladen wird in Einheiten (Variante × Animation), damit der Start schnell bleibt:
+// beim Booten nur das Menü, der Rest im Hintergrund oder spätestens beim Stage-Start.
+// Rechte Richtungen zeigen auf dasselbe Bild und werden beim Zeichnen gespiegelt.
+// Meister (Bosse, Großmagier) werden schärfer gerastert.
+export const MAGE_OFF = {};
+const units = new Map();
+const variantOf = key => { const [school, m] = key.split('.'); return [school, m === 'm']; };
+
+function loadUnit(key, anim) {
+  const id = key + '|' + anim;
+  if (units.has(id)) return units.get(id);
+  const [school, master] = variantOf(key);
+  if (!MAGE_OFF['m.' + key]) MAGE_OFF['m.' + key] = castOffsets(school, { master });
+  const jobs = [];
+  for (const dir of Object.keys(DRAWN)) for (let i = 0; i < MAGE_ANIMS[anim]; i++) jobs.push([dir, i, mageSvg(school, dir, anim, i, { master })]);
+  const pr = Promise.all(jobs.map(j => loadImg(svgUrl(j[2])))).then(imgs => {
+    jobs.forEach(([dir, i, svg], j) => {
+      const e = raster(imgs[j], svg, false, master ? 2 : 1.25);
+      SPR[`m.${key}.${anim}.${dir}.${i + 1}`] = e;
+      const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
+      if (m) SPR[`m.${key}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
+    });
+  });
+  units.set(id, pr);
+  return pr;
+}
+const loadVariant = key => Promise.all(Object.keys(MAGE_ANIMS).map(a => loadUnit(key, a)));
+
+const typeKey = t => ETYPES[t].school + (ETYPES[t].master ? '.m' : '');
+// Varianten einer Stage: Gegner-Mix, Schwarm (Lehrlinge, Funkenwichtel), Boss
+export function stageMageKeys(si) {
+  const st = STAGES[si], keys = new Set(st.mix.map(m => typeKey(m[0])));
+  for (const t of ['imp', 'bomber', st.boss.minion]) keys.add(typeKey(t));
+  keys.add(st.boss.school + '.m');
+  return [...keys];
+}
+export const ensureStage = si => Promise.all(stageMageKeys(si).map(loadVariant));
+export function allMageKeys() {
+  const keys = new Set(Object.keys(ETYPES).map(typeKey));
+  for (const st of STAGES) keys.add(st.boss.school + '.m');
+  return [...keys];
+}
+// Menü: laufende Demo-Magier + je ein Bossbild für die Stage-Vorschau
+export const MENU_MAGES = ['fire', 'frost', 'storm', 'toxic', 'shadow', 'light', 'fire.m'];
+export async function loadMenuMages() {
+  await Promise.all([...MENU_MAGES.map(k => loadUnit(k, 'walk')), ...STAGES.map(st => loadUnit(st.boss.school + '.m', 'idle'))]);
+}
+// Rest nacheinander im Hintergrund, damit das Menü flüssig bleibt
+export async function preloadAllMages() {
+  for (const k of allMageKeys()) await loadVariant(k);
 }

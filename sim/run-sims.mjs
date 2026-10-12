@@ -19,6 +19,7 @@ const p = await b.newPage({ viewport: { width: 1280, height: 760 } });
 p.on('pageerror', e => console.log('PAGEERR ' + e.message));
 await p.goto('file://' + html);
 await p.waitForFunction(() => window.GOBLIN && window.GOBLIN.scene === 'menu');
+await p.evaluate(() => GOBLIN.allLoaded);
 
 const pct = (a, n) => (100 * a / n).toFixed(0).padStart(3) + ' %';
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;

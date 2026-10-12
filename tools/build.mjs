@@ -1,5 +1,5 @@
 // Baut dist/goblin-io.html: esbuild-Bundle + Magier-Sprites (dedupliziert) + Gras-PNG inline.
-// Der Goblin wird zur Laufzeit generiert (src/gen/goblin.js).
+// Goblin und Magier werden zur Laufzeit generiert (src/gen/goblin.js, src/gen/mages.js).
 import { build } from 'esbuild';
 import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -11,7 +11,8 @@ const OUT = join(ROOT, 'dist', 'goblin-io.html');
 const dev = process.argv.includes('--dev');
 
 const files = {};
-for (const sub of ['feuermagier', 'feuermagier/fx', 'frostmagier', 'frostmagier/fx']) {
+// Von den alten Magier-Sprites werden nur noch Geschosse und Einschläge gebraucht
+for (const sub of ['feuermagier/fx', 'frostmagier/fx']) {
   const d = join(A, 'mag', 'mages', sub);
   for (const f of readdirSync(d).sort()) if (f.endsWith('.svg')) files[f.slice(0, -4)] = readFileSync(join(d, f), 'utf8');
 }

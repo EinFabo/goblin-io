@@ -1,9 +1,9 @@
 import { rnd, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
-import { $, TAU, faceOf } from '../core/util.js';
+import { $, TAU, face8 } from '../core/util.js';
 import { CCOL } from '../data/enemies.js';
-import { eShot, spawnEnemy, tipPos } from './enemies.js';
+import { eShot, mageKey, mspr, spawnEnemy, tipPos } from './enemies.js';
 import { dropGem, part, puff, ring } from './fx.js';
 import { P, run } from './state.js';
 import { banner } from '../ui/hud.js';
@@ -15,7 +15,7 @@ export function spawnBoss() {
   run.arena = { x: P.x, y: P.y, r: 470 };
   const lf = 1 + run.loop * 1.5;
   const b = {
-    type: 'boss', boss: true, pre: B.pre, kind: B.kind, minion: B.minion, name: B.name, x: P.x, y: P.y - 300, r: 38, sc: 2.7, spd: 52, dmg: 18 * st.dmg * lf,
+    type: 'boss', boss: true, pre: mageKey(B.school, true), kind: B.kind, minion: B.minion, name: B.name, x: P.x, y: P.y - 300, r: 38, sc: 2.7, spd: 52, dmg: 18 * st.dmg * lf,
     hp: 2500 * st.hp * lf, xp: 150, tint: B.tint, state: 'walk', face: 'down', at: 0, ft: 0, fired: false, charge: .7, ck: 'fire', kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, dead: false,
     ai: { st: 'chase', t: 2.5, i: 0, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0 },
   };
@@ -34,22 +34,22 @@ export function bossAI(b, dt, dx, dy, d) {
   if (ai.st === 'chase') {
     const s = b.spd * sp * (b.slowT > 0 ? .6 : 1);
     b.x += dx / d * s * dt; b.y += dy / d * s * dt;
-    b.face = faceOf(dx, dy); b.at += dt;
-    b.spr = b.pre + 'walk_' + b.face + '_' + ((Math.floor(b.at * 8) % 6) + 1);
+    b.face = face8(dx, dy, b.face); b.at += dt;
+    b.spr = mspr(b, 'walk', ((Math.floor(b.at * 8) % 6) + 1));
     if (ai.t <= 0) {
       const list = ['ring', 'fan', 'strikes', 'summon', 'charge'];
       ai.atk = list[ai.i++ % list.length];
-      if (ai.atk === 'charge') { ai.st = 'tele'; ai.t = .9; ai.ax = dx / d; ai.ay = dy / d; b.face = faceOf(dx, dy); }
-      else { ai.st = 'cast'; b.ft = 0; b.fired = false; b.face = faceOf(dx, dy); b.ck = ai.atk === 'strikes' ? 'storm' : ai.atk === 'summon' ? 'blink' : kindNow(); ai.reps = ai.atk === 'fan' ? 2 : 0; sfx.charge(); }
+      if (ai.atk === 'charge') { ai.st = 'tele'; ai.t = .9; ai.ax = dx / d; ai.ay = dy / d; b.face = face8(dx, dy, b.face); }
+      else { ai.st = 'cast'; b.ft = 0; b.fired = false; b.face = face8(dx, dy, b.face); b.ck = ai.atk === 'strikes' ? 'storm' : ai.atk === 'summon' ? 'blink' : kindNow(); ai.reps = ai.atk === 'fan' ? 2 : 0; sfx.charge(); }
     }
   } else if (ai.st === 'cast') {
     b.ft += dt;
     if (b.ft < b.charge) {
-      b.spr = b.pre + 'cast_' + b.face + '_' + (1 + Math.floor(b.ft * 10) % 4);
+      b.spr = mspr(b, 'cast', (1 + Math.floor(b.ft * 10) % 4));
       if (Math.random() < dt * 40) { const [tx, ty] = tipPos(b), a = Math.random() * TAU; part(tx + Math.cos(a) * 50, ty + Math.sin(a) * 50, -Math.cos(a) * 140, -Math.sin(a) * 140, .32, CCOL[b.ck] || '#fff', 4); }
     } else {
       const f = Math.floor((b.ft - b.charge) * 12);
-      b.spr = b.pre + 'cast_' + b.face + '_' + Math.min(8, 5 + f);
+      b.spr = mspr(b, 'cast', Math.min(8, 5 + f));
       if (!b.fired) {
         b.fired = true;
         const [tx, ty] = tipPos(b);
@@ -68,16 +68,16 @@ export function bossAI(b, dt, dx, dy, d) {
         }
       }
       if (f >= 4) {
-        if (ai.reps > 0) { ai.reps--; b.ft = b.charge * .6; b.fired = false; b.face = faceOf(dx, dy); }
+        if (ai.reps > 0) { ai.reps--; b.ft = b.charge * .6; b.fired = false; b.face = face8(dx, dy, b.face); }
         else { ai.st = 'chase'; ai.t = 2.2 / sp; }
       }
     }
   } else if (ai.st === 'tele') {
-    b.spr = b.pre + 'idle_' + b.face + '_' + ((Math.floor(run.time * 8) % 4) + 1);
+    b.spr = mspr(b, 'idle', ((Math.floor(run.time * 8) % 4) + 1));
     if (ai.t <= 0) { ai.st = 'charge'; ai.t = .75; sfx.whoosh(); }
   } else if (ai.st === 'charge') {
     b.x += ai.ax * 560 * dt; b.y += ai.ay * 560 * dt; b.at += dt * 3;
-    b.spr = b.pre + 'walk_' + b.face + '_' + ((Math.floor(b.at * 8) % 6) + 1);
+    b.spr = mspr(b, 'walk', ((Math.floor(b.at * 8) % 6) + 1));
     if (Math.random() < .5) part(b.x + frand(-20, 20), b.y + 30, frand(-30, 30), frand(-30, 0), .4, 'rgba(200,190,170,.7)', 6);
     if (ai.t <= 0) { ai.st = 'chase'; ai.t = 2 / sp; }
   }

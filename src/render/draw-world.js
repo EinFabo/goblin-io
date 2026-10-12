@@ -249,7 +249,7 @@ export function drawEnemy(e, t) {
   if (e.slowT > 0 || e.freezeT > 0) { ctx.fillStyle = 'rgba(120,210,255,.4)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 26 * e.sc, e.r * 1.4, e.r * .5, 0, 0, TAU); ctx.fill(); }
   if (e.spawnT > 0) { drawPortal(e, t); return; }
   const fl = e.flash > 0 || (e.bomber && e.fuse > 0 && Math.floor(e.fuse * 14) % 2 === 0);
-  drawSpr(e.spr || (e.pre + 'idle_down_1'), e.x, e.y, e.sc, 0, e.tint, 1, fl);
+  drawSpr(e.spr || (e.pre + '.idle.down.1'), e.x, e.y, e.sc, 0, e.tint, 1, fl);
   if (e.type === 'healer') { ctx.fillStyle = '#8dff7a'; ctx.strokeStyle = '#0a0f06'; ctx.lineWidth = 2; const hy = e.y - 46; ctx.beginPath(); ctx.rect(e.x - 2.5, hy - 7, 5, 14); ctx.rect(e.x - 7, hy - 2.5, 14, 5); ctx.stroke(); ctx.fill(); }
   if (e.type === 'storm' && Math.random() < .08) part(e.x + frand(-14, 14), e.y - frand(10, 40), frand(-30, 30), frand(-30, 30), .15, '#fff59a', 2);
   if (e.freezeT > 0) {
@@ -366,5 +366,5 @@ function drawPortal(e, t) {
   ctx.beginPath(); ctx.ellipse(e.x, e.y + 22 * e.sc, R, R * .38, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
   ctx.beginPath(); ctx.ellipse(e.x, e.y + 22 * e.sc, R * .8, R * .3, 0, 0, TAU); ctx.clip();
   ctx.restore();
-  drawSpr(e.spr || e.pre + 'idle_down_1', e.x, e.y + 22 * e.sc * (1 - p), e.sc, 0, p < .6 ? col : e.tint, .3 + .7 * p);
+  drawSpr(e.spr || e.pre + '.idle.down.1', e.x, e.y + 22 * e.sc * (1 - p), e.sc, 0, p < .6 ? col : e.tint, .3 + .7 * p);
 }
