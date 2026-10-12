@@ -851,6 +851,11 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - Goblin-Schläue Stufe 10 gibt die 4. Level-Up-Karte, Bannfluch +1 Bannen.
   - Sim-Erwartungen (`sim/expected-progress.js`) auf Talent-Stufen umgerechnet: Stage 3 75 %, 4 94 %, 5 59 % (vorher 72/97/66, also im Streubereich gleich).
 - [ ] Hub mit Tab-Leiste (10.1)
+- [x] **Bug (gemeldet von Fabi, 2026-10-12): Spiel friert beim Tod ein.** Statt Sterbe-Animation blieb das Bild stehen, „Nochmal“ blieb eingefroren, hinter dem Menü hing der alte Lauf.
+  - Ursache: Die Spielschleife (`src/core/loop.js`) macht pro Bild mehrere 60-Hz-Schritte. Starb der Goblin nicht im letzten davon, wechselte die Szene zu „results“ (hat kein `update`) und der nächste Schritt warf einen Fehler. Weil `requestAnimationFrame` erst am Ende stand, war die Schleife danach für immer tot. Deshalb trat es nur manchmal auf.
+  - Fix: Szene bei jedem Schritt neu prüfen; nächsten Frame zuerst anmelden, damit ein Fehler nur ein Bild kostet. Test `test/loop.test.js`, und `npm run smoke` stirbt jetzt echt und prüft Sterbe-Animation, „Nochmal“ und „Menü“.
+- [ ] **Rauchbombe: langsamer angreifen, solange man unsichtbar ist (Wunsch Fabi, 2026-10-12).** Während der Unsichtbarkeit greifen die Waffen 60 % langsamer an. Über den Skill Tree der Rauchbombe lässt sich der Malus senken, bis auf 20 %, aber erst nach vielen Upgrades (z. B. in kleinen Schritten über mehrere Stufen, nicht mit einem Punkt). Klären: Malus = −60 % Angriffstempo; zählt das auch für Fähigkeiten oder nur für Waffen?
+- [ ] **Gegner zittern an der Stelle, an der der Spieler zuletzt war (Wunsch Fabi, 2026-10-12).** Gegner laufen zur Spielerposition (z. B. letzte bekannte Position bei Rauch) und pendeln dort hin und her. Wenn sie den Zielpunkt erreicht haben, sollen sie wieder Abstand gewinnen (wegdriften, umherstreifen oder einen Ring um den Punkt bilden), statt auf dem Punkt zu ruckeln.
 
 ### Phase 6 – Truhen, Shop, Kosmetik
 - [ ] Truhen mit Drop-Tabellen, Pity und Wahrscheinlichkeits-Anzeige (9.5)

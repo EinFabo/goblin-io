@@ -7,14 +7,16 @@ const MAX_STEPS = 8;
 let acc = 0, last = 0;
 
 function frame(now) {
+  // Zuerst anmelden: ein Fehler in einer Szene kostet so nur einen Frame, nicht das ganze Spiel
+  requestAnimationFrame(frame);
   const dt = Math.min(.1, (now - last) / 1000); last = now;
   if (scene && scene.update) {
     acc += dt;
     let n = 0;
-    while (acc >= STEP && n < MAX_STEPS) { scene.update(STEP); acc -= STEP; n++; }
+    // scene bei jedem Schritt neu prüfen: ein Schritt kann die Szene wechseln (Tod → results ohne update)
+    while (acc >= STEP && n < MAX_STEPS && scene.update) { scene.update(STEP); acc -= STEP; n++; }
     if (n === MAX_STEPS) acc = 0; // zu langsam: lieber Zeit verlieren als hinterherlaufen
   } else acc = 0;
   if (scene && scene.render) scene.render(now, acc / STEP, dt);
-  requestAnimationFrame(frame);
 }
 export function startLoop() { last = performance.now(); requestAnimationFrame(frame); }

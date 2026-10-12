@@ -33,6 +33,31 @@ for (let si = 0; si < stages; si++) {
   const st = await p.evaluate(() => ({ t: Math.round(GOBLIN.run.time), boss: !!GOBLIN.run.boss || GOBLIN.run.over }));
   console.log(`Stage ${si + 1}: bis ${st.t} s, Boss erreicht: ${st.boss ? 'ja' : 'nein'}`);
 }
+// Tod im echten Spiel (nicht per Hand gesteppt): Sterbe-Animation, Nochmal, Menü
+async function dieForReal() {
+  for (let i = 0; i < 80 && !(await p.evaluate(() => GOBLIN.run.over)); i++) {
+    await p.evaluate(() => {
+      const G = GOBLIN;
+      if (G.run.paused && !G.run.over) { const c = document.querySelector('#levelup .card'); if (c) c.click(); }
+      G.P.hp = Math.min(G.P.hp, 1);
+      if (G.run.enemies.length < 10) G.spawnEnemy('fire_mage', { x: G.P.x + 40, y: G.P.y });
+    });
+    await p.waitForTimeout(250);
+  }
+  await p.waitForSelector('#over:not([hidden])');
+}
+const fail = m => { console.log('Tod: ' + m); errs.push(m); };
+await p.evaluate(() => GOBLIN.go('run', { si: 0, seed: 5 }));
+await dieForReal();
+if (!(await p.evaluate(() => GOBLIN.P.endAnim > .3))) fail('Sterbe-Animation läuft nicht (Spiel eingefroren)');
+await p.click('#againBtn');
+await p.waitForTimeout(800);
+if (!(await p.evaluate(() => GOBLIN.scene === 'run' && GOBLIN.run.time > .3))) fail('nach „Nochmal“ läuft das Spiel nicht');
+await dieForReal();
+await p.click('#menuBtn');
+await p.waitForTimeout(300);
+if (!(await p.evaluate(() => GOBLIN.scene === 'menu' && !GOBLIN.run))) fail('nach „Menü“ hängt der Lauf noch im Hintergrund');
+console.log('Tod, Nochmal, Menü: geprüft');
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');
