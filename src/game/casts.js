@@ -19,10 +19,10 @@ const lead = s => [P.x + P.vx * s, P.y + P.vy * s];
 const angTo = (x, y) => Math.atan2(P.y - y, P.x - x);
 
 export function eShot(x, y, a, kind, dmg, sp, sc = 1, extra) {
-  run.eproj.push({ x, y, a, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, kind, dmg, life: 4.5, t: Math.random(), sc, r: sc * 9, ...extra });
+  run.eproj.push({ x, y, a, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, kind, dmg, life: 4.5, t: Math.random(), sc, r: sc * 9, owner: run.caster, ...extra });
 }
 function lob(e, sx, sy, tx, ty, opt) {
-  run.eproj.push({ lob: true, sx, sy, tx, ty, x: sx, y: sy, t: 0, a: 0, vx: 0, vy: 0, life: 3, h: 0, sc: 1.1, r: 10, ...opt });
+  run.eproj.push({ lob: true, sx, sy, tx, ty, x: sx, y: sy, t: 0, a: 0, vx: 0, vy: 0, life: 3, h: 0, sc: 1.1, r: 10, owner: run.caster, ...opt });
 }
 
 export const CASTS = {

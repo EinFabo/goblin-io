@@ -27,7 +27,7 @@ export function newRun(si, seed = newSeed()) {
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
     scrap: 0, mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, mechReadyShown: false,
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
-  r.cam = { x: 0, y: 0, z: 1 }; r.hitstop = 0; r.slowT = 0;
+  r.cam = { x: 0, y: 0, z: 1 }; r.hitstop = 0; r.slowT = 0; r.caster = null;
   setRun(r, p);
   addEvents(0);
   grid.clear();

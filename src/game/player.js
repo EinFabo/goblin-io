@@ -3,6 +3,7 @@ import { joy, keys, sprintHeld } from '../core/input.js';
 import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { damagePlayer } from './combat.js';
+import { affixOnHitPlayer } from './affixes.js';
 import { part } from './fx.js';
 import { hint } from './run.js';
 import { P, pR, query, run } from './state.js';
@@ -59,7 +60,7 @@ export function updPlayer(dt) {
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
   query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {
-      const was = P.inv; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg);
+      const was = P.inv, before = P.hp; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg); affixOnHitPlayer(e, before - P.hp);
       if (e.melee === 'slow' && was <= 0 && P.mechT <= 0) P.slowT = .6;
       return false;
     }

@@ -9,6 +9,7 @@ import { CASTS, castAllowed, castWindup } from './casts.js';
 import { damagePlayer, hurt } from './combat.js';
 import { animFx, part, ring } from './fx.js';
 import { hint } from './run.js';
+import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
 import { P, onScreen, pR, query, run, viewR } from './state.js';
 import { banner } from '../ui/hud.js';
 
@@ -17,6 +18,7 @@ export { eShot } from './casts.js';
 // ---------- Gegner ----------
 export const SPAWN_T = .4;
 const has = (e, t) => e.traits && e.traits.includes(t);
+
 
 // Sprite-Name: m.<schule>[.m|.c].<anim>.<richtung>.<n> (Magier) oder n.<art>.<anim>.<richtung>.<n> (Diener)
 export const mageKey = (school, master, clone) => 'm.' + school + (master ? '.m' : clone ? '.c' : '');
@@ -39,7 +41,7 @@ export function spawnEnemy(type, opt = {}) {
     kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, spr: null, dead: false, shield: 0,
   };
   if (opt.mini) { e.sc *= .65; e.r *= .7; e.hp *= .3; e.xp = Math.ceil(e.xp / 3); e.mini = true; }
-  if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; }
+  if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; rollAffixes(e); }
   e.maxHp = e.hp;
   // Sichtbare Spawns kommen durch ein Portal (0,4 s, solange nicht angreifbar)
   if (opt.x !== undefined || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (onScreen(x, y)) sfx.portal(); }
@@ -60,8 +62,8 @@ export function doEvent(ev) {
   if (ev.k === 'elite') {
     // Elite: nur normale Magier (Meister mit ×14 Leben wären zu viel)
     const types = run.st.mix.filter(m => ETYPES[m[0]].role === 'mage' && run.time >= m[2]).map(m => m[0]);
-    spawnEnemy(RNG.spawn.pick(types.length ? types : ['fire_mage']), { elite: true });
-    banner('Elite-Magier!', '');
+    const el = spawnEnemy(RNG.spawn.pick(types.length ? types : ['fire_mage']), { elite: true });
+    banner(el.affixes.length ? 'Elite: ' + affixNames(el) + '!' : 'Elite-Magier!', '');
   } else if (ev.k === 'swarm') {
     const n = 36, R = viewR() * .85, [main, extra] = run.st.swarm;
     for (let i = 0; i < n; i++) { const a = i * TAU / n; spawnEnemy(i % 6 === 0 && extra ? extra : main, { x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R }); }
@@ -90,7 +92,7 @@ function startCast(e, c) {
   e.state = 'cast'; e.ft = 0; e.fired = false; e.ck = c.id; e.cur = c; e.charge = castWindup(c.id);
   e.face = face8(P.x - e.x, P.y - e.y, e.face);
   const C = CASTS[c.id];
-  if (C.start) C.start(e);
+  if (C.start) { run.caster = e; C.start(e); run.caster = null; }
   if (onScreen(e.x, e.y) && !e.clone) sfx.charge();
 }
 
@@ -110,6 +112,7 @@ export function updEnemy(e, dt) {
     if (e.pre) e.spr = mspr(e, 'idle', 1);
     return;
   }
+  if (e.affixes) updAffixes(e, dt, spawnEnemy);
   if (e.flash > 0) e.flash -= dt;
   if (e.slowT > 0) e.slowT -= dt;
   e.x += e.kx * dt; e.y += e.ky * dt;
@@ -136,7 +139,11 @@ export function updEnemy(e, dt) {
       if (Math.random() < dt * 25) { const [tx, ty] = tipPos(e), a = Math.random() * TAU; part(tx + Math.cos(a) * 22 * e.sc, ty + Math.sin(a) * 22 * e.sc, -Math.cos(a) * 70, -Math.sin(a) * 70, .28, C.col, 2.5); }
     } else {
       const f = Math.floor((e.ft - e.charge) * 14);
-      if (!e.fired) { e.fired = true; e.cur.t = rand(e.cur.cd[0], e.cur.cd[1]); const [tx, ty] = tipPos(e); C.release(e, tx, ty, spawnEnemy); }
+      if (!e.fired) {
+        e.fired = true; e.cur.t = rand(e.cur.cd[0], e.cur.cd[1]);
+        const [tx, ty] = tipPos(e);
+        run.caster = e; C.release(e, tx, ty, spawnEnemy); run.caster = null;   // Geschosse/Zonen merken sich den Zaubernden
+      }
       if (e.dash) return;
       if (f >= 4) {
         e.state = 'walk';
@@ -201,6 +208,7 @@ export function bomberBoom(e, hurtPlayer) {
 
 // Treffer-Regeln je Gegner (vor dem Abziehen der Lebenspunkte). Gibt den Schaden zurück, der durchkommt.
 export function damageRules(e, dmg, kx, ky) {
+  if (e.affixes) { dmg = affixDamage(e, dmg, kx, ky); if (dmg <= 0) return { dmg: 0, blocked: true }; }
   // Gletscherwächter: Eisschild vorne blockt fast alles, was aus Blickrichtung kommt
   if (has(e, 'frontShield') && (kx || ky)) {
     const fa = DIR8.indexOf(e.face) * Math.PI / 4, l = Math.hypot(kx, ky);
@@ -219,6 +227,7 @@ export function damageRules(e, dmg, kx, ky) {
 
 // Was beim Tod passiert (Teilen, Knochenhaufen, Grab für den Lich)
 export function deathRules(e) {
+  if (e.affixes) affixOnDeath(e, spawnEnemy);
   if (has(e, 'split') && !e.mini) {
     for (const s of [-1, 1]) { const o = spawnEnemy(e.type, { x: e.x + s * 24, y: e.y, mini: true }); o.spawnT = .25; o.traits = null; }
   }

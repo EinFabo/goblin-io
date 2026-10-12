@@ -4,6 +4,7 @@ import { TAU } from '../core/util.js';
 import { damagePlayer, hurt } from './combat.js';
 import { animFx, boltFx, explode, part, ring } from './fx.js';
 import { perfectRoll } from './abilities.js';
+import { affixOnHitPlayer } from './affixes.js';
 import { P, onScreen, pR, query, run } from './state.js';
 
 export function updTele(dt) {
@@ -45,7 +46,7 @@ export function updEProj(dt) {
         p.life = 0;
         if (p.kind === 'rock') { for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(160,130,90,.9)', 4); }
         else {
-          addHaz({ shape: 'circle', x: p.tx, y: p.ty, r: 58, warn: 0, act: 4.2, tick: .5, dmg: p.dmg, kind: 'toxic', src: 'zone' });
+          addHaz({ shape: 'circle', x: p.tx, y: p.ty, r: 58, warn: 0, act: 4.2, tick: .5, dmg: p.dmg, kind: 'toxic', src: 'zone', owner: p.owner });
           animFx('f_fireball_hit_', 5, p.tx, p.ty, 2.2, 16); for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(150,240,80,.9)', 4);
         }
       }
@@ -56,7 +57,7 @@ export function updEProj(dt) {
     const dx = p.x - P.x, dy = p.y - (P.y - 6), rr = p.r + pR() * .85;
     if (p.fake && dx * dx + dy * dy < rr * rr) { p.life = 0; part(p.x, p.y, 0, -30, .3, 'rgba(200,160,255,.6)', 5); continue; }
     if (dx * dx + dy * dy < rr * rr && P.dashT <= 0 && P.inv <= 0) {
-      damagePlayer(p.dmg, 'proj');
+      const before = P.hp; damagePlayer(p.dmg, 'proj'); affixOnHitPlayer(p.owner, before - P.hp);
       if (p.kind === 'frost' && P.mechT <= 0) P.slowT = 1.2;
       p.life = 0;
       animFx(p.kind === 'fire' ? 'f_fireball_hit_' : 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
@@ -70,7 +71,7 @@ export function updEProj(dt) {
 // warn: Warnzeit bis zur Wirkung, act: Dauer danach (0 = einmaliger Treffer), tick: Abstand der Treffer,
 // owner + cancel: verschwindet, wenn der Zaubernde vorher stirbt. drain: heilt diesen Gegner um den Schaden.
 export function addHaz(h) {
-  run.haz.push({ act: 0, tick: .5, tk: 0, t: 0, ...h, dur: h.warn });
+  run.haz.push({ act: 0, tick: .5, tk: 0, t: 0, owner: run.caster || null, ...h, dur: h.warn });
 }
 export const hazWarnCount = () => run.haz.reduce((n, h) => n + (h.warn > 0 && h.dmg > 0 ? 1 : 0), 0);
 
@@ -108,7 +109,8 @@ function hazFx(h) {
     run.shake = Math.max(run.shake, 4);
     for (let i = 0; i < 12; i++) part(x + frand(-40, 40), y + frand(-20, 20), frand(-80, 80), frand(-120, -30), .5, 'rgba(170,140,100,.9)', frand(3, 6));
     if (onScreen(x, y)) sfx.stomp();
-  } else if (h.kind === 'fire') { if (onScreen(x, y)) sfx.boom(); }
+  } else if (h.boom) { animFx('f_fireball_hit_', 5, h.x, h.y, h.r / 16); run.shake = Math.max(run.shake, 8); sfx.boom(); }
+  else if (h.kind === 'fire') { if (onScreen(x, y)) sfx.boom(); }
 }
 
 function updHaz(dt) {
@@ -120,12 +122,12 @@ function updHaz(dt) {
       h.warn -= dt;
       if (h.warn > 0) continue;
       hazFx(h);
-      if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) damagePlayer(h.dmg, h.src); h.done = true; continue; }
+      if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) { const b0 = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, b0 - P.hp); } h.done = true; continue; }
     }
     h.act -= dt; h.tk -= dt;
     if (h.tk <= 0 && h.dmg > 0 && hazHitsPlayer(h)) {
       h.tk = h.tick;
-      const before = P.hp; damagePlayer(h.dmg, h.src);
+      const before = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, before - P.hp);
       if (h.drain && !h.drain.dead) { const got = before - P.hp; h.drain.hp = Math.min(h.drain.maxHp, h.drain.hp + got * 3); }
     }
     if (h.act <= 0) h.done = true;

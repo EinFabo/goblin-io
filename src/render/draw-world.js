@@ -3,6 +3,7 @@ import { joy } from '../core/input.js';
 import { DIR8, TAU, clamp } from '../core/util.js';
 import { CCOL, ECOL, SCHOOL_COL, ETYPES } from '../data/enemies.js';
 import { CASTS } from '../game/casts.js';
+import { affixNames, hasAffix } from '../game/affixes.js';
 import { save } from '../core/save.js';
 import { SPAWN_T, tipPos } from '../game/enemies.js';
 import { part } from '../game/fx.js';
@@ -243,6 +244,7 @@ export function drawEnemy(e, t) {
   const fl = e.flash > 0 || (e.bomber && e.fuse > 0 && Math.floor(e.fuse * 14) % 2 === 0);
   drawSpr(e.spr || (e.pre + '.idle.down.1'), e.x, e.y, e.sc, 0, e.tint, e.clone ? .85 : 1, fl);
   if (e.traits && e.traits.includes('frontShield')) drawFrontShield(e);
+  if (e.affixes && e.affixes.length) drawAffixes(e, t);
   if (e.shield > 0) {
     ctx.fillStyle = `rgba(255,225,120,${.16 + .06 * Math.sin(t * 6)})`; ctx.strokeStyle = 'rgba(255,215,90,.9)'; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.arc(e.x, e.y - 4 * e.sc, 30 * e.sc, 0, TAU); ctx.fill(); ctx.stroke();
@@ -474,5 +476,38 @@ function drawRock(x, y, rot) {
   ctx.fillStyle = '#8a7a62'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(-11, -2); ctx.lineTo(-5, -11); ctx.lineTo(6, -10); ctx.lineTo(12, -1); ctx.lineTo(7, 9); ctx.lineTo(-6, 10); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#b8a888'; ctx.beginPath(); ctx.moveTo(-5, -7); ctx.lineTo(3, -7); ctx.lineTo(-1, -1); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+// Elite-Eigenschaften sichtbar machen (Plan 5.4: "erkennbar an")
+function drawAffixes(e, t) {
+  const fy = e.y + 26 * e.sc, R = e.r * 1.5;
+  ctx.save();
+  if (hasAffix(e, 'armored')) { ctx.strokeStyle = 'rgba(210,220,235,.95)'; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(e.x, fy, R, R * .38, 0, 0, TAU); ctx.stroke(); }
+  if (hasAffix(e, 'summoner')) { ctx.strokeStyle = 'rgba(180,120,255,.85)'; ctx.lineWidth = 2.5; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.ellipse(e.x, fy, R * 1.25, R * .48, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+  if (hasAffix(e, 'explosive')) {
+    ctx.strokeStyle = `rgba(255,${120 + 80 * Math.sin(t * 8) | 0},40,.9)`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(e.x, e.y - 4 * e.sc, 30 * e.sc, 0, TAU); ctx.stroke();
+    if (Math.random() < .3) part(e.x + frand(-20, 20) * e.sc, e.y - frand(0, 40) * e.sc, frand(-20, 20), frand(-60, -20), .4, '#ffb347', 2.5);
+  }
+  if (hasAffix(e, 'fast')) {
+    const a = Math.atan2(e.y - P.y, e.x - P.x);
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2;
+    for (const o of [-12, 0, 12]) { const ox = -Math.sin(a) * o, oy = Math.cos(a) * o; ctx.beginPath(); ctx.moveTo(e.x + Math.cos(a) * 26 + ox, e.y - 10 + Math.sin(a) * 26 + oy); ctx.lineTo(e.x + Math.cos(a) * 50 + ox, e.y - 10 + Math.sin(a) * 50 + oy); ctx.stroke(); }
+  }
+  if (hasAffix(e, 'splitting')) {
+    ctx.strokeStyle = 'rgba(30,20,10,.85)'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(e.x - 2, e.y - 30 * e.sc); ctx.lineTo(e.x + 5, e.y - 14 * e.sc); ctx.lineTo(e.x - 4, e.y); ctx.lineTo(e.x + 3, e.y + 14 * e.sc); ctx.stroke();
+  }
+  if (e.plates > 0) {
+    for (let i = 0; i < e.plates; i++) {
+      const a = t * 2.5 + i * TAU / 3, x = e.x + Math.cos(a) * 34 * e.sc, y = e.y - 6 * e.sc + Math.sin(a) * 14 * e.sc;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a + Math.PI / 2);
+      ctx.fillStyle = '#dfe6f0'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-7, -9, 14, 18, 3); ctx.fill(); ctx.stroke(); ctx.restore();
+    }
+  }
+  // Namen der Eigenschaften über dem Elite
+  ctx.font = '900 11px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+  const ty = e.y - 52 * e.sc, txt = affixNames(e);
+  ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(10,15,6,.9)'; ctx.strokeText(txt, e.x, ty); ctx.fillStyle = '#ffd84a'; ctx.fillText(txt, e.x, ty);
   ctx.restore();
 }
