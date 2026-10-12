@@ -851,6 +851,11 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - Goblin-Schläue Stufe 10 gibt die 4. Level-Up-Karte, Bannfluch +1 Bannen.
   - Sim-Erwartungen (`sim/expected-progress.js`) auf Talent-Stufen umgerechnet: Stage 3 75 %, 4 94 %, 5 59 % (vorher 72/97/66, also im Streubereich gleich).
 - [ ] Hub mit Tab-Leiste (10.1)
+- [ ] **Bug (gemeldet von Fabi, 2026-10-12): Lag beim Rundenstart.** Beim Start eines Laufs ruckelt es. Ursache messen (Sprites erzeugen, Musik starten, erste Spawns?) und vorziehen bzw. verteilen.
+- [ ] **Skill Tree befriedigender machen (Wunsch Fabi, 2026-10-12):** Animationen beim Lernen (Knoten leuchtet auf, Linie zum nächsten Knoten füllt sich, Partikel), eigene Sounds pro Rang, Level-Up der Fähigkeit mit kleiner Feier.
+- [ ] **Mehr Level und fähigkeitsspezifische Skills im Tree (Wunsch Fabi, 2026-10-12):** höhere Level-Grenze als 18 und mehr eigene Knoten je Fähigkeit statt nur Kraft/Tempo/Reichweite + 2 Extras (z. B. Rauchbombe: Malus im Rauch senken als eigener Knoten).
+- [ ] **Standard-Fähigkeiten leveln, mehrere Dashes (Wunsch Fabi, 2026-10-12):** Rolle und Sprint bekommen ebenfalls Level/Skill Tree, z. B. 2–3 Aufladungen für die Rolle (Idee aus 8.3: Lv5 zwei Aufladungen, Lv10 Krähenfüße).
+- [ ] **Fähigkeiten aufeinander abstimmen (Wunsch Fabi, 2026-10-12):** Regeln, welche Fähigkeiten zusammen gehen. Beispiel: Während der Goblin-Maschine keine anderen Fähigkeiten. Für alle Paare prüfen und im HUD zeigen (Knopf gesperrt).
 - [x] **Bug (gemeldet von Fabi, 2026-10-12): Spiel friert beim Tod ein.** Statt Sterbe-Animation blieb das Bild stehen, „Nochmal“ blieb eingefroren, hinter dem Menü hing der alte Lauf.
   - Ursache: Die Spielschleife (`src/core/loop.js`) macht pro Bild mehrere 60-Hz-Schritte. Starb der Goblin nicht im letzten davon, wechselte die Szene zu „results“ (hat kein `update`) und der nächste Schritt warf einen Fehler. Weil `requestAnimationFrame` erst am Ende stand, war die Schleife danach für immer tot. Deshalb trat es nur manchmal auf.
   - Fix: Szene bei jedem Schritt neu prüfen; nächsten Frame zuerst anmelden, damit ein Fehler nur ein Bild kostet. Test `test/loop.test.js`, und `npm run smoke` stirbt jetzt echt und prüft Sterbe-Animation, „Nochmal“ und „Menü“.
@@ -867,17 +872,25 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 - [ ] Shop mit Tagesangeboten (9.6)
 - [ ] Garderobe, Kosmetik im Generator und im Spiel (9.7)
 - [ ] Tagesaufgaben und Erfolge (9.8)
+- [ ] **Mehr Wiederspielwert und längerer Grind (Wunsch Fabi, 2026-10-12):** Erfolge (9.8) so auslegen, dass sie lange tragen (mehrstufig, seltene Ziele), dazu weitere Langzeit-Ziele, damit man immer etwas zu jagen hat.
 
 ### Phase 7 – Stages und Bosse
 - [ ] 8 Stages mit Deko und Musik (6.1), Sterne, Albtraum-Modus
 - [ ] Boss-Runner mit Phasen, Wut-Timer, Phasenwechsel-Regeln (6.2)
 - [ ] 8 Bosse (6.3) + Mini-Bosse
 - [ ] **Boss-Rework (Wunsch Fabi, 2026-10-12):** die heutigen 5 Bosse ersetzen, nicht nur ergänzen. Jeder Boss bekommt ein eigenes Modell statt "Meister seiner Schule" (Phase 1). Malvorn bekommt ein Modell mit Teilen aller Schulen und wechselt sichtbar die Schule. Die alte feste Angriffsrotation (Ring/Fächer/Blitze/Beschwören/Ansturm) entfällt zugunsten der Phasen aus 6.3.
+- [ ] **Bosse wie in Undertale (Wunsch Fabi, 2026-10-12):** mehrere deutlich verschiedene Phasen (siehe 6.2/6.3), und jeder Boss wird angekündigt: kurze Cutscene mit Auftritt-Animation, Name und Titel, Kamera auf den Boss, eigene Musik mit Intro. Phasenwechsel ebenfalls mit kleiner Szene.
+- [ ] **Mehr Musik, echte Titelmusik (Wunsch Fabi, 2026-10-12):** eigenes Stück für das Hauptmenü/den Titel, dazu mehr Stücke im Lauf (pro Stage, Boss, Ergebnis).
 
 ### Phase 8 – Feinschliff und Test
 - [ ] Performance-Budget prüfen (12.3)
 - [ ] Linkshänder-Modus, Einstellungen
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
+- [ ] **Vielleicht: Game-Loop-Rework (Wunsch Fabi, 2026-10-12):** Der Wurfdolch wird automatisch hochgestuft (ohne Level-Up-Karte), damit die Karten für andere Waffen und Builds frei sind. Vorher mit der Sim prüfen, wie sich die Kraftkurve (7.3) ändert, und mit Fabi entscheiden.
+
+### Phase 9 – Goblin-Klassen (Wunsch Fabi, 2026-10-12)
+- [ ] Mehrere Goblin-Typen mit eigener Startwaffe und eigenen Standard-Fähigkeiten statt Rolle/Sprint, z. B. Bogen-Goblin (Bogen als Startwaffe), Magier-Goblin (Teleport statt Rolle).
+- [ ] Eigenes Modell je Typ im Generator (Ebenen-Struktur aus 4.2), Auswahl im Hub, eigene Fortschritte/Freischaltung.
 
 ---
 
@@ -919,7 +932,7 @@ Aus v2 übernehmen (`sim.js`) und ausbauen:
 | Frage | Vorschlag |
 |---|---|
 | Ausrüstung (Rüstung, Ringe) wie in Survivor.io zusätzlich zu Karten? | Erst nach Phase 8, sonst zu viele Systeme auf einmal |
-| Mehrere spielbare Figuren (z. B. Kobold, Troll)? | Später; die Ebenen-Struktur des Goblin-Generators macht das möglich |
+| Mehrere spielbare Figuren (z. B. Kobold, Troll)? | Entschieden (Fabi, 2026-10-12): ja, als Goblin-Klassen, siehe Phase 9 |
 | Online-Bestenliste? | Braucht einen Server. Vorerst nur lokale Bestzeiten und Tageschallenge mit Seed |
 | Speicherort | Ein einzelnes Browser-Save ist leicht verloren (privates Fenster, Cache leeren). Export/Import als Code-Text in den Einstellungen anbieten |
 | Sprache | Deutsch bleibt Hauptsprache; Texte trotzdem in `src/data/i18n/de.js` sammeln, dann ist Englisch später leicht |
