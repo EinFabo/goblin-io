@@ -13,7 +13,7 @@ export const ABILITIES = {
     desc: '12 s Dampf-Mech mit MG, Raketen und Stampfer. Du nimmst 70 % weniger Schaden.',
     extras: [{ name: 'Panzerplatten', desc: 'Im Mech nimmst du 85 % statt 70 % weniger Schaden.' }, { name: 'Doppelsalve', desc: 'Raketen kommen doppelt so oft.' }] },
   smoke: { name: 'Rauchbombe', short: 'Rauch', charge: 'cd', need: 14, dur: 3, unlock: { stage: 1 },
-    desc: '3 s unsichtbar. Gegner laufen zu deinem alten Platz, manche schlagen verwirrt aufeinander ein.',
+    desc: '3 s unsichtbar. Gegner laufen zu deinem alten Platz, manche schlagen verwirrt aufeinander ein. Im Rauch greifen deine Waffen 60 % langsamer an, jeder Punkt im Skill Tree senkt das (bis 20 %).',
     extras: [{ name: 'Dichter Rauch', desc: 'Du bleibst 2 s länger unsichtbar.' }, { name: 'Giftrauch', desc: 'Gegner rund um den Rauch nehmen jede Sekunde Schaden.' }] },
   catapult: { name: 'Goblin-Katapult', short: 'Katapult', charge: 'scrap', need: 35, unlock: { acct: 5 },
     desc: '5 Felsen schlagen in die dichteste Gegnergruppe ein.',
@@ -75,8 +75,12 @@ export function canLearn(st, k) {
 // Wirkung des Baums für einen Lauf
 export function abilMods(st) {
   const p = (st && st.pts) || {};
-  return { pow: 1 + .08 * (p.pow || 0), spd: 1 - .05 * (p.cd || 0), area: 1 + .08 * (p.area || 0), a: !!p.a, b: !!p.b };
+  return { pow: 1 + .08 * (p.pow || 0), spd: 1 - .05 * (p.cd || 0), area: 1 + .08 * (p.area || 0), a: !!p.a, b: !!p.b, base: basePoints(p) };
 }
+// Rauchbombe: Angriffstempo-Malus der Waffen, solange man unsichtbar ist (Wunsch Fabi).
+// 60 % ohne Punkte, sinkt mit jedem Punkt in Kraft/Tempo/Reichweite, erst voll ausgebaut 20 %.
+const BASE_MAX = TREE.pow.max + TREE.cd.max + TREE.area.max;
+export const smokeAtkSlow = base => .6 - .4 * Math.min(base || 0, BASE_MAX) / BASE_MAX;
 export const SLOT2_ACCT = 3;
 export const SLOT_KEYS = ['Q', 'E'];
 export const DEFAULT_LOADOUT = ['rage', 'trap'];

@@ -5,13 +5,15 @@ import { hurt } from './combat.js';
 import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
 import { P, nearest, query, randomEnemyInView, run } from './state.js';
 import { H, W, ZOOM } from '../render/canvas.js';
+import { smokeAtkSlow } from '../data/abilities.js';
 
 // ---------- Waffen ----------
 export function shoot(k, a, dmg, pierce, spd, life, extra = {}) {
   run.pproj.push(Object.assign({ k, x: P.x, y: P.y - 8, a, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, dmg: dmg * P.dmgMult, pierce, life, hit: new Set(), r: 13, t: 0 }, extra));
 }
 export function updWeapons(dt) {
-  const rate = P.rageT > 0 ? 1.6 : 1;
+  const smoke = P.smokeT > 0 && run.abMods && run.abMods.smoke;
+  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.base) : 1);
   for (const w of run.weapons) {
     const L = w.lv - 1;
     switch (w.id) {

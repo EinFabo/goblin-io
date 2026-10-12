@@ -1,7 +1,7 @@
 import { sfx } from '../core/audio.js';
 import { abilState, persist, save } from '../core/save.js';
 import { $ } from '../core/util.js';
-import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, SLOT2_ACCT, SLOT_KEYS, TREE, abilXpNeed, basePoints, canLearn, spentPoints, unlockText, xpPerUse } from '../data/abilities.js';
+import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, SLOT2_ACCT, SLOT_KEYS, TREE, abilXpNeed, basePoints, canLearn, smokeAtkSlow, spentPoints, unlockText, xpPerUse } from '../data/abilities.js';
 import { accountXpNeed } from '../game/balance.js';
 import { canEquip, slotOpen } from '../game/abilities.js';
 import { icon } from '../render/icons.js';
@@ -79,7 +79,7 @@ function openTree(id) { treeId = id; renderTree(); $('#tree').hidden = false; sf
 function renderTree() {
   const A = ABILITIES[treeId], s = abilState(treeId), free = s.lv - 1 - spentPoints(s.pts), base = basePoints(s.pts);
   $('#treeTitle').textContent = A.name;
-  $('#treeInfo').innerHTML = `<img src="${icon(treeId)}" alt=""><span>Level <b>${s.lv}</b>${s.lv < ABIL_MAX_LV ? ` · ${Math.floor(s.xp)} / ${abilXpNeed(s.lv)} XP` : ' (max.)'}<br><small>+${xpPerUse(treeId)} XP pro Einsatz</small></span><b class="free">${free} Punkt${free === 1 ? '' : 'e'} frei</b>`;
+  $('#treeInfo').innerHTML = `<img src="${icon(treeId)}" alt=""><span>Level <b>${s.lv}</b>${s.lv < ABIL_MAX_LV ? ` · ${Math.floor(s.xp)} / ${abilXpNeed(s.lv)} XP` : ' (max.)'}<br><small>+${xpPerUse(treeId)} XP pro Einsatz${treeId === 'smoke' ? ` · Angriff im Rauch −${Math.round(smokeAtkSlow(base) * 100)} %` : ''}</small></span><b class="free">${free} Punkt${free === 1 ? '' : 'e'} frei</b>`;
   const node = k => {
     const N = TREE[k], have = s.pts[k] || 0, ex = k === 'a' ? A.extras[0] : k === 'b' ? A.extras[1] : null;
     const name = ex ? ex.name : N.name, desc = ex ? ex.desc : N.desc, can = canLearn(s, k), locked = base < (N.req || 0);

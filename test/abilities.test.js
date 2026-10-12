@@ -55,6 +55,16 @@ test('Skill Tree: Punkte, Maximum, Voraussetzungen', async () => {
   for (const id of ids) assert.ok(xpPerUse(id) >= 2, id);
 });
 
+test('Rauchbombe: Angriffs-Malus 60 % ohne Punkte, erst voll ausgebaut 20 %', async () => {
+  const { smokeAtkSlow, abilMods } = await import('../src/data/abilities.js');
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: {} }).base), .6));
+  assert.ok(near(smokeAtkSlow(abilMods(undefined).base), .6), 'ohne Spielstand');
+  const half = smokeAtkSlow(abilMods({ pts: { pow: 3, cd: 3 } }).base);
+  assert.ok(half < .6 && half > .3, 'mit ein paar Punkten nur etwas besser: ' + half);
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 5, cd: 5, area: 3, a: 1, b: 1 } }).base), .2));
+});
+
 test('Fähigkeiten-Stand im Spielstand wird repariert', () => {
   const s = normalize({ abilities: { trap: { lv: 5, xp: 30, pts: { pow: 2, cd: 2 } }, gibtsnicht: { lv: 3 }, rage: { lv: 2, pts: { pow: 5 } }, mech: 'kaputt' } });
   assert.deepEqual(s.abilities.trap, { lv: 5, xp: 30, pts: { pow: 2, cd: 2 } });

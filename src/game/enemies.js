@@ -168,7 +168,15 @@ export function updEnemy(e, dt) {
   const kd = Math.exp(-9 * dt); e.kx *= kd; e.ky *= kd;
   if (e.freezeT > 0) { e.freezeT -= dt; return; }
   // Rauchbombe: alle außer dem Boss laufen zu deinem alten Platz und zaubern nicht
-  const blind = P.smokeT > 0 && !e.boss && run.decoy, tx = blind ? run.decoy.x : P.x, ty = blind ? run.decoy.y : P.y;
+  const blind = P.smokeT > 0 && !e.boss && run.decoy;
+  let tx = P.x, ty = P.y;
+  if (blind) {
+    // Nicht alle auf einen Punkt (dort zittern sie hin und her): jeder sucht auf einem eigenen Ring um den alten Platz,
+    // der Suchpunkt wandert langsam herum
+    if (e.seek !== run.decoy) { e.seek = run.decoy; e.seekA = Math.atan2(e.y - run.decoy.y, e.x - run.decoy.x); e.seekR = rand(60, 140); }
+    const a = e.seekA + run.time * .5 * e.side;
+    tx = run.decoy.x + Math.cos(a) * e.seekR; ty = run.decoy.y + Math.sin(a) * e.seekR;
+  }
   const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy) || 1;
   if (e.boss) { bossAI(e, dt, dx, dy, d); return; }
   if (e.bomber) { updBomber(e, dt, dx, dy, d); return; }
@@ -203,8 +211,13 @@ export function updEnemy(e, dt) {
     }
     return;
   }
-  const [mx, my] = move(e, dt, dx, dy, d);
-  const sp = e.spd * (e.slowT > 0 ? .5 : 1);
+  // Nahkämpfer: nach einer Berührung kurz zurückweichen (Blick bleibt beim Spieler), dann wieder ran.
+  // Sonst stehen sie auf dem Spieler und zittern zwischen Hinlaufen und Wegschieben hin und her.
+  if (!blind && e.ai !== 'kite' && e.ai !== 'still' && !(e.backT > 0) && d < pR() + e.r) e.backT = rand(.35, .55);
+  let [mx, my] = move(e, dt, dx, dy, d), back = 1;
+  if (e.backT > 0) { e.backT -= dt; mx = -dx / d; my = -dy / d; back = .7; }
+  // im Rauch: am Suchpunkt weich abbremsen statt drüberzuschießen
+  const sp = e.spd * (e.slowT > 0 ? .5 : 1) * back * (blind ? Math.min(1, d / 40) : 1);
   e.x += mx * sp * dt; e.y += my * sp * dt;
   e.face = face8(dx, dy, e.face); e.at += dt * (e.slowT > 0 ? .5 : 1);
   e.spr = mspr(e, 'walk', (Math.floor(e.at * 9) % 6) + 1);
