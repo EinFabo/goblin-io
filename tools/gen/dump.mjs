@@ -84,3 +84,21 @@ if (process.argv.includes('--png')) {
   await p.goto('file://' + join(out, 'minions.html')); await (await p.$('#n')).screenshot({ path: join(out, 'minions.png') }); await b.close();
   console.log('png', join(out, 'minions.png'));
 }
+
+// ---------- Geschosse ----------
+const { FX_KINDS, fxSvg, fxHitSvg } = await import('../../src/gen/fx.js');
+mkdirSync(join(out, 'fx'), { recursive: true });
+let frows = '';
+for (const k of FX_KINDS) {
+  let cells = '';
+  for (let i = 0; i < 4; i++) { writeFileSync(join(out, 'fx', `${k}_${i + 1}.svg`), fxSvg(k, i)); cells += `<td><img src="fx/${k}_${i + 1}.svg" width="96" height="96"></td>`; }
+  for (let i = 0; i < 5; i++) { writeFileSync(join(out, 'fx', `${k}_hit_${i + 1}.svg`), fxHitSvg(k, i)); cells += `<td><img src="fx/${k}_hit_${i + 1}.svg" width="96" height="96"></td>`; }
+  frows += `<tr><th>${k}</th>${cells}</tr>`;
+}
+writeFileSync(join(out, 'fx.html'), `<!doctype html><meta charset="utf-8"><style>body{background:#5fae3a;font:12px sans-serif;margin:4px}td{background:rgba(255,255,255,.12);padding:0}</style><table id="f">${frows}</table>`);
+if (process.argv.includes('--png')) {
+  const { chromium } = await import('playwright');
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1100, height: 700 } });
+  await p.goto('file://' + join(out, 'fx.html')); await (await p.$('#f')).screenshot({ path: join(out, 'fx.png') }); await b.close();
+  console.log('png', join(out, 'fx.png'));
+}

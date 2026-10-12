@@ -7,6 +7,9 @@ import { perfectRoll } from './abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { P, onScreen, pR, query, run } from './state.js';
 
+// Einschlag-Animation je Geschossart
+const HIT_FX = { fire: 'f_fireball_hit_', frost: 'e_frostbolt_hit_', void: 'p.shade_hit.' };
+
 export function updTele(dt) {
   for (const t of run.tele) {
     if (t.k === 'meteor') {
@@ -44,10 +47,10 @@ export function updEProj(dt) {
       p.x = p.sx + (p.tx - p.sx) * q; p.y = p.sy + (p.ty - p.sy) * q; p.h = Math.sin(q * Math.PI) * 110;
       if (q >= 1) {
         p.life = 0;
-        if (p.kind === 'rock') { for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(160,130,90,.9)', 4); }
+        if (p.kind === 'rock') { animFx('p.rock_hit.', 5, p.tx, p.ty, 2.2, 16); for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(160,130,90,.9)', 4); }
         else {
           addHaz({ shape: 'circle', x: p.tx, y: p.ty, r: 58, warn: 0, act: 4.2, tick: .5, dmg: p.dmg, kind: 'toxic', src: 'zone', owner: p.owner });
-          animFx('f_fireball_hit_', 5, p.tx, p.ty, 2.2, 16); for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(150,240,80,.9)', 4);
+          animFx('p.glob_hit.', 5, p.tx, p.ty, 2.4, 16); for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(150,240,80,.9)', 4);
         }
       }
       continue;
@@ -60,7 +63,7 @@ export function updEProj(dt) {
       const before = P.hp; damagePlayer(p.dmg, 'proj'); affixOnHitPlayer(p.owner, before - P.hp);
       if (p.kind === 'frost' && P.mechT <= 0) P.slowT = 1.2;
       p.life = 0;
-      animFx(p.kind === 'fire' ? 'f_fireball_hit_' : 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
+      animFx(HIT_FX[p.kind] || 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
     } else if (P.dashT > 0 && dx * dx + dy * dy < rr * rr) perfectRoll(p.x, p.y);
   }
   run.eproj = run.eproj.filter(p => p.life > 0);

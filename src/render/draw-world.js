@@ -142,9 +142,9 @@ function drawRun(now) {
     if (!onScreen(p.x, p.y, 60)) continue;
     if (p.lob) {
       ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 10, 4, 0, 0, TAU); ctx.fill();
-      if (p.kind === 'rock') { drawRock(p.x, p.y - p.h, p.t * 9); continue; }
+      if (p.kind === 'rock') { drawSpr('p.rock.' + ((Math.floor(p.t * 10) % 4) + 1), p.x, p.y - p.h, 1.3); continue; }
       ctx.strokeStyle = 'rgba(255,70,70,.7)'; ctx.lineWidth = 2.5; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.ellipse(p.tx, p.ty, 58, 42, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-      drawSpr('f_fireball_' + ((Math.floor(p.t * 12) % 4) + 1), p.x, p.y - p.h, 1.2, Math.PI / 2, 'toxp');
+      drawSpr('p.glob.' + ((Math.floor(p.t * 12) % 4) + 1), p.x, p.y - p.h, 1.3, Math.atan2(p.ty - p.sy - Math.cos(p.t / p.dur * Math.PI) * 110, p.tx - p.sx));
       continue;
     }
     if (p.fake) ctx.globalAlpha = .45;
@@ -152,7 +152,8 @@ function drawRun(now) {
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 8, 0, TAU); ctx.fill();
     const fr = (Math.floor(p.t * 12) % 4) + 1;
     if (p.kind === 'fire') drawSpr('f_fireball_' + fr, p.x, p.y, p.sc, p.a);
-    else drawSpr('e_frostbolt_' + fr, p.x, p.y, p.sc, p.a, p.kind === 'void' ? 'voidp' : null);
+    else if (p.kind === 'void') drawSpr('p.shade.' + fr, p.x, p.y, p.sc * 1.2, p.a);
+    else drawSpr('e_frostbolt_' + fr, p.x, p.y, p.sc, p.a);
     ctx.globalAlpha = 1;
   }
   // Effekte
@@ -471,13 +472,6 @@ function drawFrontShield(e) {
   ctx.restore();
 }
 
-function drawRock(x, y, rot) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
-  ctx.fillStyle = '#8a7a62'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.moveTo(-11, -2); ctx.lineTo(-5, -11); ctx.lineTo(6, -10); ctx.lineTo(12, -1); ctx.lineTo(7, 9); ctx.lineTo(-6, 10); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.fillStyle = '#b8a888'; ctx.beginPath(); ctx.moveTo(-5, -7); ctx.lineTo(3, -7); ctx.lineTo(-1, -1); ctx.closePath(); ctx.fill();
-  ctx.restore();
-}
 
 // Elite-Eigenschaften sichtbar machen (Plan 5.4: "erkennbar an")
 function drawAffixes(e, t) {

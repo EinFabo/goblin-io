@@ -729,13 +729,26 @@ Jede Phase endet mit einem spielbaren Stand. Die Reihenfolge ist so gewählt, da
 - Hitstop nur bei Elite- und Boss-Kill, nicht bei kritischen Treffern (die kommen zu oft, das würde ruckeln).
 - Sichtbare Spawns brauchen 0,4 s im Portal (dabei nicht angreifbar). Sim: alle Konfigurationen im Streubereich.
 
-### Phase 2 – Magierschulen
-- [ ] KI-Bausteine (5.5) mit einheitlichem Cast-Ablauf
-- [ ] 8 Schulen × 3 Rollen aus 5.3 als Daten + Verhalten
-- [ ] Elite-Affixe (5.4)
-- [ ] Hinweis-Toast beim ersten Auftauchen (gibt es schon) auf neue Gegner erweitern
-- [ ] Eigene Geschosse und Einschläge je Schule (offen aus Phase 1): Sturm, Gift, Schatten, Nekro, Erde, Licht
-- [ ] Neue Gegner in die heutigen 5 Stages einsortieren (bis die Wellen-Skripte aus Phase 3 und die Stages aus Phase 7 kommen)
+### Phase 2 – Magierschulen ✅ erledigt 2026-10-12
+- [x] KI-Bausteine (5.5) mit einheitlichem Cast-Ablauf
+- [x] 8 Schulen × 3 Rollen aus 5.3 als Daten + Verhalten
+- [x] Elite-Affixe (5.4)
+- [x] Hinweis-Toast beim ersten Auftauchen (gibt es schon) auf neue Gegner erweitern
+- [x] Eigene Geschosse und Einschläge je Schule (offen aus Phase 1): Sturm, Gift, Schatten, Nekro, Erde, Licht
+- [x] Neue Gegner in die heutigen 5 Stages einsortieren (bis die Wellen-Skripte aus Phase 3 und die Stages aus Phase 7 kommen)
+
+**Umsetzung:**
+- `src/data/enemies.js`: alle 24 Gegner + Diener/Objekte als Daten (Schule, Rolle, `ai`, `casts`, `traits`).
+- `src/game/casts.js`: jeder Zauber hat Ausholzeit (mind. 0,6 s), Farbe, optional Ziellinie, `start` (Bodenwarnung schon beim Ausholen) und `release`. Grenzen: 6 + 2×Stage Geschosse, 4 Bodenwarnungen gleichzeitig.
+- `src/game/hazards.js`: Bodenwarnungen als Kreis/Linie/Kegel/Strahl mit Warn- und Aktivphase; `dangerVec()` sagt dem Bot, wohin er ausweichen muss.
+- `src/game/affixes.js`: 7 Elite-Eigenschaften, ab Stage 3 eine, Endlos zwei.
+
+**Abweichungen / Hinweise für später:**
+- Bewegungsarten: chase, kite (mit Kreisen im Wunschabstand), zigzag, still. "Blink" und "Charge" sind Zauber (Blinzler, Paladin), kein eigener Bewegungsbaustein. "Flank" fehlt noch – kein Gegner aus 5.3 braucht ihn bisher.
+- Elites sind nur normale Magier (Rolle "mage"), keine Meister – ein Meister mit ×14 Leben war zu viel.
+- Klone schießen harmlose, halbdurchsichtige Bolzen und haben keinen Schatten am Boden; sie verschwinden, wenn der echte Spiegelmagier stirbt.
+- Der Lich holt Geister aus "Gräbern" (Orte, an denen zuletzt Magier starben).
+- Balance (Bot, 60 Hz, je 60–100 Läufe): Stage 1 100 %, 2 98 %, 3 15–22 %, 3+Werkstatt 49–58 %, 4+Werkstatt 25–30 % (vorher 12 %), 5+Werkstatt 0 % (vorher 3–5 %). Stage 4 ist also leichter, Stage 5 schwerer geworden → in Phase 3 mit Wellen-Skripten und Kraftkurve angleichen. In Stage 4 machen Giftpfützen den meisten Schaden.
 
 ### Phase 3 – Balancing-System
 - [ ] Level-Up-Regeln (7.2) inkl. Bannen und Sperren

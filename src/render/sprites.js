@@ -2,6 +2,7 @@ import { ANIMS, DEFAULT_LOOK, goblinSvg } from '../gen/goblin.js';
 import { DRAWN, MIRROR } from '../gen/svg.js';
 import { MAGE_ANIMS, castOffsets, mageSvg } from '../gen/mages.js';
 import { MINION_ANIMS, minionSvg } from '../gen/minions.js';
+import { FX_KINDS, fxHitSvg, fxSvg } from '../gen/fx.js';
 import { ETYPES } from '../data/enemies.js';
 import { STAGES } from '../data/stages.js';
 import { makeProc } from './proc.js';
@@ -29,7 +30,7 @@ export async function loadAssets() {
   const imgs = await Promise.all(SVGS.map(s => loadImg(svgUrl(s))));
   const fixed = imgs.map((im, i) => raster(im, SVGS[i]));
   for (const [name, i] of Object.entries(SPRMAP)) SPR[name] = fixed[i];
-  await loadGoblin(DEFAULT_LOOK);
+  await Promise.all([loadGoblin(DEFAULT_LOOK), loadFx()]);
   await loadMenuMages();
   GRASS_IMG = await loadImg(GRASS);
   makeProc();
@@ -141,4 +142,15 @@ export function loadMinions(kinds) {
     units.set(id, pr);
     return pr;
   }));
+}
+
+// Geschosse/Einschläge der Schulen: p.<art>.<n> (4 Frames) und p.<art>_hit.<n> (5 Frames)
+async function loadFx() {
+  const jobs = [];
+  for (const k of FX_KINDS) {
+    for (let i = 0; i < 4; i++) jobs.push([`p.${k}.${i + 1}`, fxSvg(k, i)]);
+    for (let i = 0; i < 5; i++) jobs.push([`p.${k}_hit.${i + 1}`, fxHitSvg(k, i)]);
+  }
+  const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[1]))));
+  jobs.forEach(([name, svg], j) => { SPR[name] = raster(imgs[j], svg); });
 }
