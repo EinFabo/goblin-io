@@ -16,8 +16,10 @@ import './scenes/menu.js';
 import './scenes/run.js';
 import './scenes/results.js';
 import './debug.js';
+import { startPerf } from './perf.js';
 
 loadSave();
 resize();
 go('boot');
 startLoop();
+if (/[?&]perf\b/.test(location.search)) startPerf();
