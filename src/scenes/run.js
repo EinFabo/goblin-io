@@ -2,6 +2,7 @@ import { on } from '../core/events.js';
 import { Music } from '../core/music.js';
 import { defineScene, go } from '../core/scenes.js';
 import { $ } from '../core/util.js';
+import { levelLabel } from '../data/levels.js';
 import { newRun, update } from '../game/run.js';
 import { run } from '../game/state.js';
 import { renderRun } from '../render/draw-world.js';
@@ -12,13 +13,13 @@ import { hideOverlays, showScreen } from '../ui/menus.js';
 let offs = [];
 
 defineScene('run', {
-  enter({ si, seed }) {
-    newRun(si, seed);
+  enter({ si, li = 0, seed }) {
+    newRun(si, seed, li);
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true;
-    $('#stageTxt').textContent = run.st.name;
+    $('#stageTxt').textContent = run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`;
     refreshSlots(); setupAbilButtons();
-    banner(run.st.name, '');
+    banner(run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`, '');
     Music.boss = false; Music.start();
     offs = [
       on('runEnd', r => go('results', r)),

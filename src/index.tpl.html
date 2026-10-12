@@ -59,17 +59,13 @@
 </nav>
 
 <section class="screen" id="menu" hidden>
-  <div class="menubox">
-    <canvas id="mascot" width="240" height="240" aria-hidden="true"></canvas>
-    <h1 class="logo">Goblin<span>.io</span></h1>
-    <div class="carousel" id="carousel">
-      <button class="iconbtn arrow" id="stPrev" aria-label="Vorige Stage">‹</button>
-      <div class="stcard" id="stCard" aria-live="polite"></div>
-      <button class="iconbtn arrow" id="stNext" aria-label="Nächste Stage">›</button>
-    </div>
-    <div class="stdots" id="stDots" aria-hidden="true"></div>
-    <button class="btn primary big" id="playBtn">Spielen</button>
+  <div class="worldhead">
+    <button class="iconbtn arrow" id="wPrev" aria-label="Vorige Welt">‹</button>
+    <div class="wtitle"><small id="wNum">Welt 1</small><b id="wName">Goblinwiese</b><span class="whats" id="wHats"></span></div>
+    <button class="iconbtn arrow" id="wNext" aria-label="Nächste Welt">›</button>
   </div>
+  <div id="mapNodes"></div>
+  <div class="parch lvnote" id="lvNote" aria-live="polite" hidden></div>
 </section>
 
 <section class="screen" id="profile" hidden>
@@ -84,7 +80,7 @@
     </div>
     <h3 class="sec">Statistiken</h3>
     <div class="pstats" id="profStats"></div>
-    <h3 class="sec">Stages</h3>
+    <h3 class="sec">Welten</h3>
     <div class="pstages" id="profStages"></div>
     <h3 class="sec">Konto-Level schaltet frei</h3>
     <ol class="punlocks" id="profUnlocks"></ol>
@@ -183,6 +179,7 @@
 <div class="overlay" id="over" hidden>
   <div class="panel">
     <h2 id="overTitle">Besiegt!</h2>
+    <div class="overhats" id="overHats"></div>
     <div class="results" id="overStats"></div>
     <div class="menubtns row">
       <button class="btn primary" id="againBtn">Nochmal</button>

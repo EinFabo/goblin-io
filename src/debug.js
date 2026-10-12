@@ -15,9 +15,10 @@ import { spawnEnemy } from './game/enemies.js';
 import { ETYPES } from './data/enemies.js';
 import { allLoaded } from './scenes/boot.js';
 import { SPR, loadMinions } from './render/sprites.js';
+import { M as MAP } from './ui/worldmap.js';
 
 const api = {
-  STEP, STAGES, events, joy, keys, RNG,
+  STEP, STAGES, events, joy, keys, RNG, MAP,
   newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES,
 };
 Object.defineProperties(api, {

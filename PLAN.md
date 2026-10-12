@@ -308,6 +308,23 @@ Alle Gegner setzen sich aus wenigen Verhalten zusammen (`src/game/enemies/ai-*.j
 
 **Albtraum-Modus** nach dem Abschluss einer Stage: +80 % Gegner-HP, Elites mit 2 Affixen, bessere Truhen.
 
+### 6.1a Welten mit Leveln und Weltkarte (Wunsch Fabi, 2026-10-12)
+
+Ersetzt die Stage-Liste bzw. das Stage-Karussell. Entschieden mit Fabi:
+
+- **Welten statt Stages:** Jede Stage aus 6.1 wird eine Welt (heute 5, später 8). Endlose Nacht bleibt ein einzelnes Feld am Ende der letzten Welt.
+- **5 Level pro Welt**, jedes ein eigener kurzer Lauf, Start immer bei Level 1 (Talente, Fähigkeiten und Skill Trees wirken wie bisher):
+  1. Einführung: die Hauptschule der Welt
+  2. Nebenschule: neue Magier kommen dazu
+  3. Elites und Schwärme
+  4. Mini-Boss (bei ~1:40)
+  5. Boss-Level: ~90 s dichte Wellen, dann Boss-Auftritt und Kampf in der Arena
+  Level 1–4 dauern 2:30 (überleben = geschafft), das Boss-Level endet mit dem Boss. Ein geschafftes Level öffnet das nächste, der Boss öffnet die nächste Welt.
+- **Magierhüte statt Sterne** (Goblin klaut den Magiern die Hüte): 1 Hut = geschafft, 2 = mit über 50 % Leben am Ende, 3 = nie unter 25 % Leben gefallen. Belohnung in Juwelen kommt mit Phase 6.
+- **Weltkarte** im Tab „Spielen“: eine Karte pro Welt im Look der Welt, Pfad mit 5 Punkten (Boss-Punkt größer, mit Boss). Level antippen → der Goblin läuft den Pfad entlang hin, ein Zettel zeigt Name, Hüte, Bestzeit und „Los!“. ←/→ springt zum Nachbar-Level, Enter startet. Pfeile wechseln die Welt; gesperrte Welten grau mit Schloss. Geschaffte Level tragen eine Fahne, neu freie Wegstücke malen sich auf.
+- **Spielstand:** pro Welt `levels: [{ hats, best }] × 5`; eine bisher geschaffte Stage zählt als komplett geschaffte Welt (alle Level mit 1 Hut).
+- Wellen der Level werden aus dem Skript der Welt abgeleitet (Haupt-/Nebenschule, Schwarm-, Elite- und Mini-Boss-Typen), damit neue Welten nur ihre Daten brauchen.
+
 ### 6.2 Bosse: Aufbau
 
 Jeder Boss hat **3 Phasen** (bei 100 %, 66 % und 33 % HP). Beim Phasenwechsel:
@@ -875,6 +892,25 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 - [x] **Gegner zittern an der Stelle, an der der Spieler zuletzt war (Wunsch Fabi, 2026-10-12).**
   - Im Rauch: Jeder Gegner sucht auf einem eigenen Ring (60–140 px) um den alten Platz, der Suchpunkt wandert langsam herum, am Punkt bremsen sie weich ab. Richtungswechsel pro Gegner und Sekunde: 2,8 → 0,2.
   - Auch ohne Rauch standen Nahkämpfer auf dem Spieler und zitterten (3,9 Richtungswechsel/s). Jetzt: nach einer Berührung 0,35–0,55 s zurückweichen (Blick zum Spieler), dann wieder ran → 1,2/s (das ist das gewollte Hin und Her). Sim: Kontaktschaden etwas niedriger, Siegquoten im Streubereich.
+
+- [x] **Welten mit 5 Leveln und Weltkarte (6.1a, Wunsch Fabi, 2026-10-12)** – Magierhüte statt Sterne (Fabi hat aus 5 Vorschlägen gewählt: Hüte, Goldzähne, Beutesäcke, Schädel, Kristalle)
+  - `src/data/levels.js`: Level-Skripte aus dem Stage-Skript abgeleitet, `levelStage(si, li)` liefert die spielbare Stage. Level 1–4 enden mit dem Ereignis `clear` nach 2:30 (Magier lösen sich auf, Kristalle fliegen her, „Level geschafft!“, unverwundbar bis zum Ergebnis). HUD zählt dort rückwärts. Boss-Level: Boss bei 1:30.
+  - Weltkarte (`src/ui/worldmap.js`, `src/render/map-scene.js`): Boden der Welt, Erdweg nach Catmull-Rom durch die Punkte, gesperrter Teil gepunktet, Boss steht neben seinem Punkt, Goblin läuft mit 8-Richtungs-Animation. Punkte sind Knöpfe (Fahne = geschafft, Hüte darunter). Zettel mit Hut-Bedingungen, Rekord (Kills bzw. schnellster Boss-Sieg) und „Los!“. ←/→ bzw. A/D Level, Q/E bzw. Bild↑/↓ Welt, Enter startet. Nach einem Erstsieg malt sich das neue Wegstück auf und der Goblin läuft hin. Endlose Nacht ist der 6. Punkt der letzten Welt.
+  - Ergebnis: Level-Name, Hüte (neue springen rein), „Weiter: 1-3“ / „Welt 2“ / „Endlose Nacht“, „Karte“ statt „Menü“. Profil zeigt Welten mit Hüten und schnellstem Boss-Sieg.
+  - Save: `stages[n].lv[0–4] = { hats, kills, fast }`, `map = { si, li, fresh }` (ersetzt `lastStage`). Alte geschaffte Stages = alle Level mit 1 Hut.
+  - Belohnung: Gold-Bonus `25 + 20×Welt` (Boss-Level zusätzlich `40 + 30×Welt`); Konto-XP-Bonus voll (100/200) nur für Boss-Level, sonst 40 für Sieg, 50 für Erstsieg.
+  - Balance (`npm run sim -- --levels`, erwartete Talente je Welt, 40 Läufe, zwei Seed-Sätze): Schwierigkeit je Level `LEVEL_KIND` (Schaden, Spawnrate, `hpT` = Gegner-Leben wie nach so vielen Sekunden mehr) und je Welt `WORLD_LV` (eigene gleichmäßige Kurve; die alten Stage-Werte `dmg`/`rate` waren für 4-Minuten-Läufe verbogen), Gegner-Leben mit halbem `STAGE_HP`-Zuschlag, Boss ×1,6.
+
+    | Welt | 1 | 2 | 3 | 4 | Boss |
+    |---|---|---|---|---|---|
+    | 1 | 100 | 100 | 100 | 100 | 98–100 |
+    | 2 | 100 | 100 | 100 | 100 | 100 |
+    | 3 | 100 | 100 | 93 | 88–93 | 75 |
+    | 4 | 100 | 100 | 100 | 93–95 | 53–60 |
+    | 5 | 100 | 100 | 100 | 98–100 | 83–93 |
+
+    Welt 1–2 sind bewusst leicht (Einstieg; alte Ziele dort ≥ 85 bzw. ≥ 60 %). Bosskampf dauert ~30 s (vorher ~12 s), das Ziel 45–75 s kommt mit dem Boss-Rework (Phase 7). Level 3/4 der späteren Welten noch etwas leicht → Phase 8.
+- [x] **Hub auf Handy quer:** kompakte Leisten, Tab-Leiste nur mit Icons, Zettel rechts neben der Karte; Screens beginnen oben und scrollen, wenn sie höher als der Bildschirm sind (`place-items: safe center`).
 
 ### Phase 6 – Truhen, Shop, Kosmetik
 - [ ] Truhen mit Drop-Tabellen, Pity und Wahrscheinlichkeits-Anzeige (9.5)

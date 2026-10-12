@@ -1,5 +1,4 @@
 import { $, clamp, fmtTime } from '../core/util.js';
-import { STAGE_LEN } from '../data/stages.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
 import { ABILITIES } from '../data/abilities.js';
@@ -20,7 +19,7 @@ export function updHud(dt) {
   setTxt('#lvTxt', 'Lv ' + P.lv);
   setTxt('#killTxt', String(run.kills));
   setTxt('#goldTxt', String(run.gold));
-  setTxt('#timeTxt', run.st.endless ? fmtTime(run.time) : fmtTime(Math.min(run.time, STAGE_LEN)));
+  setTxt('#timeTxt', run.st.len && !run.st.endless ? fmtTime(Math.max(0, run.st.len - run.time)) : fmtTime(run.time));
   run.abil.forEach((s, i) => { if (s) setAbil('#ab' + i + 'Btn', abilFill(s), abilReady(s), abilActive(s.id)); });
   setAbil('#dashBtn', 1 - Math.max(0, P.dashCd) / 2.4, P.dashCd <= 0);
   setAbil('#sprintBtn', P.stam / P.stamMax, !P.exhaust, P.sprinting);

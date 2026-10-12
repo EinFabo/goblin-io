@@ -1,11 +1,11 @@
 // Balance-Bot. Läuft komplett im Browser (wird per page.evaluate übergeben),
 // darf also nichts von außen benutzen außer window.GOBLIN.
 // step: Länge eines Logikschritts in s (Standard wie im Spiel: 1/60)
-export function botRun({ si, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20 }) {
+export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20 }) {
   const G = window.GOBLIN, joy = G.joy, STEP = step || G.STEP;
   G.save.talents = { ...talents }; G.save.loadout = [...loadout]; G.save.profile.level = acct;
   for (let k = 1; k <= 8; k++) G.save.stages[k] = { cleared: true, stars: 0, best: 0, nightmare: false };   // alles freigeschaltet
-  G.newRun(si, seed);
+  G.newRun(si, seed, li);
   const run = G.run, P = G.P;
   const dmg = {};
   const off = G.events.on('playerHurt', h => { dmg[h.src] = (dmg[h.src] || 0) + h.amount; });

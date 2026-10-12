@@ -9,9 +9,9 @@ test('v1 → v3 übernimmt Gold, Stages, Bestzeiten, Werkstatt (als Talente ×2)
   const s = migrate(V1);
   assert.equal(s.version, VERSION);
   assert.equal(s.wallet.gold, 812);
-  assert.deepEqual(s.stages[1], { cleared: true, stars: 0, best: 251, nightmare: false });
-  assert.deepEqual(s.stages[2], { cleared: true, stars: 0, best: 244, nightmare: false });
-  assert.deepEqual(s.stages[3], { cleared: false, stars: 0, best: 130, nightmare: false });
+  { const { lv, ...rest } = s.stages[1]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 251, nightmare: false }); assert.equal(lv[4].hats, 1); }
+  { const { lv, ...rest } = s.stages[2]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 244, nightmare: false }); assert.equal(lv[4].hats, 1); }
+  { const { lv, ...rest } = s.stages[3]; assert.deepEqual(rest, { cleared: false, stars: 0, best: 130, nightmare: false }); assert.equal(lv[4].hats, 0); }
   assert.deepEqual(s.talents, { atk: 8, hp: 6, reroll: 1 });
   assert.equal(s.settings.mute, true);
   assert.equal(s.settings.musicOff, false);
@@ -68,10 +68,17 @@ test('Talente über dem Maximum werden gekappt, unbekannte entfernt', () => {
   assert.deepEqual(s.talents, { atk: 20, reroll: 3 });
 });
 
-test('Statistiken und Karussell-Stage: alte Stände bekommen Standardwerte, Unsinn wird verworfen', () => {
+test('Statistiken und Kartenplatz: alte Stände bekommen Standardwerte, Unsinn wird verworfen', () => {
   const s = migrate({ version: 3, stages: { 1: { cleared: true }, 2: { cleared: true } }, stats: { runs: 5, weapons: { dagger: 4, nix: 9, orbit: 'x' } } });
-  assert.equal(s.lastStage, 2);   // höchste freie Stage
+  assert.deepEqual(s.map, { si: 2, li: 0, fresh: false });   // erste offene Welt
   assert.equal(s.stats.bestKills, 0);
   assert.deepEqual(s.stats.weapons, { dagger: 4 });
-  assert.equal(migrate({ version: 3, lastStage: 0, stages: { 1: { cleared: true } } }).lastStage, 0);   // gewählte Stage bleibt
+  assert.deepEqual(migrate({ version: 3, map: { si: 0, li: 3 } }).map, { si: 0, li: 3, fresh: false });
+});
+
+test('Welten: geschaffte Stage aus alten Ständen = alle Level mit 1 Hut, sonst gelten gespeicherte Hüte', () => {
+  const s = migrate({ version: 3, stages: { 1: { cleared: true, best: 250 }, 2: { lv: [{ hats: 3 }, { hats: 9 }, {}] } } });
+  assert.deepEqual(s.stages[1].lv.map(l => l.hats), [1, 1, 1, 1, 1]);
+  assert.deepEqual(s.stages[2].lv.map(l => l.hats), [3, 3, 0, 0, 0]);
+  assert.deepEqual(s.map, { si: 1, li: 2, fresh: false });
 });

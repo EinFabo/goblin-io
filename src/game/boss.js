@@ -18,7 +18,7 @@ export function spawnBoss() {
   const lf = 1 + run.loop * 1.5;
   const b = {
     type: 'boss', boss: true, pre: mageKey(B.school, true), kind: B.kind, minion: B.minion, name: B.name, x: P.x, y: P.y - 300, r: 38, sc: 2.7, spd: 52, dmg: 18 * st.dmg * lf,
-    hp: 2500 * STAGE_HP[run.si] * lf, xp: 150, tint: B.tint, state: 'walk', face: 'down', at: 0, ft: 0, fired: false, charge: .7, ck: 'fire', kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, dead: false,
+    hp: 2500 * STAGE_HP[run.si] * lf * (st.bossHp || 1), xp: 150, tint: B.tint, state: 'walk', face: 'down', at: 0, ft: 0, fired: false, charge: .7, ck: 'fire', kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, dead: false,
     ai: { st: 'chase', t: 2.5, i: 0, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0 },
   };
   b.maxHp = b.hp;

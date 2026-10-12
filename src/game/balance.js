@@ -30,5 +30,6 @@ export const capKind = src => src === 'contact' ? 'contact' : src === 'proj' ? '
 export const hitDamage = (raw, maxHp, src) => Math.min(raw, maxHp * DMG_CAP[capKind(src)]);
 
 // Konto-XP pro Lauf (14.3)
-export const accountXp = ({ kills, seconds, win, firstClear }) => Math.floor(kills / 10 + seconds / 4) + (win ? 100 : 0) + (firstClear ? 200 : 0);
+// Level einer Welt (6.1a) sind kürzer: Sieg-/Erstsieg-Bonus voll nur für Boss-Level (und Endlos)
+export const accountXp = ({ kills, seconds, win, firstClear, boss = true }) => Math.floor(kills / 10 + seconds / 4) + (win ? (boss ? 100 : 40) : 0) + (firstClear ? (boss ? 200 : 50) : 0);
 export const accountXpNeed = L => 200 + 60 * L + 8 * L * L;

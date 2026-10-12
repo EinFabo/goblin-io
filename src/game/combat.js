@@ -64,7 +64,7 @@ export function bossDown(b) {
 }
 // src: contact | proj | bomb | strike | zone (für Statistik und Sim)
 export function damagePlayer(d, src = 'contact') {
-  if (P.inv > 0 || P.dashT > 0 || run.over) return;
+  if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
   d = shieldAbsorb(hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1));
   if (d <= 0) { P.inv = .5; return; }
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);

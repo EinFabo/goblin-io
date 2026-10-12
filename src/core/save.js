@@ -5,6 +5,7 @@ import { ABILITIES, ABIL_MAX_LV, DEFAULT_LOADOUT, TREE, abilXpNeed, spentPoints 
 import { accountXpNeed } from '../game/balance.js';
 import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 import { WEAPONS } from '../data/weapons.js';
+import { LEVELS } from '../data/levels.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
@@ -22,8 +23,8 @@ export function defaults() {
     stages: {},
     // weapons: in wie vielen Läufen welche Waffe dabei war (Lieblingswaffe)
     stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0, bestKills: 0, bestLevel: 0, weapons: {} },
-    // zuletzt gewählte Stage im Karussell (0-basiert)
-    lastStage: 0,
+    // Platz des Goblins auf der Weltkarte (si = Welt 0-basiert, li = Level); fresh: gerade freigespielt
+    map: { si: 0, li: 0, fresh: false },
     // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
     loadout: [...DEFAULT_LOADOUT],
     // Fähigkeiten-Level und Skill Tree: { id: { lv, xp, pts: { pow, cd, area, a, b } } }
@@ -74,7 +75,7 @@ export function normalize(raw) {
       runs: num(st.runs) | 0, wins: num(st.wins) | 0, kills: num(st.kills) | 0, playSeconds: num(st.playSeconds),
       bestKills: num(st.bestKills) | 0, bestLevel: num(st.bestLevel) | 0, weapons: {},
     },
-    lastStage: num(r.lastStage, 0, 0, 99) | 0,
+    map: { si: 0, li: 0, fresh: false },
     loadout: normLoadout(r.loadout),
     abilities: normAbilities(r.abilities),
     settings: {
@@ -87,10 +88,23 @@ export function normalize(raw) {
   for (const [k, v] of Object.entries(obj(r.stages))) {
     if (!/^\d+$/.test(k) || +k < 1) continue;
     const s = obj(v);
-    out.stages[+k] = { cleared: bool(s.cleared, false), stars: num(s.stars, 0, 0, 3) | 0, best: num(s.best), nightmare: bool(s.nightmare, false) };
+    const o = out.stages[+k] = { cleared: bool(s.cleared, false), stars: num(s.stars, 0, 0, 3) | 0, best: num(s.best), nightmare: bool(s.nightmare, false), lv: [] };
+    // Level der Welt (6.1a); Stände von vor den Welten: geschaffte Stage = alle Level mit 1 Hut
+    const lv = Array.isArray(s.lv) ? s.lv : [];
+    for (let i = 0; i < LEVELS; i++) {
+      const l = obj(lv[i]);
+      o.lv.push({ hats: num(l.hats, o.cleared && !Array.isArray(s.lv) ? 1 : 0, 0, 3) | 0, kills: num(l.kills) | 0, fast: num(l.fast) });
+    }
   }
-  // Alte Stände ohne Karussell-Wahl: höchste freie Stage
-  if (typeof r.lastStage !== 'number') { let k = 0; while (out.stages[k + 1] && out.stages[k + 1].cleared) k++; out.lastStage = k; }
+  // Kartenplatz; alte Stände: erstes offenes Level der höchsten freien Welt
+  const m = obj(r.map);
+  if (typeof m.si === 'number') out.map = { si: num(m.si, 0, 0, 99) | 0, li: num(m.li, 0, 0, LEVELS - 1) | 0, fresh: bool(m.fresh, false) };
+  else {
+    let k = 0; while (out.stages[k + 1] && out.stages[k + 1].cleared) k++;
+    const lv = out.stages[k + 1] ? out.stages[k + 1].lv : [];
+    let li = 0; while (li < LEVELS - 1 && lv[li] && lv[li].hats) li++;
+    out.map = { si: k, li, fresh: false };
+  }
   return out;
 }
 
@@ -183,8 +197,26 @@ export function gainAbilXp(id, n) {
   return up;
 }
 
-export function recordStage(i, { win, time }) {
+// Level einer Welt
+const newLv = () => Array.from({ length: LEVELS }, () => ({ hats: 0, kills: 0, fast: 0 }));
+function stageRec(i) {
   const s = save.stages[i + 1] || (save.stages[i + 1] = { cleared: false, stars: 0, best: 0, nightmare: false });
+  if (!Array.isArray(s.lv)) s.lv = newLv();
+  return s;
+}
+export const levelInfo = (si, li) => { const s = save.stages[si + 1]; return (s && s.lv && s.lv[li]) || { hats: 0, kills: 0, fast: 0 }; };
+export const levelDone = (si, li) => levelInfo(si, li).hats > 0;
+export const levelUnlocked = (si, li) => stageUnlocked(si) && (li === 0 || levelDone(si, li - 1));
+// Ergebnis eines Levels speichern. first = erstes Mal geschafft, newHats = Hüte dazugewonnen
+export function recordLevel(si, li, { win, time, hats, kills = 0, endless = false }) {
+  if (endless) { recordStage(si, { win: false, time }); return { first: false, newHats: 0 }; }
+  const L = stageRec(si).lv[li], first = win && !L.hats, newHats = Math.max(0, hats - L.hats);
+  L.hats = Math.max(L.hats, hats); L.kills = Math.max(L.kills, kills);
+  if (win && li === LEVELS - 1) { L.fast = L.fast ? Math.min(L.fast, Math.floor(time)) : Math.floor(time); recordStage(si, { win, time }); }
+  return { first, newHats };
+}
+export function recordStage(i, { win, time }) {
+  const s = stageRec(i);
   if (win) s.cleared = true;
   s.best = Math.max(s.best, Math.floor(time));
 }

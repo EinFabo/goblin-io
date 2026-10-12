@@ -9,7 +9,7 @@ import { enemyHp } from './balance.js';
 import { bossAI, spawnBoss } from './boss.js';
 import { CASTS, castAllowed, castWindup } from './casts.js';
 import { damagePlayer, hurt } from './combat.js';
-import { animFx, part, ring } from './fx.js';
+import { animFx, part, puff, ring } from './fx.js';
 import { hint } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
 import { P, onScreen, pR, query, run, viewR } from './state.js';
@@ -36,7 +36,7 @@ export function spawnEnemy(type, opt = {}) {
   if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60; x = P.x + Math.cos(a) * R; y = P.y + Math.sin(a) * R; }
   const e = {
     type, pre: typeSprite(T), x, y, r: T.r, sc: T.sc, spd: T.spd * RNG.spawn.range(.9, 1.1), dmg: T.dmg * st.dmg * (1 + run.time / 400) * lf,
-    hp: enemyHp(T.hp, run.si, run.time) * lf, xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
+    hp: enemyHp(T.hp, run.si, run.time + (run.st.hpT || 0)) * (run.st.hpMul || 1) * lf, xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
     casts: (T.casts || []).map(c => ({ ...c, t: RNG.spawn.range(1.5, c.cd[1]) })),
     bomber: has(T, 'bomber'), obj: !!T.draw, clone: !!T.clone, side: RNG.spawn.next() < .5 ? 1 : -1,
     state: 'walk', face: 'down', at: RNG.spawn.next() * 5, ft: 0, fired: false, ck: null, charge: 0, chain: null, fuse: 0,
@@ -91,6 +91,16 @@ export function doEvent(ev) {
   } else if (ev.event === 'swarm') { swarm(ev); banner('Ansturm!', 'danger'); }
   else if (ev.event === 'warn') { banner('Der Boss naht …', 'danger'); sfx.warn(); }
   else if (ev.event === 'boss') spawnBoss();
+  else if (ev.event === 'clear') levelClear();
+}
+
+// Level überlebt (6.1a): alle Magier lösen sich auf, Kristalle fliegen zum Goblin, kurz danach das Ergebnis
+function levelClear() {
+  for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
+  run.eproj.length = 0; run.haz.length = 0; run.spawnQ.length = 0;
+  for (const it of run.items) if (it.k === 'gem' || it.k === 'coin' || it.k === 'gear') it.mag = true;
+  banner('Level geschafft!', ''); sfx.chest();
+  run.clearT = 2.5;
 }
 
 // Schwarm-Formen. Jeder sechste Gegner ist "extra", falls angegeben.

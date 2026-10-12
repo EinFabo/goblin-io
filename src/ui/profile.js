@@ -1,5 +1,7 @@
 import { sfx } from '../core/audio.js';
-import { persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
+import { levelInfo, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
+import { LEVELS } from '../data/levels.js';
+import { hatSvg } from './hats.js';
 import { $, fmtTime } from '../core/util.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { STAGES } from '../data/stages.js';
@@ -52,9 +54,11 @@ export function renderProfile() {
     `<div class="pstat fav"><span>Lieblingswaffe</span>${fav ? `<b><img src="${icon(fav)}" alt="">${WEAPONS[fav].name}</b><small>in ${s.weapons[fav]} Läufen dabei</small>` : '<b>–</b>'}</div>`;
 
   $('#profStages').innerHTML = STAGES.map((st, i) => {
-    const ok = stageCleared(i), open = stageUnlocked(i), best = stageBest(i);
+    const ok = stageCleared(i), open = stageUnlocked(i);
     const state = ok ? '<span class="ok">Geschafft</span>' : open ? '<span>Offen</span>' : '<span class="no">Gesperrt</span>';
-    return `<div class="pstage${open ? '' : ' locked'}"><span class="n">${st.endless ? '∞' : i + 1}</span><b>${st.name}</b>${state}<span class="t">${best ? fmtTime(best) : '–'}</span></div>`;
+    if (st.endless) { const best = stageBest(i); return `<div class="pstage${open ? '' : ' locked'}"><span class="n">∞</span><b>${st.name}</b>${state}<span></span><span class="t">${best ? fmtTime(best) : '–'}</span></div>`; }
+    const hats = Array.from({ length: LEVELS }, (_, l) => levelInfo(i, l).hats).reduce((a, b) => a + b, 0), fast = levelInfo(i, LEVELS - 1).fast;
+    return `<div class="pstage${open ? '' : ' locked'}"><span class="n">${i + 1}</span><b>${st.name}</b>${state}<span class="t"><i class="hat1">${hatSvg}</i>${hats}/${LEVELS * 3}</span><span class="t" title="schnellster Boss-Sieg">${fast ? fmtTime(fast) : '–'}</span></div>`;
   }).join('');
 
   const list = acctUnlocks(), next = list.find(u => u.lv > p.level);

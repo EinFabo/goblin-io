@@ -13,10 +13,11 @@ await p.goto('file://' + html);
 await p.waitForFunction(() => window.GOBLIN && window.GOBLIN.scene === 'menu');
 await p.evaluate(() => GOBLIN.allLoaded);
 const stages = await p.evaluate(() => GOBLIN.STAGES.length);
+// Je Welt das Boss-Level (Boss nach 1:30), Endlos wie bisher bis zum Boss bei 4:00
 for (let si = 0; si < stages; si++) {
-  // Alle Fähigkeiten nacheinander durchwechseln, damit auch ihre Effekte gezeichnet werden
-  await p.evaluate(si => { const G = GOBLIN; G.save.profile.level = 20; G.save.loadout = ['rage', 'mech']; G.go('run', { si, seed: 11 + si }); }, si);
-  for (const until of [30, 60, 90, 120, 150, 200, 239, 241, 250, 262]) {
+  const endless = await p.evaluate(si => !!GOBLIN.STAGES[si].endless, si);
+  await p.evaluate(([si, li]) => { const G = GOBLIN; G.save.profile.level = 20; G.save.loadout = ['rage', 'mech']; G.go('run', { si, li, seed: 11 + si }); }, [si, endless ? 0 : 4]);
+  for (const until of endless ? [30, 60, 90, 120, 150, 200, 239, 241, 250, 262] : [30, 60, 89, 91, 100, 115, 130]) {
     await p.evaluate(until => {
       const G = GOBLIN, run = G.run;
       if (!run || run.over) return;
@@ -31,8 +32,16 @@ for (let si = 0; si < stages; si++) {
     await p.waitForTimeout(120);   // ein paar echte Bilder zeichnen lassen
   }
   const st = await p.evaluate(() => ({ t: Math.round(GOBLIN.run.time), boss: !!GOBLIN.run.boss || GOBLIN.run.over }));
-  console.log(`Stage ${si + 1}: bis ${st.t} s, Boss erreicht: ${st.boss ? 'ja' : 'nein'}`);
+  console.log(`${endless ? 'Endlos' : `Welt ${si + 1} Boss-Level`}: bis ${st.t} s, Boss erreicht: ${st.boss ? 'ja' : 'nein'}`);
 }
+// Normales Level: nach 2:30 „Level geschafft“, Ergebnis mit Hüten, Weiter → nächstes Level
+await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 0, li: 1, seed: 3 }); const run = G.run; run.paused = true;
+  while (run.time < 160 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } }
+  run.paused = false; });
+await p.waitForSelector('#over:not([hidden])');
+const lvRes = await p.evaluate(() => ({ win: GOBLIN.run.result.win, hats: document.querySelectorAll('#overHats .hats i.on').length, next: document.querySelector('#nextBtn').textContent }));
+if (!lvRes.win || lvRes.hats < 1 || lvRes.next !== 'Weiter: 1-3') errs.push('Level-Ende: ' + JSON.stringify(lvRes));
+console.log('Level 1-2 geschafft:', JSON.stringify(lvRes));
 // Tod im echten Spiel (nicht per Hand gesteppt): Sterbe-Animation, Nochmal, Menü
 async function dieForReal() {
   for (let i = 0; i < 80 && !(await p.evaluate(() => GOBLIN.run.over)); i++) {
@@ -66,13 +75,18 @@ for (const t of ['#shop', '#armory', '#profile', '#menu']) {
   await p.click(`#tabbar [data-tab="${t}"]`);
   if (!(await vis(t))) hubFail(`Tab ${t} öffnet nicht`);
 }
-await p.evaluate(() => { const s = GOBLIN.save; s.stages[1] = { cleared: true, stars: 0, best: 200, nightmare: false }; s.lastStage = 0; });
+await p.evaluate(() => GOBLIN.setSave({ ...GOBLIN.save, stages: { 1: { cleared: true } }, map: { si: 1, li: 0, fresh: false } }));
 await p.click('#tabbar [data-tab="#profile"]'); await p.click('#tabbar [data-tab="#menu"]');
-await p.click('#stNext');
-if ((await p.evaluate(() => GOBLIN.save.lastStage)) !== 1) hubFail('Pfeil › wechselt die Stage nicht');
-await p.keyboard.press('ArrowRight');
-if (!(await p.evaluate(() => document.querySelector('#playBtn').disabled))) hubFail('gesperrte Stage 3 lässt sich starten');
+if ((await p.evaluate(() => document.querySelector('#wName').textContent)) !== 'Frostlichtung') hubFail('Karte zeigt nicht Welt 2');
+await p.click('#wPrev');
+await p.click('#mapNodes [data-node="2"]');
+await p.waitForFunction(() => !document.querySelector('#lvNote').hidden, null, { timeout: 8000 }).catch(() => {});
+if (!(await vis('#lvNote')) || (await p.evaluate(() => document.querySelector('#lvNote .nh .lbl').textContent)) !== '1-3') hubFail('Goblin läuft nicht zu Level 1-3 / Zettel fehlt');
+await p.click('#wNext');
+await p.click('#mapNodes [data-node="1"]'); await p.waitForTimeout(300);
+if (!(await p.evaluate(() => !!document.querySelector('#lvNote .lock')))) hubFail('gesperrtes Level 2-2 zeigt keinen Hinweis');
 await p.keyboard.press('ArrowLeft');
+await p.waitForFunction(() => document.querySelector('#lvNote [data-go]'), null, { timeout: 8000 }).catch(() => {});
 await p.click('#topWho');
 await p.click('#nameEdit'); await p.fill('#nameIn', 'Gr'); await p.press('#nameIn', 'Enter');
 if ((await p.evaluate(() => GOBLIN.save.profile.name)) === 'Gr') hubFail('zu kurzer Name wurde angenommen');
@@ -83,11 +97,11 @@ if (!(await vis('#howto')) || (await vis('#options'))) hubFail('„So spielst du
 await p.keyboard.press('Escape');
 if (await vis('#howto')) hubFail('Esc schließt „So spielst du“ nicht');
 await p.click('#tabbar [data-tab="#menu"]');
-await p.click('#playBtn');
+await p.click('#lvNote [data-go]');
 await p.waitForTimeout(800);
-if (!(await p.evaluate(() => GOBLIN.scene === 'run' && GOBLIN.run.si === 1))) hubFail('Spielen startet nicht die gewählte Stage 2');
+if (!(await p.evaluate(() => GOBLIN.scene === 'run' && GOBLIN.run.si === 1 && GOBLIN.run.li === 0))) hubFail('„Los!“ startet nicht Level 2-1');
 if (await vis('#tabbar')) hubFail('Tab-Leiste bleibt im Lauf sichtbar');
-console.log('Hub (Tabs, Karussell, Name, Einstellungen, Start): geprüft');
+console.log('Hub (Tabs, Weltkarte, Name, Einstellungen, Start): geprüft');
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

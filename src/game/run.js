@@ -1,11 +1,12 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { newSeed, seedRun } from '../core/rng.js';
-import { abilState, gainAbilXp, gainAccountXp, persist, recordStage, save, stageCleared, talent } from '../core/save.js';
+import { abilState, gainAbilXp, gainAccountXp, levelDone, persist, recordLevel, save, talent } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
-import { STAGES, STAGE_LEN } from '../data/stages.js';
+import { STAGE_LEN } from '../data/stages.js';
+import { LEVELS, levelStage, nextLevel } from '../data/levels.js';
 import { canEquip, initAbilities, updAbilities } from './abilities.js';
 import { doEvent, spawnTick, updEnemy } from './enemies.js';
 import { part, ring } from './fx.js';
@@ -17,11 +18,12 @@ import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 
 // Neuer Lauf: nur Spielzustand. Bildschirm, HUD und Musik macht die Szene "run".
-export function newRun(si, seed = newSeed()) {
-  const st = STAGES[si];
+// si = Welt (Stage), li = Level in der Welt (0–4, das letzte ist das Boss-Level)
+export function newRun(si, seed = newSeed(), li = 0) {
+  const st = levelStage(si, li);
   seedRun(seed);
   const r = {
-    si, st, seed, time: 0, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
+    si, li: st.li, st, seed, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
   };
@@ -38,12 +40,12 @@ export function newRun(si, seed = newSeed()) {
   grid.clear();
   recalc(); P.hp = P.maxHp; P.stam = P.stamMax;
   addWeapon('dagger');
-  if (si === 0 && !stageCleared(0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. Rechts unten: Rolle, Sprint und deine Fähigkeiten.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q und E Fähigkeiten');
+  if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. Rechts unten: Rolle, Sprint und deine Fähigkeiten.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q und E Fähigkeiten');
   emit('runStart', run);
 }
 // Feste Momente aus dem Wellen-Skript in die Zeitleiste (Endlos: je Runde erneut)
 export function addEvents(loop) {
-  const o = loop * STAGE_LEN;
+  const o = loop * (run.st.len || STAGE_LEN);
   for (const w of run.st.waves) if (w.event) run.events.push({ ...w, t: o + w.at });
 }
 export function recalc() {
@@ -73,6 +75,7 @@ export function update(dt) {
   run.time += dt;
   while (run.ei < run.events.length && run.time >= run.events[run.ei].t) doEvent(run.events[run.ei++]);
   updPlayer(dt);
+  if (P.maxHp) run.minHp = Math.min(run.minHp, P.hp / P.maxHp);
   updCamera(dt);
   if (run.over) return;
   updAbilities(dt);
@@ -126,22 +129,27 @@ function savePrev() {
 export function endRun(win) {
   if (run.over) return;
   run.over = true; run.paused = true;
-  const bonus = win ? 60 + run.si * 50 : 0;
+  const boss = !run.st.endless && run.li === LEVELS - 1;
+  const bonus = win ? 25 + run.si * 20 + (boss ? 40 + run.si * 30 : 0) : 0;
+  // Magierhüte (6.1a): geschafft, über 50 % Leben am Ende, nie unter 25 % gefallen
+  const hats = win ? 1 + (P.hp / P.maxHp > .5 ? 1 : 0) + (run.minHp >= .25 ? 1 : 0) : 0;
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
-  const before = ABILITY_IDS.filter(canEquip), firstClear = win && !stageCleared(run.si);
-  recordStage(run.si, { win, time: run.time });
-  const xp = accountXp({ kills: run.kills, seconds: run.time, win, firstClear }), up = gainAccountXp(xp);
+  const before = ABILITY_IDS.filter(canEquip);
+  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, kills: run.kills, endless: !!run.st.endless });
+  const xp = accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
+  if (rec.first && boss && nextLevel(run.si, run.li)) unlocked.push('Welt ' + (nextLevel(run.si, run.li).si + 1));
   // Fähigkeiten-XP durch Benutzen
   const abil = Object.entries(run.abXp).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   s.bestKills = Math.max(s.bestKills, run.kills); s.bestLevel = Math.max(s.bestLevel, P.lv);
   for (const w of run.weapons) s.weapons[w.id] = (s.weapons[w.id] || 0) + 1;
-  if (firstClear && run.si + 1 < STAGES.length) save.lastStage = run.si + 1;   // Karussell zeigt danach die neue Stage
+  const next = win ? nextLevel(run.si, run.li) : null;
+  if (rec.first && next) save.map = { si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, next: win && run.si + 1 < STAGES.length, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, bonus, gold: run.gold + bonus, next, hats, newHats: rec.newHats, first: rec.first, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
 }
 

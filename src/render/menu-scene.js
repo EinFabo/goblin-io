@@ -2,13 +2,17 @@ import { $, TAU, face8 } from '../core/util.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawSpr } from './canvas.js';
 import { drawGround } from './tiles.js';
 import { SPR } from './sprites.js';
+import { renderMapScene } from './map-scene.js';
 
 // Menü-Szene
 const demo = [];
+let lastT = 0;
 export function renderMenuScene(t) {
+  const dt = Math.min(.1, Math.max(0, t - lastT)); lastT = t;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!SPR.idle_down_1) { ctx.fillStyle = '#141c0e'; ctx.fillRect(0, 0, cv.width, cv.height); return; }
+  if (!$('#menu').hidden) { renderMapScene(t, dt); avatars(SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)]); return; }
   const z = ZOOM * DPR * 1.1, cx = Math.sin(t * .05) * 200, cy = t * 12;
   ctx.setTransform(z, 0, 0, z, cv.width / 2 - cx * z, cv.height / 2 - cy * z);
   const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
@@ -26,8 +30,9 @@ export function renderMenuScene(t) {
   }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = 'rgba(10,15,6,.25)'; ctx.fillRect(0, 0, W, H);
-  const e = SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)];
-  if (!$('#menu').hidden) paint('#mascot', e);
+  avatars(SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)]);
+}
+function avatars(e) {
   if (!$('#armory').hidden) paint('#armGob', e);
   if (!$('#profile').hidden) paint('#profGob', e);
   // Avatar: nur der Kopf; in der Tab-Leiste und oben links
