@@ -8,6 +8,7 @@ Survivor-artiges Spiel. Ergebnis ist **eine einzelne HTML-Datei**, die offline i
     npm run lint         # ESLint, findet u. a. undefinierte Namen
     npm run sim          # Balance-Bot, Standard-Satz (6 Konfigurationen × 20 Läufe)
     npm run sim -- --stage 3 --runs 50 --talents atk=4,hp=4 --seed 1
+    node tools/gen/dump.mjs build/sprites --png   # alle generierten Sprites ansehen
 
 ## Aufbau
 
@@ -19,9 +20,10 @@ Survivor-artiges Spiel. Ergebnis ist **eine einzelne HTML-Datei**, die offline i
 | `src/ui/` | HUD, Menüs, Pause, Level-Up-Karten, Ergebnis, Knöpfe |
 | `src/scenes/` | `boot → menu → run → results → menu` |
 | `src/data/` | Stages, Waffen, Passive, Gegner, Werkstatt |
+| `src/gen/` | Sprite-Generatoren (Goblin, 8 Magierschulen, Diener), laufen beim Laden im Browser |
 | `src/debug.js` | `window.GOBLIN` für Bot und Tests |
 | `assets/` | Sprites aus dem Magier-Paket, Gras, Dolch |
-| `tools/` | `build.mjs` (esbuild + Assets inline), `gen/mages.py` (Sprite-Generator) |
+| `tools/` | `build.mjs` (esbuild + Assets inline), `gen/dump.mjs` (generierte Sprites als SVG/PNG ausgeben), `gen/mages.py` (alter Python-Generator, nur noch Referenz) |
 | `sim/` | Balance-Bot (`bot.js`) und Auswertung (`run-sims.mjs`), braucht Playwright |
 | `test/` | `node --test` |
 

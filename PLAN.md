@@ -711,14 +711,23 @@ Jede Phase endet mit einem spielbaren Stand. Die Reihenfolge ist so gewählt, da
 - Rendern interpoliert Spieler, Gegner und Kumpel zwischen den 60-Hz-Schritten.
 - Neu: `npm test` (Save-Migration, RNG), `npm run lint` (ESLint), `window.GOBLIN` als Schnittstelle für Bot und Tests.
 
-### Phase 1 – Sprites und Animation
-- [ ] `mages.py`: Schul-System (Palette + Kopf + Stabspitze + FX), 8 Richtungen
-- [ ] `goblin.py`: Ebenen, Ankerpunkte, 8 Richtungen, Sprint/Roll/Hurt/Victory/Death
-- [ ] `minions.py`: Skelett, Geist, Golem, Ratte
-- [ ] Atlas-Build (optional), `face8()` mit Hysterese
-- [ ] Sprint- und Dash-Polish aus 4.3, Hitstop, Spawn-Portale, Tod-Auflösen
+### Phase 1 – Sprites und Animation ✅ erledigt 2026-10-12
+- [x] `mages.py`: Schul-System (Palette + Kopf + Stabspitze + FX), 8 Richtungen → `src/gen/mages.js`
+- [x] `goblin.py`: Ebenen, Ankerpunkte, 8 Richtungen, Sprint/Roll/Hurt/Victory/Death → `src/gen/goblin.js`
+- [x] `minions.py`: Skelett, Geist, Golem, Ratte → `src/gen/minions.js`
+- [x] ~~Atlas-Build (optional)~~ nicht nötig (siehe unten), `face8()` mit Hysterese
+- [x] Sprint- und Dash-Polish aus 4.3, Hitstop, Spawn-Portale, Tod-Auflösen
 
 **Fertig, wenn:** alle 8 Richtungen sauber wechseln und Rolle/Sprint die neuen Animationen zeigen.
+
+**Abweichungen vom Plan / Hinweise für später:**
+- Die Generatoren sind **JavaScript statt Python** und laufen **im Browser beim Laden**. Kosmetik (Phase 6) erzeugt so jede Kombination ohne zusätzliche Dateien, und die HTML-Datei ist von 576 auf ~250 KB geschrumpft. `node tools/gen/dump.mjs build/sprites --png` exportiert alles als SVG/PNG zum Anschauen.
+- Köpfe, Ohren, Hüte usw. sind Pseudo-3D-Punkte (`kit()` in `src/gen/svg.js`), die je Richtung gedreht werden. Ankerpunkte für Hüte braucht es dadurch nicht mehr: Der Hut wird im selben Modell mitgezeichnet.
+- Kein Atlas: Magier werden in Einheiten (Schule × Animation) nachgeladen, Menü zuerst, Rest im Hintergrund, Stage-Start wartet nur falls nötig. Menü steht nach ~1,1 s. Gespiegelte Richtungen teilen sich ein Bild.
+- Gegner-Zuordnung: Schattenlehrling/Schattenmagier → Schatten, Großmagier → Feuer-Meister, Blitzmagier → Sturm, Giftmagier → Gift, Heilmagier → Licht, Funkenwichtel → Feuer. Bosse sind Meister ihrer Schule, Malvorn ist vorerst Licht-Meister. Nekro und Erde sind fertig gezeichnet, kommen aber erst mit ihren Gegnern (Phase 2) ins Spiel.
+- Noch offen für Phase 2: eigene Geschosse/Einschläge für Sturm, Gift, Schatten, Nekro, Erde, Licht (jetzt noch Feuerball/Eisspeer, teils eingefärbt); Sieg-Pose wird im Ergebnis gezeigt, aber noch nicht auf einem eigenen Ergebnis-Bildschirm.
+- Hitstop nur bei Elite- und Boss-Kill, nicht bei kritischen Treffern (die kommen zu oft, das würde ruckeln).
+- Sichtbare Spawns brauchen 0,4 s im Portal (dabei nicht angreifbar). Sim: alle Konfigurationen im Streubereich.
 
 ### Phase 2 – Magierschulen
 - [ ] KI-Bausteine (5.5) mit einheitlichem Cast-Ablauf

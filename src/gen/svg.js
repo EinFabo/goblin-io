@@ -44,3 +44,36 @@ export function turn(x, z, th) {
   const c = Math.cos(th), s = Math.sin(th);
   return [x * c - z * s, x * s + z * c];
 }
+
+// ---------- Pseudo-3D-Kit ----------
+// Teile: { l: Ebene, d: Tiefe, s: SVG }. Ebenen: 0 hinter dem Kopf, 1 Kopf, 2 Gesicht, 3 Hut/Haube, 4 ganz vorne.
+export function kit(th) {
+  const k = Math.sin(th), c = Math.cos(th);
+  const K = {
+    k, c, ak: Math.abs(k), ac: Math.abs(c), parts: [],
+    x: (x, z) => x * c - z * k,                 // Bild-x
+    dep: (x, z) => x * k + z * c,               // Tiefe (> 0 = zur Kamera)
+    face: (x, z, min = .5) => x * k + z * c > min,
+    add(l, d, s) { K.parts.push({ l, d, s }); },
+    // Ellipsoid: Breite ergibt sich aus x- und z-Radius je nach Drehung
+    blobE(l, x, y, z, rx, ry, rz, fill, extra = '') {
+      K.add(l, K.dep(x, z), ell(K.x(x, z), y, Math.hypot(rx * c, rz * k), ry, fill, extra));
+    },
+    poly(l, pts, fill, extra = '') {
+      const d = pts.reduce((a, p) => a + K.dep(p[0], p[2]), 0) / pts.length;
+      K.add(l, d, poly(pts.map(p => [K.x(p[0], p[2]), p[1]]), fill, extra));
+    },
+    // geschlossene, weiche Kurve durch 3D-Punkte (Catmull-Rom)
+    smooth(l, pts, fill, extra = '', depth = null) {
+      const P = pts.map(p => [K.x(p[0], p[2]), p[1]]), n = P.length;
+      let d = `M${f(P[0][0])} ${f(P[0][1])}`;
+      for (let i = 0; i < n; i++) {
+        const p0 = P[(i - 1 + n) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n];
+        d += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)} ${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)} ${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])} ${f(p2[1])}`;
+      }
+      K.add(l, depth ?? pts.reduce((a, p) => a + K.dep(p[0], p[2]), 0) / n, path(d + 'Z', fill, extra));
+    },
+    out() { return K.parts.map((p, i) => ({ ...p, i })).sort((a, b) => a.l - b.l || a.d - b.d || a.i - b.i).map(p => p.s); },
+  };
+  return K;
+}

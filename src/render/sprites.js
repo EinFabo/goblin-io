@@ -1,6 +1,7 @@
 import { ANIMS, DEFAULT_LOOK, goblinSvg } from '../gen/goblin.js';
 import { DRAWN, MIRROR } from '../gen/svg.js';
 import { MAGE_ANIMS, castOffsets, mageSvg } from '../gen/mages.js';
+import { MINION_ANIMS, minionSvg } from '../gen/minions.js';
 import { ETYPES } from '../data/enemies.js';
 import { STAGES } from '../data/stages.js';
 import { makeProc } from './proc.js';
@@ -116,4 +117,22 @@ export async function loadMenuMages() {
 // Rest nacheinander im Hintergrund, damit das Menü flüssig bleibt
 export async function preloadAllMages() {
   for (const k of allMageKeys()) await loadVariant(k);
+}
+
+// Diener (Skelett, Geist, Golem, Ratte): n.<art>.<anim>.<richtung>.<n>, nur bei Bedarf geladen
+export function loadMinions(kinds) {
+  return Promise.all(kinds.map(kind => {
+    const id = 'n|' + kind;
+    if (units.has(id)) return units.get(id);
+    const jobs = [];
+    for (const [anim, n] of Object.entries(MINION_ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, minionSvg(kind, dir, anim, i)]);
+    const pr = Promise.all(jobs.map(j => loadImg(svgUrl(j[3])))).then(imgs => jobs.forEach(([anim, dir, i, svg], j) => {
+      const e = raster(imgs[j], svg, false, kind === 'golem' ? 1.5 : 1.25);
+      SPR[`n.${kind}.${anim}.${dir}.${i + 1}`] = e;
+      const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
+      if (m) SPR[`n.${kind}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
+    }));
+    units.set(id, pr);
+    return pr;
+  }));
 }

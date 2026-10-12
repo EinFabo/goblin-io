@@ -58,3 +58,29 @@ if (process.argv.includes('--png')) {
   await p.goto('file://' + join(out, 'mages.html')); await (await p.$('#m')).screenshot({ path: join(out, 'mages.png') }); await b.close();
   console.log('png', join(out, 'mages.png'));
 }
+
+// ---------- Diener ----------
+const { MINION_KINDS, minionSvg } = await import('../../src/gen/minions.js');
+mkdirSync(join(out, 'minions'), { recursive: true });
+let nrows = '';
+for (const kind of MINION_KINDS) {
+  let cells = '';
+  for (const dir of ['down', 'downleft', 'left', 'upleft', 'up']) {
+    const name = `${kind}_idle_${dir}_1.svg`;
+    writeFileSync(join(out, 'minions', name), minionSvg(kind, dir, 'idle', 0));
+    cells += `<td><img src="minions/${name}" width="128" height="128"></td>`;
+  }
+  for (let i = 0; i < 6; i += 2) {
+    const name = `${kind}_walk_downleft_${i + 1}.svg`;
+    writeFileSync(join(out, 'minions', name), minionSvg(kind, 'downleft', 'walk', i));
+    cells += `<td><img src="minions/${name}" width="128" height="128"></td>`;
+  }
+  nrows += `<tr><th>${kind}</th>${cells}</tr>`;
+}
+writeFileSync(join(out, 'minions.html'), `<!doctype html><meta charset="utf-8"><style>body{background:#5fae3a;font:12px sans-serif;margin:4px}td{background:rgba(255,255,255,.12);padding:0}</style><table id="n">${nrows}</table>`);
+if (process.argv.includes('--png')) {
+  const { chromium } = await import('playwright');
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1200, height: 700 } });
+  await p.goto('file://' + join(out, 'minions.html')); await (await p.$('#n')).screenshot({ path: join(out, 'minions.png') }); await b.close();
+  console.log('png', join(out, 'minions.png'));
+}
