@@ -8,6 +8,7 @@ import { icon } from '../render/icons.js';
 import { SPR, ensureStage, tinted } from '../render/sprites.js';
 import { stageTile } from '../render/tiles.js';
 import { setMusic, setMute } from './settings.js';
+import { showLoadout } from './loadout.js';
 
 // ---------- Menüs ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
@@ -17,7 +18,7 @@ export async function startStage(si) {
   clearTimeout(t); $('#loading').hidden = true;
   go('run', { si });
 }
-const SCREENS = ['#menu', '#stages', '#shop', '#howto'];
+const SCREENS = ['#menu', '#stages', '#loadout', '#shop', '#howto'];
 const OVERLAYS = ['#levelup', '#pause', '#over'];
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
 export function showScreen(id) {
@@ -41,7 +42,7 @@ export function renderStages() {
     if (e) tg.drawImage(st.boss.tint ? tinted(e, st.boss.tint) : e.c, 190, -6, 120, 120);
     if (SPR.idle_right_1) tg.drawImage(SPR.idle_right_1.c, 100, 18, 90, 90);
     b.querySelector('.thumb').prepend(tc);
-    b.addEventListener('click', () => { audioInit(); sfx.pickCard(); startStage(i); });
+    b.addEventListener('click', () => { audioInit(); sfx.pickCard(); showScreen('#loadout'); showLoadout(i, startStage); });
     g.appendChild(b);
   });
 }
@@ -63,6 +64,7 @@ $('#shopList').addEventListener('click', e => {
   save.wallet.gold -= cost; save.talents[s.id] = lv + 1; persist(); sfx.buy(); renderShop();
 });
 $('#playBtn').addEventListener('click', () => showScreen('#stages'));
+$('#loadBack').addEventListener('click', () => showScreen('#stages'));
 $('#shopBtn').addEventListener('click', () => showScreen('#shop'));
 $('#howBtn').addEventListener('click', () => showScreen('#howto'));
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => showScreen('#menu')));

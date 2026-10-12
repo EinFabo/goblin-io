@@ -1,6 +1,7 @@
 // npm run sim                         → jede Stage ohne und mit erwarteten Upgrades, mit Zielwerten (7.6)
 // npm run sim -- --v2                 → alter Satz aus v2 (6 Konfigurationen)
 // npm run sim -- --stage 4 --talents exp  → erwartete Upgrades für Stage 4
+// npm run sim -- --loadout rage,trap  → andere Fähigkeiten (Standard rage,mech wie v2)
 // npm run sim -- --stage 3 --runs 50 --talents atk=4,hp=4 [--seed 1] [--hz 60] [--par 3] [--html datei]
 import os from 'node:os';
 import { chromium } from 'playwright';
@@ -13,6 +14,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const args = Object.fromEntries(process.argv.slice(2).join(' ').split('--').filter(Boolean).map(a => { const [k, ...v] = a.trim().split(/\s+/); return [k, v.join(' ') || true]; }));
 const html = resolve(args.html || join(ROOT, 'dist', 'goblin-io.html'));
 const runs = +args.runs || 20, seed0 = args.seed !== undefined ? +args.seed : 1, hz = +args.hz || 60;
+const loadout = args.loadout ? String(args.loadout).split(',') : ['rage', 'mech'];
 const parseTalents = s => Object.fromEntries(String(s || '').split(',').filter(Boolean).map(x => { const [k, v] = x.split('='); return [k, +v]; }));
 
 const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln' };
@@ -40,14 +42,14 @@ const pages = await Promise.all(Array.from({ length: par }, async () => {
 
 const pct = (a, n) => (100 * a / n).toFixed(0).padStart(3) + ' %';
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
-console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz\n`);
-console.log('Stage  Talente               Siege   Ziel       Ø Zeit  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
+console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz, Fähigkeiten ${loadout.join(' + ')}\n`);
+console.log('Stage  Talente               Siege   Ziel       Ø Zeit  Fähigk.  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
 const t0 = Date.now();
 for (const [stage, talents] of configs) {
   const res = new Array(runs);
   let next = 0;
   await Promise.all(pages.map(async p => {
-    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, talents, seed: seed0 + k, step: 1 / hz }); }
+    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, talents, seed: seed0 + k, step: 1 / hz, loadout }); }
   }));
   const wins = res.filter(r => r.win).length;
   const lv = [1, 2, 3, 4].map(m => { const a = res.map(r => r.lvAt[m]).filter(x => x !== undefined); return a.length ? avg(a).toFixed(1) : '–'; }).join('/');
@@ -57,7 +59,7 @@ for (const [stage, talents] of configs) {
   const isExp = JSON.stringify(talents) === JSON.stringify(EXPECTED[stage]) && stage > 1, tg = TARGET[stage] && TARGET[stage][isExp ? 'exp' : Object.keys(talents).length ? null : 'none'];
   const w = 100 * wins / runs, mark = !tg ? '' : w < tg[0] ? '↑' : w > tg[1] ? '↓' : '✓';
   const goal = tg ? `${tg[0]}–${tg[1]} % ${mark}` : '';
-  console.log(`${String(stage).padEnd(6)} ${tal.padEnd(21)} ${pct(wins, runs)}  ${goal.padEnd(10)} ${String(Math.round(avg(res.map(r => r.t)))).padStart(4)} s  ${lv.padEnd(20)}  ${d}`);
+  console.log(`${String(stage).padEnd(6)} ${tal.padEnd(21)} ${pct(wins, runs)}  ${goal.padEnd(10)} ${String(Math.round(avg(res.map(r => r.t)))).padStart(4)} s  ${avg(res.map(r => r.abil)).toFixed(1).padStart(5)}×  ${lv.padEnd(20)}  ${d}`);
 }
 console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
 await b.close();

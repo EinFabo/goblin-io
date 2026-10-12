@@ -167,7 +167,9 @@ export function updEnemy(e, dt) {
   e.x += e.kx * dt; e.y += e.ky * dt;
   const kd = Math.exp(-9 * dt); e.kx *= kd; e.ky *= kd;
   if (e.freezeT > 0) { e.freezeT -= dt; return; }
-  const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1;
+  // Rauchbombe: alle außer dem Boss laufen zu deinem alten Platz und zaubern nicht
+  const blind = P.smokeT > 0 && !e.boss && run.decoy, tx = blind ? run.decoy.x : P.x, ty = blind ? run.decoy.y : P.y;
+  const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy) || 1;
   if (e.boss) { bossAI(e, dt, dx, dy, d); return; }
   if (e.bomber) { updBomber(e, dt, dx, dy, d); return; }
   if (e.obj) { updObject(e, dt); return; }
@@ -209,7 +211,7 @@ export function updEnemy(e, dt) {
   // Zauber: der erste, der bereit ist und gewirkt werden darf
   for (const c of e.casts) {
     c.t -= dt;
-    if (c.t > 0 || e.state === 'cast') continue;
+    if (c.t > 0 || e.state === 'cast' || blind) continue;
     if (d < c.range && onScreen(e.x, e.y, -20)) { if (castAllowed(e, c)) startCast(e, c); else c.t = .6; }
   }
   if (d > viewR() * 1.9 && !e.elite && !e.miniboss) { e.px = e.x = P.x + dx / d * viewR() * 1.1; e.py = e.y = P.y + dy / d * viewR() * 1.1; }

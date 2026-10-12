@@ -1,10 +1,10 @@
 import { audioInit } from '../core/audio.js';
 import { setSprintHeld } from '../core/input.js';
 import { $ } from '../core/util.js';
-import { doDash, doUlt, startMech } from '../game/abilities.js';
+import { doDash, useAbility } from '../game/abilities.js';
 
 // ---------- Fähigkeiten-Knöpfe (Handy) ----------
-for (const [id, fn] of [['#dashBtn', doDash], ['#ultBtn', doUlt], ['#mechBtn', startMech]]) {
+for (const [id, fn] of [['#dashBtn', doDash], ['#ab0Btn', () => useAbility(0)], ['#ab1Btn', () => useAbility(1)]]) {
   $(id).addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); fn(); });
 }
 {

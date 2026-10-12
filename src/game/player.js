@@ -3,6 +3,8 @@ import { joy, keys, sprintHeld } from '../core/input.js';
 import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { LOW_HP, damagePlayer } from './combat.js';
+import { abilReady } from './abilities.js';
+import { ABILITIES, SLOT_KEYS } from '../data/abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { part } from './fx.js';
 import { hint } from './run.js';
@@ -59,15 +61,19 @@ export function updPlayer(dt) {
   P.inv -= dt; P.dashCd -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
   if (P.hp < P.maxHp * LOW_HP) run.lowT += dt;
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
-  query(P.x, P.y, pR(), e => {
+  if (!(P.smokeT > 0)) query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {
       const was = P.inv, before = P.hp; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg); affixOnHitPlayer(e, before - P.hp);
       if (e.melee === 'slow' && was <= 0 && P.mechT <= 0) P.slowT = .6;
       return false;
     }
   });
-  if (P.scrap >= 100 && !P.mechReadyShown) { P.mechReadyShown = true; hint(isTouch() ? '<b>Maschine bereit!</b> Tippe auf den Maschinen-Knopf.' : '<b>Maschine bereit!</b> Drück F zum Einsteigen.'); }
-  if (P.mechT > 0) P.mechReadyShown = false;
+  // Hinweis, wenn eine Fähigkeit zum ersten Mal bereit ist
+  run.abil.forEach((s, i) => {
+    if (!s || P.abilReadyShown[i] || !abilReady(s)) return;
+    P.abilReadyShown[i] = true;
+    hint(`<b>${ABILITIES[s.id].name} bereit!</b> ` + (isTouch() ? 'Tippe auf den Knopf rechts unten.' : `Drück ${SLOT_KEYS[i]}.`));
+  });
 }
 export const ROLL_T = .3;   // Roll-Animation (die Rolle selbst dauert .18 s)
 export function curPlayerSpr() {

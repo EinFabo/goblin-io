@@ -2,6 +2,8 @@ import { $, clamp, fmtTime } from '../core/util.js';
 import { STAGE_LEN } from '../data/stages.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
+import { ABILITIES } from '../data/abilities.js';
+import { abilReady } from '../game/abilities.js';
 
 // ---------- HUD ----------
 export const hudCache = {};
@@ -19,10 +21,9 @@ export function updHud(dt) {
   setTxt('#killTxt', String(run.kills));
   setTxt('#goldTxt', String(run.gold));
   setTxt('#timeTxt', run.st.endless ? fmtTime(run.time) : fmtTime(Math.min(run.time, STAGE_LEN)));
-  setAbil('#ultBtn', P.ult / P.ultNeed, P.ult >= P.ultNeed, P.rageT > 0);
+  run.abil.forEach((s, i) => { if (s) setAbil('#ab' + i + 'Btn', abilFill(s), abilReady(s), abilActive(s.id)); });
   setAbil('#dashBtn', 1 - Math.max(0, P.dashCd) / 2.4, P.dashCd <= 0);
   setAbil('#sprintBtn', P.stam / P.stamMax, !P.exhaust, P.sprinting);
-  setAbil('#mechBtn', P.mechT > 0 ? P.mechT / P.mechMax : P.scrap / 100, P.scrap >= 100, P.mechT > 0);
   if (run.boss) $('#bossFill').style.width = (Math.max(0, run.boss.hp / run.boss.maxHp) * 100).toFixed(1) + '%';
   if (!run.paused) {
     run.hintT -= dt;
@@ -33,6 +34,24 @@ export function updHud(dt) {
     }
   }
 }
+// Leiste: Aufladung, während der Wirkung die Restzeit
+const abilActive = id => id === 'rage' ? P.rageT > 0 : id === 'mech' ? P.mechT > 0 : id === 'smoke' ? P.smokeT > 0 : id === 'shield' ? P.shieldT > 0 : id === 'totem' ? run.goldT > 0 : false;
+function abilFill(s) {
+  if (s.id === 'mech' && P.mechT > 0) return P.mechT / P.mechMax;
+  if (s.id === 'shield' && P.shieldT > 0) return P.shieldHp / (P.maxHp * .4);
+  return s.ch / s.need;
+}
+// Knöpfe passend zur Ausrüstung beschriften (beim Start eines Laufs)
+export function setupAbilButtons() {
+  run.abil.forEach((s, i) => {
+    const b = $('#ab' + i + 'Btn'); b.hidden = !s; if (!s) return;
+    const A = ABILITIES[s.id];
+    b.querySelector('img').src = icon(s.id); b.querySelector('.lbl').textContent = A.short; b.setAttribute('aria-label', A.name);
+    b.style.setProperty('--c', ABIL_COL[s.id] || '#e0a83a');
+    for (const k of ['p', 'r', 'o']) delete hudCache['#ab' + i + 'Btn' + k];
+  });
+}
+const ABIL_COL = { rage: '#ff5a3c', mech: '#e0a83a', trap: '#c9a26a', smoke: '#b8b8c8', catapult: '#a08a6a', hook: '#8fd0ff', shroom: '#7be04a', shield: '#dfe6ea', rats: '#d9a066', call: '#6fc23a', totem: '#ffd84a', timebomb: '#8fe6ff', bigbang: '#ff9a2e', charm: '#ffd84a' };
 export function slotHtml(ic, lv, evo) { return `<div class="slot${evo ? ' evo' : ''}"><img src="${ic}" alt=""><i>${evo ? '★' : lv}</i></div>`; }
 export function refreshSlots() {
   $('#wSlots').innerHTML = run.weapons.map(w => slotHtml(icon(w.evo ? w.id + '_evo' : w.id), w.lv, w.evo)).join('');

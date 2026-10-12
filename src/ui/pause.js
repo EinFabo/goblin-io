@@ -13,7 +13,7 @@ export function openPause() {
   const st = [
     ['Leben', Math.ceil(P.hp) + ' / ' + P.maxHp], ['Schaden', '+' + Math.round((P.dmgMult - 1) * 100) + ' %'], ['Abklingzeit', '−' + Math.round((1 - P.cdMult) * 100) + ' %'],
     ['Fläche', '+' + Math.round((P.area - 1) * 100) + ' %'], ['Tempo', Math.round(P.speed)], ['Sammelradius', Math.round(P.magnet)],
-    ['Krit-Chance', Math.round(P.crit * 100) + ' %'], ['Schrott', Math.floor(P.scrap) + ' %'],
+    ['Krit-Chance', Math.round(P.crit * 100) + ' %'],
   ];
   $('#buildList').innerHTML = `<div class="slots">${run.weapons.map(w => slotHtml(icon(w.evo ? w.id + '_evo' : w.id), w.lv, w.evo)).join('')}</div>
     <div class="slots">${Object.entries(run.passives).map(([id, lv]) => slotHtml(icon(id), lv, false)).join('')}</div>

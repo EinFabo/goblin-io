@@ -1,6 +1,6 @@
 import { audioInit } from './audio.js';
 import { $ } from './util.js';
-import { doDash, doUlt, startMech } from '../game/abilities.js';
+import { doDash, useAbility } from '../game/abilities.js';
 import { run } from '../game/state.js';
 import { cv } from '../render/canvas.js';
 import { openPause, resume } from '../ui/pause.js';
@@ -16,8 +16,8 @@ window.addEventListener('keydown', e => {
   if (!run || run.over) return;
   if (e.code === 'Space') { e.preventDefault(); doDash(); }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();
-  if (e.code === 'KeyQ') doUlt();
-  if (e.code === 'KeyF' || e.code === 'KeyE') startMech();
+  if (e.code === 'KeyQ') useAbility(0);
+  if (e.code === 'KeyE' || e.code === 'KeyF') useAbility(1);
   if (e.code === 'Escape' || e.code === 'KeyP') { if (!$('#pause').hidden) resume(); else if (!run.paused) openPause(); }
   if (!$('#levelup').hidden && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) { const b = $('#cards').children[+e.code.slice(5) - 1]; if (b) b.click(); }
   if (!$('#levelup').hidden && e.code === 'KeyR') $('#rerollBtn').click();

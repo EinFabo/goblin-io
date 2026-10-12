@@ -3,7 +3,7 @@ import { sfx } from '../core/audio.js';
 import { TAU } from '../core/util.js';
 import { damagePlayer, hurt } from './combat.js';
 import { animFx, boltFx, explode, part, ring } from './fx.js';
-import { perfectRoll } from './abilities.js';
+import { perfectRoll, reflect } from './abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { P, onScreen, pR, query, run } from './state.js';
 
@@ -15,6 +15,10 @@ export function updTele(dt) {
     if (t.k === 'meteor') {
       t.t -= dt;
       if (t.t <= 0) { explode(t.x, t.y, t.rad, t.dmg, 'fire'); run.shake = Math.max(run.shake, 5); run.zones.push({ k: 'burn', x: t.x, y: t.y, r: t.rad * .65, t: 2.6, dur: 2.6, tick: 0, dmg: 9 * P.dmgMult }); t.done = true; }
+    } else if (t.k === 'boulder') {
+      // Katapult-Fels: fliegt im Bogen, schlägt ein
+      t.t += dt;
+      if (t.t >= t.dur) { explode(t.x, t.y, t.rad, t.dmg, 'fire'); run.shake = Math.max(run.shake, 7); t.done = true; for (let i = 0; i < 10; i++) part(t.x, t.y, frand(-120, 120), frand(-140, -20), .5, i % 2 ? '#8a7a66' : '#5d5246', 5); }
     } else if (t.k === 'flask') {
       t.t += dt;
       if (t.t >= t.dur) { run.zones.push({ k: 'poison', x: t.x, y: t.y, r: t.rad, t: t.zdur, dur: t.zdur, tick: 0, dmg: t.dmg }); t.done = true; for (let i = 0; i < 8; i++) part(t.x, t.y, frand(-80, 80), frand(-90, -20), .5, 'rgba(140,230,80,.9)', 5); }
@@ -59,6 +63,7 @@ export function updEProj(dt) {
     if (run.arena && Math.hypot(p.x - run.arena.x, p.y - run.arena.y) > run.arena.r + 40) p.life = 0;
     const dx = p.x - P.x, dy = p.y - (P.y - 6), rr = p.r + pR() * .85;
     if (p.fake && dx * dx + dy * dy < rr * rr) { p.life = 0; part(p.x, p.y, 0, -30, .3, 'rgba(200,160,255,.6)', 5); continue; }
+    if (dx * dx + dy * dy < rr * rr && P.shieldT > 0 && !p.fake) { p.life = 0; reflect(p); continue; }
     if (dx * dx + dy * dy < rr * rr && P.dashT <= 0 && P.inv <= 0) {
       const before = P.hp; damagePlayer(p.dmg, 'proj'); affixOnHitPlayer(p.owner, before - P.hp);
       if (p.kind === 'frost' && P.mechT <= 0) P.slowT = 1.2;

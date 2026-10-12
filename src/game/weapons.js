@@ -144,23 +144,25 @@ export function updWeapons(dt) {
 export function updAllies(dt) {
   const w = run.weapons.find(x => x.id === 'gang'); if (!w || !w.dmg) return;
   const rate = P.rageT > 0 ? 1.6 : 1;
-  run.allies.forEach((al, i) => {
-    al.atk -= dt * rate; al.slash -= dt;
-    let tgt = null, td = 0;
-    for (const e of run.enemies) {
-      if (e.dead || (e.x - P.x) ** 2 + (e.y - P.y) ** 2 > 300 * 300) continue;
-      const d2 = (e.x - al.x) ** 2 + (e.y - al.y) ** 2; if (!tgt || d2 < td) { tgt = e; td = d2; }
-    }
-    let tx, ty;
-    if (tgt) { tx = tgt.x; ty = tgt.y; }
-    else { const a = run.time * .8 + al.off + i * TAU / run.allies.length; tx = P.x + Math.cos(a) * 55; ty = P.y + Math.sin(a) * 40; }
-    const dx = tx - al.x, dy = ty - al.y, d = Math.hypot(dx, dy) || 1;
-    const reach = tgt ? tgt.r + 12 : 6;
-    al.moving = d > reach;
-    if (al.moving) { const s = Math.min(d - reach, w.spd * dt); al.x += dx / d * s; al.y += dy / d * s; al.face = face8(dx, dy, al.face); al.at += dt; }
-    if (tgt && d < reach + 6 && al.atk <= 0) { al.atk = .45; al.slash = .15; al.sa = Math.atan2(dy, dx); hurt(tgt, w.dmg, 90, dx / d, dy / d); }
-    if (Math.hypot(al.x - P.x, al.y - P.y) > 520) { al.px = al.x = P.x + rand(-30, 30); al.py = al.y = P.y + rand(-30, 30); puff(al.x, al.y, .5); }
-  });
+  run.allies.forEach((al, i) => stepAlly(al, i, run.allies.length, w.dmg, w.spd, rate, dt));
+}
+// Ein Kumpel: nächsten Gegner in Reichweite suchen, hinlaufen, zustechen (auch für den Goblin-Ruf)
+export function stepAlly(al, i, n, dmg, spd, rate, dt) {
+  al.atk -= dt * rate; al.slash -= dt;
+  let tgt = null, td = 0;
+  for (const e of run.enemies) {
+    if (e.dead || (e.x - P.x) ** 2 + (e.y - P.y) ** 2 > 300 * 300) continue;
+    const d2 = (e.x - al.x) ** 2 + (e.y - al.y) ** 2; if (!tgt || d2 < td) { tgt = e; td = d2; }
+  }
+  let tx, ty;
+  if (tgt) { tx = tgt.x; ty = tgt.y; }
+  else { const a = run.time * .8 + al.off + i * TAU / n; tx = P.x + Math.cos(a) * 55; ty = P.y + Math.sin(a) * 40; }
+  const dx = tx - al.x, dy = ty - al.y, d = Math.hypot(dx, dy) || 1;
+  const reach = tgt ? tgt.r + 12 : 6;
+  al.moving = d > reach;
+  if (al.moving) { const s = Math.min(d - reach, spd * dt); al.x += dx / d * s; al.y += dy / d * s; al.face = face8(dx, dy, al.face); al.at += dt; }
+  if (tgt && d < reach + 6 && al.atk <= 0) { al.atk = .45; al.slash = .15; al.sa = Math.atan2(dy, dx); hurt(tgt, dmg, 90, dx / d, dy / d); }
+  if (Math.hypot(al.x - P.x, al.y - P.y) > 520) { al.px = al.x = P.x + rand(-30, 30); al.py = al.y = P.y + rand(-30, 30); puff(al.x, al.y, .5); }
 }
 export function updPProj(dt) {
   const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;

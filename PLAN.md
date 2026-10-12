@@ -783,10 +783,39 @@ Stellschrauben je Stage: `dmg` und `rate` (Stage 3: 1,5/1,32 · 4: 1,8/1,58 · 5
 - Wiederbelebung (Goblin-Amulett) fehlt noch → Phase 4 als Fähigkeit.
 - Drei Bot-Stärken (12.1) gibt es noch nicht, nur "Normal".
 
-### Phase 4 – Fähigkeiten
-- [ ] 2 Slots + Loadout-Screen
-- [ ] die 13 Fähigkeiten aus 8.3
-- [ ] Freischaltung über Konto-Level und Stage-Siege
+### Phase 4 – Fähigkeiten ✅ erledigt 2026-10-12
+- [x] 2 Slots + Loadout-Screen
+- [x] die 13 Fähigkeiten aus 8.3 (+ Goblin-Amulett aus 7.5)
+- [x] Freischaltung über Konto-Level und Stage-Siege
+
+**Umsetzung:**
+- `src/data/abilities.js`: alle Fähigkeiten als Daten (Aufladeart `cd`/`kills`/`scrap`/`once`, Bedarf, Freischaltung). `src/game/abilities.js`: Slots (`run.abil`), Aufladung, Effekte; laufende Effekte in `run.abfx`, Zeichnen in `src/render/draw-abilities.js`.
+- Tasten Q (Slot 1) und E (Slot 2, F geht weiter). Die beiden Handy-Knöpfe zeigen Icon und Kurznamen der gewählten Fähigkeit.
+- Ausrüstungs-Screen zwischen Stage-Wahl und Lauf (`src/ui/loadout.js`): Slot antippen, dann Fähigkeit; gesperrte zeigen ihre Bedingung. Gespeichert in `save.loadout`.
+- Konto-Level ist jetzt echt: XP nach 14.3 am Ende jedes Laufs, im Ergebnis „+XP · Level N!“ und „Neu freigeschaltet: …“. Slot 2 ab Konto-Level 3. Die Profil-Seite kommt mit Phase 5.
+- **Goblin-Amulett** (Wiederbelebung aus 7.5) ist eine Fähigkeit mit Aufladeart „1× pro Lauf“ (ab Konto-Level 6). Intern heißt sie `charm`, weil `amulet` schon das Passiv „Wirbelamulett“ ist.
+- Talente aus der Werkstatt wirken weiter: „ult“ senkt den Kill-Bedarf, „mech“ verlängert die Maschine.
+- Bot: setzt jede bereite Fähigkeit sofort ein. `npm run sim -- --loadout trap,smoke` testet andere Kombinationen (Standard rage,mech wie bisher, damit die Balance aus Phase 3 vergleichbar bleibt). Die Sim zeigt die Zahl der Einsätze.
+
+**Stärke der Fähigkeiten** (Bot, Stage 3 mit erwarteten Upgrades, Partner „Totem“ ≈ keine Fähigkeit, je 80–100 Läufe; ohne Fähigkeit ~25 %):
+
+| Fähigkeit | Sieg | | Fähigkeit | Sieg |
+|---|---|---|---|---|
+| Goblin-Wut | 60–65 % | | Schrottschild | 49 % |
+| Goblin-Amulett | 53 % | | Goblin-Maschine | 51–58 % |
+| Rattenflut | 56 % | | Bärenfalle | 46 % |
+| Rauchbombe | 44 % | | Goblin-Ruf | 44 % |
+| Großer Knall | 41 % | | Pilzring | 40 % |
+| Enterhaken | 39 % | | Goblin-Katapult | 30–40 % |
+| Zeitbombe | ~24 % | | | |
+
+Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapult, Haken, Ratten, Ruf, Zeitbombe und Knall stärker bzw. schneller geladen.
+
+**Abweichungen / Hinweise für später:**
+- Zeitbombe und Großer Knall brauchen „Stage 6/8 gewonnen“. Stage 6 ist heute Endlos (nie „gewonnen“), Stage 8 gibt es noch nicht → erst mit Phase 7 erreichbar. Die Zeitbombe ist im Bot-Test kaum besser als nichts; mit Phase 7 neu ansehen.
+- Der Bot nutzt Fähigkeiten nicht taktisch (Rauch, Haken, Schild sofort). Für Menschen sind die defensiven Fähigkeiten wohl stärker, als die Tabelle sagt.
+- Aufwertung der Fähigkeiten mit Karten + Gold (Stufe 5/10-Extras) kommt mit Phase 5 (Karten).
+- Neue Spieler haben bis Konto-Level 3 nur einen Slot (vorher immer Wut + Maschine). Ein erster Sieg auf Stage 1 bringt ~390 XP, Level 3 ist nach 2–3 Läufen erreicht.
 
 ### Phase 5 – Meta: Profil, Karten, Talente
 - [ ] Profil, Konto-Level, Statistiken

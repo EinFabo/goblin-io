@@ -28,3 +28,7 @@ export const enemyHp = (base, si, t) => base * STAGE_HP[si] * hpTime(t);
 export const DMG_CAP = { contact: .08, proj: .12, special: .25 };
 export const capKind = src => src === 'contact' ? 'contact' : src === 'proj' ? 'proj' : 'special';
 export const hitDamage = (raw, maxHp, src) => Math.min(raw, maxHp * DMG_CAP[capKind(src)]);
+
+// Konto-XP pro Lauf (14.3)
+export const accountXp = ({ kills, seconds, win, firstClear }) => Math.floor(kills / 10 + seconds / 4) + (win ? 100 : 0) + (firstClear ? 200 : 0);
+export const accountXpNeed = L => 200 + 60 * L + 8 * L * L;

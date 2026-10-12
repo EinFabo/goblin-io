@@ -2,6 +2,7 @@ import { RNG, rnd, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { $ } from '../core/util.js';
+import { chargeAbil, shieldAbsorb, tryRevive } from './abilities.js';
 import { hitDamage } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { addItem, addNum, animFx, dissolve, dropGem } from './fx.js';
@@ -17,6 +18,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null) {
   const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
   const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
   e.hp -= d; e.flash = .09;
+  if (e.tb !== undefined && e.freezeT > 0) e.tb += d;   // Zeitbombe sammelt Schaden
   if (kb && !e.boss && !rule.blocked) { const m = e.elite ? .25 : e.traits && e.traits.includes('heavy') ? .2 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }
   if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit);
   else if (rule.blocked) addNum(e.x, e.y - 22 * e.sc, 'Block', '#dff6ff', false);
@@ -26,7 +28,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null) {
 export function kill(e) {
   e.dead = true; run.kills++;
   emit('enemyKilled', e);
-  if (!e.boss) { P.ult = Math.min(P.ultNeed, P.ult + 1); if (P.mechT <= 0) P.scrap = Math.min(100, P.scrap + .35); }
+  if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
   dropGem(e.x, e.y, e.xp);
   dissolve(e);
   if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);
@@ -62,10 +64,11 @@ export function bossDown(b) {
 // src: contact | proj | bomb | strike | zone (für Statistik und Sim)
 export function damagePlayer(d, src = 'contact') {
   if (P.inv > 0 || P.dashT > 0 || run.over) return;
-  d = hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? .3 : 1);
+  d = shieldAbsorb(hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? .3 : 1));
+  if (d <= 0) { P.inv = .5; return; }
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
   emit('playerHurt', { amount: d, src: run.boss ? 'boss' : src });
-  if (P.hp <= 0) { P.hp = 0; endRun(false); }
+  if (P.hp <= 0 && !tryRevive()) { P.hp = 0; endRun(false); }
 }

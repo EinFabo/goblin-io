@@ -31,8 +31,8 @@
 </div>
 
 <div id="ctrl" hidden>
-  <button class="abil" id="ultBtn" aria-label="Goblin-Wut"><img alt="" data-icon="rage"><span class="lbl">Wut</span><span class="key">Q</span></button>
-  <button class="abil" id="mechBtn" aria-label="Goblin-Maschine"><img alt="" data-icon="mech"><span class="lbl">Maschine</span><span class="key">F</span></button>
+  <button class="abil" id="ab0Btn" aria-label="Fähigkeit 1"><img alt=""><span class="lbl"></span><span class="key">Q</span></button>
+  <button class="abil" id="ab1Btn" aria-label="Fähigkeit 2"><img alt=""><span class="lbl"></span><span class="key">E</span></button>
   <button class="abil" id="dashBtn" aria-label="Rolle"><img alt="" data-icon="dash"><span class="lbl">Rolle</span><span class="key">Leer</span></button>
   <button class="abil" id="sprintBtn" aria-label="Sprint (gedrückt halten)"><img alt="" data-icon="boots"><span class="lbl">Sprint</span><span class="key">Shift</span></button>
 </div>
@@ -65,6 +65,16 @@
   </div>
 </section>
 
+<section class="screen" id="loadout" hidden>
+  <div class="panel wide">
+    <div class="phead"><h2>Ausrüstung</h2><button class="iconbtn" id="loadBack" aria-label="Zurück">✕</button></div>
+    <p class="note" id="loadStage"></p>
+    <div class="lslots" id="loadSlots"></div>
+    <div class="abilgrid" id="abilGrid"></div>
+    <div class="menubtns row"><button class="btn primary" id="loadGo">Los!</button></div>
+  </div>
+</section>
+
 <section class="screen" id="shop" hidden>
   <div class="panel wide">
     <div class="phead"><h2>Werkstatt</h2><div class="goldline"><span class="coin"></span><b id="shopGold">0</b></div><button class="iconbtn" data-back aria-label="Zurück">✕</button></div>
@@ -81,11 +91,10 @@
       <dt>Angreifen</dt><dd>passiert automatisch</dd>
       <dt>Rolle</dt><dd>Leertaste · kurzer Sprung, dabei unverwundbar</dd>
       <dt>Sprint</dt><dd>Shift gedrückt halten · verbraucht Ausdauer (gelbe Leiste)</dd>
-      <dt>Goblin-Wut</dt><dd>Q, wenn die Leiste voll ist · Schockwelle und 6 s Raserei</dd>
-      <dt>Maschine</dt><dd>F, wenn genug Schrott gesammelt ist · 12 s Dampf-Mech mit MG, Raketen und Stampfer</dd>
+      <dt>Fähigkeiten</dt><dd>Q und E, wenn der Knopf leuchtet · vor jedem Lauf wählst du, welche du mitnimmst</dd>
       <dt>Pause</dt><dd>Esc oder P</dd>
     </dl>
-    <p class="note">Magier lassen <b>Kristalle</b> fallen. Genug Kristalle = Level-Up, du wählst eine Waffe oder Verbesserung. Waffe auf Stufe 5 plus passendes Passiv = <b>Entwicklung</b>. Graue <b>Zahnräder</b> füllen die Maschinen-Leiste. Glühende Stäbe heißen: gleich kommt ein Zauber, also ausweichen! Goldene Elite-Magier lassen Schatztruhen fallen. Nach 4 Minuten kommt der Boss.</p>
+    <p class="note">Magier lassen <b>Kristalle</b> fallen. Genug Kristalle = Level-Up, du wählst eine Waffe oder Verbesserung. Waffe auf Stufe 5 plus passendes Passiv = <b>Entwicklung</b>. Graue <b>Zahnräder</b> laden Schrott-Fähigkeiten wie die Goblin-Maschine. Glühende Stäbe heißen: gleich kommt ein Zauber, also ausweichen! Goldene Elite-Magier lassen Schatztruhen fallen. Nach 4 Minuten kommt der Boss.</p>
   </div>
 </section>
 

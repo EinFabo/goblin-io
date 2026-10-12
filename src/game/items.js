@@ -3,6 +3,7 @@ import { sfx, tickGemCombo } from '../core/audio.js';
 import { $, TAU } from '../core/util.js';
 import { xpCatchUp } from './balance.js';
 import { autoChest } from './levelup.js';
+import { chargeAbil } from './abilities.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
 import { P, onScreen, pR, run, xpNeed } from './state.js';
@@ -40,9 +41,9 @@ export function collect(it) {
       if (performance.now() - xpPulseT > 110) { xpPulseT = performance.now(); const b = $('#xpBar'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
       break;
     }
-    case 'coin': run.gold++; sfx.coin(); break;
+    case 'coin': run.gold += run.goldT > 0 ? 2 : 1; sfx.coin(); break;
     case 'gear':
-      if (P.mechT <= 0) P.scrap = Math.min(100, P.scrap + 7); sfx.gear();
+      chargeAbil('scrap', 7); sfx.gear();
       for (let i = 0; i < 4; i++) part(P.x, P.y - 10, frand(-90, 90), frand(-120, -20), .3, '#c9d1d8', 2.5);
       break;
     case 'heal': P.hp = Math.min(P.maxHp, P.hp + 35); addNum(P.x, P.y - 40, '+35', '#7dff7a'); sfx.heal(); break;

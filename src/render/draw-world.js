@@ -14,6 +14,9 @@ import { DPR, H, W, ZOOM, ctx, cv, drawImgC, drawSpr } from './canvas.js';
 import { iconCanvas } from './icons.js';
 import { PROC } from './proc.js';
 import { drawGround } from './tiles.js';
+import { drawAbilGround, drawAbilTop } from './draw-abilities.js';
+
+const CALL_LOOK = { sc: .62 };   // Krieger vom Goblin-Ruf: etwas größer als die Bande
 
 // ---------- Zeichnen ----------
 // alpha: Anteil zwischen letztem und nächstem Logikschritt. Spieler, Gegner und Kumpel
@@ -45,6 +48,7 @@ function drawRun(now) {
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(zn.x, zn.y, zn.r, zn.r * .75, 0, 0, TAU); ctx.fill();
   }
   drawHaz(t, false);
+  drawAbilGround(t);
   const pw = run.weapons.find(w => w.id === 'poison' && w.evo);
   if (pw) {
     const R = 125 * P.area, g = ctx.createRadialGradient(P.x, P.y, R * .3, P.x, P.y, R);
@@ -90,16 +94,18 @@ function drawRun(now) {
   const list = [];
   for (const e of run.enemies) if (onScreen(e.x, e.y, 120 * e.sc)) list.push(e);
   for (const al of run.allies) list.push(al);
+  for (const al of run.tmpAllies) list.push(al);
   list.push(P);
   list.sort((a, b) => a.y - b.y);
   for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, 'trail', tr.t * 2.4);
   const gang = run.weapons.find(w => w.id === 'gang');
   for (const o of list) {
     if (o === P) { if (P.mechT > 0) drawMech(); else drawPlayer(t); }
-    else if (o.ally) drawAlly(o, gang);
+    else if (o.ally) drawAlly(o, o.tmp ? CALL_LOOK : gang);
     else drawEnemy(o, t);
   }
   drawPlayerBars();
+  drawAbilTop(t);
   for (const e of run.enemies) if (e.state === 'cast' && !e.boss && e.ft < e.charge + .05 && onScreen(e.x, e.y, 60)) drawCharge(e, t);
   if (run.boss && run.boss.ai.st === 'cast' && run.boss.ft < run.boss.charge) drawCharge(run.boss, t);
   for (const w of run.weapons) if (w.id === 'orbit') {
@@ -305,7 +311,7 @@ export function drawPlayer(t) {
     // unverwundbar: weißer Rand
     if (P.inv > 0) drawSpr(spr, 0, 0, 1.12, 0, 'white', .85);
   }
-  drawSpr(spr, 0, 0, 1, 0, P.rageT > 0 ? 'rage' : null, flick ? .45 : 1);
+  drawSpr(spr, 0, 0, 1, 0, P.rageT > 0 ? 'rage' : null, P.smokeT > 0 ? .35 : flick ? .45 : 1);
   ctx.restore();
 }
 export function drawPlayerBars() {

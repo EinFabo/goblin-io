@@ -8,7 +8,9 @@ let showT = 0;
 export function showResults(r) {
   $('#overTitle').textContent = r.win ? 'Stage geschafft!' : 'Besiegt!';
   const res = [['Zeit', fmtTime(run.time)], ['Level', P.lv], ['Besiegt', run.kills], ['Gold', '+' + r.gold]];
-  $('#overStats').innerHTML = res.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  res.push(['Konto-XP', '+' + r.xp + (r.up ? ` · Level ${r.level}!` : '')]);
+  $('#overStats').innerHTML = res.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('') +
+    (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '');
   $('#nextBtn').hidden = !r.next;
   $('#againBtn').textContent = r.win ? 'Nochmal' : 'Nochmal versuchen';
   showT = setTimeout(() => { $('#over').hidden = false; }, r.win ? 200 : 700);

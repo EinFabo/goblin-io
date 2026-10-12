@@ -1,6 +1,8 @@
 // Spielstand v2 mit Versionsnummer und Migration.
 // Kaputte oder unvollständige Stände werden repariert statt zu crashen.
 // Stages sind im Save 1-basiert ("1" = Goblinwiese), im Code 0-basiert.
+import { ABILITIES, DEFAULT_LOADOUT } from '../data/abilities.js';
+import { accountXpNeed } from '../game/balance.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
@@ -17,6 +19,8 @@ export function defaults() {
     talents: {},
     stages: {},
     stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0 },
+    // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
+    loadout: [...DEFAULT_LOADOUT],
     settings: { mute: false, musicOff: false, shake: true, numbers: true, lefty: false },
   };
 }
@@ -60,6 +64,7 @@ export function normalize(raw) {
     talents: {},
     stages: {},
     stats: { runs: num(st.runs) | 0, wins: num(st.wins) | 0, kills: num(st.kills) | 0, playSeconds: num(st.playSeconds) },
+    loadout: normLoadout(r.loadout),
     settings: {
       mute: bool(se.mute, false), musicOff: bool(se.musicOff, false), shake: bool(se.shake, true),
       numbers: bool(se.numbers, true), lefty: bool(se.lefty, false),
@@ -72,6 +77,13 @@ export function normalize(raw) {
     out.stages[+k] = { cleared: bool(s.cleared, false), stars: num(s.stars, 0, 0, 3) | 0, best: num(s.best), nightmare: bool(s.nightmare, false) };
   }
   return out;
+}
+
+function normLoadout(v) {
+  const a = Array.isArray(v) ? v.slice(0, 2).map(x => (ABILITIES[x] ? x : null)) : [...DEFAULT_LOADOUT];
+  while (a.length < 2) a.push(null);
+  if (a[0] && a[0] === a[1]) a[1] = null;
+  return a;
 }
 
 // Beliebigen Rohstand auf die aktuelle Version bringen
@@ -107,6 +119,14 @@ export const stageCleared = i => !!(save.stages[i + 1] && save.stages[i + 1].cle
 export const stageUnlocked = i => i === 0 || stageCleared(i - 1);
 export const stageBest = i => (save.stages[i + 1] ? save.stages[i + 1].best : 0);
 export const talent = id => save.talents[id] || 0;
+
+// Konto-XP gutschreiben, gibt die Anzahl neuer Level zurück
+export function gainAccountXp(n) {
+  const p = save.profile; let up = 0;
+  p.xp += n;
+  while (p.level < 50 && p.xp >= accountXpNeed(p.level)) { p.xp -= accountXpNeed(p.level); p.level++; up++; }
+  return up;
+}
 
 export function recordStage(i, { win, time }) {
   const s = save.stages[i + 1] || (save.stages[i + 1] = { cleared: false, stars: 0, best: 0, nightmare: false });

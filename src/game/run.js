@@ -1,10 +1,12 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { newSeed, seedRun } from '../core/rng.js';
-import { persist, recordStage, save, stageCleared, talent } from '../core/save.js';
+import { gainAccountXp, persist, recordStage, save, stageCleared, talent } from '../core/save.js';
+import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
+import { accountXp } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
 import { STAGES, STAGE_LEN } from '../data/stages.js';
-import { updMech } from './abilities.js';
+import { canEquip, initAbilities, updAbilities } from './abilities.js';
 import { doEvent, spawnTick, updEnemy } from './enemies.js';
 import { part, ring } from './fx.js';
 import { updEProj, updTele } from './hazards.js';
@@ -21,21 +23,22 @@ export function newRun(si, seed = newSeed()) {
   const r = {
     si, st, seed, time: 0, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
-    rerolls: 2 + talent('reroll'), bans: 1, locks: 1, cardN: 3, pendingLv: 0, pendingChest: 0, lowT: 0, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
+    rerolls: 2 + talent('reroll'), bans: 1, locks: 1, cardN: 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
-    hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), ult: 0, rageT: 0, slowT: 0, trail: [], trailT: 0,
+    hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, shieldT: 0, shieldHp: 0, slowT: 0, trail: [], trailT: 0,
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
-    scrap: 0, mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, mechReadyShown: false,
+    mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
   r.cam = { x: 0, y: 0, z: 1 }; r.hitstop = 0; r.slowT = 0; r.caster = null;
   r.offer = { ...newOfferState(), weapons: r.weapons, passives: r.passives };
   setRun(r, p);
+  initAbilities();
   addEvents(0);
   grid.clear();
   recalc(); P.hp = P.maxHp; P.stam = P.stamMax;
   addWeapon('dagger');
-  if (si === 0 && !stageCleared(0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. Rechts unten: Rolle, Sprint, Wut und Maschine.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q Wut · F Maschine');
+  if (si === 0 && !stageCleared(0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. Rechts unten: Rolle, Sprint und deine Fähigkeiten.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q und E Fähigkeiten');
   emit('runStart', run);
 }
 // Feste Momente aus dem Wellen-Skript in die Zeitleiste (Endlos: je Runde erneut)
@@ -56,7 +59,6 @@ export function recalc() {
   P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .04 * sh('spd'));
   P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .12 * sh('mag'));
   P.xpMult = 1 + .06 * sh('xp');
-  P.ultNeed = Math.round(90 * Math.pow(.9, sh('ult')));
   P.proj = 1 + .12 * pl('oil');
   P.crit = .08 + .06 * pl('powder');
   P.stamMax = 100 * (1 + .15 * sh('stam'));
@@ -73,7 +75,7 @@ export function update(dt) {
   updPlayer(dt);
   updCamera(dt);
   if (run.over) return;
-  updMech(dt);
+  updAbilities(dt);
   spawnTick(dt);
   buildGrid();
   for (const e of run.enemies) if (!e.dead) updEnemy(e, dt);
@@ -117,6 +119,7 @@ function savePrev() {
   run.cam.px = run.cam.x; run.cam.py = run.cam.y;
   for (const e of run.enemies) { e.px = e.x; e.py = e.y; }
   for (const a of run.allies) { a.px = a.x; a.py = a.y; }
+  for (const a of run.tmpAllies) { a.px = a.x; a.py = a.y; }
 }
 
 // Lauf beenden: Belohnung, Spielstand, Statistik. Die Szene zeigt danach das Ergebnis.
@@ -124,11 +127,16 @@ export function endRun(win) {
   if (run.over) return;
   run.over = true; run.paused = true;
   const bonus = win ? 60 + run.si * 50 : 0;
+  // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
+  const before = ABILITY_IDS.filter(canEquip), firstClear = win && !stageCleared(run.si);
   recordStage(run.si, { win, time: run.time });
+  const xp = accountXp({ kills: run.kills, seconds: run.time, win, firstClear }), up = gainAccountXp(xp);
+  const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
+  if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
   save.wallet.gold += run.gold + bonus;
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, next: win && run.si + 1 < STAGES.length };
+  run.result = { win, bonus, gold: run.gold + bonus, next: win && run.si + 1 < STAGES.length, xp, level: save.profile.level, up, unlocked };
   emit('runEnd', run.result);
 }
 

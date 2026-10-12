@@ -1,9 +1,10 @@
 // Balance-Bot. Läuft komplett im Browser (wird per page.evaluate übergeben),
 // darf also nichts von außen benutzen außer window.GOBLIN.
 // step: Länge eines Logikschritts in s (Standard wie im Spiel: 1/60)
-export function botRun({ si, talents, seed, maxTime = 330, step }) {
+export function botRun({ si, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20 }) {
   const G = window.GOBLIN, joy = G.joy, STEP = step || G.STEP;
-  G.save.talents = { ...talents };
+  G.save.talents = { ...talents }; G.save.loadout = [...loadout]; G.save.profile.level = acct;
+  for (let k = 1; k <= 8; k++) G.save.stages[k] = { cleared: true, stars: 0, best: 0, nightmare: false };   // alles freigeschaltet
   G.newRun(si, seed);
   const run = G.run, P = G.P;
   const dmg = {};
@@ -15,7 +16,7 @@ export function botRun({ si, talents, seed, maxTime = 330, step }) {
     if (run.weapons.length >= 3) { const u = ord.find(i => c[i].k === 'upW' || c[i].k === 'evo'); if (u !== undefined) return G.choose(c, u); }
     G.choose(c, ord[0]);
   };
-  let mechs = 0;
+  let abil = 0;
   const steps = Math.round(maxTime / STEP);
   for (let i = 0; i < steps && !run.over; i++) {
     // Ausweichen: weg von Gegnern, seitlich an Geschossen vorbei, raus aus Warnkreisen, hin zu Kristallen
@@ -43,8 +44,7 @@ export function botRun({ si, talents, seed, maxTime = 330, step }) {
     joy.id = 1; joy.ox = 0; joy.oy = 0; joy.x = vx * 55; joy.y = vy * 55;
 
     if (P.dashCd <= 0 && P.hp < P.maxHp * .5) G.doDash();
-    if (P.ult >= P.ultNeed) G.doUlt();
-    if (P.scrap >= 100) { G.startMech(); if (P.mechT > 0) mechs++; }
+    for (let k = 0; k < 2; k++) if (G.abilReady(run.abil[k]) && G.useAbility(k)) abil++;
     G.update(STEP);
     if (run.lvDelay > 0) { run.lvDelay = 0; pickCard(); }
     const m = Math.floor(run.time / 60);
@@ -53,7 +53,7 @@ export function botRun({ si, talents, seed, maxTime = 330, step }) {
   joy.id = null; off();
   const win = !!(run.over && P.hp > 0);
   return {
-    win, t: Math.round(run.time), lv: P.lv, kills: run.kills, gold: run.gold, mechs, lvAt, dmg,
+    win, t: Math.round(run.time), lv: P.lv, kills: run.kills, gold: run.gold, abil, lvAt, dmg,
     weapons: run.weapons.map(w => w.id + w.lv + (w.evo ? '*' : '')).join(','),
   };
 }

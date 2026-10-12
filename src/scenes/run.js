@@ -5,7 +5,7 @@ import { $ } from '../core/util.js';
 import { newRun, update } from '../game/run.js';
 import { run } from '../game/state.js';
 import { renderRun } from '../render/draw-world.js';
-import { banner, refreshSlots, updHud } from '../ui/hud.js';
+import { banner, refreshSlots, setupAbilButtons, updHud } from '../ui/hud.js';
 import { openLevelUp } from '../ui/levelup.js';
 import { hideOverlays, showScreen } from '../ui/menus.js';
 
@@ -17,7 +17,7 @@ defineScene('run', {
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true;
     $('#stageTxt').textContent = run.st.name;
-    refreshSlots();
+    refreshSlots(); setupAbilButtons();
     banner(run.st.name, '');
     Music.boss = false; Music.start();
     offs = [

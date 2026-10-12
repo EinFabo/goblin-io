@@ -107,7 +107,8 @@ function typeNeeds(type, out = { mages: new Set(), minions: new Set() }, seen = 
   return out;
 }
 function stageNeeds(si) {
-  const st = STAGES[si], out = { mages: new Set([st.boss.school + '.m']), minions: new Set() }, seen = new Set();
+  // Ratten immer dabei (Rattenflut)
+  const st = STAGES[si], out = { mages: new Set([st.boss.school + '.m']), minions: new Set(['rat']) }, seen = new Set();
   for (const t of stageTypes(st)) typeNeeds(t, out, seen);
   return out;
 }
