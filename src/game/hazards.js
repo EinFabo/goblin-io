@@ -3,6 +3,7 @@ import { sfx } from '../core/audio.js';
 import { TAU } from '../core/util.js';
 import { damagePlayer, hurt } from './combat.js';
 import { animFx, boltFx, explode, part, ring } from './fx.js';
+import { perfectRoll } from './abilities.js';
 import { P, onScreen, pR, query, run } from './state.js';
 
 export function updTele(dt) {
@@ -67,7 +68,7 @@ export function updEProj(dt) {
       if (p.kind === 'frost' && P.mechT <= 0) P.slowT = 1.2;
       p.life = 0;
       animFx(p.kind === 'fire' ? 'f_fireball_hit_' : 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
-    }
+    } else if (P.dashT > 0 && dx * dx + dy * dy < rr * rr) perfectRoll(p.x, p.y);
   }
   run.eproj = run.eproj.filter(p => p.life > 0);
 }

@@ -9,7 +9,7 @@ export const gk = (cx, cy) => cx * 100003 + cy;
 export function buildGrid() {
   grid.clear();
   for (const e of run.enemies) {
-    if (e.dead) continue;
+    if (e.dead || e.spawnT > 0) continue;
     const k = gk(Math.floor(e.x / CELL), Math.floor(e.y / CELL));
     let a = grid.get(k); if (!a) { a = []; grid.set(k, a); } a.push(e);
   }

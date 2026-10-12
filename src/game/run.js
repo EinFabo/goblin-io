@@ -25,7 +25,9 @@ export function newRun(si, seed = newSeed()) {
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
     hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), ult: 0, rageT: 0, slowT: 0, trail: [], trailT: 0,
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
-    scrap: 0, mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, mechReadyShown: false };
+    scrap: 0, mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, mechReadyShown: false,
+    step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
+  r.cam = { x: 0, y: 0, z: 1 }; r.hitstop = 0; r.slowT = 0;
   setRun(r, p);
   addEvents(0);
   grid.clear();
@@ -66,6 +68,7 @@ export function update(dt) {
   run.time += dt;
   while (run.ei < run.events.length && run.time >= run.events[run.ei].t) doEvent(run.events[run.ei++]);
   updPlayer(dt);
+  updCamera(dt);
   if (run.over) return;
   updMech(dt);
   spawnTick(dt);
@@ -108,6 +111,7 @@ export function update(dt) {
 // Positionen vor dem Schritt merken, damit der Renderer zwischen zwei Schritten interpolieren kann
 function savePrev() {
   P.px = P.x; P.py = P.y;
+  run.cam.px = run.cam.x; run.cam.py = run.cam.y;
   for (const e of run.enemies) { e.px = e.x; e.py = e.y; }
   for (const a of run.allies) { a.px = a.x; a.py = a.y; }
 }
@@ -123,4 +127,12 @@ export function endRun(win) {
   persist();
   run.result = { win, bonus, gold: run.gold + bonus, next: win && run.si + 1 < STAGES.length };
   emit('runEnd', run.result);
+}
+
+// Kamera zieht weich nach und schaut in Laufrichtung voraus, beim Sprinten weiter und 4 % herausgezoomt
+function updCamera(dt) {
+  const c = run.cam, look = P.sprinting ? 40 : P.moving ? 16 : 0;
+  const a = 1 - Math.pow(.85, dt * 60);
+  c.x += (P.x + P.aimX * look - c.x) * a; c.y += (P.y + P.aimY * look - c.y) * a;
+  c.z += ((P.sprinting ? .96 : 1) - c.z) * (1 - Math.pow(.92, dt * 60));
 }

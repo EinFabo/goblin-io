@@ -3,7 +3,7 @@ import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { $ } from '../core/util.js';
 import { bomberBoom } from './enemies.js';
-import { addItem, addNum, animFx, dropGem, puff } from './fx.js';
+import { addItem, addNum, animFx, dissolve, dropGem } from './fx.js';
 import { addEvents } from './run.js';
 import { P, run } from './state.js';
 import { banner } from '../ui/hud.js';
@@ -25,7 +25,9 @@ export function kill(e) {
   emit('enemyKilled', e);
   if (!e.boss) { P.ult = Math.min(P.ultNeed, P.ult + 1); if (P.mechT <= 0) P.scrap = Math.min(100, P.scrap + .35); }
   dropGem(e.x, e.y, e.xp);
-  puff(e.x, e.y, e.sc);
+  dissolve(e);
+  if (e.elite) run.hitstop = Math.max(run.hitstop, .04);
+  if (e.boss) run.hitstop = Math.max(run.hitstop, .08);
   sfx.kill();
   if (e.bomber && !e.boomed) bomberBoom(e, false);
   if (e.elite) { for (let i = 0; i < 8; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y); }
@@ -53,7 +55,7 @@ export function bossDown(b) {
 export function damagePlayer(d, src = 'contact') {
   if (P.inv > 0 || P.dashT > 0 || run.over) return;
   d *= P.armorMult * (P.mechT > 0 ? .3 : 1);
-  P.hp -= d; P.inv = .5; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
+  P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
   emit('playerHurt', { amount: d, src: run.boss ? 'boss' : src });

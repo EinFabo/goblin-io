@@ -1,3 +1,4 @@
+import { ECOL } from '../data/enemies.js';
 import { RNG, frand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { TAU } from '../core/util.js';
@@ -29,4 +30,11 @@ export function explode(x, y, rad, dmg, kind = 'fire') {
   query(x, y, rad, e => { const d = Math.hypot(e.x - x, e.y - y) || 1; hurt(e, dmg, 160, (e.x - x) / d, (e.y - y) / d, kind === 'fire' ? '#ffb35c' : null); });
   animFx(kind === 'fire' ? 'f_fireball_hit_' : 'e_frostbolt_hit_', 5, x, y, rad / 18);
   sfx.boom();
+}
+
+// Gegner löst sich in seiner Schulfarbe auf
+export function dissolve(e) {
+  const col = ECOL[e.boss ? 'boss' : e.type] || '#ffffff';
+  run.fx.push({ k: 'dissolve', spr: e.spr || e.pre + 'idle_down_1', x: e.x, y: e.y, sc: e.sc, col, t: 0, dur: .45 });
+  for (let i = 0; i < 8; i++) part(e.x + frand(-12, 12) * e.sc, e.y + frand(-22, 10) * e.sc, frand(-30, 30), frand(-90, -30), frand(.4, .7), col, frand(3, 6) * Math.min(e.sc, 1.6));
 }

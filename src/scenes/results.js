@@ -2,6 +2,7 @@ import { sfx } from '../core/audio.js';
 import { setSprintHeld } from '../core/input.js';
 import { Music } from '../core/music.js';
 import { defineScene } from '../core/scenes.js';
+import { P } from '../game/state.js';
 import { renderRun } from '../render/draw-world.js';
 import { updHud } from '../ui/hud.js';
 import { hideResults, showResults } from '../ui/results.js';
@@ -14,5 +15,5 @@ defineScene('results', {
     showResults(r);
   },
   exit() { hideResults(); },
-  render(now, alpha, dt) { renderRun(now, 1); updHud(dt); },
+  render(now, alpha, dt) { P.endAnim += dt; renderRun(now, 1); updHud(dt); },
 });

@@ -14,3 +14,5 @@ export const CHARGE = { fire: .75, frost: .75, fire3: .9, storm: .8, toxic: .8, 
 export const CCOL = { fire: '#ff8a1f', fire3: '#ff5a1f', frost: '#7fd8ff', storm: '#ffe45c', toxic: '#7be04a', blink: '#b26bff', void: '#b26bff', heal: '#9dff9a' };
 export const AIMED = { fire: 1, fire3: 1, frost: 1, void: 1 };
 export const OFF = { down: [-6.7, 21.1], up: [25.4, -28.3], left: [-33.9, -1.6], right: [33.9, -1.6] };
+// Farbe der Magierschule (Spawn-Portal, Auflösen beim Tod)
+export const ECOL = { fire: '#ff8a1f', frost: '#7fd8ff', imp: '#b26bff', brute: '#ff5a1f', storm: '#ffe45c', toxic: '#7be04a', void: '#b26bff', healer: '#fff3b0', bomber: '#ff8a1f', boss: '#c58cff' };

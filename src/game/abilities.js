@@ -1,8 +1,10 @@
+import { ROLL_T } from './player.js';
 import { frand, rand, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { talent } from '../core/save.js';
 import { hurt } from './combat.js';
-import { animFx, part, ring } from './fx.js';
+import { addNum, animFx, part, ring } from './fx.js';
+import { TAU } from '../core/util.js';
 import { P, nearest, query, randomEnemyInView, run } from './state.js';
 import { banner } from '../ui/hud.js';
 
@@ -11,6 +13,8 @@ export function doDash() {
   if (!run || run.paused || run.over || P.dashCd > 0) return;
   P.dashT = .18; P.dashCd = 2.4; P.inv = Math.max(P.inv, .3);
   P.dvx = P.aimX * 900; P.dvy = P.aimY * 900;
+  P.rollT = ROLL_T; P.perfect = false; P.trailT = 0;
+  for (let i = 0; i < 8; i++) part(P.x + frand(-10, 10), P.y + 16, -P.aimX * 90 + frand(-40, 40), frand(-50, -10), .4, 'rgba(220,210,170,.8)', frand(4, 7));
   sfx.dash();
 }
 export function doUlt() {
@@ -72,4 +76,14 @@ export function updMech(dt) {
     for (let i = 0; i < 24; i++) part(P.x, P.y - 20, frand(-260, 260), frand(-300, 60), frand(.4, .9), i % 2 ? '#c9973a' : '#6d747c', frand(4, 8));
     P.inv = 1; run.shake = 16; sfx.boom(); sfx.ult(); banner('Maschine explodiert!', '');
   }
+}
+
+// Perfekte Rolle: durch ein Geschoss gerollt → kurze Zeitlupe, Glitzer, +5 Wut
+export function perfectRoll(x, y) {
+  if (P.perfect) return;
+  P.perfect = true; run.slowT = .15;
+  P.ult = Math.min(P.ultNeed, P.ult + 5);
+  for (let i = 0; i < 12; i++) { const a = i * TAU / 12; part(x, y, Math.cos(a) * 160, Math.sin(a) * 160, .4, i % 2 ? '#fff6b0' : '#8fe6ff', 2.8); }
+  addNum(P.x, P.y - 52, 'Perfekt!', '#8fe6ff', true);
+  sfx.perfect();
 }

@@ -12,6 +12,7 @@ import { U } from '../render/sprites.js';
 import { banner } from '../ui/hud.js';
 
 // ---------- Gegner ----------
+export const SPAWN_T = .4;
 export function spawnEnemy(type, opt = {}) {
   const T = ETYPES[type], st = run.st;
   const tf = 1 + (run.time / 85) * (1 + run.si * .15), lf = 1 + run.loop * 1.2;
@@ -27,6 +28,8 @@ export function spawnEnemy(type, opt = {}) {
   };
   if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; }
   e.maxHp = e.hp;
+  // Sichtbare Spawns kommen durch ein Portal (0,4 s, solange nicht angreifbar)
+  if (opt.x !== undefined || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (onScreen(x, y)) sfx.portal(); }
   run.enemies.push(e);
   if (!run.seen.has(type)) { run.seen.add(type); if (type !== 'fire' || run.si === 0) hint(`<b>${T.name}</b> ${T.tip}`); }
   return e;
@@ -72,6 +75,7 @@ export function startCast(e, kind) {
   if (onScreen(e.x, e.y)) sfx.charge();
 }
 export function updEnemy(e, dt) {
+  if (e.spawnT > 0) { e.spawnT -= dt; e.spr = e.pre + 'idle_' + faceOf(P.x - e.x, P.y - e.y) + '_1'; return; }
   if (e.flash > 0) e.flash -= dt;
   if (e.slowT > 0) e.slowT -= dt;
   e.x += e.kx * dt; e.y += e.ky * dt;

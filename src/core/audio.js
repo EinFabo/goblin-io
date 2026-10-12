@@ -73,5 +73,10 @@ export const sfx = {
   hover() { thr('hov', 45) && tone(1700 + Math.random() * 200, 1300, .035, 'sine', .028); },
   hoverCard() { thr('hovc', 80) && (tone(1200, 0, .05, 'triangle', .03), tone(1800, 0, .07, 'sine', .022, .04)); },
   click() { tone(520, 0, .05, 'square', .04); noise(.02, .06, 3000, 'highpass'); },
+  step() { thr('step', 90) && noise(.04, .05, 1400, 'bandpass', 0, null, 2); },
+  breath() { thr('breath', 650) && noise(.35, .035, 900, 'bandpass', 0, null, 1.5, 500); },
+  puh() { tone(320, 140, .25, 'triangle', .06); noise(.3, .05, 700, 'bandpass', 0, null, 1, 300); },
+  perfect() { [1318, 1760, 2349].forEach((f, i) => tone(f, 0, .12, 'sine', .05, i * .04)); },
+  portal() { thr('portal', 120) && tone(200, 600, .3, 'sine', .02); },
   buy() { [880, 1175, 1568].forEach((f, i) => tone(f, 0, .1, 'square', .04, i * .05)); },
 };

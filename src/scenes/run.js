@@ -30,11 +30,14 @@ defineScene('run', {
   exit() { for (const f of offs) f(); offs = []; },
   update(step) {
     if (run.paused) return;
+    // Hitstop: Spiel steht kurz still (Elite-Kill, Boss besiegt)
+    if (run.hitstop > 0) { run.hitstop -= step; return; }
     // Nach einem Level-Up kurz Zeitlupe, dann die Karten
     if (run.lvDelay > 0) {
       run.lvDelay -= step; update(step * .25);
       if (run.lvDelay <= 0 && !run.over) openLevelUp(run.lvKind === 'chest');
-    } else update(step);
+    } else if (run.slowT > 0) { run.slowT -= step; update(step * .3); }
+    else update(step);
   },
   render(now, alpha, dt) { renderRun(now, alpha); updHud(dt); },
 });

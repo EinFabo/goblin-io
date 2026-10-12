@@ -1,11 +1,12 @@
 import { frand } from '../core/rng.js';
 import { joy } from '../core/input.js';
 import { TAU, clamp } from '../core/util.js';
-import { AIMED, CCOL } from '../data/enemies.js';
-import { tipPos } from '../game/enemies.js';
+import { AIMED, CCOL, ECOL } from '../data/enemies.js';
+import { save } from '../core/save.js';
+import { SPAWN_T, tipPos } from '../game/enemies.js';
 import { part } from '../game/fx.js';
 import { gemTier } from '../game/items.js';
-import { curPlayerSpr } from '../game/player.js';
+import { ROLL_T, curPlayerSpr } from '../game/player.js';
 import { P, onScreen, run } from '../game/state.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawImgC, drawSpr } from './canvas.js';
 import { iconCanvas } from './icons.js';
@@ -16,7 +17,7 @@ import { drawGround } from './tiles.js';
 // alpha: Anteil zwischen letztem und nächstem Logikschritt. Spieler, Gegner und Kumpel
 // werden für das Bild dazwischen gesetzt und danach zurückgesetzt.
 export function renderRun(now, alpha = 1) {
-  const moved = [P, ...run.enemies, ...run.allies], saved = new Array(moved.length * 2);
+  const moved = [P, run.cam, ...run.enemies, ...run.allies], saved = new Array(moved.length * 2);
   moved.forEach((o, i) => {
     saved[i * 2] = o.x; saved[i * 2 + 1] = o.y;
     if (o.px !== undefined) { o.x = o.px + (o.x - o.px) * alpha; o.y = o.py + (o.y - o.py) * alpha; }
@@ -28,10 +29,11 @@ function drawRun(now) {
   const t = now / 1000;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  const sx = (Math.random() - .5) * run.shake, sy = (Math.random() - .5) * run.shake;
-  const camX = P.x + sx, camY = P.y + sy, z = ZOOM * DPR;
+  const sh = save.settings.shake ? run.shake : 0;
+  const sx = (Math.random() - .5) * sh, sy = (Math.random() - .5) * sh;
+  const zm = ZOOM * run.cam.z, camX = run.cam.x + sx, camY = run.cam.y + sy, z = zm * DPR;
   ctx.setTransform(z, 0, 0, z, cv.width / 2 - camX * z, cv.height / 2 - camY * z);
-  const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
+  const hw = W / 2 / zm, hh = H / 2 / zm;
   drawGround(run.si, camX - hw - 4, camY - hh - 4, hw * 2 + 8, hh * 2 + 8);
   if (run.arena) drawArena(run.arena, t);
   for (const zn of run.zones) {
@@ -101,7 +103,7 @@ function drawRun(now) {
   for (const al of run.allies) list.push(al);
   list.push(P);
   list.sort((a, b) => a.y - b.y);
-  for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, 'rage', tr.t * 1.6);
+  for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, 'trail', tr.t * 2.4);
   const gang = run.weapons.find(w => w.id === 'gang');
   for (const o of list) {
     if (o === P) { if (P.mechT > 0) drawMech(); else drawPlayer(t); }
@@ -164,6 +166,12 @@ function drawRun(now) {
   // Effekte
   for (const f of run.fx) {
     if (f.k === 'anim') { const i = Math.min(f.n, Math.floor(f.t * f.fps) + 1); drawSpr(f.pre + i, f.x, f.y, f.sc, f.rot); }
+    else if (f.k === 'dissolve') {
+      // in Schulfarbe einfärben, nach oben zusammenschrumpfen und verblassen
+      const p = f.t / f.dur;
+      ctx.save(); ctx.translate(f.x, f.y + 24 * f.sc); ctx.scale(1 + p * .25, 1 - p * .7);
+      drawSpr(f.spr, 0, -24 * f.sc, f.sc, 0, f.col, (1 - p) * .9); ctx.restore();
+    }
     else if (f.k === 'ring') {
       const p = f.t / f.dur, r = f.r0 + (f.r1 - f.r0) * (1 - (1 - p) * (1 - p));
       ctx.globalAlpha = 1 - p; ctx.strokeStyle = f.c; ctx.lineWidth = f.w * (1 - p * .5);
@@ -239,6 +247,7 @@ export function drawEnemy(e, t) {
   } else if (e.type === 'healer') { ctx.fillStyle = `rgba(160,255,150,${.18 + .08 * Math.sin(t * 4)})`; ctx.beginPath(); ctx.ellipse(e.x, e.y + 24, 26, 10, 0, 0, TAU); ctx.fill(); }
   else if (e.type === 'void') { ctx.fillStyle = 'rgba(140,60,220,.25)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 24, 24, 9, 0, 0, TAU); ctx.fill(); }
   if (e.slowT > 0 || e.freezeT > 0) { ctx.fillStyle = 'rgba(120,210,255,.4)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 26 * e.sc, e.r * 1.4, e.r * .5, 0, 0, TAU); ctx.fill(); }
+  if (e.spawnT > 0) { drawPortal(e, t); return; }
   const fl = e.flash > 0 || (e.bomber && e.fuse > 0 && Math.floor(e.fuse * 14) % 2 === 0);
   drawSpr(e.spr || (e.pre + 'idle_down_1'), e.x, e.y, e.sc, 0, e.tint, 1, fl);
   if (e.type === 'healer') { ctx.fillStyle = '#8dff7a'; ctx.strokeStyle = '#0a0f06'; ctx.lineWidth = 2; const hy = e.y - 46; ctx.beginPath(); ctx.rect(e.x - 2.5, hy - 7, 5, 14); ctx.rect(e.x - 7, hy - 2.5, 14, 5); ctx.stroke(); ctx.fill(); }
@@ -271,7 +280,7 @@ export function drawCharge(e, t) {
 export function drawAlly(al, w) {
   const sc = w && w.sc ? w.sc : .55;
   ctx.fillStyle = 'rgba(111,194,58,.3)'; ctx.beginPath(); ctx.ellipse(al.x, al.y + 14, 14, 5, 0, 0, TAU); ctx.fill();
-  const spr = al.moving ? 'walk_' + al.face + '_' + ((Math.floor(al.at * 12) % 6) + 1) : 'idle_' + al.face + '_' + ((Math.floor(run.time * 5) % 4) + 1);
+  const spr = al.moving ? `gob.walk.${al.face}.${(Math.floor(al.at * 12) % 6) + 1}` : `gob.idle.${al.face}.${(Math.floor(run.time * 5) % 4) + 1}`;
   drawSpr(spr, al.x, al.y - 4, sc, 0, P.rageT > 0 ? 'rage' : null);
   if (al.slash > 0) {
     ctx.strokeStyle = `rgba(255,255,255,${al.slash / .15})`; ctx.lineWidth = 3;
@@ -279,13 +288,25 @@ export function drawAlly(al, w) {
   }
 }
 export function drawPlayer(t) {
-  const flick = P.inv > 0 && P.dashT <= 0 && Math.floor(t * 20) % 2 === 0;
+  const roll = P.rollT > 0 && !run.over;
+  const flick = P.inv > 0 && !roll && !run.over && Math.floor(t * 20) % 2 === 0;
   if (P.slowT > 0) { ctx.fillStyle = 'rgba(120,210,255,.4)'; ctx.beginPath(); ctx.ellipse(P.x, P.y + 14, 22, 8, 0, 0, TAU); ctx.fill(); }
   if (P.sprinting) {
     ctx.strokeStyle = 'rgba(255,240,170,.55)'; ctx.lineWidth = 2;
     for (let i = 0; i < 3; i++) { const o = (i - 1) * 12; ctx.beginPath(); ctx.moveTo(P.x - P.aimX * 30 - P.aimY * o, P.y - 8 - P.aimY * 30 + P.aimX * o); ctx.lineTo(P.x - P.aimX * 55 - P.aimY * o, P.y - 8 - P.aimY * 55 + P.aimX * o); ctx.stroke(); }
   }
-  drawSpr(curPlayerSpr(), P.x, P.y - 8, 1, 0, P.rageT > 0 ? 'rage' : null, flick ? .45 : 1);
+  const spr = curPlayerSpr();
+  ctx.save(); ctx.translate(P.x, P.y - 8);
+  if (roll) {
+    // Squash & Stretch in Bewegungsrichtung: Start gestaucht, Ende gestreckt
+    const q = 1 - P.rollT / ROLL_T, a = Math.atan2(P.dvy, P.dvx);
+    const [kx, ky] = q < .2 ? [1.25, .8] : q > .75 ? [.85, 1.15] : [1, 1];
+    ctx.rotate(a); ctx.scale(kx, ky); ctx.rotate(-a);
+    // unverwundbar: weißer Rand
+    if (P.inv > 0) drawSpr(spr, 0, 0, 1.12, 0, 'white', .85);
+  }
+  drawSpr(spr, 0, 0, 1, 0, P.rageT > 0 ? 'rage' : null, flick ? .45 : 1);
+  ctx.restore();
 }
 export function drawPlayerBars() {
   const y = P.y + (P.mechT > 0 ? 36 : 30), w = P.mechT > 0 ? 60 : 46, f = clamp(P.hp / P.maxHp, 0, 1);
@@ -333,4 +354,17 @@ export function drawMech() {
   ctx.fillStyle = '#3d4148'; ctx.beginPath(); ctx.roundRect(12, -4, 22, 8, 2); ctx.fill(); ctx.stroke();
   if (P.gunFlash > 0) { ctx.fillStyle = '#fff2a0'; ctx.beginPath(); ctx.moveTo(34, -7); ctx.lineTo(48, 0); ctx.lineTo(34, 7); ctx.closePath(); ctx.fill(); }
   ctx.restore();
+}
+
+// Spawn-Portal: Ring in Schulfarbe wächst, der Magier steigt daraus auf
+function drawPortal(e, t) {
+  const p = 1 - e.spawnT / SPAWN_T, col = ECOL[e.type] || '#c58cff', R = (18 + 10 * p) * Math.min(e.sc, 1.6);
+  ctx.save();
+  ctx.globalAlpha = .35 + .3 * Math.sin(t * 20); ctx.fillStyle = col;
+  ctx.beginPath(); ctx.ellipse(e.x, e.y + 22 * e.sc, R, R * .38, 0, 0, TAU); ctx.fill();
+  ctx.globalAlpha = 1; ctx.strokeStyle = col; ctx.lineWidth = 3; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -t * 40;
+  ctx.beginPath(); ctx.ellipse(e.x, e.y + 22 * e.sc, R, R * .38, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.ellipse(e.x, e.y + 22 * e.sc, R * .8, R * .3, 0, 0, TAU); ctx.clip();
+  ctx.restore();
+  drawSpr(e.spr || e.pre + 'idle_down_1', e.x, e.y + 22 * e.sc * (1 - p), e.sc, 0, p < .6 ? col : e.tint, .3 + .7 * p);
 }

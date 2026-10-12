@@ -1,6 +1,6 @@
 import { rnd, frand, rand, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
-import { TAU, clamp, faceOf } from '../core/util.js';
+import { TAU, clamp, face8 } from '../core/util.js';
 import { hurt } from './combat.js';
 import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
 import { P, nearest, query, randomEnemyInView, run } from './state.js';
@@ -157,7 +157,7 @@ export function updAllies(dt) {
     const dx = tx - al.x, dy = ty - al.y, d = Math.hypot(dx, dy) || 1;
     const reach = tgt ? tgt.r + 12 : 6;
     al.moving = d > reach;
-    if (al.moving) { const s = Math.min(d - reach, w.spd * dt); al.x += dx / d * s; al.y += dy / d * s; al.face = faceOf(dx, dy); al.at += dt; }
+    if (al.moving) { const s = Math.min(d - reach, w.spd * dt); al.x += dx / d * s; al.y += dy / d * s; al.face = face8(dx, dy, al.face); al.at += dt; }
     if (tgt && d < reach + 6 && al.atk <= 0) { al.atk = .45; al.slash = .15; al.sa = Math.atan2(dy, dx); hurt(tgt, w.dmg, 90, dx / d, dy / d); }
     if (Math.hypot(al.x - P.x, al.y - P.y) > 520) { al.px = al.x = P.x + rand(-30, 30); al.py = al.y = P.y + rand(-30, 30); puff(al.x, al.y, .5); }
   });
