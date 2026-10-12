@@ -4,6 +4,7 @@ import { DIR8, TAU, face8 } from '../core/util.js';
 import { ETYPES, SCHOOL_COL } from '../data/enemies.js';
 import { MAGE_OFF, U } from '../render/sprites.js';
 import { STAGE_LEN } from '../data/stages.js';
+import { enemyHp } from './balance.js';
 import { bossAI, spawnBoss } from './boss.js';
 import { CASTS, castAllowed, castWindup } from './casts.js';
 import { damagePlayer, hurt } from './combat.js';
@@ -29,12 +30,12 @@ export const tipPos = e => { const o = MAGE_OFF[e.pre] && MAGE_OFF[e.pre][e.face
 
 export function spawnEnemy(type, opt = {}) {
   const T = ETYPES[type], st = run.st;
-  const tf = 1 + (run.time / 85) * (1 + run.si * .15), lf = 1 + run.loop * 1.2;
+  const lf = 1 + run.loop * 1.2;
   let x = opt.x, y = opt.y;
   if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60; x = P.x + Math.cos(a) * R; y = P.y + Math.sin(a) * R; }
   const e = {
     type, pre: typeSprite(T), x, y, r: T.r, sc: T.sc, spd: T.spd * RNG.spawn.range(.9, 1.1), dmg: T.dmg * st.dmg * (1 + run.time / 400) * lf,
-    hp: T.hp * st.hp * tf * lf, xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
+    hp: enemyHp(T.hp, run.si, run.time) * lf, xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
     casts: (T.casts || []).map(c => ({ ...c, t: RNG.spawn.range(1.5, c.cd[1]) })),
     bomber: has(T, 'bomber'), obj: !!T.draw, clone: !!T.clone, side: RNG.spawn.next() < .5 ? 1 : -1,
     state: 'walk', face: 'down', at: RNG.spawn.next() * 5, ft: 0, fired: false, ck: null, charge: 0, chain: null, fuse: 0,

@@ -173,7 +173,18 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 .lvpips i.on{background:var(--leaf)}
 .lvpips i.nx{background:var(--gold);animation:blink .7s infinite alternate}
 @keyframes blink{to{opacity:.35}}
-@media (max-width:640px){.cards{grid-template-columns:1fr}.card{flex-direction:row;text-align:left;padding:10px 12px;gap:12px}.card img{width:56px;height:56px;flex:none}.card .body{display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}.card .d{min-height:0}.card .k{display:none}}
+.cards.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.card .tagx.why{background:rgba(10,15,6,.7);color:var(--gold)}
+.card.locked{border-color:#6fc3ff;box-shadow:0 6px 0 var(--edge),0 0 18px rgba(111,195,255,.5)}
+.card.locked::after{content:'bleibt liegen';position:absolute;right:8px;top:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6fc3ff}
+.cards.mode-ban .card:not(.off){border-color:#d24a4a;animation:none}
+.cards.mode-ban .card.off{opacity:.4}
+.cards.mode-lock .card{border-color:#6fc3ff;animation:none}
+.lvtools{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px}
+.lvtools.skip span{font-weight:700;color:var(--muted);font-size:14px}
+.lvtools .btn.on{background:var(--hat)}
+.lvnote{margin:0;min-height:1.3em;font-weight:600;font-size:14px;color:var(--muted)}
+@media (max-width:640px){.cards,.cards.n4{grid-template-columns:1fr}.card{flex-direction:row;text-align:left;padding:10px 12px;gap:12px}.card img{width:56px;height:56px;flex:none}.card .body{display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}.card .d{min-height:0}.card .k{display:none}}
 @media (min-width:641px){.card .body{display:contents}}
 
 /* Pause / Ergebnis */

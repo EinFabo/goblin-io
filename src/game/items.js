@@ -1,6 +1,7 @@
 import { frand } from '../core/rng.js';
 import { sfx, tickGemCombo } from '../core/audio.js';
 import { $, TAU } from '../core/util.js';
+import { xpCatchUp } from './balance.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
 import { P, onScreen, pR, run, xpNeed } from './state.js';
@@ -52,6 +53,6 @@ export function collect(it) {
   }
 }
 export function addXp(v) {
-  P.xp += v * P.xpMult;
+  P.xp += v * P.xpMult * xpCatchUp(run.time, P.lv);
   while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); run.pendingLv++; }
 }

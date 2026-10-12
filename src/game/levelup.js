@@ -1,33 +1,35 @@
 import { RNG } from '../core/rng.js';
-import { PASSIVES, WEAPONS } from '../data/weapons.js';
+import { WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
+import { drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
 import { P, run } from './state.js';
 import { banner, refreshSlots } from '../ui/hud.js';
 
 // ---------- Level-Up ----------
-export function genChoices() {
-  const pool = [], owned = new Set(run.weapons.map(w => w.id));
-  for (const w of run.weapons) {
-    const D = WEAPONS[w.id];
-    if (!w.evo && w.lv >= 5 && run.passives[D.with]) pool.push({ k: 'evo', id: w.id, wgt: 1000 });
-    else if (w.lv < 5) pool.push({ k: 'upW', id: w.id, wgt: 10 });
-  }
-  if (run.weapons.length < 6) for (const id in WEAPONS) if (!owned.has(id)) pool.push({ k: 'newW', id, wgt: 6 });
-  const pc = Object.keys(run.passives).length;
-  for (const id in PASSIVES) {
-    const lv = run.passives[id] || 0;
-    if (lv > 0 && lv < 5) pool.push({ k: 'upP', id, wgt: 8 });
-    else if (lv === 0 && pc < 6) pool.push({ k: 'newP', id, wgt: 4 });
-  }
-  const out = [];
-  while (out.length < 3 && pool.length) {
-    let tot = 0; for (const p of pool) tot += p.wgt;
-    let r = RNG.lvl.next() * tot, i = 0;
-    for (; i < pool.length; i++) { r -= pool[i].wgt; if (r <= 0) break; }
-    out.push(pool.splice(Math.min(i, pool.length - 1), 1)[0]);
-  }
-  if (out.length < 3) { out.push({ k: 'heal' }); if (out.length < 3) out.push({ k: 'gold' }); }
-  return out.slice(0, 3);
+// Regeln stehen in offer.js; hier nur der Lauf drumherum (Würfeln, Bannen, Sperren, Überspringen)
+const rnd = () => RNG.lvl.next();
+export const SKIP_GOLD = 15, SKIP_HEAL = .2;
+
+export function genChoices(avoid) { return drawOffer(run.offer, rnd, { n: run.cardN, avoid }); }
+export function reroll(offer) {
+  if (run.rerolls <= 0) return offer;
+  run.rerolls--;
+  return genChoices(offer.filter(c => c.why === 'rest').map(itemKey));
+}
+export function ban(offer, i) {
+  if (run.bans <= 0) return offer;
+  run.bans--; run.offer.banned.add(itemKey(offer[i]));
+  return replaceCard(run.offer, offer.slice(), i, rnd);
+}
+
+// Wahl abschließen. i = Index der Karte, oder 'gold'/'heal' zum Überspringen. lockIdx = gesperrte Karte (oder -1)
+export function choose(offer, i, lockIdx = -1) {
+  const skip = typeof i !== 'number';
+  if (lockIdx >= 0 && lockIdx !== i) run.locks--;
+  settleOffer(run.offer, offer, skip ? -1 : i, lockIdx);
+  if (i === 'gold') run.gold += SKIP_GOLD;
+  else if (i === 'heal') P.hp = Math.min(P.maxHp, P.hp + P.maxHp * SKIP_HEAL);
+  else applyChoice(offer[i]);
 }
 
 export function applyChoice(c) {

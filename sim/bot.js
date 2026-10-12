@@ -11,9 +11,9 @@ export function botRun({ si, talents, seed, maxTime = 330, step }) {
   const lvAt = {};
   const pr = { evo: 0, upW: 1, newW: 2, upP: 3, newP: 4, heal: 5, gold: 6 };
   const pickCard = () => {
-    const c = G.genChoices(); c.sort((a, b) => pr[a.k] - pr[b.k]);
-    if (run.weapons.length >= 3) { const u = c.find(x => x.k === 'upW' || x.k === 'evo'); if (u) return G.applyChoice(u); }
-    G.applyChoice(c[0]);
+    const c = G.genChoices(), ord = c.map((x, i) => i).sort((a, b) => pr[c[a].k] - pr[c[b].k]);
+    if (run.weapons.length >= 3) { const u = ord.find(i => c[i].k === 'upW' || c[i].k === 'evo'); if (u !== undefined) return G.choose(c, u); }
+    G.choose(c, ord[0]);
   };
   let mechs = 0;
   const steps = Math.round(maxTime / STEP);

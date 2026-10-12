@@ -38,5 +38,5 @@ export function randomEnemyInView(margin = 0) {
 }
 export const viewR = () => Math.hypot(W / 2 / ZOOM, H / 2 / ZOOM);
 export const onScreen = (x, y, m = 0) => Math.abs(x - P.x) < W / 2 / ZOOM + m && Math.abs(y - P.y) < H / 2 / ZOOM + m;
-export const xpNeed = l => Math.round(4 + l * 3 + l * l * 0.3);
+export { xpNeed } from './balance.js';
 export const pR = () => P.mechT > 0 ? 26 : 16;

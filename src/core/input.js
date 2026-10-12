@@ -19,8 +19,10 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyQ') doUlt();
   if (e.code === 'KeyF' || e.code === 'KeyE') startMech();
   if (e.code === 'Escape' || e.code === 'KeyP') { if (!$('#pause').hidden) resume(); else if (!run.paused) openPause(); }
-  if (!$('#levelup').hidden && ['Digit1', 'Digit2', 'Digit3'].includes(e.code)) { const b = $('#cards').children[+e.code.slice(5) - 1]; if (b) b.click(); }
+  if (!$('#levelup').hidden && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) { const b = $('#cards').children[+e.code.slice(5) - 1]; if (b) b.click(); }
   if (!$('#levelup').hidden && e.code === 'KeyR') $('#rerollBtn').click();
+  if (!$('#levelup').hidden && e.code === 'KeyB') $('#banBtn').click();
+  if (!$('#levelup').hidden && e.code === 'KeyL') $('#lockBtn').click();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 cv.addEventListener('pointerdown', e => {

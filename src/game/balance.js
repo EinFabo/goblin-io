@@ -1,0 +1,30 @@
+// ---------- Kraftkurve (PLAN 7.3, Formeln 14.3) ----------
+// Alle Balance-Formeln an einer Stelle. Rein, ohne Lauf-Zustand, damit Tests sie direkt prüfen können.
+
+// Ziel-Level nach Sekunden im Lauf; nach 4:00 (Endlos) 4 Level pro Minute weiter
+export const LEVEL_CURVE = [[0, 1], [30, 3], [60, 6], [120, 11], [180, 16], [240, 20]];
+export function targetLevel(t) {
+  const C = LEVEL_CURVE, last = C[C.length - 1];
+  if (t >= last[0]) return last[1] + (t - last[0]) / 15;
+  for (let i = 1; i < C.length; i++) if (t <= C[i][0]) { const [t0, l0] = C[i - 1], [t1, l1] = C[i]; return l0 + (l1 - l0) * (t - t0) / (t1 - t0); }
+  return C[0][1];
+}
+
+// Sanftes Gummiband: wer hinterher ist, bekommt mehr XP, wer weit vorne ist, etwas weniger
+export function xpCatchUp(t, lv) {
+  const diff = targetLevel(t) - lv;
+  return diff >= 3 ? 1.35 : diff >= 2 ? 1.2 : diff <= -3 ? .85 : 1;
+}
+
+export const xpNeed = l => Math.round(4 + l * 3 + l * l * 0.3);
+
+// Gegner-Leben: Grundwert × Stage × Zeitkurve. Stage-Index 0…7, Endlos nutzt Index 5.
+export const STAGE_HP = [1, 1.25, 1.5, 1.8, 2.1, 2.4, 2.8, 3.2];
+export const HP_T1 = .012, HP_T2 = .000035;
+export const hpTime = t => 1 + HP_T1 * t + HP_T2 * t * t;
+export const enemyHp = (base, si, t) => base * STAGE_HP[si] * hpTime(t);
+
+// Spielerschaden gedeckelt nach Art: niemand stirbt in einer Sekunde durch Pech
+export const DMG_CAP = { contact: .08, proj: .12, special: .25 };
+export const capKind = src => src === 'contact' ? 'contact' : src === 'proj' ? 'proj' : 'special';
+export const hitDamage = (raw, maxHp, src) => Math.min(raw, maxHp * DMG_CAP[capKind(src)]);

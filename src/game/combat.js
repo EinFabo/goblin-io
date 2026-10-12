@@ -2,6 +2,7 @@ import { RNG, rnd, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { $ } from '../core/util.js';
+import { hitDamage } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { addItem, addNum, animFx, dissolve, dropGem } from './fx.js';
 import { addEvents } from './run.js';
@@ -57,7 +58,7 @@ export function bossDown(b) {
 // src: contact | proj | bomb | strike | zone (für Statistik und Sim)
 export function damagePlayer(d, src = 'contact') {
   if (P.inv > 0 || P.dashT > 0 || run.over) return;
-  d *= P.armorMult * (P.mechT > 0 ? .3 : 1);
+  d = hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? .3 : 1);
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
