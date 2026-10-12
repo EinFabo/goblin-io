@@ -1,7 +1,7 @@
 import { ROLL_T } from './player.js';
 import { RNG, frand, rand, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
-import { save, stageCleared, talent } from '../core/save.js';
+import { save, stageCleared } from '../core/save.js';
 import { ABILITIES, SLOT2_ACCT, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
 import { hurt } from './combat.js';
 import { addNum, animFx, explode, part, puff, ring } from './fx.js';
@@ -21,7 +21,7 @@ const M = id => (run.abMods && run.abMods[id]) || NOMOD;
 function needOf(id) {
   const A = ABILITIES[id], m = M(id);
   if (A.charge === 'once') return A.need;
-  if (A.charge === 'kills') return Math.round(A.need * Math.pow(.9, talent('ult')) * m.spd);
+  if (A.charge === 'kills') return Math.round(A.need * m.spd);
   return A.charge === 'cd' ? A.need * m.spd : Math.round(A.need * m.spd);
 }
 export const slotOpen = i => i === 0 || save.profile.level >= SLOT2_ACCT;
@@ -111,7 +111,7 @@ function doRage(m) {
 // ---------- Goblin-Maschine ----------
 export function startMech(m = NOMOD) {
   if (P.mechT > 0) return false;
-  P.mechMax = P.mechT = (12 + 1.5 * talent('mech')) * m.area;
+  P.mechMax = P.mechT = 12 * m.area;
   P.mechArmor = m.a ? .15 : .3; P.mechPow = m.pow; P.mechRocket = m.b ? .7 : 1.4;
   P.gunT = 0; P.rocketT = .6; P.stepT = 0; P.inv = Math.max(P.inv, .6); P.slowT = 0;
   ring(P.x, P.y, 10, 160, .5, 'rgba(230,170,60,.95)', 10);

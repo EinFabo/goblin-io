@@ -1,11 +1,11 @@
 // Was ein Spieler vor einer Stage typischerweise an Upgrades hat (PLAN 7.6).
-// Bis die Talente aus Phase 5 kommen, sind das Werkstatt-Stufen (atk, hp, spd, …).
+// Talent-Stufen (data/talents.js); entspricht den Werkstatt-Stufen von früher ×2.
 export const EXPECTED = {
   1: {},
-  2: { atk: 1, hp: 1 },
-  3: { atk: 4, hp: 4 },
-  4: { atk: 6, hp: 6 },
-  5: { atk: 8, hp: 8, spd: 3 },
+  2: { atk: 2, hp: 2 },
+  3: { atk: 8, hp: 8 },
+  4: { atk: 12, hp: 12 },
+  5: { atk: 16, hp: 16, spd: 6 },
 };
 
 // Zielwerte für den "Normal"-Bot in Prozent: [min, max] ohne Upgrades und mit erwarteten

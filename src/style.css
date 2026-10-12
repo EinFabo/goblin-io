@@ -187,6 +187,12 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 @media (max-width:640px){.cards,.cards.n4{grid-template-columns:1fr}.card{flex-direction:row;text-align:left;padding:10px 12px;gap:12px}.card img{width:56px;height:56px;flex:none}.card .body{display:flex;flex-direction:column;gap:4px;align-items:flex-start;min-width:0}.card .d{min-height:0}.card .k{display:none}}
 @media (min-width:641px){.card .body{display:contents}}
 
+/* Talente */
+.shopitem.locked{opacity:.55}
+.tbar{position:relative;grid-column:1/-1;height:16px;border-radius:8px;background:rgba(10,15,6,.8);overflow:hidden}
+.tbar i{display:block;height:100%;background:var(--leaf)}
+.tbar span{position:absolute;inset:0;text-align:center;font-size:11px;font-weight:900;line-height:16px}
+
 /* Ausrüstung */
 .acctbar{display:inline-block;width:90px;height:8px;border-radius:4px;background:rgba(10,15,6,.8);vertical-align:middle;margin-left:6px;overflow:hidden}
 .acctbar i{display:block;height:100%;background:var(--gold)}

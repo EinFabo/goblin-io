@@ -3,10 +3,11 @@
 // Stages sind im Save 1-basiert ("1" = Goblinwiese), im Code 0-basiert.
 import { ABILITIES, ABIL_MAX_LV, DEFAULT_LOADOUT, TREE, abilXpNeed, spentPoints } from '../data/abilities.js';
 import { accountXpNeed } from '../game/balance.js';
+import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
-export const VERSION = 2;
+export const VERSION = 3;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -15,7 +16,7 @@ export function defaults() {
     version: VERSION,
     profile: { name: 'Goblin', level: 1, xp: 0, title: '', created: today() },
     wallet: { gold: 0, gems: 0 },
-    // Bis Phase 5 die Werkstatt-Stufen aus v1 (gleiche Schlüssel, gleiche Wirkung)
+    // Talente (data/talents.js); bis v2 waren das die Werkstatt-Stufen
     talents: {},
     stages: {},
     stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0 },
@@ -34,7 +35,7 @@ const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 // v1: { gold, unlocked, cleared: {0: true}, best: {0: 251}, shop: {atk: 3}, mute, musicOff }
 export function migrateV1(v1) {
   v1 = obj(v1);
-  const s = defaults();
+  const s = { ...defaults(), version: 2 };
   s.wallet.gold = num(v1.gold);
   const cleared = obj(v1.cleared), best = obj(v1.best);
   const idx = new Set([...Object.keys(cleared), ...Object.keys(best)].map(Number).filter(i => Number.isInteger(i) && i >= 0));
@@ -73,7 +74,7 @@ export function normalize(raw) {
       numbers: bool(se.numbers, true), lefty: bool(se.lefty, false),
     },
   };
-  for (const [k, v] of Object.entries(obj(r.talents))) out.talents[k] = num(v, 0, 0, 99) | 0;
+  for (const [k, v] of Object.entries(obj(r.talents))) if (TALENT[k]) out.talents[k] = num(v, 0, 0, TALENT[k].max) | 0;
   for (const [k, v] of Object.entries(obj(r.stages))) {
     if (!/^\d+$/.test(k) || +k < 1) continue;
     const s = obj(v);
@@ -101,10 +102,27 @@ function normAbilities(v) {
   return out;
 }
 
+// v2 → v3: Werkstatt wird zu Talenten. Talente sind halb so stark → Stufen ×2.
+// "Kurze Zündschnur" und "Goblin-Ingenieur" gibt es nicht mehr (macht jetzt der Skill Tree): Gold zurück.
+const DOUBLE = ['atk', 'hp', 'spd', 'mag', 'stam', 'xp'];
+export function migrateV2(v2) {
+  const r = { ...obj(v2) }, t = obj(r.talents), out = {}, w = { ...obj(r.wallet) };
+  let refund = 0;
+  for (const [k, v] of Object.entries(t)) {
+    const n = num(v, 0, 0, 99) | 0;
+    if (DOUBLE.includes(k)) out[k] = n * 2;
+    else if (OLD_COST[k]) for (let i = 0; i < n; i++) refund += oldShopCost(OLD_COST[k], i);
+    else out[k] = n;
+  }
+  w.gold = num(w.gold) + refund;
+  return { ...r, version: 3, talents: out, wallet: w };
+}
+
 // Beliebigen Rohstand auf die aktuelle Version bringen
 export function migrate(raw) {
-  const r = obj(raw);
-  if (!r.version) return normalize(migrateV1(r));
+  let r = obj(raw);
+  if (!r.version) r = migrateV1(r);
+  if (r.version < 3) r = migrateV2(r);
   return normalize(r);
 }
 
@@ -116,7 +134,7 @@ function readJson(key) {
 
 export function loadSave() {
   const v2 = readJson(SAVE_KEY);
-  if (v2 && typeof v2 === 'object') save = migrate(v2);
+  if (v2 && typeof v2 === 'object') { save = migrate(v2); persist(); }
   else {
     if (v2 === undefined) { try { localStorage.setItem(SAVE_KEY + '_broken', localStorage.getItem(SAVE_KEY)); } catch (e) {} }
     const v1 = readJson(SAVE_KEY_V1);

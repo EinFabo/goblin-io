@@ -2,7 +2,7 @@ import { audioInit, sfx } from '../core/audio.js';
 import { persist, save, stageBest, stageCleared, stageUnlocked, talent } from '../core/save.js';
 import { go } from '../core/scenes.js';
 import { $, fmtTime } from '../core/util.js';
-import { SHOP, shopCost } from '../data/shop.js';
+import { TALENT, TALENTS, talentCost } from '../data/talents.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from '../render/icons.js';
 import { SPR, ensureStage, tinted } from '../render/sprites.js';
@@ -46,21 +46,22 @@ export function renderStages() {
     g.appendChild(b);
   });
 }
+// Talente (ersetzen die Werkstatt): Stufen mit Gold, ab Konto-Level freigeschaltet
 export function renderShop() {
-  const gold = save.wallet.gold;
+  const gold = save.wallet.gold, acct = save.profile.level;
   $('#shopGold').textContent = gold;
-  $('#shopList').innerHTML = SHOP.map(s => {
-    const lv = talent(s.id), max = lv >= s.max, cost = shopCost(s, lv);
-    let pips = ''; for (let i = 0; i < s.max; i++) pips += `<i class="${i < lv ? 'on' : ''}"></i>`;
-    return `<div class="shopitem"><img src="${icon(s.icon)}" alt=""><span class="t">${s.name}</span><span class="d">${s.desc} pro Stufe</span>
-      <div class="pips">${pips}</div>
-      <button class="btn ${max ? 'ghost' : 'primary'}" data-buy="${s.id}" ${max || gold < cost ? 'disabled' : ''}>${max ? 'Maximal' : `<span class="coin"></span>${cost}`}</button></div>`;
+  $('#shopList').innerHTML = TALENTS.map(s => {
+    const lv = talent(s.id), max = lv >= s.max, cost = talentCost(s, lv), locked = acct < s.acct;
+    const pips = s.max > 10 ? `<div class="tbar"><i style="width:${lv / s.max * 100}%"></i><span>${lv} / ${s.max}</span></div>` : `<div class="pips">${Array.from({ length: s.max }, (_, i) => `<i class="${i < lv ? 'on' : ''}"></i>`).join('')}</div>`;
+    const btn = locked ? `<button class="btn ghost" disabled>ab Konto-Level ${s.acct}</button>` : `<button class="btn ${max ? 'ghost' : 'primary'}" data-buy="${s.id}" ${max || gold < cost ? 'disabled' : ''}>${max ? 'Maximal' : `<span class="coin"></span>${cost}`}</button>`;
+    return `<div class="shopitem${locked ? ' locked' : ''}"><img src="${icon(s.icon)}" alt=""><span class="t">${s.name}</span><span class="d">${s.desc} pro Stufe</span>
+      ${pips}${btn}</div>`;
   }).join('');
 }
 $('#shopList').addEventListener('click', e => {
   const b = e.target.closest('[data-buy]'); if (!b) return;
-  const s = SHOP.find(x => x.id === b.dataset.buy), lv = talent(s.id), cost = shopCost(s, lv);
-  if (lv >= s.max || save.wallet.gold < cost) { sfx.buzz(); return; }
+  const s = TALENT[b.dataset.buy], lv = talent(s.id), cost = talentCost(s, lv);
+  if (lv >= s.max || save.wallet.gold < cost || save.profile.level < s.acct) { sfx.buzz(); return; }
   save.wallet.gold -= cost; save.talents[s.id] = lv + 1; persist(); sfx.buy(); renderShop();
 });
 $('#playBtn').addEventListener('click', () => showScreen('#stages'));

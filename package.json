@@ -7,7 +7,8 @@
     "build": "node tools/build.mjs",
     "sim": "node sim/run-sims.mjs",
     "test": "node --test \"test/**/*.test.js\"",
-    "lint": "eslint src tools sim test"
+    "lint": "eslint src tools sim test",
+    "smoke": "node tools/smoke.mjs"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

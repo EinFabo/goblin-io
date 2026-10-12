@@ -23,7 +23,7 @@ export function newRun(si, seed = newSeed()) {
   const r = {
     si, st, seed, time: 0, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
-    rerolls: 2 + talent('reroll'), bans: 1, locks: 1, cardN: 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
+    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
     hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, shieldT: 0, shieldHp: 0, shieldMax: 1, shieldShard: 0, mechArmor: .3, mechPow: 1, mechRocket: 1.4, slowT: 0, trail: [], trailT: 0,
@@ -48,20 +48,20 @@ export function addEvents(loop) {
 }
 export function recalc() {
   const pl = id => run.passives[id] || 0, sh = talent;
-  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .06 * sh('atk'));
+  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk'));
   P.cdMult = Math.pow(.92, pl('book'));
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
-  P.maxHp = 100 + 20 * pl('heart') + 12 * sh('hp');
+  P.maxHp = 100 + 20 * pl('heart') + 6 * sh('hp');
   if (old) P.hp += Math.max(0, P.maxHp - old);
   P.regen = .4 * pl('herbs');
-  P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .04 * sh('spd'));
-  P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .12 * sh('mag'));
-  P.xpMult = 1 + .06 * sh('xp');
+  P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd'));
+  P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .06 * sh('mag'));
+  P.xpMult = 1 + .03 * sh('xp');
   P.proj = 1 + .12 * pl('oil');
   P.crit = .08 + .06 * pl('powder');
-  P.stamMax = 100 * (1 + .15 * sh('stam'));
+  P.stamMax = 100 * (1 + .075 * sh('stam'));
 }
 export function addWeapon(id) { run.weapons.push({ id, lv: 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [] }); }
 export function hint(html) { run.hints.push(html); }

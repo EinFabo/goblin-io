@@ -843,7 +843,11 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - Der Ausrüstungs-Screen bleibt vorerst vor jedem Lauf; Fabi schaut sich an, ob er in den Hub wandern soll.
 - [ ] Profil, Konto-Level, Statistiken
 - [ ] Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3) – nur Waffen und Passive
-- [ ] Talente statt Werkstatt (9.4)
+- [x] Talente statt Werkstatt (9.4)
+  - `src/data/talents.js`, Save v3 mit Migration: Werkstatt-Stufen ×2; „Kurze Zündschnur“ und „Goblin-Ingenieur“ entfallen (macht jetzt der Skill Tree), ihr Gold wird erstattet.
+  - Abweichung: Dicke Haut +6 statt +8 Leben pro Stufe, damit migrierte Spielstände nicht stärker werden (Stage 4 mit Upgrades ist ohnehin zu leicht).
+  - Goblin-Schläue Stufe 10 gibt die 4. Level-Up-Karte, Bannfluch +1 Bannen.
+  - Sim-Erwartungen (`sim/expected-progress.js`) auf Talent-Stufen umgerechnet: Stage 3 75 %, 4 94 %, 5 59 % (vorher 72/97/66, also im Streubereich gleich).
 - [ ] Hub mit Tab-Leiste (10.1)
 
 ### Phase 6 – Truhen, Shop, Kosmetik

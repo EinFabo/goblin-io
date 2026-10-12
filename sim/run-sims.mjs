@@ -18,7 +18,7 @@ const loadout = args.loadout ? String(args.loadout).split(',') : ['rage', 'mech'
 const parseTalents = s => Object.fromEntries(String(s || '').split(',').filter(Boolean).map(x => { const [k, v] = x.split('='); return [k, +v]; }));
 
 const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln' };
-const SUITE_V2 = [[1, {}], [2, {}], [3, {}], [3, { atk: 4, hp: 4 }], [4, { atk: 6, hp: 6 }], [5, { atk: 8, hp: 8, spd: 3 }]];
+const SUITE_V2 = [[1, {}], [2, {}], [3, {}], [3, { atk: 8, hp: 8 }], [4, { atk: 12, hp: 12 }], [5, { atk: 16, hp: 16, spd: 6 }]];   // Werkstatt-Stufen aus v2 ×2
 // Standard: jede Stage ohne Upgrades und mit den erwarteten (sim/expected-progress.js), Stage 1 nur einmal
 const SUITE = [[1, {}], [2, {}], [2, EXPECTED[2]], [3, {}], [3, EXPECTED[3]], [4, {}], [4, EXPECTED[4]], [5, {}], [5, EXPECTED[5]]];
 const configs = args.stage ? [[+args.stage, args.talents === 'exp' ? EXPECTED[+args.stage] : parseTalents(args.talents)]] : args.v2 ? SUITE_V2 : SUITE;

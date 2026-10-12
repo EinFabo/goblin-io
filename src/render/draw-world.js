@@ -263,7 +263,7 @@ export function drawEnemy(e, t) {
     ctx.fillStyle = 'rgba(170,230,255,.42)'; ctx.strokeStyle = 'rgba(230,250,255,.9)'; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.roundRect(e.x - w / 2, e.y - h / 2, w, h, 6); ctx.fill(); ctx.stroke();
   }
-  if ((e.elite || ETYPES[e.type].role === 'master' || e.obj) && e.hp < e.maxHp) {
+  if (!e.boss && (e.elite || e.miniboss || e.obj || ETYPES[e.type].role === 'master') && e.hp < e.maxHp) {
     const w = 46 * e.sc * .7, y = e.y - 44 * e.sc;
     ctx.fillStyle = 'rgba(10,15,6,.85)'; ctx.fillRect(e.x - w / 2 - 2, y - 2, w + 4, 8);
     ctx.fillStyle = '#ffcf3a'; ctx.fillRect(e.x - w / 2, y, w * Math.max(0, e.hp / e.maxHp), 4);
