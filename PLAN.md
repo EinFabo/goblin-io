@@ -734,6 +734,8 @@ Jede Phase endet mit einem spielbaren Stand. Die Reihenfolge ist so gewählt, da
 - [ ] 8 Schulen × 3 Rollen aus 5.3 als Daten + Verhalten
 - [ ] Elite-Affixe (5.4)
 - [ ] Hinweis-Toast beim ersten Auftauchen (gibt es schon) auf neue Gegner erweitern
+- [ ] Eigene Geschosse und Einschläge je Schule (offen aus Phase 1): Sturm, Gift, Schatten, Nekro, Erde, Licht
+- [ ] Neue Gegner in die heutigen 5 Stages einsortieren (bis die Wellen-Skripte aus Phase 3 und die Stages aus Phase 7 kommen)
 
 ### Phase 3 – Balancing-System
 - [ ] Level-Up-Regeln (7.2) inkl. Bannen und Sperren
@@ -764,6 +766,7 @@ Jede Phase endet mit einem spielbaren Stand. Die Reihenfolge ist so gewählt, da
 - [ ] 8 Stages mit Deko und Musik (6.1), Sterne, Albtraum-Modus
 - [ ] Boss-Runner mit Phasen, Wut-Timer, Phasenwechsel-Regeln (6.2)
 - [ ] 8 Bosse (6.3) + Mini-Bosse
+- [ ] **Boss-Rework (Wunsch Fabi, 2026-10-12):** die heutigen 5 Bosse ersetzen, nicht nur ergänzen. Jeder Boss bekommt ein eigenes Modell statt "Meister seiner Schule" (Phase 1). Malvorn bekommt ein Modell mit Teilen aller Schulen und wechselt sichtbar die Schule. Die alte feste Angriffsrotation (Ring/Fächer/Blitze/Beschwören/Ansturm) entfällt zugunsten der Phasen aus 6.3.
 
 ### Phase 8 – Feinschliff und Test
 - [ ] Performance-Budget prüfen (12.3)
