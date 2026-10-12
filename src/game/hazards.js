@@ -32,37 +32,29 @@ export function updTele(dt) {
     if (Math.random() < dt * 8) part(z.x + frand(-z.r, z.r) * .7, z.y + frand(-z.r, z.r) * .5, 0, -25, .6, z.k === 'poison' ? 'rgba(170,255,110,.7)' : 'rgba(255,170,60,.8)', 4);
   }
   run.zones = run.zones.filter(z => z.t > 0);
-  for (const s of run.etele) {
-    s.t -= dt;
-    if (s.t <= 0) {
-      s.done = true;
-      boltFx(s.x + frand(-30, 30), s.y - 460, s.x, s.y, 6, 'storm');
-      for (let i = 0; i < 10; i++) part(s.x, s.y, frand(-150, 150), frand(-150, 50), .35, '#fff59a', 3);
-      ring(s.x, s.y, 5, s.r, .25, 'rgba(255,240,120,.9)', 6);
-      if (Math.hypot(P.x - s.x, P.y - s.y) < s.r + pR() * .6) damagePlayer(s.dmg, 'strike');
-      if (onScreen(s.x, s.y)) sfx.ezap();
-    }
-  }
-  run.etele = run.etele.filter(s => !s.done);
-  for (const z of run.ezones) {
-    z.t -= dt; z.tick -= dt;
-    if (z.tick <= 0 && Math.hypot(P.x - z.x, P.y - z.y) < z.r + pR() * .5) { z.tick = .5; damagePlayer(z.dmg, 'zone'); }
-    if (Math.random() < dt * 6) part(z.x + frand(-z.r, z.r) * .6, z.y + frand(-z.r, z.r) * .4, 0, -20, .7, 'rgba(160,90,220,.7)', 4);
-  }
-  run.ezones = run.ezones.filter(z => z.t > 0);
+  updHaz(dt);
 }
+
 export function updEProj(dt) {
   for (const p of run.eproj) {
     p.t += dt; p.life -= dt;
     if (p.lob) {
       const q = Math.min(1, p.t / p.dur);
       p.x = p.sx + (p.tx - p.sx) * q; p.y = p.sy + (p.ty - p.sy) * q; p.h = Math.sin(q * Math.PI) * 110;
-      if (q >= 1) { p.life = 0; run.ezones.push({ x: p.tx, y: p.ty, r: 58, t: 4.2, dur: 4.2, tick: 0, dmg: p.dmg }); animFx('f_fireball_hit_', 5, p.tx, p.ty, 2.2, 16); for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(150,240,80,.9)', 4); }
+      if (q >= 1) {
+        p.life = 0;
+        if (p.kind === 'rock') { for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(160,130,90,.9)', 4); }
+        else {
+          addHaz({ shape: 'circle', x: p.tx, y: p.ty, r: 58, warn: 0, act: 4.2, tick: .5, dmg: p.dmg, kind: 'toxic', src: 'zone' });
+          animFx('f_fireball_hit_', 5, p.tx, p.ty, 2.2, 16); for (let i = 0; i < 8; i++) part(p.tx, p.ty, frand(-90, 90), frand(-90, -20), .45, 'rgba(150,240,80,.9)', 4);
+        }
+      }
       continue;
     }
     p.x += p.vx * dt; p.y += p.vy * dt;
     if (run.arena && Math.hypot(p.x - run.arena.x, p.y - run.arena.y) > run.arena.r + 40) p.life = 0;
     const dx = p.x - P.x, dy = p.y - (P.y - 6), rr = p.r + pR() * .85;
+    if (p.fake && dx * dx + dy * dy < rr * rr) { p.life = 0; part(p.x, p.y, 0, -30, .3, 'rgba(200,160,255,.6)', 5); continue; }
     if (dx * dx + dy * dy < rr * rr && P.dashT <= 0 && P.inv <= 0) {
       damagePlayer(p.dmg, 'proj');
       if (p.kind === 'frost' && P.mechT <= 0) P.slowT = 1.2;
@@ -71,4 +63,87 @@ export function updEProj(dt) {
     } else if (P.dashT > 0 && dx * dx + dy * dy < rr * rr) perfectRoll(p.x, p.y);
   }
   run.eproj = run.eproj.filter(p => p.life > 0);
+}
+
+// ---------- Bodenwarnungen und Gefahrenzonen der Gegner ----------
+// Form: circle {x,y,r} | line {x,y,x2,y2,w} | cone {x,y,a,len,spread} | beam {a,b,w} (zwischen zwei Gegnern)
+// warn: Warnzeit bis zur Wirkung, act: Dauer danach (0 = einmaliger Treffer), tick: Abstand der Treffer,
+// owner + cancel: verschwindet, wenn der Zaubernde vorher stirbt. drain: heilt diesen Gegner um den Schaden.
+export function addHaz(h) {
+  run.haz.push({ act: 0, tick: .5, tk: 0, t: 0, ...h, dur: h.warn });
+}
+export const hazWarnCount = () => run.haz.reduce((n, h) => n + (h.warn > 0 && h.dmg > 0 ? 1 : 0), 0);
+
+// Abstand eines Punkts zur Form (negativ = drin)
+function segDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1, L = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / L));
+  const cx = x1 + dx * t, cy = y1 + dy * t;
+  return [Math.hypot(px - cx, py - cy), cx, cy];
+}
+export function hazDist(h, x, y) {
+  switch (h.shape) {
+    case 'circle': return [Math.hypot(x - h.x, y - h.y) - h.r, h.x, h.y];
+    case 'line': { const [d, cx, cy] = segDist(x, y, h.x, h.y, h.x2, h.y2); return [d - h.w / 2, cx, cy]; }
+    case 'beam': { const [d, cx, cy] = segDist(x, y, h.a.x, h.a.y - 20, h.b.x, h.b.y - 20); return [d - h.w / 2, cx, cy]; }
+    case 'cone': {
+      const dx = x - h.x, dy = y - h.y, d = Math.hypot(dx, dy);
+      let da = Math.atan2(dy, dx) - h.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+      const inside = d < h.len && Math.abs(da) < h.spread;
+      return [inside ? -Math.min(h.len - d, (h.spread - Math.abs(da)) * d) : Math.min(Math.abs(d - h.len), Math.abs(Math.abs(da) - h.spread) * d), h.x, h.y];
+    }
+  }
+  return [1e9, 0, 0];
+}
+const hazHitsPlayer = h => hazDist(h, P.x, P.y)[0] < pR() * .6;
+
+function hazFx(h) {
+  const x = h.shape === 'circle' ? h.x : h.shape === 'cone' ? h.x + Math.cos(h.a) * h.len * .5 : h.shape === 'beam' ? (h.a.x + h.b.x) / 2 : (h.x + h.x2) / 2;
+  const y = h.shape === 'circle' ? h.y : h.shape === 'cone' ? h.y + Math.sin(h.a) * h.len * .5 : h.shape === 'beam' ? (h.a.y + h.b.y) / 2 : (h.y + h.y2) / 2;
+  if (h.kind === 'storm' && h.shape === 'circle') {
+    boltFx(h.x + frand(-30, 30), h.y - 460, h.x, h.y, 6, 'storm');
+    for (let i = 0; i < 10; i++) part(h.x, h.y, frand(-150, 150), frand(-150, 50), .35, '#fff59a', 3);
+    ring(h.x, h.y, 5, h.r, .25, 'rgba(255,240,120,.9)', 6);
+    if (onScreen(h.x, h.y)) sfx.ezap();
+  } else if (h.kind === 'earth') {
+    run.shake = Math.max(run.shake, 4);
+    for (let i = 0; i < 12; i++) part(x + frand(-40, 40), y + frand(-20, 20), frand(-80, 80), frand(-120, -30), .5, 'rgba(170,140,100,.9)', frand(3, 6));
+    if (onScreen(x, y)) sfx.stomp();
+  } else if (h.kind === 'fire') { if (onScreen(x, y)) sfx.boom(); }
+}
+
+function updHaz(dt) {
+  for (const h of run.haz) {
+    h.t += dt;
+    if (h.owner && h.cancel && h.owner.dead) { h.done = true; continue; }
+    if (h.shape === 'beam' && (h.a.dead || h.b.dead)) { h.done = true; continue; }
+    if (h.warn > 0) {
+      h.warn -= dt;
+      if (h.warn > 0) continue;
+      hazFx(h);
+      if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) damagePlayer(h.dmg, h.src); h.done = true; continue; }
+    }
+    h.act -= dt; h.tk -= dt;
+    if (h.tk <= 0 && h.dmg > 0 && hazHitsPlayer(h)) {
+      h.tk = h.tick;
+      const before = P.hp; damagePlayer(h.dmg, h.src);
+      if (h.drain && !h.drain.dead) { const got = before - P.hp; h.drain.hp = Math.min(h.drain.maxHp, h.drain.hp + got * 3); }
+    }
+    if (h.act <= 0) h.done = true;
+  }
+  run.haz = run.haz.filter(h => !h.done);
+}
+
+// Für den Bot: Schubs weg von allen Gefahren in der Nähe (Länge ~ wie dringend)
+export function dangerVec(x, y, margin = 40) {
+  let vx = 0, vy = 0;
+  for (const h of run.haz) {
+    if (h.dmg <= 0) continue;
+    const [d, cx, cy] = hazDist(h, x, y);
+    if (d > margin) continue;
+    let dx = x - cx, dy = y - cy, l = Math.hypot(dx, dy);
+    if (l < 1) { dx = Math.random() - .5; dy = Math.random() - .5; l = Math.hypot(dx, dy); }
+    const w = (margin - d) / margin * 4;
+    vx += dx / l * w; vy += dy / l * w;
+  }
+  return [vx, vy];
 }

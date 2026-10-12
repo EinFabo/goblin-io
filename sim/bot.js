@@ -6,7 +6,7 @@ export function botRun({ si, talents, seed, maxTime = 330, step }) {
   G.save.talents = { ...talents };
   G.newRun(si, seed);
   const run = G.run, P = G.P;
-  const dmg = { contact: 0, proj: 0, boss: 0, bomb: 0, strike: 0, zone: 0 };
+  const dmg = {};
   const off = G.events.on('playerHurt', h => { dmg[h.src] = (dmg[h.src] || 0) + h.amount; });
   const lvAt = {};
   const pr = { evo: 0, upW: 1, newW: 2, upP: 3, newP: 4, heal: 5, gold: 6 };
@@ -33,7 +33,7 @@ export function botRun({ si, talents, seed, maxTime = 330, step }) {
     const l = Math.hypot(ax, ay) || 1; let vx = ax / l, vy = ay / l; const tx = -vy, ty = vx;
     vx = vx * .7 + tx * .7; vy = vy * .7 + ty * .7;
     if (px || py) { const pl = Math.hypot(px, py); vx = vx * .3 + px / pl * 1.5; vy = vy * .3 + py / pl * 1.5; }
-    for (const z of run.etele.concat(run.ezones)) { const dx = P.x - z.x, dy = P.y - z.y, d = Math.hypot(dx, dy) || 1; if (d < z.r + 40) { px += dx / d * 4 / Math.max(20, d) * 40; py += dy / d * 4 / Math.max(20, d) * 40; } }
+    { const [hx, hy] = G.dangerVec(P.x, P.y, 50); px += hx * 2; py += hy * 2; }
     for (const e of run.enemies) if (e.bomber && e.fuse > 0) { const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1; if (d < 120) { px += dx / d * 3; py += dy / d * 3; } }
     if (px || py) { const pl = Math.hypot(px, py); vx = vx * .3 + px / pl * 1.5; vy = vy * .3 + py / pl * 1.5; }
     if (run.arena) { const cx = run.arena.x - P.x, cy = run.arena.y - P.y, cd = Math.hypot(cx, cy); if (cd > 300) { vx += cx / cd; vy += cy / cd; } }

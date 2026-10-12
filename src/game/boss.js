@@ -5,13 +5,14 @@ import { $, TAU, face8 } from '../core/util.js';
 import { CCOL } from '../data/enemies.js';
 import { eShot, mageKey, mspr, spawnEnemy, tipPos } from './enemies.js';
 import { dropGem, part, puff, ring } from './fx.js';
+import { addHaz } from './hazards.js';
 import { P, run } from './state.js';
 import { banner } from '../ui/hud.js';
 
 export function spawnBoss() {
   const st = run.st, B = st.boss;
   for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); dropGem(e.x, e.y, e.xp); }
-  run.eproj.length = 0; run.etele.length = 0;
+  run.eproj.length = 0; run.haz.length = 0;
   run.arena = { x: P.x, y: P.y, r: 470 };
   const lf = 1 + run.loop * 1.5;
   const b = {
@@ -59,8 +60,8 @@ export function bossAI(b, dt, dx, dy, d) {
           for (let i = 0; i < n; i++) eShot(tx, ty, base + (i - (n - 1) / 2) * .14, b.ck, b.dmg * .45, 225, 1.4);
         } else if (ai.atk === 'strikes') {
           const n = enr ? 8 : 5;
-          run.etele.push({ k: 'strike', x: P.x, y: P.y, t: 1, dur: 1, r: 60, dmg: b.dmg * .7 });
-          for (let i = 1; i < n; i++) { const a = rnd() * TAU, r = rand(70, 200); run.etele.push({ k: 'strike', x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r, t: 1 + i * .08, dur: 1 + i * .08, r: 60, dmg: b.dmg * .7 }); }
+          addHaz({ shape: 'circle', x: P.x, y: P.y, r: 60, warn: 1, dmg: b.dmg * .7, kind: 'storm', src: 'strike' });
+          for (let i = 1; i < n; i++) { const a = rnd() * TAU, r = rand(70, 200); addHaz({ shape: 'circle', x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r, r: 60, warn: 1 + i * .08, dmg: b.dmg * .7, kind: 'storm', src: 'strike' }); }
         } else if (ai.atk === 'summon') {
           const n = enr ? 7 : 5;
           for (let i = 0; i < n; i++) { const a = i * TAU / n; spawnEnemy(b.minion || 'imp', { x: b.x + Math.cos(a) * 80, y: b.y + Math.sin(a) * 80 }); }

@@ -422,12 +422,13 @@ export function magePoses(anim, d) {
 
 // ---------- ganzer Magier ----------
 // Ergebnis: [SVG-Teile, Position der Stabspitze]
-export function drawMage(school, d, p, { master = false } = {}) {
+export function drawMage(school, d, p, { master = false, clone = false } = {}) {
   const S = SCHOOLS[school], th = DRAWN[d] * RAD, K = kit(th);
   const b = p.bob, L = p.lean, base = d === 'downleft' ? 'down' : d === 'upleft' ? 'up' : d;
   const hs = p.hs || BASE_HANDS[base === 'up' ? 'up' : base === 'left' ? 'left' : 'down'].hs;
   const hf = p.hf !== undefined && p.hf !== null ? p.hf : (base === 'left' ? null : BASE_HANDS[base].hf);
-  const o = [ell(0, 20, 17 * (master ? 1.1 : 1), 6, '#000', ' fill-opacity=".3"' + NOSTROKE), ...feet(K, S, p)];
+  // Klone (Spiegelmagier) haben keinen Schatten am Boden – daran erkennt man den echten
+  const o = [...(clone ? [] : [ell(0, 20, 17 * (master ? 1.1 : 1), 6, '#000', ' fill-opacity=".3"' + NOSTROKE)]), ...feet(K, S, p)];
   const [staff, orb] = drawStaff(S, school, p, hs[0], hs[1] + b);
   const fx = drawFx(S, p, ...orb);
   // Kopf mit Neigung beim Zaubern (seitlich)

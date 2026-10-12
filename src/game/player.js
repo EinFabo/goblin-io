@@ -57,7 +57,13 @@ export function updPlayer(dt) {
   P.vx = (P.x - ox) / Math.max(dt, 1e-4); P.vy = (P.y - oy) / Math.max(dt, 1e-4);
   P.inv -= dt; P.dashCd -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
-  query(P.x, P.y, pR(), e => { if (e.dmg > 0 && !(e.freezeT > 0)) { damagePlayer(e.dmg); return false; } });
+  query(P.x, P.y, pR(), e => {
+    if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {
+      const was = P.inv; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg);
+      if (e.melee === 'slow' && was <= 0 && P.mechT <= 0) P.slowT = .6;
+      return false;
+    }
+  });
   if (P.scrap >= 100 && !P.mechReadyShown) { P.mechReadyShown = true; hint(isTouch() ? '<b>Maschine bereit!</b> Tippe auf den Maschinen-Knopf.' : '<b>Maschine bereit!</b> Drück F zum Einsteigen.'); }
   if (P.mechT > 0) P.mechReadyShown = false;
 }

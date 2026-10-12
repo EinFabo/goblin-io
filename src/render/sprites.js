@@ -73,18 +73,18 @@ export function tinted(entry, tint) {
 // Meister (Bosse, Großmagier) werden schärfer gerastert.
 export const MAGE_OFF = {};
 const units = new Map();
-const variantOf = key => { const [school, m] = key.split('.'); return [school, m === 'm']; };
+const variantOf = key => { const [school, v] = key.split('.'); return [school, { master: v === 'm', clone: v === 'c' }]; };
 
 function loadUnit(key, anim) {
   const id = key + '|' + anim;
   if (units.has(id)) return units.get(id);
-  const [school, master] = variantOf(key);
-  if (!MAGE_OFF['m.' + key]) MAGE_OFF['m.' + key] = castOffsets(school, { master });
+  const [school, opt] = variantOf(key);
+  if (!MAGE_OFF['m.' + key]) MAGE_OFF['m.' + key] = castOffsets(school, opt);
   const jobs = [];
-  for (const dir of Object.keys(DRAWN)) for (let i = 0; i < MAGE_ANIMS[anim]; i++) jobs.push([dir, i, mageSvg(school, dir, anim, i, { master })]);
+  for (const dir of Object.keys(DRAWN)) for (let i = 0; i < MAGE_ANIMS[anim]; i++) jobs.push([dir, i, mageSvg(school, dir, anim, i, opt)]);
   const pr = Promise.all(jobs.map(j => loadImg(svgUrl(j[2])))).then(imgs => {
     jobs.forEach(([dir, i, svg], j) => {
-      const e = raster(imgs[j], svg, false, master ? 2 : 1.25);
+      const e = raster(imgs[j], svg, false, opt.master ? 2 : 1.25);
       SPR[`m.${key}.${anim}.${dir}.${i + 1}`] = e;
       const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
       if (m) SPR[`m.${key}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
@@ -95,19 +95,25 @@ function loadUnit(key, anim) {
 }
 const loadVariant = key => Promise.all(Object.keys(MAGE_ANIMS).map(a => loadUnit(key, a)));
 
-const typeKey = t => ETYPES[t].school + (ETYPES[t].master ? '.m' : '');
-// Varianten einer Stage: Gegner-Mix, Schwarm (Lehrlinge, Funkenwichtel), Boss
-export function stageMageKeys(si) {
-  const st = STAGES[si], keys = new Set(st.mix.map(m => typeKey(m[0])));
-  for (const t of ['imp', 'bomber', st.boss.minion]) keys.add(typeKey(t));
-  keys.add(st.boss.school + '.m');
-  return [...keys];
+// Was ein Gegnertyp an Bildern braucht, inkl. allem, was er beschwört
+const SUMMONS = { summon_skeletons: ['skeleton'], raise_ghosts: ['ghost'], summon_golem: ['golem'], portal: ['void_portal', 'shadow_apprentice'], clones: ['shadow_clone'] };
+function typeNeeds(type, out = { mages: new Set(), minions: new Set() }, seen = new Set()) {
+  if (seen.has(type)) return out; seen.add(type);
+  const T = ETYPES[type];
+  if (T.sprite) out.minions.add(T.sprite);
+  else if (!T.draw) out.mages.add(T.school + (T.role === 'master' ? '.m' : T.clone ? '.c' : ''));
+  for (const c of T.casts || []) for (const s of SUMMONS[c.id] || []) typeNeeds(s, out, seen);
+  return out;
 }
-export const ensureStage = si => Promise.all(stageMageKeys(si).map(loadVariant));
-export function allMageKeys() {
-  const keys = new Set(Object.keys(ETYPES).map(typeKey));
-  for (const st of STAGES) keys.add(st.boss.school + '.m');
-  return [...keys];
+function stageNeeds(si) {
+  const st = STAGES[si], out = { mages: new Set([st.boss.school + '.m']), minions: new Set() }, seen = new Set();
+  for (const t of [...st.mix.map(m => m[0]), ...st.swarm.filter(Boolean), st.boss.minion]) typeNeeds(t, out, seen);
+  return out;
+}
+export const stageMageKeys = si => [...stageNeeds(si).mages];
+export function ensureStage(si) {
+  const n = stageNeeds(si);
+  return Promise.all([...[...n.mages].map(loadVariant), loadMinions([...n.minions])]);
 }
 // Menü: laufende Demo-Magier + je ein Bossbild für die Stage-Vorschau
 export const MENU_MAGES = ['fire', 'frost', 'storm', 'toxic', 'shadow', 'light', 'fire.m'];
@@ -116,7 +122,7 @@ export async function loadMenuMages() {
 }
 // Rest nacheinander im Hintergrund, damit das Menü flüssig bleibt
 export async function preloadAllMages() {
-  for (const k of allMageKeys()) await loadVariant(k);
+  for (let si = 0; si < STAGES.length; si++) await ensureStage(si);
 }
 
 // Diener (Skelett, Geist, Golem, Ratte): n.<art>.<anim>.<richtung>.<n>, nur bei Bedarf geladen

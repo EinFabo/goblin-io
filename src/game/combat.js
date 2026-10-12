@@ -2,7 +2,7 @@ import { RNG, rnd, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { $ } from '../core/util.js';
-import { bomberBoom } from './enemies.js';
+import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { addItem, addNum, animFx, dissolve, dropGem } from './fx.js';
 import { addEvents } from './run.js';
 import { P, run } from './state.js';
@@ -13,10 +13,12 @@ import { endRun } from './run.js';
 export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null) {
   if (e.dead) return;
   const crit = rnd() < P.crit;
-  const d = Math.max(1, Math.round(dmg * (crit ? 2 : 1) * rand(.9, 1.1)));
+  const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
+  const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
   e.hp -= d; e.flash = .09;
-  if (kb && !e.boss) { const m = e.elite ? .25 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }
-  addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit);
+  if (kb && !e.boss && !rule.blocked) { const m = e.elite ? .25 : e.traits && e.traits.includes('heavy') ? .2 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }
+  if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit);
+  else if (rule.blocked) addNum(e.x, e.y - 22 * e.sc, 'Block', '#dff6ff', false);
   sfx.hit();
   if (e.hp <= 0) kill(e);
 }
@@ -30,6 +32,7 @@ export function kill(e) {
   if (e.boss) run.hitstop = Math.max(run.hitstop, .08);
   sfx.kill();
   if (e.bomber && !e.boomed) bomberBoom(e, false);
+  deathRules(e);
   if (e.elite) { for (let i = 0; i < 8; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y); }
   else if (!e.boss) {
     const r = RNG.loot.next();
@@ -46,7 +49,7 @@ export function bossDown(b) {
   for (let i = 0; i < 25; i++) addItem('coin', b.x, b.y);
   for (let i = 0; i < 6; i++) setTimeout(() => { if (run && !run.over) { animFx('f_fireball_hit_', 5, b.x + frand(-60, 60), b.y + frand(-60, 60), 3.5); sfx.boom(); } }, i * 150);
   addItem('chest', b.x, b.y);
-  run.shake = 18; run.etele.length = 0;
+  run.shake = 18; run.haz.length = 0;
   banner(b.name + ' besiegt!', '');
   if (run.st.endless) { run.loop++; addEvents(run.loop); }
   else run.clearT = 3;

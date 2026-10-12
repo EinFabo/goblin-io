@@ -11,6 +11,7 @@ const html = resolve(args.html || join(ROOT, 'dist', 'goblin-io.html'));
 const runs = +args.runs || 20, seed0 = args.seed !== undefined ? +args.seed : 1, hz = +args.hz || 60;
 const parseTalents = s => Object.fromEntries(String(s || '').split(',').filter(Boolean).map(x => { const [k, v] = x.split('='); return [k, +v]; }));
 
+const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln' };
 const SUITE = [[1, {}], [2, {}], [3, {}], [3, { atk: 4, hp: 4 }], [4, { atk: 6, hp: 6 }], [5, { atk: 8, hp: 8, spd: 3 }]];
 const configs = args.stage ? [[+args.stage, parseTalents(args.talents)]] : SUITE;
 
@@ -24,14 +25,15 @@ await p.evaluate(() => GOBLIN.allLoaded);
 const pct = (a, n) => (100 * a / n).toFixed(0).padStart(3) + ' %';
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
 console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz\n`);
-console.log('Stage  Talente               Siege   Ø Zeit  Ø Lv@1/2/3/4 min      Schaden: Kontakt/Geschoss/Boss/Bombe/Blitz/Pfütze');
+console.log('Stage  Talente               Siege   Ø Zeit  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
 const t0 = Date.now();
 for (const [stage, talents] of configs) {
   const res = [];
   for (let k = 0; k < runs; k++) res.push(await p.evaluate(botRun, { si: stage - 1, talents, seed: seed0 + k, step: 1 / hz }));
   const wins = res.filter(r => r.win).length;
   const lv = [1, 2, 3, 4].map(m => { const a = res.map(r => r.lvAt[m]).filter(x => x !== undefined); return a.length ? avg(a).toFixed(1) : '–'; }).join('/');
-  const d = ['contact', 'proj', 'boss', 'bomb', 'strike', 'zone'].map(k => Math.round(avg(res.map(r => r.dmg[k] || 0)))).join('/');
+  const srcs = [...new Set(res.flatMap(r => Object.keys(r.dmg)))];
+  const d = srcs.map(k => [k, Math.round(avg(res.map(r => r.dmg[k] || 0)))]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k, v]) => SRC[k] + ' ' + v).join(', ');
   const tal = Object.entries(talents).map(([k, v]) => k + '=' + v).join(',') || '–';
   console.log(`${String(stage).padEnd(6)} ${tal.padEnd(21)} ${pct(wins, runs)}  ${String(Math.round(avg(res.map(r => r.t)))).padStart(4)} s  ${lv.padEnd(20)}  ${d}`);
 }

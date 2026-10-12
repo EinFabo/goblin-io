@@ -18,7 +18,7 @@ export function newRun(si, seed = newSeed()) {
   const st = STAGES[si];
   seedRun(seed);
   const r = {
-    si, st, seed, time: 0, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], etele: [], ezones: [], allies: [],
+    si, st, seed, time: 0, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     rerolls: 2 + talent('reroll'), pendingLv: 0, pendingChest: 0, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
   };
@@ -75,7 +75,7 @@ export function update(dt) {
   buildGrid();
   for (const e of run.enemies) if (!e.dead) updEnemy(e, dt);
   for (const e of run.enemies) {
-    if (e.dead || e.boss) continue;
+    if (e.dead || e.boss || e.obj || (e.traits && e.traits.includes('float'))) continue;
     query(e.x, e.y, e.r * .9, o => {
       if (o === e) return;
       const dx = e.x - o.x, dy = e.y - o.y, d = Math.hypot(dx, dy) || .01, ov = (e.r + o.r) * .9 - d;

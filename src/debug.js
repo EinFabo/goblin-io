@@ -10,12 +10,15 @@ import { doDash, doUlt, startMech } from './game/abilities.js';
 import { applyChoice, genChoices } from './game/levelup.js';
 import { newRun, update } from './game/run.js';
 import { P, run } from './game/state.js';
+import { dangerVec } from './game/hazards.js';
+import { spawnEnemy } from './game/enemies.js';
+import { ETYPES } from './data/enemies.js';
 import { allLoaded } from './scenes/boot.js';
 import { SPR, loadMinions } from './render/sprites.js';
 
 const api = {
   STEP, STAGES, events, joy, keys, RNG,
-  newRun, update, genChoices, applyChoice, doDash, doUlt, startMech, go, setSave, loadMinions, SPR,
+  newRun, update, genChoices, applyChoice, doDash, doUlt, startMech, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES,
 };
 Object.defineProperties(api, {
   run: { get: () => run }, allLoaded: { get: () => allLoaded }, P: { get: () => P }, save: { get: () => save }, scene: { get: () => sceneName },
