@@ -9,3 +9,4 @@ export function setMusic(off) {
   for (const b of [$('#musicBtn'), $('#pMusicBtn')]) b.textContent = 'Musik: ' + (off ? 'aus' : 'an');
   if (off) Music.stop();
 }
+export function setShake(on) { save.settings.shake = on; persist(); $('#shakeBtn').textContent = 'Wackeln: ' + (on ? 'an' : 'aus'); }

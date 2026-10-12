@@ -67,3 +67,11 @@ test('Talente über dem Maximum werden gekappt, unbekannte entfernt', () => {
   const s = normalize({ version: 3, talents: { atk: 99, reroll: 7, ult: 3 } });
   assert.deepEqual(s.talents, { atk: 20, reroll: 3 });
 });
+
+test('Statistiken und Karussell-Stage: alte Stände bekommen Standardwerte, Unsinn wird verworfen', () => {
+  const s = migrate({ version: 3, stages: { 1: { cleared: true }, 2: { cleared: true } }, stats: { runs: 5, weapons: { dagger: 4, nix: 9, orbit: 'x' } } });
+  assert.equal(s.lastStage, 2);   // höchste freie Stage
+  assert.equal(s.stats.bestKills, 0);
+  assert.deepEqual(s.stats.weapons, { dagger: 4 });
+  assert.equal(migrate({ version: 3, lastStage: 0, stages: { 1: { cleared: true } } }).lastStage, 0);   // gewählte Stage bleibt
+});

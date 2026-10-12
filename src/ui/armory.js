@@ -2,7 +2,6 @@ import { sfx } from '../core/audio.js';
 import { abilState, persist, save } from '../core/save.js';
 import { $ } from '../core/util.js';
 import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, SLOT2_ACCT, SLOT_KEYS, TREE, abilXpNeed, basePoints, canLearn, smokeAtkSlow, spentPoints, unlockText, xpPerUse } from '../data/abilities.js';
-import { accountXpNeed } from '../game/balance.js';
 import { canEquip, slotOpen } from '../game/abilities.js';
 import { icon } from '../render/icons.js';
 
@@ -21,8 +20,6 @@ export function cleanLoadout() {
 export function renderArmory() {
   cleanLoadout();
   if (!sel || !ABILITIES[sel]) sel = save.loadout[0];
-  const p = save.profile;
-  $('#armAcct').innerHTML = `Konto-Level <b>${p.level}</b> <span class="acctbar"><i style="width:${Math.min(100, p.xp / accountXpNeed(p.level) * 100).toFixed(0)}%"></i></span>`;
   renderHooks(); renderShelf(); renderNote();
 }
 

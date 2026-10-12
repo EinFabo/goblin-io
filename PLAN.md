@@ -843,14 +843,21 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - **Rüstkammer statt Ausrüstungs-Screen (Wunsch Fabi):** eigener Bildschirm im Hauptmenü im Stil eines Goblin-Lagers. Holzbalken mit zwei Haken (Q/E), an denen die Fähigkeiten als Schilder hängen (schwingen beim Umhängen), der Goblin in der Mitte, alle Fähigkeiten als Holzmarken auf einem Regal (Level, Slot, lila Punkt = Skillpunkte frei), Pergamentzettel mit Details, „An Q/E hängen“ und Skill Tree. Die Auswahl bleibt gespeichert, Stages starten direkt (`src/ui/armory.js`).
   - **Ladebildschirm (Wunsch Fabi):** Der Goblin rennt über die Wiese, drei Feuermagier jagen ihn, er hüpft über ihre Feuerbälle; darüber Logo, Holz-Fortschrittsbalken mit Statuszeile, ein Spieltipp (`src/render/loading-scene.js`). Zuerst werden nur die Sprint-Bilder erzeugt, damit er sofort rennt. Geladen werden alle Bilder plus die Magier der *freigeschalteten* Stages; danach lädt im Menü nichts mehr nach (vorher 13 Ruckler bis 150 ms). Gesperrte Stages laden beim ersten Start („Lade Magier …“). Neuer Spieler: Menü nach ~1,5–2 s (Headless).
   - Fix: Sobald der Boss im Bild war, brach das Zeichnen ab (Spieler weg, Bild eingefroren). Ursache seit Phase 2: Lebensbalken-Abfrage `ETYPES[e.type]` gab es für den Boss nicht. Neu: `npm run smoke` spielt jede Stage im Browser mit Zeichnen bis in den Bosskampf.
-- [ ] Profil, Konto-Level, Statistiken
+- [x] Profil, Konto-Level, Statistiken
+  - Profil-Tab (`src/ui/profile.js`): Name ändern (3–16 Zeichen), Konto-Level mit XP-Balken, Statistiken (Läufe, Siege, Siegquote, Kills, Spielzeit, meiste Kills und höchstes Level in einem Lauf, freie Fähigkeiten, Lieblingswaffe), Stages mit Stand und Bestzeit, Liste „Konto-Level schaltet frei“ mit dem nächsten Ziel hervorgehoben.
+  - Neu im Save (ohne Versionssprung, `normalize` füllt auf): `stats.bestKills`, `stats.bestLevel`, `stats.weapons` (in wie vielen Läufen welche Waffe dabei war), `lastStage`.
+  - Titel und Erfolge fehlen noch → Phase 6 (9.8).
 - [ ] Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3) – nur Waffen und Passive
 - [x] Talente statt Werkstatt (9.4)
   - `src/data/talents.js`, Save v3 mit Migration: Werkstatt-Stufen ×2; „Kurze Zündschnur“ und „Goblin-Ingenieur“ entfallen (macht jetzt der Skill Tree), ihr Gold wird erstattet.
   - Abweichung: Dicke Haut +6 statt +8 Leben pro Stufe, damit migrierte Spielstände nicht stärker werden (Stage 4 mit Upgrades ist ohnehin zu leicht).
   - Goblin-Schläue Stufe 10 gibt die 4. Level-Up-Karte, Bannfluch +1 Bannen.
   - Sim-Erwartungen (`sim/expected-progress.js`) auf Talent-Stufen umgerechnet: Stage 3 75 %, 4 94 %, 5 59 % (vorher 72/97/66, also im Streubereich gleich).
-- [ ] Hub mit Tab-Leiste (10.1)
+- [x] Hub mit Tab-Leiste (10.1)
+  - Leiste oben: Avatar (Goblin-Kopf), Name, Konto-Level mit XP, Gold, Zahnrad für Einstellungen (Ton, Musik, Wackeln, „So spielst du“). Tab-Leiste unten aus Holz: Talente · Rüstkammer · **Spielen** (erhöht) · Profil, Wisch-Ton und Einschieben beim Wechsel.
+  - Spielen: Stage-Karussell statt Stage-Liste (Pfeile, ←/→ oder A/D, Wischen am Handy, Enter startet), Punkte zeigen geschafft/gesperrt, die Karte zeigt Bestzeit und welche Fähigkeit ein Sieg freischaltet. Der große Knopf startet direkt; die Wahl bleibt gespeichert, nach einem Erstsieg springt das Karussell auf die neue Stage.
+  - Shop und Sammlung kommen als eigene Tabs dazu, sobald es sie gibt (Phase 5 Karten, Phase 6 Shop). Juwelen erscheinen erst mit Phase 6 in der Leiste.
+  - `npm run smoke` klickt jetzt auch durch den Hub (Tabs, Karussell, Name, Einstellungen, Start).
 - [ ] **Bug (gemeldet von Fabi, 2026-10-12): Lag beim Rundenstart.** Beim Start eines Laufs ruckelt es. Ursache messen (Sprites erzeugen, Musik starten, erste Spawns?) und vorziehen bzw. verteilen.
   - Stand: Fabi spürt es im PC-Browser (Windows) bei den ersten Gegnern/Tönen. Headless (auch mit 4× CPU-Bremse) kein Start-Ruckler, keine spät erzeugten Bilder/Canvases, JS pro Frame nur wenige ms. GPU über WSL (`GALLIUM_DRIVER=d3d12`, RTX 3070) ruckelt auch im Menü → als Messplatz unbrauchbar.
   - Neu: Mess-Modus `goblin-io.html?perf` (`src/perf.js`) zeichnet auf Fabis Gerät jeden Frame > 50 ms mit Kontext auf (Logik/Zeichnen, Gegner, neue Bilder, Töne, Long Animation Frames); „Kopieren“ liefert den Bericht.

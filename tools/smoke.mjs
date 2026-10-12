@@ -58,6 +58,36 @@ await p.click('#menuBtn');
 await p.waitForTimeout(300);
 if (!(await p.evaluate(() => GOBLIN.scene === 'menu' && !GOBLIN.run))) fail('nach „Menü“ hängt der Lauf noch im Hintergrund');
 console.log('Tod, Nochmal, Menü: geprüft');
+
+// Hub: Tabs, Karussell, Name ändern, Einstellungen, Start über den Spielen-Knopf
+const hubFail = m => { console.log('Hub: ' + m); errs.push(m); };
+const vis = sel => p.evaluate(sel => !document.querySelector(sel).hidden, sel);
+for (const t of ['#shop', '#armory', '#profile', '#menu']) {
+  await p.click(`#tabbar [data-tab="${t}"]`);
+  if (!(await vis(t))) hubFail(`Tab ${t} öffnet nicht`);
+}
+await p.evaluate(() => { const s = GOBLIN.save; s.stages[1] = { cleared: true, stars: 0, best: 200, nightmare: false }; s.lastStage = 0; });
+await p.click('#tabbar [data-tab="#profile"]'); await p.click('#tabbar [data-tab="#menu"]');
+await p.click('#stNext');
+if ((await p.evaluate(() => GOBLIN.save.lastStage)) !== 1) hubFail('Pfeil › wechselt die Stage nicht');
+await p.keyboard.press('ArrowRight');
+if (!(await p.evaluate(() => document.querySelector('#playBtn').disabled))) hubFail('gesperrte Stage 3 lässt sich starten');
+await p.keyboard.press('ArrowLeft');
+await p.click('#topWho');
+await p.click('#nameEdit'); await p.fill('#nameIn', 'Gr'); await p.press('#nameIn', 'Enter');
+if ((await p.evaluate(() => GOBLIN.save.profile.name)) === 'Gr') hubFail('zu kurzer Name wurde angenommen');
+await p.fill('#nameIn', 'Grubnik'); await p.press('#nameIn', 'Enter');
+if ((await p.evaluate(() => GOBLIN.save.profile.name + '|' + document.querySelector('#topName').textContent)) !== 'Grubnik|Grubnik') hubFail('Name wird nicht übernommen');
+await p.click('#optBtn'); await p.click('#howBtn');
+if (!(await vis('#howto')) || (await vis('#options'))) hubFail('„So spielst du“ öffnet nicht aus den Einstellungen');
+await p.keyboard.press('Escape');
+if (await vis('#howto')) hubFail('Esc schließt „So spielst du“ nicht');
+await p.click('#tabbar [data-tab="#menu"]');
+await p.click('#playBtn');
+await p.waitForTimeout(800);
+if (!(await p.evaluate(() => GOBLIN.scene === 'run' && GOBLIN.run.si === 1))) hubFail('Spielen startet nicht die gewählte Stage 2');
+if (await vis('#tabbar')) hubFail('Tab-Leiste bleibt im Lauf sichtbar');
+console.log('Hub (Tabs, Karussell, Name, Einstellungen, Start): geprüft');
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

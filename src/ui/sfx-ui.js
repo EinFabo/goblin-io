@@ -11,6 +11,6 @@ document.addEventListener('pointerover', e => {
 document.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   audioInit();
-  if (b.classList.contains('card') || b.dataset.buy || b.classList.contains('stage')) return;
+  if (b.classList.contains('card') || b.dataset.buy || b.classList.contains('tab') || b.id === 'playBtn' || b.closest('.carousel')) return;
   b.disabled ? sfx.buzz() : sfx.click();
 }, true);

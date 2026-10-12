@@ -78,5 +78,6 @@ export const sfx = {
   puh() { tone(320, 140, .25, 'triangle', .06); noise(.3, .05, 700, 'bandpass', 0, null, 1, 300); },
   perfect() { [1318, 1760, 2349].forEach((f, i) => tone(f, 0, .12, 'sine', .05, i * .04)); },
   portal() { thr('portal', 120) && tone(200, 600, .3, 'sine', .02); },
+  tab() { thr('tab', 60) && (noise(.12, .07, 700, 'bandpass', 0, null, 1.2, 2600), tone(380, 520, .06, 'triangle', .03)); },
   buy() { [880, 1175, 1568].forEach((f, i) => tone(f, 0, .1, 'square', .04, i * .05)); },
 };

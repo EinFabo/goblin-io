@@ -4,6 +4,7 @@
 import { ABILITIES, ABIL_MAX_LV, DEFAULT_LOADOUT, TREE, abilXpNeed, spentPoints } from '../data/abilities.js';
 import { accountXpNeed } from '../game/balance.js';
 import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
+import { WEAPONS } from '../data/weapons.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
@@ -19,7 +20,10 @@ export function defaults() {
     // Talente (data/talents.js); bis v2 waren das die Werkstatt-Stufen
     talents: {},
     stages: {},
-    stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0 },
+    // weapons: in wie vielen Läufen welche Waffe dabei war (Lieblingswaffe)
+    stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0, bestKills: 0, bestLevel: 0, weapons: {} },
+    // zuletzt gewählte Stage im Karussell (0-basiert)
+    lastStage: 0,
     // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
     loadout: [...DEFAULT_LOADOUT],
     // Fähigkeiten-Level und Skill Tree: { id: { lv, xp, pts: { pow, cd, area, a, b } } }
@@ -66,7 +70,11 @@ export function normalize(raw) {
     wallet: { gold: Math.floor(num(w.gold)), gems: Math.floor(num(w.gems)) },
     talents: {},
     stages: {},
-    stats: { runs: num(st.runs) | 0, wins: num(st.wins) | 0, kills: num(st.kills) | 0, playSeconds: num(st.playSeconds) },
+    stats: {
+      runs: num(st.runs) | 0, wins: num(st.wins) | 0, kills: num(st.kills) | 0, playSeconds: num(st.playSeconds),
+      bestKills: num(st.bestKills) | 0, bestLevel: num(st.bestLevel) | 0, weapons: {},
+    },
+    lastStage: num(r.lastStage, 0, 0, 99) | 0,
     loadout: normLoadout(r.loadout),
     abilities: normAbilities(r.abilities),
     settings: {
@@ -74,12 +82,15 @@ export function normalize(raw) {
       numbers: bool(se.numbers, true), lefty: bool(se.lefty, false),
     },
   };
+  for (const [k, v] of Object.entries(obj(st.weapons))) if (WEAPONS[k]) { const n = num(v) | 0; if (n) out.stats.weapons[k] = n; }
   for (const [k, v] of Object.entries(obj(r.talents))) if (TALENT[k]) out.talents[k] = num(v, 0, 0, TALENT[k].max) | 0;
   for (const [k, v] of Object.entries(obj(r.stages))) {
     if (!/^\d+$/.test(k) || +k < 1) continue;
     const s = obj(v);
     out.stages[+k] = { cleared: bool(s.cleared, false), stars: num(s.stars, 0, 0, 3) | 0, best: num(s.best), nightmare: bool(s.nightmare, false) };
   }
+  // Alte Stände ohne Karussell-Wahl: höchste freie Stage
+  if (typeof r.lastStage !== 'number') { let k = 0; while (out.stages[k + 1] && out.stages[k + 1].cleared) k++; out.lastStage = k; }
   return out;
 }
 

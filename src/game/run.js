@@ -137,6 +137,9 @@ export function endRun(win) {
   const abil = Object.entries(run.abXp).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
+  s.bestKills = Math.max(s.bestKills, run.kills); s.bestLevel = Math.max(s.bestLevel, P.lv);
+  for (const w of run.weapons) s.weapons[w.id] = (s.weapons[w.id] || 0) + 1;
+  if (firstClear && run.si + 1 < STAGES.length) save.lastStage = run.si + 1;   // Karussell zeigt danach die neue Stage
   persist();
   run.result = { win, bonus, gold: run.gold + bonus, next: win && run.si + 1 < STAGES.length, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);

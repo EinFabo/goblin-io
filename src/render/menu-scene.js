@@ -27,6 +27,16 @@ export function renderMenuScene(t) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = 'rgba(10,15,6,.25)'; ctx.fillRect(0, 0, W, H);
   const e = SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)];
-  if (!$('#menu').hidden) { const g = $('#mascot').getContext('2d'); g.clearRect(0, 0, 240, 240); g.drawImage(e.c, 0, 0, 240, 240); }
-  if (!$('#armory').hidden) { const g = $('#armGob').getContext('2d'); g.clearRect(0, 0, 220, 220); g.drawImage(e.c, 0, 0, 220, 220); }
+  if (!$('#menu').hidden) paint('#mascot', e);
+  if (!$('#armory').hidden) paint('#armGob', e);
+  if (!$('#profile').hidden) paint('#profGob', e);
+  // Avatar: nur der Kopf; in der Tab-Leiste und oben links
+  if (!$('#topbar').hidden) { paint('#avatar', e, HEAD); paint('#tabAvatar', e, HEAD); }
+}
+const HEAD = [16, 4, 112];   // Ausschnitt x, y, Seite im 144er Sprite
+function paint(sel, e, crop) {
+  const c = $(sel), g = c.getContext('2d');
+  g.clearRect(0, 0, c.width, c.height);
+  if (crop) g.drawImage(e.c, crop[0] * e.c.width / 144, crop[1] * e.c.height / 144, crop[2] * e.c.width / 144, crop[2] * e.c.height / 144, 0, 0, c.width, c.height);
+  else g.drawImage(e.c, 0, 0, c.width, c.height);
 }
