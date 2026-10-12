@@ -48,6 +48,7 @@
     <div class="goldline"><span class="coin"></span><b id="menuGold">0</b> Gold</div>
     <div class="menubtns">
       <button class="btn primary" id="playBtn">Spielen</button>
+      <button class="btn" id="armBtn">Rüstkammer</button>
       <button class="btn" id="shopBtn">Talente</button>
       <button class="btn" id="howBtn">So spielst du</button>
       <div class="togglerow">
@@ -65,13 +66,18 @@
   </div>
 </section>
 
-<section class="screen" id="loadout" hidden>
-  <div class="panel wide">
-    <div class="phead"><h2>Ausrüstung</h2><button class="iconbtn" id="loadBack" aria-label="Zurück">✕</button></div>
-    <p class="note" id="loadStage"></p>
-    <div class="lslots" id="loadSlots"></div>
-    <div class="abilgrid" id="abilGrid"></div>
-    <div class="menubtns row"><button class="btn primary" id="loadGo">Los!</button></div>
+<section class="screen" id="armory" hidden>
+  <div class="camp">
+    <div class="phead"><h2>Rüstkammer</h2><span class="acct" id="armAcct"></span><button class="iconbtn" data-back aria-label="Zurück">✕</button></div>
+    <div class="rack">
+      <div class="beam" aria-hidden="true"></div>
+      <div class="hooks" id="armHooks"></div>
+      <canvas id="armGob" width="220" height="220" aria-hidden="true"></canvas>
+    </div>
+    <div class="bench">
+      <div class="shelf" id="armShelf" role="listbox" aria-label="Fähigkeiten"></div>
+      <div class="parch" id="armNote" aria-live="polite"></div>
+    </div>
   </div>
 </section>
 

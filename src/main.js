@@ -9,7 +9,7 @@ import './ui/controls.js';
 import './ui/menus.js';
 import './ui/pause.js';
 import './ui/levelup.js';
-import './ui/loadout.js';
+import './ui/armory.js';
 import './ui/results.js';
 import './scenes/boot.js';
 import './scenes/menu.js';

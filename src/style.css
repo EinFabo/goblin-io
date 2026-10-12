@@ -193,35 +193,84 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 .tbar i{display:block;height:100%;background:var(--leaf)}
 .tbar span{position:absolute;inset:0;text-align:center;font-size:11px;font-weight:900;line-height:16px}
 
-/* Ausrüstung */
+/* Konto-Balken */
 .acctbar{display:inline-block;width:90px;height:8px;border-radius:4px;background:rgba(10,15,6,.8);vertical-align:middle;margin-left:6px;overflow:hidden}
 .acctbar i{display:block;height:100%;background:var(--gold)}
-.lslots{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px}
-.lslot{position:relative;display:flex;align-items:center;gap:10px;min-height:72px;padding:10px 12px 10px 40px;border:3px solid var(--edge);border-radius:14px;background:var(--moss-3);text-align:left;box-shadow:0 4px 0 var(--edge)}
-.lslot.on{border-color:var(--gold);box-shadow:0 4px 0 var(--edge),0 0 16px rgba(244,208,63,.4)}
-.lslot.locked{opacity:.55;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px}
-.lslot img{width:48px;height:48px}
-.lslot .k{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-family:var(--font-display);font-size:20px;color:var(--gold)}
-.lslot .t{font-family:var(--font-display);font-size:18px;letter-spacing:.02em}
-.lslot .d{font-size:13px;color:var(--muted);font-weight:600}
-.abilgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;max-height:min(52vh,460px);overflow:auto;padding:2px 2px 6px}
-.abcard{display:grid;grid-template-columns:44px 1fr;gap:2px 10px;align-items:center;text-align:left;padding:10px;border:2px solid var(--edge);border-radius:12px;background:var(--moss-3)}
-.abcard img{width:44px;height:44px;grid-row:span 2}
-.abcard .t{font-family:var(--font-display);font-size:16px;letter-spacing:.02em}
-.abcard .t i{font-style:normal;font-size:12px;background:var(--gold);color:var(--edge);border-radius:5px;padding:0 5px;margin-left:4px}
-.abcard .c{font-size:12px;font-weight:800;color:var(--gold)}
-.abcard .d{grid-column:1/-1;font-size:12.5px;line-height:1.35;color:var(--muted);font-weight:600;margin-top:4px}
-.abcard.eq{border-color:var(--gold)}
-.abcard.locked{opacity:.5}
-.abcard.locked img{filter:grayscale(1) brightness(.6)}
-.abcard:not(.locked):hover{filter:brightness(1.12)}
+
+/* Rüstkammer: Holzgestell mit zwei Haken, Brett mit Holzmarken, Pergamentzettel */
+:root{--wood:#7a4e2a;--wood-d:#4a2d16;--wood-l:#9c6a3c;--rope:#c9a26a;--parch:#eadcae;--parch-ink:#2e2110}
+.camp{box-sizing:border-box;width:min(900px,100%);min-width:0;padding:16px 18px 18px;border:3px solid var(--edge);border-radius:18px;box-shadow:0 6px 0 var(--edge);
+  background:radial-gradient(ellipse at 50% 30%,#2b3f1d 0%,var(--moss-2) 55%,#1a2612 100%)}
+.camp .acct{font-weight:800;color:var(--muted);white-space:nowrap}
+.camp .acct b{color:var(--gold)}
+.rack{position:relative;height:250px;display:flex;justify-content:center;align-items:flex-end}
+.beam{position:absolute;left:4%;right:4%;top:6px;height:22px;border:3px solid var(--edge);border-radius:6px;
+  background:repeating-linear-gradient(90deg,transparent 0 46px,rgba(0,0,0,.12) 46px 48px),linear-gradient(180deg,var(--wood-l),var(--wood) 60%,var(--wood-d));box-shadow:0 5px 0 var(--edge)}
+.beam::before,.beam::after{content:"";position:absolute;top:-3px;width:16px;height:250px;z-index:-1;border:3px solid var(--edge);border-radius:4px;background:linear-gradient(90deg,var(--wood-d),var(--wood))}
+.beam::before{left:22px}.beam::after{right:22px}
+#armGob{width:200px;height:200px;filter:drop-shadow(0 8px 0 rgba(10,15,6,.45));position:relative}
+.hooks{position:absolute;inset:0;display:flex;justify-content:space-between;padding:0 11%;pointer-events:none}
+.hook{position:relative;width:150px;display:flex;flex-direction:column;align-items:center;pointer-events:auto;transform-origin:50% 22px}
+.hook::before{content:"";width:3px;height:42px;margin-top:22px;background:repeating-linear-gradient(180deg,var(--rope) 0 5px,#8f6f3e 5px 7px)}
+.plaque{position:relative;width:132px;padding:12px 8px 10px;border:3px solid var(--edge);border-radius:10px 10px 14px 14px;text-align:center;
+  background:repeating-linear-gradient(0deg,transparent 0 11px,rgba(0,0,0,.1) 11px 12px),linear-gradient(180deg,var(--wood-l),var(--wood));box-shadow:0 5px 0 var(--edge);color:var(--ink)}
+.plaque.sel{outline:3px solid var(--gold);outline-offset:3px}
+.plaque .key{position:absolute;top:-14px;left:50%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;border:3px solid var(--edge);background:var(--gold);color:var(--edge);font-family:var(--font-display);font-size:15px;line-height:20px}
+.plaque img{width:58px;height:58px;display:block;margin:2px auto 0;filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+.plaque .t{display:block;font-family:var(--font-display);font-size:15px;letter-spacing:.02em;text-shadow:0 2px 0 var(--edge)}
+.plaque .lvl{display:block;font-size:12px;color:#ffe9a8}
+.plaque.empty{background:rgba(10,15,6,.55);border-style:dashed;color:var(--muted)}
+.plaque.empty img{display:none}
+.plaque.closed{background:rgba(10,15,6,.55);color:var(--muted);border-style:dashed}
+.hook.swing{animation:swing .9s cubic-bezier(.3,.6,.3,1)}
+@keyframes swing{0%{transform:rotate(9deg)}30%{transform:rotate(-6deg)}55%{transform:rotate(3.5deg)}78%{transform:rotate(-1.5deg)}100%{transform:rotate(0)}}
+.bench{display:grid;grid-template-columns:1fr 290px;gap:14px;margin-top:6px;align-items:start}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));grid-auto-rows:96px;gap:10px 8px;padding:14px 12px 4px;border:3px solid var(--edge);border-radius:12px;
+  /* ein Brett unter jeder Reihe: Reihe 96 px + Abstand 10 px */
+  background:repeating-linear-gradient(180deg,transparent 0 84px,rgba(0,0,0,.3) 84px 86px,var(--wood) 86px 96px,var(--wood-d) 96px 104px,transparent 104px 106px) 0 14px/100% 106px,linear-gradient(180deg,#3a2614,#2c1c0e);box-shadow:inset 0 0 0 2px #5a3a1e}
+.token{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:0;border:0;background:none;color:var(--ink)}
+.token .disc{width:60px;height:60px;border-radius:50%;border:3px solid var(--edge);display:grid;place-items:center;
+  background:radial-gradient(circle at 35% 30%,var(--wood-l),var(--wood) 60%,var(--wood-d));box-shadow:0 4px 0 var(--edge)}
+.token img{width:42px;height:42px}
+.token .n{font-size:11.5px;font-weight:800;line-height:1.15;text-align:center;max-width:76px}
+.token .tlv{position:absolute;top:-4px;right:2px;min-width:20px;padding:0 4px;border-radius:7px;border:2px solid var(--edge);background:#2b1d0e;color:#ffe9a8;font-size:11px;font-weight:900}
+.token .eq{position:absolute;top:-6px;left:2px;width:21px;height:21px;border-radius:50%;border:2px solid var(--edge);background:var(--gold);color:var(--edge);font-family:var(--font-display);font-size:12px;line-height:17px}
+.token .pts{position:absolute;top:40px;right:0;width:14px;height:14px;border-radius:50%;border:2px solid var(--edge);background:var(--hat)}
+.token.locked .disc{background:radial-gradient(circle at 35% 30%,#4a4a42,#2a2a24);}
+.token.locked img{filter:grayscale(1) brightness(.45)}
+.token.locked .n{color:var(--muted)}
+.token.on .disc{outline:3px solid var(--gold);outline-offset:2px}
+.token:hover .disc{filter:brightness(1.15)}
+.parch{position:relative;min-height:240px;padding:16px 16px 14px;color:var(--parch-ink);border-radius:4px 10px 6px 12px;transform:rotate(.6deg);
+  background:radial-gradient(ellipse at 30% 20%,#f4ead0,var(--parch) 60%,#d6c38c);box-shadow:0 5px 0 rgba(10,15,6,.6),inset 0 0 18px rgba(120,80,30,.35);font-weight:700}
+.parch::before{content:"";position:absolute;top:-8px;left:50%;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:#8a8f94;border:3px solid var(--edge)}
+.parch h3{margin:2px 0 2px;font-family:var(--font-display);font-weight:400;font-size:22px;letter-spacing:.02em}
+.parch .c{margin:0 0 8px;font-size:13px;color:#7a4e1e}
+.parch p{margin:0 0 10px;font-size:14px;line-height:1.45}
+.parch .bar{height:9px;border-radius:5px;background:rgba(46,33,16,.25);overflow:hidden;margin:2px 0 4px}
+.parch .bar i{display:block;height:100%;background:#3e8fc2}
+.parch .xp{font-size:12.5px;color:#5a4320;margin:0 0 10px}
+.parch .acts{display:flex;flex-wrap:wrap;gap:8px}
+.parch .acts .btn{flex:1 1 110px;font-size:15px;padding:8px 10px;color:var(--ink)}
+.parch .acts .btn.primary{color:var(--edge)}
+.parch .lock{margin:6px 0 0;padding:8px 10px;border:2px dashed #8a6a3a;border-radius:8px;font-size:14px}
+@media (max-width:720px){
+  .rack{height:206px}
+  .hooks{padding:0 1%}
+  .hook{width:112px}
+  .plaque{width:104px;padding:10px 6px 8px}.plaque img{width:44px;height:44px}.plaque .t{font-size:13px}
+  #armGob{width:130px;height:130px}
+  .camp{padding:12px 10px 14px}
+  .camp .phead h2{font-size:24px}
+  .bench{grid-template-columns:minmax(0,1fr)}
+  .shelf{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .parch{min-height:0;transform:none}
+}
+@media (prefers-reduced-motion:reduce){.hook.swing{animation:none}}
+
 /* Skill Tree */
-.abcard{cursor:pointer}
-.abcard .ablv{margin-left:8px;color:var(--ink);font-weight:800;white-space:nowrap}
 .xpb{display:inline-block;width:46px;height:6px;border-radius:3px;background:rgba(10,15,6,.8);vertical-align:middle;margin-left:5px;overflow:hidden}
 .xpb i{display:block;height:100%;background:#8fe6ff}
-.treebtn{grid-column:1/-1;margin-top:6px;padding:5px 8px;border-radius:8px;border:2px solid var(--edge);background:rgba(10,15,6,.55);font-weight:800;font-size:13px}
-.treebtn.pts{background:var(--hat);animation:blink .8s infinite alternate}
 .treeinfo{display:flex;align-items:center;gap:12px;margin:4px 0 14px;font-weight:700}
 .treeinfo img{width:52px;height:52px}.treeinfo span{flex:1}.treeinfo small{color:var(--muted)}
 .treeinfo .free{background:var(--hat);border-radius:8px;padding:4px 10px;white-space:nowrap}
@@ -240,7 +289,6 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 .tnode[aria-disabled]:not(.full){cursor:default}
 .tnode:not([aria-disabled]):hover{filter:brightness(1.15)}
 @media (max-width:640px){.trow.three{flex-direction:column;align-items:center}.trow.three .tnode{flex:none}}
-@media (max-width:640px){.lslots{grid-template-columns:1fr}.abilgrid{grid-template-columns:1fr;max-height:44vh}}
 
 /* Pause / Ergebnis */
 .abxp{grid-column:1/-1;margin:0;display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:10px;background:var(--moss-3);font-weight:700}

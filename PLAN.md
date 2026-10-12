@@ -840,7 +840,8 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - Skill Tree über den Knopf „Skill Tree“ an jeder Fähigkeit im Ausrüstungs-Screen; die Karte zeigt Level und XP-Balken, im Ergebnis steht „+XP · Level N! +1 Skillpunkt“.
   - Gespeichert in `save.abilities`. Baum-Werte gelten für den ganzen Lauf (`run.abMods`), XP wird am Laufende gutgeschrieben (auch bei Niederlage).
   - Balance: ohne gelernte Punkte unverändert (Stage 3 mit Upgrades 74 %). Ein voll ausgebauter Baum (+40 % Kraft, −25 % Abklingzeit, Extras) macht eine Fähigkeit deutlich stärker – das ist der Langzeit-Fortschritt und muss mit den Zielwerten in Phase 8 noch einmal geprüft werden.
-  - Der Ausrüstungs-Screen bleibt vorerst vor jedem Lauf; Fabi schaut sich an, ob er in den Hub wandern soll.
+  - **Rüstkammer statt Ausrüstungs-Screen (Wunsch Fabi):** eigener Bildschirm im Hauptmenü im Stil eines Goblin-Lagers. Holzbalken mit zwei Haken (Q/E), an denen die Fähigkeiten als Schilder hängen (schwingen beim Umhängen), der Goblin in der Mitte, alle Fähigkeiten als Holzmarken auf einem Regal (Level, Slot, lila Punkt = Skillpunkte frei), Pergamentzettel mit Details, „An Q/E hängen“ und Skill Tree. Die Auswahl bleibt gespeichert, Stages starten direkt (`src/ui/armory.js`).
+  - Fix: Sobald der Boss im Bild war, brach das Zeichnen ab (Spieler weg, Bild eingefroren). Ursache seit Phase 2: Lebensbalken-Abfrage `ETYPES[e.type]` gab es für den Boss nicht. Neu: `npm run smoke` spielt jede Stage im Browser mit Zeichnen bis in den Bosskampf.
 - [ ] Profil, Konto-Level, Statistiken
 - [ ] Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3) – nur Waffen und Passive
 - [x] Talente statt Werkstatt (9.4)

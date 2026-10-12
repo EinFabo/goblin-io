@@ -26,8 +26,7 @@ export function renderMenuScene(t) {
   }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = 'rgba(10,15,6,.25)'; ctx.fillRect(0, 0, W, H);
-  if (!$('#menu').hidden) {
-    const m = $('#mascot'), g = m.getContext('2d'), e = SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)];
-    g.clearRect(0, 0, 240, 240); g.drawImage(e.c, 0, 0, 240, 240);
-  }
+  const e = SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)];
+  if (!$('#menu').hidden) { const g = $('#mascot').getContext('2d'); g.clearRect(0, 0, 240, 240); g.drawImage(e.c, 0, 0, 240, 240); }
+  if (!$('#armory').hidden) { const g = $('#armGob').getContext('2d'); g.clearRect(0, 0, 220, 220); g.drawImage(e.c, 0, 0, 220, 220); }
 }
