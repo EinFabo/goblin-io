@@ -971,10 +971,23 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 - [x] **Hub auf Handy quer:** kompakte Leisten, Tab-Leiste nur mit Icons, Zettel rechts neben der Karte; Screens beginnen oben und scrollen, wenn sie höher als der Bildschirm sind (`place-items: safe center`).
 
 ### Phase 6 – Truhen, Shop, Kosmetik
-- [ ] Truhen mit Drop-Tabellen, Pity und Wahrscheinlichkeits-Anzeige (9.5)
-- [ ] Kartensammlung für Waffen und Passive (9.3, aus Phase 5 hierher verschoben) – Sammlung-Tab, Aufwerten mit Karten + Gold, Karten aus Truhen
-- [ ] Öffnen-Animation
-- [ ] Shop mit Tagesangeboten (9.6)
+- [x] Truhen mit Drop-Tabellen, Pity und Wahrscheinlichkeits-Anzeige (9.5)
+  - Logik ohne DOM in `src/game/chests.js` (würfelt mit übergebenem Zufall, Tests in `test/chests.test.js`), Daten in `src/data/cards.js`.
+  - **Truhenregal** mit 4 Plätzen im Laden (Fabi hat gewählt). Siegtruhe nach jedem Boss-Level (Welt 1–2 Holz, 3–4 Eisen, 5 Gold); ist das Regal voll, geht sie sofort auf (Ergebnis zeigt „Ansehen“). Gratis-Holztruhe alle 4 h, höchstens 2.
+  - **Öffnungszeit je Seltenheit (Wunsch Fabi, 2026-10-13):** Holz 15 min, Eisen 1 h, Gold 3 h, Magier 8 h. Wie bei Clash Royale läuft immer nur eine Truhe; Abkürzen mit 1 Juwel je angefangene 6 min. Gekaufte und Gratis-Truhen öffnen sofort.
+  - ⓘ an jeder Truhe: Wahrscheinlichkeiten pro Karte, Garantie, Pity-Stand, Öffnungszeit. Legendäre Gegenstände gibt es noch nicht – ein legendärer Wurf wird bis dahin episch (steht so in der ⓘ-Anzeige).
+  - **Juwelen** (9.2): 4 je neuem Hut, 10 je Konto-Level, Boss-Erstsieg 20 + 10 × Welt. Oben in der Leiste neben dem Gold.
+- [x] Kartensammlung für Waffen und Passive (9.3, aus Phase 5 hierher verschoben) – Sammlung-Tab, Aufwerten mit Karten + Gold, Karten aus Truhen
+  - **Tab-Leiste mit 5 Tabs (Fabi hat gewählt):** Laden · Werkstatt · Spielen · Rüstkammer · Profil; Werkstatt hat die Reiter Karten und Talente. Roter Punkt am Tab: Truhe bereit bzw. Karte aufwertbar.
+  - Seltenheiten: gewöhnlich Wurfdolch, Eisspeer, Giftflasche, Knochenbumerang, Wetzstein, Lederrüstung, Herzwurzel, Heilkräuter, Flinke Stiefel, Magnetstein; selten Klingenkreis, Feuerball, Blitzstab, Sprengfass, Zauberbuch, Wirbelamulett, Ölkanne; episch Kreissäge, Goblin-Bande, Schwarzpulver.
+  - Wirkung wie 9.3: Waffe +6 % Schaden je Stufe, ab Stufe 5 startet sie auf Waffenstufe 2, Stufe 10 greift 15 % schneller an (statt eines eigenen Bonus je Waffe). Passive +10 % Wirkung je Stufe. Karten über Stufe 10 werden zu Gold (5/15/60/300 je Karte).
+  - Kartendetails: Text, „jetzt → nächste Stufe“, Kosten, Aufwerten mit Amboss-Ton und Aufleuchten.
+  - Balance: Epische starten auf Stufe 3 (+12 % bzw. +20 %), Sim mit frischem Stand im Streubereich wie vorher (Welt 3: 100/100/93/97/70 %, Welt 5: 100/100/97/100/87 %). Hohe Kartenstufen → Phase 8.
+- [x] Öffnen-Animation
+  - `src/ui/chest-open.js`: Truhe fällt rein, wackelt 2–5 Mal (je besser der Inhalt, mit Knarzen), Deckel springt auf, Lichtsäule in der Farbe der besten Seltenheit, Funken. Karten fliegen einzeln heraus (Tippen = nächste) mit „×N“, „Neu!“, „Aufwerten möglich!“ und sich füllendem Balken, dann Übersicht. Episch/Legendär: Bildschirm dunkel, goldene Funken, eigener Ton.
+- [x] Shop mit Tagesangeboten (9.6)
+  - Laden: Truhenregal, Tagesangebote (Gratis-Gold, 3 Kartenpakete für Gold, 1 Truhe −30 % für Juwelen; gleich für alle per Datum-Seed, neu um Mitternacht), alle Truhen zum Kaufen, Gold gegen Juwelen (20/80/200 → 300/1 400/4 000).
+  - Der Kosmetik-Platz der Tagesangebote fehlt noch, kommt mit der Garderobe.
 - [ ] Garderobe, Kosmetik im Generator und im Spiel (9.7)
 - [ ] Tagesaufgaben und Erfolge (9.8)
 - [ ] **Mehr Wiederspielwert und längerer Grind (Wunsch Fabi, 2026-10-12):** Erfolge (9.8) so auslegen, dass sie lange tragen (mehrstufig, seltene Ziele), dazu weitere Langzeit-Ziele, damit man immer etwas zu jagen hat.

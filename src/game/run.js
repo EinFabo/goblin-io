@@ -1,6 +1,6 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
-import { newSeed, seedRun } from '../core/rng.js';
+import { mulberry32, newSeed, seedRun } from '../core/rng.js';
 import { abilState, gainAbilXp, gainAccountXp, levelDone, persist, recordLevel, save, talent } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp } from './balance.js';
@@ -14,6 +14,8 @@ import { updEProj, updTele } from './hazards.js';
 import { updItems } from './items.js';
 import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
+import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
+import { addToShelf, cardLv, grantChest, rollChest } from './chests.js';
 import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 
@@ -32,6 +34,8 @@ export function newRun(si, seed = newSeed(), li = 0) {
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
     mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
+  // Kartenstufen für diesen Lauf (9.3)
+  r.cards = Object.fromEntries(CARD_IDS.map(id => [id, cardLv(save, id)]));
   r.cam = { x: 0, y: 0, z: 1 }; r.hitstop = 0; r.slowT = 0; r.caster = null;
   r.offer = { ...newOfferState(), weapons: r.weapons, passives: r.passives };
   setRun(r, p);
@@ -49,7 +53,8 @@ export function addEvents(loop) {
   for (const w of run.st.waves) if (w.event) run.events.push({ ...w, t: o + w.at });
 }
 export function recalc() {
-  const pl = id => run.passives[id] || 0, sh = talent;
+  // Passive: Stufen im Lauf × Kartenstufe (+10 % Wirkung je Stufe)
+  const pl = id => (run.passives[id] || 0) * passiveCardMul(run.cards[id] || 1), sh = talent;
   P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk'));
   P.cdMult = Math.pow(.92, pl('book'));
   P.area = 1 + .12 * pl('amulet');
@@ -69,7 +74,11 @@ export function recalc() {
   P.stamRegen = 26 * (1 + .08 * sp.r.cd); P.sprintMul = 1.55 * (1 + .04 * sp.r.area);
   P.stamDrain = 34 * (1 - .08 * sp.s1); P.sprintMag = 1 + .15 * sp.s3; P.secondWind = sp.a; P.tireless = sp.m;
 }
-export function addWeapon(id) { run.weapons.push({ id, lv: 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [] }); }
+// Kartenstufe 5: startet auf Waffenstufe 2; Stufe 10: greift 15 % schneller an
+export function addWeapon(id) {
+  const c = run.cards[id] || 1;
+  run.weapons.push({ id, lv: c >= CARD_START_LV2 ? 2 : 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [], card: weaponCardMul(c), fast: c >= CARD_FAST ? 1.15 : 1 });
+}
 export function hint(html) { run.hints.push(html); }
 
 // ---------- Haupt-Update ----------
@@ -148,13 +157,23 @@ export function endRun(win) {
   // Fähigkeiten-XP durch Benutzen
   const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;
+  // Juwelen (9.2): neue Hüte, Konto-Level, Boss-Erstsieg
+  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0);
+  save.wallet.gems += gems;
+  // Siegtruhe nach jedem Boss-Level; ist das Regal voll, geht sie sofort auf
+  let chest = null;
+  if (win && boss) {
+    const type = victoryChest(run.si);
+    if (addToShelf(save, type)) chest = { type, shelf: true };
+    else { const res = rollChest(type, mulberry32(newSeed()), save.pity); grantChest(save, res); chest = { type, shelf: false, res }; }
+  }
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   s.bestKills = Math.max(s.bestKills, run.kills); s.bestLevel = Math.max(s.bestLevel, P.lv);
   for (const w of run.weapons) s.weapons[w.id] = (s.weapons[w.id] || 0) + 1;
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, next, hats, newHats: rec.newHats, first: rec.first, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, next, hats, newHats: rec.newHats, first: rec.first, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
 }
 

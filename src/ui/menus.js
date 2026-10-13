@@ -10,6 +10,8 @@ import { setMusic, setMute, setShake } from './settings.js';
 import { cleanLoadout, renderArmory } from './armory.js';
 import { renderProfile } from './profile.js';
 import { mapKey, onStart, renderMap } from './worldmap.js';
+import { renderStore, storeChanged, storeHasNews } from './store.js';
+import { anyUpgrade, renderWorkshop, workshopHooks } from './workshop.js';
 
 // ---------- Hub (PLAN 10.1): Leiste oben, Tabs unten ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
@@ -20,8 +22,8 @@ export async function startStage(si, li = 0) {
   clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
   go('run', { si, li });
 }
-const TABS = ['#shop', '#armory', '#menu', '#profile'];
-const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#options', '#howto'];
+const TABS = ['#store', '#shop', '#menu', '#armory', '#profile'];
+const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen'];
 let curTab = null;
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
 export function showScreen(id) {
@@ -39,7 +41,8 @@ export function showScreen(id) {
   if (!hub) return;
   renderTopbar();
   if (id === '#menu') renderMap();
-  if (id === '#shop') renderShop();
+  if (id === '#shop') renderWorkshop();
+  if (id === '#store') renderStore();
   if (id === '#armory') renderArmory();
   if (id === '#profile') renderProfile();
 }
@@ -49,7 +52,13 @@ export function renderTopbar() {
   $('#topLv').textContent = 'Lv ' + p.level;
   $('#topXp').style.width = (p.level >= 50 ? 100 : Math.min(100, p.xp / need * 100)).toFixed(0) + '%';
   $('#topGold').textContent = save.wallet.gold.toLocaleString('de-DE');
+  $('#topGems').textContent = save.wallet.gems.toLocaleString('de-DE');
+  // Hinweis-Punkte: Truhe bereit / Karte aufwertbar
+  $('#storeDot').hidden = !storeHasNews(); $('#shopDot').hidden = !anyUpgrade();
 }
+storeChanged(renderTopbar);
+workshopHooks(renderTopbar, () => renderShop());
+setInterval(() => { if (document.body.classList.contains('hub')) $('#storeDot').hidden = !storeHasNews(); }, 5000);
 $('#tabbar').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b || b.dataset.tab === curTab) return;
   sfx.tab(); showScreen(b.dataset.tab);
@@ -61,7 +70,7 @@ onStart((si, li) => startStage(si, li));
 const overlayOpen = () => OVERLAYS.some(o => !$(o).hidden);
 window.addEventListener('keydown', e => {
   if (!document.body.classList.contains('hub') || e.target.closest('input')) return;
-  if (e.code === 'Escape') { for (const o of ['#howto', '#options']) if (!$(o).hidden) { $(o).hidden = true; return; } }
+  if (e.code === 'Escape') { for (const o of ['#howto', '#options', '#cardInfo', '#oddsInfo']) if (!$(o).hidden) { $(o).hidden = true; return; } }
   if (curTab === '#menu' && !overlayOpen()) mapKey(e);
 });
 

@@ -92,6 +92,18 @@ export const sfx = {
     if (full) [1, 1.25, 1.5, 2].forEach((k, i) => tone(f * k, 0, .22, 'square', .035, .22 + i * .07));
   },
   master() { [523, 659, 784, 1046, 1318, 1568, 2093].forEach((f, i) => { tone(f, 0, .25, 'square', .045, i * .07); tone(f / 2, 0, .3, 'triangle', .05, i * .07); }); noise(1, .08, 4000, 'highpass', .3); },
+  // Truhen (9.5, 10.3): Holz knarrt beim Wackeln, Deckel springt auf, eigener Ton pro Seltenheit
+  creak(k = 0) { noise(.22, .07, 260 + k * 60, 'bandpass', 0, null, 8, 160 + k * 40); tone(120 + k * 20, 90, .18, 'triangle', .04); },
+  lidOpen(r) { noise(.3, .12, 1400, 'bandpass', 0, null, 1, 5000); tone(196, 392, .2, 'square', .05); [523, 659, 784, 1046].slice(0, 2 + r).forEach((f, i) => tone(f, 0, .3, 'triangle', .06, .12 + i * .07)); },
+  reveal(r) {
+    const base = [440, 523, 659, 784][r];
+    tone(base, 0, .12, 'triangle', .07); tone(base * 1.5, 0, .2, 'sine', .05, .06);
+    if (r >= 1) tone(base * 2, 0, .25, 'sine', .04, .12);
+    if (r >= 2) { noise(.5, .05, 5000, 'highpass', .1); tone(base * 2.5, 0, .35, 'triangle', .04, .2); }
+  },
+  legendary() { noise(1.4, .1, 300, 'lowpass', 0, null, 1, 3000); [262, 330, 392, 523, 659, 784, 1046, 1318].forEach((f, i) => { tone(f, 0, .5, 'sawtooth', .025, .4 + i * .09); tone(f * 2, 0, .4, 'sine', .03, .4 + i * .09); }); },
+  // Karte aufwerten: aufsteigende Töne + Amboss
+  anvil() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, .12, 'square', .045, i * .06)); tone(1800, 900, .4, 'triangle', .09, .3); tone(2700, 0, .5, 'sine', .05, .3); noise(.08, .15, 4000, 'bandpass', .3, null, 3); },
   abilUp() { [659, 880, 1175].forEach((f, i) => tone(f, 0, .14, 'triangle', .07, i * .07)); tone(1760, 0, .3, 'sine', .04, .22); },
 };
 

@@ -8,6 +8,9 @@ import { levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from '../render/icons.js';
 import { hatsHtml } from './hats.js';
+import { CHESTS } from '../data/cards.js';
+import { chestSvg } from './cardart.js';
+import { playChest } from './chest-open.js';
 
 // ---------- Ergebnis ----------
 let showT = 0;
@@ -17,8 +20,10 @@ export function showResults(r) {
   $('#overHats').innerHTML = endless ? '' : `<span class="lvlbl">${levelLabel(run.si, run.li)} ${run.st.lvName}</span>${hatsHtml(r.hats, r.newHats)}`;
   const res = [['Zeit', fmtTime(run.st.len && !endless ? Math.min(run.time, run.st.len) : run.time)], ['Level', P.lv], ['Besiegt', run.kills], ['Gold', '+' + r.gold]];
   res.push(['Konto-XP', '+' + r.xp + (r.up ? ` · Level ${r.level}!` : '')]);
+  if (r.gems) res.push(['Juwelen', '+' + r.gems]);
   $('#overStats').innerHTML = res.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('') +
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +
+    (r.chest ? `<p class="vchest">${chestSvg(r.chest.type)}<span>Siegtruhe: <b>${CHESTS[r.chest.type].name}</b><br><small>${r.chest.shelf ? 'liegt im Truhenregal (Laden)' : 'Regal voll – sie ist sofort aufgegangen'}</small></span>${r.chest.shelf ? '' : '<button class="btn small" id="vchestBtn">Ansehen</button>'}</p>` : '') +
     r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}</b></p>`).join('');
   $('#nextBtn').hidden = !r.next;
   if (r.next) $('#nextBtn').textContent = STAGES[r.next.si].endless ? 'Endlose Nacht' : r.next.si !== run.si ? `Welt ${r.next.si + 1}` : `Weiter: ${levelLabel(r.next.si, r.next.li)}`;
@@ -31,3 +36,4 @@ export function hideResults() { clearTimeout(showT); $('#over').hidden = true; }
 $('#againBtn').addEventListener('click', () => startStage(run.si, run.li));
 $('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li); });
 $('#menuBtn').addEventListener('click', () => go('menu'));
+$('#overStats').addEventListener('click', e => { if (e.target.closest('#vchestBtn') && run.result.chest) playChest(run.result.chest.res); });

@@ -13,8 +13,12 @@ export function shoot(k, a, dmg, pierce, spd, life, extra = {}) {
 }
 export function updWeapons(dt) {
   const smoke = P.smokeT > 0 && run.abMods && run.abMods.smoke;
-  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1);
-  for (const w of run.weapons) {
+  const rate0 = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1), base = P.dmgMult;
+  // Kartenstufe (9.3): mehr Grundschaden je Waffe, auf Stufe 10 schneller
+  for (const w of run.weapons) { P.dmgMult = base * (w.card || 1); try { stepWeapon(w, rate0 * (w.fast || 1), dt); } finally { P.dmgMult = base; } }
+}
+function stepWeapon(w, rate, dt) {
+  {
     const L = w.lv - 1;
     switch (w.id) {
       case 'dagger': {

@@ -166,6 +166,26 @@ for (let i = 0; i < ids.length; i += 2) {
 const unused = ids.filter(id => id !== 'charm' && !used[id]);
 if (unused.length) errs.push('nie eingesetzt: ' + unused.join(', '));
 console.log('Alle Bäume voll (40 s je Paar):', JSON.stringify(used));
+// Laden und Werkstatt (Phase 6): Holztruhe kaufen und durchklicken, Karte aufwerten, Siegtruhe nach dem Boss
+await p.evaluate(() => { const S = GOBLIN.save; S.wallet.gold = 3000; S.wallet.gems = 100; S.chests.shelf = []; GOBLIN.go('menu', '#store'); });
+await p.waitForTimeout(300);
+await p.click('[data-buy-chest="wood"]');
+await p.waitForSelector('#chestOpen:not([hidden])');
+for (let i = 0; i < 30 && !(await p.evaluate(() => !!document.querySelector('#coDone'))); i++) { await p.mouse.click(640, 380); await p.waitForTimeout(60); }
+await p.click('#coDone');
+const shop = await p.evaluate(() => { const S = GOBLIN.save; return { chests: S.stats.chests, cards: Object.values(S.cards).reduce((a, c) => a + c.n, 0), gold: S.wallet.gold }; });
+if (shop.chests !== 1 || shop.cards < 1) errs.push('Holztruhe: ' + JSON.stringify(shop));
+await p.evaluate(() => { GOBLIN.save.cards.dagger = { lv: 1, n: 2 }; GOBLIN.go('menu', '#shop'); });
+await p.waitForTimeout(200);
+await p.click('[data-card="dagger"]'); await p.click('#cardUp');
+const dag = await p.evaluate(() => GOBLIN.save.cards.dagger.lv);
+if (dag !== 2) errs.push('Aufwerten: Wurfdolch Stufe ' + dag);
+await p.click('#cardInfo [data-close]');
+await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 0, li: 4, seed: 4 }); G.endRun(true); });
+await p.waitForSelector('#over:not([hidden])');
+const vc = await p.evaluate(() => ({ chest: GOBLIN.run.result.chest, shelf: GOBLIN.save.chests.shelf.length, html: !!document.querySelector('#overStats .vchest') }));
+if (!vc.chest || vc.shelf !== 1 || !vc.html) errs.push('Siegtruhe: ' + JSON.stringify(vc));
+console.log('Laden, Truhe, Aufwerten, Siegtruhe:', JSON.stringify({ shop, dag, shelf: vc.shelf }));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

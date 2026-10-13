@@ -5,6 +5,7 @@ import { ABILITIES, ABIL_MAX_LV, DEFAULT_LOADOUT, TREE, abilXpNeed, treeDef, tre
 import { accountXpNeed } from '../game/balance.js';
 import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 import { WEAPONS } from '../data/weapons.js';
+import { CARD_MAX, CARD_RARITY, CHESTS, FREE_MAX, RARITY, SHELF } from '../data/cards.js';
 import { LEVELS } from '../data/levels.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
@@ -22,7 +23,7 @@ export function defaults() {
     talents: {},
     stages: {},
     // weapons: in wie vielen Läufen welche Waffe dabei war (Lieblingswaffe)
-    stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0, bestKills: 0, bestLevel: 0, weapons: {} },
+    stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0, bestKills: 0, bestLevel: 0, weapons: {}, chests: 0 },
     // Platz des Goblins auf der Weltkarte (si = Welt 0-basiert, li = Level); fresh: gerade freigespielt
     map: { si: 0, li: 0, fresh: false },
     // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
@@ -30,6 +31,13 @@ export function defaults() {
     // Fähigkeiten-Level und Skill Tree, auch Rolle (dash) und Sprint: { id: { lv, xp, pts: { pow, cd, area, s1, a, s2, s3, b, m } } }
     abilities: {},
     settings: { mute: false, musicOff: false, shake: true, numbers: true, lefty: false },
+    // Karten (9.3): { id: { lv, n } }; ohne Eintrag Startstufe der Seltenheit
+    cards: {},
+    // Truhen (9.5): Regal [{ type, end }], Gratis-Truhen { n, t }, Pity-Zähler
+    chests: { shelf: [], free: { n: 1, t: 0 } },
+    pity: { epic: 0, leg: 0 },
+    // Laden (9.6): Tag der Angebote und was davon gekauft wurde
+    shop: { day: '', bought: [] },
   };
 }
 
@@ -82,7 +90,22 @@ export function normalize(raw) {
       mute: bool(se.mute, false), musicOff: bool(se.musicOff, false), shake: bool(se.shake, true),
       numbers: bool(se.numbers, true), lefty: bool(se.lefty, false),
     },
+    cards: {},
+    chests: { shelf: [], free: { n: 1, t: 0 } },
+    pity: { epic: 0, leg: 0 },
+    shop: { day: '', bought: [] },
   };
+  for (const [k, v] of Object.entries(obj(r.cards))) {
+    if (!CARD_RARITY[k]) continue;
+    const c = obj(v), start = RARITY[CARD_RARITY[k]].start;
+    out.cards[k] = { lv: num(c.lv, start, start, CARD_MAX) | 0, n: num(c.n) | 0 };
+  }
+  const ch = obj(r.chests), fr = obj(ch.free), pi = obj(r.pity), sh = obj(r.shop);
+  if (Array.isArray(ch.shelf)) out.chests.shelf = ch.shelf.map(obj).filter(c => CHESTS[c.type]).slice(0, SHELF).map(c => ({ type: c.type, end: num(c.end) }));
+  if (r.chests) out.chests.free = { n: num(fr.n, 0, 0, FREE_MAX) | 0, t: num(fr.t) };
+  out.pity = { epic: num(pi.epic) | 0, leg: num(pi.leg) | 0 };
+  if (typeof sh.day === 'string') out.shop = { day: sh.day, bought: Array.isArray(sh.bought) ? sh.bought.filter(x => typeof x === 'number') : [] };
+  out.stats.chests = num(st.chests) | 0;
   for (const [k, v] of Object.entries(obj(st.weapons))) if (WEAPONS[k]) { const n = num(v) | 0; if (n) out.stats.weapons[k] = n; }
   for (const [k, v] of Object.entries(obj(r.talents))) if (TALENT[k]) out.talents[k] = num(v, 0, 0, TALENT[k].max) | 0;
   for (const [k, v] of Object.entries(obj(r.stages))) {

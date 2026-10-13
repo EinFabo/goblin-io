@@ -45,16 +45,17 @@
     <canvas id="avatar" width="96" height="96" aria-hidden="true"></canvas>
     <span class="nm"><b id="topName">Goblin</b><span class="lvrow"><span id="topLv">Lv 1</span><span class="acctbar"><i id="topXp"></i></span></span></span>
   </button>
-  <div class="goldline"><span class="coin"></span><b id="topGold">0</b></div>
+  <div class="goldline"><span class="coin"></span><b id="topGold">0</b><span class="gem"></span><b id="topGems">0</b></div>
   <button class="iconbtn" id="optBtn" aria-label="Einstellungen">
     <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm8.2 5-1.9-.4a6.6 6.6 0 0 1-.6 1.5l1.1 1.6-1.9 1.9-1.6-1.1c-.5.3-1 .5-1.5.6l-.4 1.9h-2.8l-.4-1.9a6.6 6.6 0 0 1-1.5-.6l-1.6 1.1-1.9-1.9 1.1-1.6a6.6 6.6 0 0 1-.6-1.5l-1.9-.4v-2.8l1.9-.4c.1-.5.3-1 .6-1.5L4.4 6.8l1.9-1.9 1.6 1.1c.5-.3 1-.5 1.5-.6l.4-1.9h2.8l.4 1.9c.5.1 1 .3 1.5.6l1.6-1.1 1.9 1.9-1.1 1.6c.3.5.5 1 .6 1.5l1.9.4Z" fill="currentColor" stroke="#0a0f06" stroke-width="1.6" stroke-linejoin="round"/></svg>
   </button>
 </header>
 
 <nav id="tabbar" hidden aria-label="Hauptmenü">
-  <button class="tab" data-tab="#shop"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 14h20l-3 5H9Z M11 19h10v4h3v4H8v-4h3Z" fill="#9c6a3c"/><path d="M16 4l5 6h-3v4h-4v-4h-3Z" fill="var(--gold)"/></svg><span>Talente</span></button>
-  <button class="tab" data-tab="#armory"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4l10 4v7c0 7-5 11-10 13C11 26 6 22 6 15V8Z" fill="#9c6a3c"/><path d="M16 9l2 5h5l-4 3 1.5 5L16 19l-4.5 3L13 17l-4-3h5Z" fill="var(--gold)"/></svg><span>Rüstkammer</span></button>
+  <button class="tab" data-tab="#store"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 13h22v13H5Z" fill="#9c6a3c"/><path d="M5 13c0-5 4-8 11-8s11 3 11 8Z" fill="#b97a44"/><path d="M5 13h22v3H5Z M14 15h4v5h-4Z" fill="var(--gold)"/></svg><span>Laden</span><i class="dot" id="storeDot" hidden></i></button>
+  <button class="tab" data-tab="#shop"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M6 14h20l-3 5H9Z M11 19h10v4h3v4H8v-4h3Z" fill="#9c6a3c"/><path d="M16 4l5 6h-3v4h-4v-4h-3Z" fill="var(--gold)"/></svg><span>Werkstatt</span><i class="dot" id="shopDot" hidden></i></button>
   <button class="tab play" data-tab="#menu"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7 25 21 11l3-6-6 3L4 22Z" fill="#dfe6ea"/><path d="M4 22l6 6 2-2-6-6Z M9 21l2 2-3 3-2-2Z" fill="#7a4e2a"/></svg><span>Spielen</span></button>
+  <button class="tab" data-tab="#armory"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 4l10 4v7c0 7-5 11-10 13C11 26 6 22 6 15V8Z" fill="#9c6a3c"/><path d="M16 9l2 5h5l-4 3 1.5 5L16 19l-4.5 3L13 17l-4-3h5Z" fill="var(--gold)"/></svg><span>Rüstkammer</span></button>
   <button class="tab" data-tab="#profile"><canvas id="tabAvatar" width="64" height="64" aria-hidden="true"></canvas><span>Profil</span></button>
 </nav>
 
@@ -122,11 +123,40 @@
 
 <section class="screen" id="shop" hidden>
   <div class="panel wide">
-    <div class="phead"><h2>Talente</h2></div>
-    <p class="note">Dauerhafte Verbesserungen für jeden Lauf. Gold bekommst du von besiegten Magiern, auch wenn du verlierst. Neue Talente kommen mit dem Konto-Level.</p>
-    <div class="shoplist" id="shopList"></div>
+    <div class="phead"><h2>Werkstatt</h2>
+      <div class="subtabs" role="tablist"><button class="sub" data-sub="cards" role="tab">Karten</button><button class="sub" data-sub="talents" role="tab">Talente</button></div></div>
+    <div id="cardsView">
+      <p class="note">Karten aus Truhen und dem Laden werten Waffen und Passive dauerhaft auf. Tippe eine Karte an.</p>
+      <div class="cardgrid" id="cardGrid"></div>
+    </div>
+    <div id="talentsView" hidden>
+      <p class="note">Dauerhafte Verbesserungen für jeden Lauf. Gold bekommst du von besiegten Magiern, auch wenn du verlierst. Neue Talente kommen mit dem Konto-Level.</p>
+      <div class="shoplist" id="shopList"></div>
+    </div>
   </div>
 </section>
+
+<section class="screen" id="store" hidden>
+  <div class="panel wide">
+    <div class="phead"><h2>Laden</h2></div>
+    <h3 class="sect">Truhenregal</h3>
+    <div class="shelf4" id="chestShelf"></div>
+    <h3 class="sect">Tagesangebote <small id="offerReset"></small></h3>
+    <div class="offers" id="offers"></div>
+    <h3 class="sect">Truhen</h3>
+    <div class="chestbuy" id="chestBuy"></div>
+    <h3 class="sect">Gold</h3>
+    <div class="offers" id="goldPacks"></div>
+  </div>
+</section>
+
+<div class="overlay" id="cardInfo" hidden><div class="panel cardpanel" id="cardPanel"></div></div>
+<div class="overlay" id="oddsInfo" hidden><div class="panel" id="oddsPanel"></div></div>
+<div class="overlay chestopen" id="chestOpen" hidden>
+  <canvas id="chestFx" aria-hidden="true"></canvas>
+  <div class="co-stage" id="coStage"></div>
+  <p class="co-hint" id="coHint"></p>
+</div>
 
 <div class="overlay" id="howto" hidden>
   <div class="panel wide">
