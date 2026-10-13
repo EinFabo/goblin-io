@@ -1046,6 +1046,8 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
 - [ ] Performance-Budget prüfen (12.3)
 - [ ] Linkshänder-Modus, Einstellungen
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
+- [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.
+- [ ] **Accounts mit Cloud-Sync (Wunsch Fabi, 2026-10-13):** Anmelden, Spielstand in der Cloud, gleicher Stand in Browser, exe und APK. Braucht einen Server (Anbieter wählen), Konflikte zwischen Geräten lösen (z. B. neuerer/weiterer Stand gewinnt, vorher fragen). Bis dahin wurde der Browser-Stand (Opera GX, localhost:8080) am 2026-10-13 von Hand in die exe kopiert.
 - [ ] **Vielleicht: Game-Loop-Rework (Wunsch Fabi, 2026-10-12):** Der Wurfdolch wird automatisch hochgestuft (ohne Level-Up-Karte), damit die Karten für andere Waffen und Builds frei sind. Vorher mit der Sim prüfen, wie sich die Kraftkurve (7.3) ändert, und mit Fabi entscheiden.
 
 ### Phase 9 – Goblin-Klassen (Wunsch Fabi, 2026-10-12)
