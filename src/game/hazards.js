@@ -14,7 +14,7 @@ export function updTele(dt) {
   for (const t of run.tele) {
     if (t.k === 'meteor') {
       t.t -= dt;
-      if (t.t <= 0) { explode(t.x, t.y, t.rad, t.dmg, 'fire'); run.shake = Math.max(run.shake, 5); run.zones.push({ k: 'burn', x: t.x, y: t.y, r: t.rad * .65, t: 2.6, dur: 2.6, tick: 0, dmg: 9 * P.dmgMult }); t.done = true; }
+      if (t.t <= 0) { explode(t.x, t.y, t.rad, t.dmg, 'fire'); run.shake = Math.max(run.shake, 5); run.zones.push({ k: 'burn', x: t.x, y: t.y, r: t.rad * .65, t: 2.6, dur: 2.6, tick: 0, dmg: t.burn ?? 9 * P.dmgMult }); t.done = true; }
     } else if (t.k === 'boulder') {
       // Katapult-Fels: fliegt im Bogen, schlägt ein
       t.t += dt;

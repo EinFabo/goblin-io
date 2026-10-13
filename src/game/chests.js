@@ -19,8 +19,10 @@ export function rollChest(type, r, pity = { epic: 0, leg: 0 }) {
   if (C.sure) { const k = RARITIES.indexOf(C.sure[0]); let need = C.sure[1] - count.slice(k).reduce((a, b) => a + b, 0); for (let j = 0; j < k && need > 0; j++) { const m = Math.min(count[j], need); count[j] -= m; count[k] += m; need -= m; } }
   if (C.pity) {
     pity.epic++; pity.leg++;
-    if (pity.leg >= PITY_LEG && !count[3]) { count[0]--; count[3]++; }
-    if (pity.epic >= PITY_EPIC && !count[2] && !count[3]) { count[0]--; count[2]++; }
+    // Eine Karte der niedrigsten vorhandenen Seltenheit wird hochgestuft (nie unter 0)
+    const lift = to => { const j = count.findIndex((n, i) => i < to && n > 0); if (j >= 0) { count[j]--; count[to]++; } };
+    if (pity.leg >= PITY_LEG && !count[3]) lift(3);
+    if (pity.epic >= PITY_EPIC && !count[2] && !count[3]) lift(2);
     if (count[3]) pity.leg = 0;
     if (count[2] || count[3]) pity.epic = 0;
   }
@@ -75,12 +77,12 @@ export function addToShelf(save, type) {
   if (save.chests.shelf.length >= SHELF) return false;
   save.chests.shelf.push({ type, end: 0 }); return true;
 }
-export const unlocking = save => save.chests.shelf.some(c => c.end > 0 && c.end > Date.now());
+export const unlocking = (save, now = Date.now()) => save.chests.shelf.some(c => c.end > now);
 export function chestLeft(c, now = Date.now()) { return c.end ? Math.max(0, c.end - now) : CHESTS[c.type].wait; }
 export const chestReady = (c, now = Date.now()) => c.end > 0 && c.end <= now;
 export function startUnlock(save, i, now = Date.now()) {
   const c = save.chests.shelf[i];
-  if (!c || c.end || unlocking(save)) return false;
+  if (!c || c.end || unlocking(save, now)) return false;
   c.end = now + CHESTS[c.type].wait; return true;
 }
 // Mit Juwelen sofort öffnen (läuft gerade eine andere, darf man diese trotzdem abkürzen)

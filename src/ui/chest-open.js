@@ -13,6 +13,7 @@ const coStage = () => $('#coStage');
 
 export function playChest(res, done = () => {}) {
   audioInit();
+  if (S) clearTimers();   // alte Sitzung (z. B. von außen versteckt) beenden, bevor ihre Timer feuern
   S = { res, step: 'wobble', i: -1, timers: [], done, best: RARITIES.indexOf(res.best) };
   const ov = $('#chestOpen');
   ov.hidden = false; ov.classList.toggle('dark', S.best >= 2); ov.style.setProperty('--bc', RARITY[res.best].color);
@@ -24,7 +25,8 @@ export function playChest(res, done = () => {}) {
   for (let k = 0; k < n; k++) later(500 + k * 420, () => { const c = $('.co-chest'); c.classList.remove('drop', 'wob'); void c.offsetWidth; c.classList.add('wob'); sfx.creak(k); if (S.best >= 2) sparks(60, 52, 6 + k * 4, '#ffd84a'); });
   later(500 + n * 420 + 150, openLid);
 }
-function later(ms, fn) { S.timers.push(setTimeout(() => { if (S) fn(); }, ms)); }
+// Timer gehören zu ihrer Sitzung: feuern sie nach einem Wechsel, tun sie nichts
+function later(ms, fn) { const me = S; S.timers.push(setTimeout(() => { if (S === me) fn(); }, ms)); }
 function clearTimers() { for (const t of S.timers) clearTimeout(t); S.timers = []; }
 function hint(t) { $('#coHint').textContent = t; }
 
@@ -96,7 +98,7 @@ function startFx() { if (!raf) { lastT = performance.now(); raf = requestAnimati
 function tick(now) {
   const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
   const ov = $('#chestOpen');
-  if (ov.hidden) { raf = 0; parts = []; return; }
+  if (ov.hidden) { raf = 0; parts = []; if (S) { clearTimers(); S = null; } return; }   // von außen versteckt (Szenenwechsel)
   raf = requestAnimationFrame(tick);
   // Legendär/Episch: ständig goldene Funken von oben
   if (S && S.best >= 3 && Math.random() < dt * 30) parts.push({ x: Math.random() * 100, y: -2, vx: 0, vy: 20 + Math.random() * 20, t: 0, life: 3, c: '#ffd84a', s: 1.5 + Math.random() * 2 });

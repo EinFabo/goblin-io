@@ -52,12 +52,19 @@ test('Truhenregal: eine Truhe zur Zeit, Wartezeit je Seltenheit, Abkürzen mit J
   assert.ok(!addToShelf(s, 'wood'), 'Regal voll');
   assert.ok(CHESTS.mage.wait > CHESTS.gold.wait && CHESTS.gold.wait > CHESTS.iron.wait && CHESTS.iron.wait > CHESTS.wood.wait);
   assert.ok(startUnlock(s, 1, t0));
-  s.chests.shelf[1].end = Date.now() + CHESTS.gold.wait;   // läuft (echte Uhr für „unlocking“)
-  assert.ok(!startUnlock(s, 0), 'nur eine zur Zeit');
-  assert.equal(takeFromShelf(s, 1), null, 'noch zu');
-  s.wallet.gems = 1000; const left = chestLeft(s.chests.shelf[1]);
-  assert.ok(skipUnlock(s, 1)); assert.equal(s.wallet.gems, 1000 - skipGems(left));
-  assert.equal(takeFromShelf(s, 1), 'gold'); assert.equal(s.chests.shelf.length, 3);
+  assert.ok(!startUnlock(s, 0, t0), 'nur eine zur Zeit');
+  assert.equal(takeFromShelf(s, 1, t0 + 1000), null, 'noch zu');
+  s.wallet.gems = 1000; const left = chestLeft(s.chests.shelf[1], t0 + 1000);
+  assert.ok(skipUnlock(s, 1, t0 + 1000)); assert.equal(s.wallet.gems, 1000 - skipGems(left));
+  assert.equal(takeFromShelf(s, 1, t0 + 1000), 'gold'); assert.equal(s.chests.shelf.length, 3);
+  assert.ok(startUnlock(s, 0, t0 + 1000), 'danach darf die nächste');
+});
+
+test('Pity stuft nie mehr Karten hoch als da sind', () => {
+  // Zufall immer knapp unter 100 → jede Karte fällt in die letzte Seltenheit mit Chance, keine gewöhnliche
+  const pity = { epic: 99, leg: 99 }, res = rollChest('gold', () => .9999, pity);
+  assert.equal(res.cards.reduce((a, c) => a + c.n, 0), CHESTS.gold.cards);
+  assert.ok(res.cards.every(c => c.n > 0));
 });
 
 test('Gratis-Truhe alle 4 Stunden, höchstens 2', () => {
