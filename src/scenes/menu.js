@@ -1,5 +1,5 @@
 import { on } from '../core/events.js';
-import { Music, TITLE } from '../core/music.js';
+import { Music } from '../core/music.js';
 import { defineScene } from '../core/scenes.js';
 import { $ } from '../core/util.js';
 import { setRun } from '../game/state.js';
@@ -11,7 +11,7 @@ let off = null;
 defineScene('menu', {
   enter(screen = '#menu') {
     setRun(null, null); Music.stop();
-    Music.boss = false; Music.hold = false; Music.world = TITLE; Music.start();
+    Music.boss = false; Music.hold = false; Music.world = 'title'; Music.start();
     off = on('audioReady', () => Music.start());
     $('#hud').hidden = true; $('#ctrl').hidden = true; $('#hint').hidden = true;
     hideOverlays(); showScreen(screen);

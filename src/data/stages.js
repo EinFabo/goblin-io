@@ -12,7 +12,7 @@ const ev = (at, event, o = {}) => ({ at, event, ...o });
 
 export const STAGES = [
   { name: 'Goblinwiese', sub: 'Feuermagier und erste Funkenwichtel.', tint: null, dark: 0, dmg: 1, rate: 1,
-    deco: 'meadow', music: { bpm: 116, roots: [110, 87.31, 130.81, 98] },
+    deco: 'meadow', music: 'meadow',
     waves: [
       ph(0, 30, [.5, 1], { fire_mage: 1 }),
       ph(30, 26, [1.2, 1.8], { fire_mage: 3, frost_apprentice: 2 }),
@@ -35,7 +35,7 @@ export const STAGES = [
 
   { name: 'Frostlichtung', sub: 'Frostmagier bremsen dich, Schattenmagier tauchen neben dir auf.', tint: ['#a8d8ff', .5], dark: .05, dmg: 1.15, rate: 1.08,
     hue: ['#b8dcff', .45],
-    deco: 'snow', music: { bpm: 110, roots: [123.47, 110, 98, 110], bell: true },
+    deco: 'snow', music: 'snow',
     waves: [
       ph(0, 25, [.6, 1.1], { frost_mage: 2, frost_apprentice: 1 }),
       ph(25, 31, [1.2, 2], { frost_mage: 3, frost_apprentice: 3 }),
@@ -58,7 +58,7 @@ export const STAGES = [
 
   { name: 'Giftsumpf', sub: 'Giftmischer und Seuchendoktoren, dazwischen Felsenwerfer aus dem Moor.', tint: ['#8fae5a', .6], dark: .12, dmg: 1.3, rate: 1.15,
     hue: ['#6b7f2a', .55],
-    deco: 'swamp', music: { bpm: 108, roots: [98, 92.5, 87.31, 92.5] },
+    deco: 'swamp', music: 'swamp',
     waves: [
       ph(0, 25, [.6, 1.2], { toxic_apprentice: 3, toxic_mage: .6 }),
       ph(25, 31, [1.2, 2], { toxic_apprentice: 3, toxic_mage: 1.2, fire_apprentice: 1 }),
@@ -81,7 +81,7 @@ export const STAGES = [
 
   { name: 'Knochenacker', sub: 'Knochenrufer wecken die Toten. Erwisch sie, bevor das Feld voller Skelette ist.', tint: ['#9a92a8', .6], dark: .2, dmg: 1.45, rate: 1.2,
     hue: ['#8a8296', .75],
-    deco: 'graves', music: { bpm: 112, roots: [110, 103.83, 98, 103.83], organ: true },
+    deco: 'graves', music: 'graves',
     waves: [
       ph(0, 25, [.6, 1.2], { necro_apprentice: 3, necro_mage: .5 }),
       ph(25, 31, [1.3, 2.1], { necro_apprentice: 3, necro_mage: 1, frost_mage: 1 }),
@@ -104,7 +104,7 @@ export const STAGES = [
 
   { name: 'Spiegelhain', sub: 'Blinzler tauchen neben dir auf, Spiegelmagier täuschen mit Klonen. Heiler halten sie am Leben.', tint: ['#a68fd8', .6], dark: .22, dmg: 1.55, rate: 1.24,
     hue: ['#7a5ad0', .5],
-    deco: 'mirrors', music: { bpm: 120, roots: [116.54, 110, 98, 87.31], bell: true },
+    deco: 'mirrors', music: 'mirrors',
     waves: [
       ph(0, 25, [.6, 1.2], { shadow_apprentice: 3, shadow_mage: .5 }),
       ph(25, 31, [1.3, 2.1], { shadow_apprentice: 3, shadow_mage: 1, fire_mage: 1 }),
@@ -127,7 +127,7 @@ export const STAGES = [
 
   { name: 'Sturmklippen', sub: 'Sturmrufer werfen Blitze, Donnerpriester spannen Strahlen. Frostmagier bremsen dich dabei.', tint: ['#8aa0b8', .6], dark: .16, dmg: 1.65, rate: 1.28,
     hue: ['#7a90a8', .65],
-    deco: 'cliffs', music: { bpm: 132, roots: [110, 130.81, 116.54, 98], stab: true },
+    deco: 'cliffs', music: 'cliffs',
     waves: [
       ph(0, 25, [.7, 1.3], { storm_apprentice: 3, storm_mage: .6 }),
       ph(25, 31, [1.4, 2.2], { storm_apprentice: 3, storm_mage: 1.2, fire_apprentice: 1 }),
@@ -150,7 +150,7 @@ export const STAGES = [
 
   { name: 'Felsenschlund', sub: 'Erdbeber reißen den Boden auf, Golem-Beschwörer rufen Steinriesen. Unten wühlen die Toten.', tint: ['#b08a62', .6], dark: .24, dmg: 1.75, rate: 1.3,
     hue: ['#b07a42', .6],
-    deco: 'chasm', music: { bpm: 100, roots: [82.41, 87.31, 77.78, 73.42], stab: true },
+    deco: 'chasm', music: 'chasm',
     waves: [
       ph(0, 25, [.7, 1.3], { earth_apprentice: 3, earth_mage: .6 }),
       ph(25, 31, [1.4, 2.2], { earth_apprentice: 3, earth_mage: 1.2, fire_mage: 1 }),
@@ -173,7 +173,7 @@ export const STAGES = [
 
   { name: 'Turm der Magier', sub: 'Alle Schulen auf einmal. Der Erzmagier wartet.', tint: ['#9b7ad0', .6], dark: .26, dmg: 1.9, rate: 1.35,
     hue: ['#6a4aa0', .5],
-    deco: 'tower', music: { bpm: 126, roots: [110, 116.54, 98, 103.83], organ: true },
+    deco: 'tower', music: 'tower',
     waves: [
       ph(0, 25, [.7, 1.3], { fire_mage: 2, frost_mage: 2, frost_apprentice: 1.5, storm_apprentice: 1.5 }),
       ph(25, 31, [1.4, 2.2], { storm_mage: 2.5, fire_apprentice: 1.5, shadow_apprentice: 1.5, fire_mage: 1.5, frost_mage: 1.5 }),
@@ -196,7 +196,7 @@ export const STAGES = [
 
   { name: 'Endlose Nacht', sub: 'Kein Ende, alle 4 Minuten ein Boss. Wie lange hältst du durch?', tint: ['#5a6cb0', .62], dark: .32, dmg: 1.7, rate: 1.4, endless: true,
     hue: ['#3a4a8a', .5],
-    deco: 'night', music: { bpm: 120, roots: [98, 92.5, 110, 87.31] },
+    deco: 'night', music: 'night',
     waves: [
       ph(0, 26, [.8, 1.5], { fire_mage: 2, frost_mage: 2, necro_apprentice: 1.5, frost_apprentice: 1.5, storm_apprentice: 1 }),
       ph(30, 26, [1.5, 2.3], { storm_mage: 2, shadow_apprentice: 1.5, light_apprentice: 1, fire_apprentice: 1.5, toxic_apprentice: 1.5, earth_apprentice: 1 }),
