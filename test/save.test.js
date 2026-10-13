@@ -6,8 +6,9 @@ import { oldShopCost } from '../src/data/talents.js';
 const V1 = { gold: 812, unlocked: 3, cleared: { 0: true, 1: true }, best: { 0: 251, 1: 244, 2: 130 }, shop: { atk: 4, hp: 3, reroll: 1 }, mute: true, musicOff: false };
 
 test('v1 → v3 übernimmt Gold, Stages, Bestzeiten, Werkstatt (als Talente ×2) und Ton', () => {
-  const s = migrate(V1);
-  assert.equal(s.version, VERSION);
+  // Stand bis v3 (ab v4 beginnt der Weltfortschritt neu, siehe unten)
+  const s = normalize(migrateV2(migrateV1(V1)));
+  assert.deepEqual(migrate(V1).stages, {}); assert.deepEqual(migrate(V1).keep.sort(), ['hook', 'smoke']);
   assert.equal(s.wallet.gold, 812);
   { const { lv, ...rest } = s.stages[1]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 251, nightmare: false }); assert.equal(lv[4].hats, 1); }
   { const { lv, ...rest } = s.stages[2]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 244, nightmare: false }); assert.equal(lv[4].hats, 1); }
@@ -53,8 +54,8 @@ test('normalize ist idempotent', () => {
 
 test('v2 → v3: Werkstatt ×2, Zündschnur und Ingenieur werden erstattet', () => {
   const v2 = { version: 2, wallet: { gold: 100, gems: 0 }, talents: { atk: 4, spd: 2, ult: 2, mech: 1, reroll: 1 }, stages: { 1: { cleared: true } } };
-  const s = migrate(v2);
-  assert.equal(s.version, 3);
+  const s = normalize(migrateV2(v2));
+  assert.equal(migrateV2(v2).version, 3);
   assert.deepEqual(s.talents, { atk: 8, spd: 4, reroll: 1 });
   assert.equal(s.wallet.gold, 100 + oldShopCost(80, 0) + oldShopCost(80, 1) + oldShopCost(90, 0));
   assert.equal(s.stages[1].cleared, true);
@@ -69,16 +70,29 @@ test('Talente über dem Maximum werden gekappt, unbekannte entfernt', () => {
 });
 
 test('Statistiken und Kartenplatz: alte Stände bekommen Standardwerte, Unsinn wird verworfen', () => {
-  const s = migrate({ version: 3, stages: { 1: { cleared: true }, 2: { cleared: true } }, stats: { runs: 5, weapons: { dagger: 4, nix: 9, orbit: 'x' } } });
+  const s = migrate({ version: 4, stages: { 1: { cleared: true }, 2: { cleared: true } }, stats: { runs: 5, weapons: { dagger: 4, nix: 9, orbit: 'x' } } });
   assert.deepEqual(s.map, { si: 2, li: 0, fresh: false });   // erste offene Welt
   assert.equal(s.stats.bestKills, 0);
   assert.deepEqual(s.stats.weapons, { dagger: 4 });
-  assert.deepEqual(migrate({ version: 3, map: { si: 0, li: 3 } }).map, { si: 0, li: 3, fresh: false });
+  assert.deepEqual(migrate({ version: 4, map: { si: 0, li: 3 } }).map, { si: 0, li: 3, fresh: false });
 });
 
 test('Welten: geschaffte Stage aus alten Ständen = alle Level mit 1 Hut, sonst gelten gespeicherte Hüte', () => {
-  const s = migrate({ version: 3, stages: { 1: { cleared: true, best: 250 }, 2: { lv: [{ hats: 3 }, { hats: 9 }, {}] } } });
+  const s = migrate({ version: 4, stages: { 1: { cleared: true, best: 250 }, 2: { lv: [{ hats: 3 }, { hats: 9 }, {}] } } });
   assert.deepEqual(s.stages[1].lv.map(l => l.hats), [1, 1, 1, 1, 1]);
   assert.deepEqual(s.stages[2].lv.map(l => l.hats), [3, 3, 0, 0, 0]);
   assert.deepEqual(s.map, { si: 1, li: 2, fresh: false });
+});
+
+test('v3 → v4: 8 Welten, Weltfortschritt neu, über Welten freie Fähigkeiten bleiben frei', () => {
+  const v3 = { version: 3, wallet: { gold: 500, gems: 7 }, talents: { atk: 4 }, loadout: ['hook', 'rats'], stages: { 1: { cleared: true }, 2: { cleared: true }, 3: { cleared: false } }, map: { si: 2, li: 1 } };
+  const s = migrate(v3);
+  assert.equal(s.version, VERSION);
+  assert.deepEqual(s.stages, {});
+  assert.deepEqual(s.map, { si: 0, li: 0, fresh: false });
+  assert.deepEqual(s.keep.sort(), ['hook', 'smoke']);   // Welt 1 → Rauch, Welt 2 → Haken; Welt 3 nicht geschafft
+  assert.equal(s.wallet.gold, 500); assert.equal(s.talents.atk, 4);
+  assert.deepEqual(s.loadout, ['hook', 'rats']);
+  assert.deepEqual(migrate(s).keep.sort(), ['hook', 'smoke']);   // bleibt beim erneuten Laden
+  assert.deepEqual(normalize({ version: 4, keep: ['hook', 'gibtsnicht', 'hook'] }).keep, ['hook']);
 });

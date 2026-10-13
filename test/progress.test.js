@@ -30,7 +30,7 @@ test('Erfolg: Stufen abholen, Juwelen, Titel ab Gold', () => {
 
 test('Hutsammler Gold gibt die Krone', () => {
   const s = defaults();
-  for (let w = 1; w <= 5; w++) s.stages[w] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 3, kills: 0, fast: 0 })) };
+  for (let w = 1; w <= 8; w++) s.stages[w] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 3, kills: 0, fast: 0 })) };
   const r = claimAch(s, 'hats');
   assert.equal(r.cosm, 'hat.crown'); assert.ok(s.cosm.includes('hat.crown'));
 });

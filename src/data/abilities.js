@@ -160,4 +160,4 @@ export function abilityUnlocked(id, acct, cleared) {
   if (u.acct) return acct >= u.acct;
   return cleared(u.stage - 1);
 }
-export const unlockText = id => { const u = ABILITIES[id].unlock; return !u ? '' : u.acct ? `Konto-Level ${u.acct}` : `Stage ${u.stage} gewinnen`; };
+export const unlockText = id => { const u = ABILITIES[id].unlock; return !u ? '' : u.acct ? `Konto-Level ${u.acct}` : `Welt ${u.stage} schaffen`; };

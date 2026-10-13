@@ -18,6 +18,9 @@ import { drawAbilGround, drawAbilTop } from './draw-abilities.js';
 import { daggerTint } from './sprites.js';
 import { MECH_PAINT, TRAIL } from '../data/cosmetics.js';
 
+// Gegner-Geschosse: Schein und Bild je Art (Bilder aus gen/fx.js)
+const PGLOW = { fire: 'rgba(255,50,30,.22)', void: 'rgba(170,80,255,.28)', frost: 'rgba(80,180,255,.25)', toxic: 'rgba(120,230,60,.28)', storm: 'rgba(255,230,80,.28)', necro: 'rgba(120,255,110,.25)', earth: 'rgba(150,110,60,.3)', light: 'rgba(255,240,170,.3)' };
+const PFX = { void: 'shade', toxic: 'glob', storm: 'spark', necro: 'soul', earth: 'rock', light: 'lance' };
 const CALL_LOOK = { sc: .62 };   // Krieger vom Goblin-Ruf: etwas größer als die Bande
 const CHIEF_LOOK = { sc: .95 };  // Häuptling (Meister des Goblin-Rufs)
 
@@ -111,7 +114,7 @@ function drawRun(now) {
   drawPlayerBars();
   drawAbilTop(t);
   for (const e of run.enemies) if (e.state === 'cast' && !e.boss && e.ft < e.charge + .05 && onScreen(e.x, e.y, 60)) drawCharge(e, t);
-  if (run.boss && run.boss.ai.st === 'cast' && run.boss.ft < run.boss.charge) drawCharge(run.boss, t);
+  for (const e of run.enemies) if (e.boss && !e.dead && e.ai.st === 'cast' && e.ft < e.charge) drawCharge(e, t);   // Boss und seine Teile
   for (const w of run.weapons) if (w.id === 'orbit') {
     ctx.strokeStyle = w.evo ? 'rgba(255,230,120,.25)' : 'rgba(255,255,255,.14)'; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.arc(P.x, P.y - 8, w.r || 80, 0, TAU); ctx.stroke();
@@ -156,11 +159,11 @@ function drawRun(now) {
       continue;
     }
     if (p.fake) ctx.globalAlpha = .45;
-    ctx.fillStyle = p.kind === 'fire' ? 'rgba(255,50,30,.22)' : p.kind === 'void' ? 'rgba(170,80,255,.28)' : 'rgba(80,180,255,.25)';
+    ctx.fillStyle = PGLOW[p.kind] || PGLOW.frost;
     ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 8, 0, TAU); ctx.fill();
     const fr = (Math.floor(p.t * 12) % 4) + 1;
     if (p.kind === 'fire') drawSpr('f_fireball_' + fr, p.x, p.y, p.sc, p.a);
-    else if (p.kind === 'void') drawSpr('p.shade.' + fr, p.x, p.y, p.sc * 1.2, p.a);
+    else if (PFX[p.kind]) drawSpr(`p.${PFX[p.kind]}.${fr}`, p.x, p.y, p.sc * 1.2, p.a);
     else drawSpr('e_frostbolt_' + fr, p.x, p.y, p.sc, p.a);
     ctx.globalAlpha = 1;
   }
@@ -225,10 +228,16 @@ export function drawArena(A, t) {
   ctx.strokeStyle = 'rgba(170,110,255,.55)'; ctx.lineWidth = 14; ctx.beginPath(); ctx.arc(A.x, A.y, A.r, 0, TAU); ctx.stroke();
   if (A.burn > 0) {
     // brennender Rand (Ignaz Phase 3): Glut-Band nach innen, Flammenzungen
-    const r0 = A.r - 22 - A.burn, g = ctx.createRadialGradient(A.x, A.y, r0, A.x, A.y, A.r);
-    g.addColorStop(0, 'rgba(255,120,30,0)'); g.addColorStop(.25, 'rgba(255,120,30,.45)'); g.addColorStop(1, 'rgba(200,40,10,.7)');
+    const r0 = A.r - 22 - A.burn, g = ctx.createRadialGradient(A.x, A.y, r0, A.x, A.y, A.r), tox = A.burnKind === 'toxic';
+    if (tox) { g.addColorStop(0, 'rgba(120,220,60,0)'); g.addColorStop(.08, 'rgba(120,220,60,.5)'); g.addColorStop(1, 'rgba(90,40,140,.7)'); }
+    else { g.addColorStop(0, 'rgba(255,120,30,0)'); g.addColorStop(.25, 'rgba(255,120,30,.45)'); g.addColorStop(1, 'rgba(200,40,10,.7)'); }
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(A.x, A.y, A.r, 0, TAU); ctx.arc(A.x, A.y, r0, 0, TAU, true); ctx.fill();
-    for (let i = 0; i < 48; i++) {
+    if (tox) for (let i = 0; i < 40; i++) {
+      // Giftblasen am Rand des Gifts
+      const a = i * TAU / 40 + t * .05, q = (t * .7 + i * .37) % 1, rr = r0 + 8 + (i % 4) * 10, x = A.x + Math.cos(a) * rr, y = A.y + Math.sin(a) * rr;
+      ctx.strokeStyle = `rgba(200,255,140,${.8 * (1 - q)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y - q * 12, 3 + q * 6, 0, TAU); ctx.stroke();
+    }
+    else for (let i = 0; i < 48; i++) {
       const a = i * TAU / 48 + Math.sin(t + i) * .02, h = 14 + 10 * Math.sin(t * 9 + i * 1.7), rr = r0 + 6 + (i % 3) * 8, x = A.x + Math.cos(a) * rr, y = A.y + Math.sin(a) * rr;
       ctx.fillStyle = i % 2 ? 'rgba(255,170,40,.85)' : 'rgba(255,90,20,.85)';
       ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x - 4, y - h * .6, x, y - h); ctx.quadraticCurveTo(x + 4, y - h * .6, x + 6, y); ctx.closePath(); ctx.fill();
@@ -256,6 +265,7 @@ export function drawGem(it, bob) {
 }
 export function drawEnemy(e, t) {
   if (e.hidden) return;
+  if (e.boss && e.vessels) drawTethers(e, t);
   if (e.elite || e.boss || e.miniboss) {
     const R = e.r * 1.6 + Math.sin(t * 5) * 3;
     ctx.fillStyle = e.elite ? 'rgba(255,210,60,.3)' : e.boss ? 'rgba(255,60,60,.28)' : 'rgba(200,90,255,.3)';
@@ -456,6 +466,17 @@ function drawHaz(t, top) {
         seg(); ctx.strokeStyle = rgba(h.kind, .45); ctx.lineWidth = h.w * 1.3; ctx.stroke();
         seg(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = h.w * .35; ctx.stroke();
       }
+    } else if (h.shape === 'ring') {
+      // Knochenkäfig: Knochenstäbe im Kreis, Lücke offen (Warnung gestrichelt)
+      const n = Math.max(8, Math.round(h.r / 9));
+      for (let i = 0; i < n; i++) {
+        const a = h.gap + h.gapW + (TAU - 2 * h.gapW) * (i + .5) / n, x = h.x + Math.cos(a) * h.r, y = h.y + Math.sin(a) * h.r * .8;
+        if (warn) { ctx.fillStyle = rgba('necro', .25 + .4 * p); ctx.beginPath(); ctx.arc(x, y, 6, 0, TAU); ctx.fill(); continue; }
+        ctx.fillStyle = '#ece4cf'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.roundRect(x - 4, y - 26, 8, 30, 3); ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y - 27, 5, 0, TAU); ctx.fill(); ctx.stroke();
+      }
+      if (warn) { ctx.strokeStyle = rgba('necro', .9); ctx.lineWidth = 2.5; ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 40; ctx.beginPath(); ctx.ellipse(h.x, h.y, h.r, h.r * .8, 0, h.gap + h.gapW, h.gap + TAU - h.gapW); ctx.stroke(); }
     } else if (h.shape === 'cone') {
       ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.arc(h.x, h.y, h.len, h.a - h.spread, h.a + h.spread); ctx.closePath();
       ctx.fillStyle = rgba(h.kind, warn ? .1 + .22 * p : .45); ctx.fill();
@@ -476,7 +497,21 @@ function drawHaz(t, top) {
 
 // Objekte ohne Figur: Leerenportal, Knochenhaufen
 function drawObject(e, t) {
-  if (e.type === 'void_portal') {
+  if (e.type === 'soul_vessel') {
+    // Seelengefäß: Krug mit grüner Seele, schwebt leicht
+    const y = e.y - 6 + Math.sin(t * 3 + e.x) * 3;
+    ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 18, 18, 6, 0, 0, TAU); ctx.fill();
+    ctx.save(); ctx.translate(e.x, y);
+    const g = ctx.createRadialGradient(0, 0, 2, 0, 0, 40); g.addColorStop(0, `rgba(123,255,106,${.35 + .15 * Math.sin(t * 5)})`); g.addColorStop(1, 'rgba(123,255,106,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 40, 0, TAU); ctx.fill();
+    ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2.5; ctx.fillStyle = e.flash > 0 ? '#ffffff' : '#4a3a5a';
+    ctx.beginPath(); ctx.moveTo(-9, -20); ctx.lineTo(9, -20); ctx.lineTo(7, -14); ctx.quadraticCurveTo(20, -8, 16, 8); ctx.quadraticCurveTo(12, 20, 0, 20); ctx.quadraticCurveTo(-12, 20, -16, 8); ctx.quadraticCurveTo(-20, -8, -7, -14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#7bff6a'; ctx.beginPath(); ctx.ellipse(0, 3, 8, 9 + Math.sin(t * 6), 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#e0ffd8'; ctx.beginPath(); ctx.arc(-2, 0, 2.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = '#e8c35a'; ctx.fillRect(-10, -24, 20, 5); ctx.strokeRect(-10, -24, 20, 5);
+    ctx.restore();
+    if (Math.random() < .15) part(e.x + frand(-8, 8), y - 20, frand(-10, 10), -50, .6, '#7bff6a', 3);
+  } else if (e.type === 'void_portal') {
     const grow = e.spawnT > 0 ? 1 - e.spawnT / 2 : 1, R = 30 * grow;
     for (let i = 3; i >= 0; i--) {
       ctx.fillStyle = i % 2 ? 'rgba(60,20,110,.85)' : 'rgba(150,80,255,.7)';
@@ -505,6 +540,15 @@ function drawFrontShield(e) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(a);
   ctx.fillStyle = 'rgba(190,240,255,.75)'; ctx.strokeStyle = 'rgba(240,252,255,.95)'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(-3, -20 * e.sc); ctx.quadraticCurveTo(9, 0, -3, 20 * e.sc); ctx.lineTo(-9, 14 * e.sc); ctx.quadraticCurveTo(0, 0, -9, -14 * e.sc); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+// Seelengefäße: grüne Fäden zum Grafen, solange er durch sie geschützt ist
+function drawTethers(b, t) {
+  const up = b.vessels.filter(v => !v.dead); if (!up.length) return;
+  ctx.save(); ctx.lineWidth = 4; ctx.setLineDash([12, 8]); ctx.lineDashOffset = -t * 60; ctx.strokeStyle = `rgba(123,255,106,${.5 + .2 * Math.sin(t * 6)})`;
+  for (const v of up) { ctx.beginPath(); ctx.moveTo(v.x, v.y - 10); ctx.lineTo(b.x, b.y - 30 * b.sc); ctx.stroke(); }
+  ctx.setLineDash([]); ctx.fillStyle = `rgba(123,255,106,${.12 + .05 * Math.sin(t * 4)})`; ctx.strokeStyle = 'rgba(160,255,140,.7)'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.ellipse(b.x, b.y - 12 * b.sc, 26 * b.sc, 30 * b.sc, 0, 0, TAU); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
 // Eisschild (Frostbart): Bogen vor dem Boss, Risse je Treffer am Rücken, Punkte = Treffer bis zum Bruch

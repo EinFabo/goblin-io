@@ -130,10 +130,63 @@ export function setBossBar(b) {
 function enterPhase(b) {
   const ph = phase(b);
   b.ai.st = 'chase'; b.ai.t = 1.2; b.ai.i = 0;
-  if (ph.burn) run.arena.burnTo = 64;
+  const A = run.arena;
+  if (ph.burn) Object.assign(A, { burnTo: 64, burnRate: 40, burnKind: 'fire' });
+  // Gift von außen: steigt langsam (~50 s bis zum vollen Ring)
+  if (ph.poison) Object.assign(A, { burnTo: 250, burnRate: 5, burnKind: 'toxic' });
   if (ph.storm) run.storm = run.storm || .001;
   if (ph.shield) raiseShield(b);
+  if (ph.split) splitBoss(b, ph.split);
+  if (ph.vessels) spawnVessels(b, ph.vessels);
   setBossBar(b);
+}
+
+// ---------- Morgra: Teilen ----------
+// Teile (link) sind eigene Gegner mit dem Bild des Bosses, laufen versetzt um den Goblin und zaubern Pfützen und Gas.
+// Treffer auf ein Teil gehen auf das gemeinsame Leben (combat.js hurt), sterben tun alle mit dem Boss.
+const SPLIT_SC = { 2: 2.1, 3: 1.8 };
+function splitBoss(b, n) {
+  for (const e of run.enemies) if (e.link === b && !e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
+  b.sc = SPLIT_SC[n] || b.sc; b.r = 38 * b.sc / 2.7;
+  for (let i = 1; i < n; i++) {
+    const a = Math.atan2(b.y - P.y, b.x - P.x) + i * TAU / n;
+    const l = {
+      ...b, link: b, x: b.x + Math.cos(a) * 90, y: b.y + Math.sin(a) * 60, ph: 0, hp: 1, maxHp: 1, xp: 0, ice: 0, vessels: null,
+      B: { ...b.B, phases: [{ atk: ['gas', 'puddles'], gap: 4 }] }, off: a, flash: .3,
+      ai: { st: 'chase', t: 1.5 + i * .9, i: i % 2, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0, chan: 0, spin: null },
+    };
+    run.enemies.push(l);
+    ring(l.x, l.y, 10, 90, .4, b.B.col, 6);
+    for (let k = 0; k < 14; k++) part(l.x, l.y - 20, frand(-160, 160), frand(-160, 40), .5, '#9cf06a', 5);
+  }
+  sfx.boom();
+}
+
+// ---------- Knochenhand: Seelengefäße ----------
+function spawnVessels(b, n) {
+  const A = run.arena;
+  b.vessels = [];
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + i * TAU / n, v = spawnEnemy('soul_vessel', { x: A.x + Math.cos(a) * A.r * .62, y: A.y + Math.sin(a) * A.r * .62 });
+    v.hp = v.maxHp = b.maxHp * .045; v.of = b;
+    b.vessels.push(v);
+  }
+}
+const vesselsUp = b => !!(b.vessels && b.vessels.some(v => !v.dead));
+// Knochenhand Phase 3: tote Skelette stehen als Geister wieder auf
+export function bossOnKill(e) {
+  const b = run.boss;
+  if (!b || e.type !== 'skeleton' || !phase(b).ghosts) return;
+  (b.rise || (b.rise = [])).push({ x: e.x, y: e.y, t: 1.2 });
+}
+function updRise(b, dt) {
+  if (!b.rise || !b.rise.length) return;
+  for (const r of b.rise) {
+    r.t -= dt;
+    if (Math.random() < .3) part(r.x + frand(-10, 10), r.y, 0, -60, .5, '#7bff6a', 3);
+    if (r.t <= 0 && run.enemies.filter(e => e.type === 'ghost' && !e.dead).length < 14) { spawnEnemy('ghost', { x: r.x, y: r.y }); }
+  }
+  b.rise = b.rise.filter(r => r.t > 0);
 }
 
 // Nach jedem Treffer: Phasenwechsel bei 66 % / 33 % (Leben bleibt an der Schwelle stehen, keine Phase wird übersprungen)
@@ -147,7 +200,14 @@ export function bossHurt(b) {
 // Unverwundbar, Eisschild
 // kx/ky: Rückstoß-Richtung des Treffers (vom Angreifer weg). Ohne Richtung (Flächen, Gift) zählt, wo der Goblin steht.
 export function bossDamageRule(b, dmg, kx = 0, ky = 0) {
-  if (b.inv > 0 || run.cut) return { dmg: 0, blocked: false };
+  const m = b.link || b;
+  if (m.inv > 0 || run.cut) return { dmg: 0, blocked: false };
+  // Seelengefäße: solange eins steht, prallt alles ab
+  if (vesselsUp(m)) {
+    if (m.blkT > 0) return { dmg: 0, blocked: false };
+    m.blkT = .35;
+    return { dmg: 0, blocked: true };
+  }
   if (b.ice > 0) {
     const from = kx || ky ? Math.atan2(-ky, -kx) : Math.atan2(P.y - b.y, P.x - b.x);
     let da = from - b.fa; da = Math.atan2(Math.sin(da), Math.cos(da));
@@ -252,6 +312,45 @@ export const ATK = {
       }
     },
   },
+  // Morgra: Giftpfützen regnen rund um den Goblin
+  puddles: {
+    ck: () => 'toxic', charge: .7,
+    fire(b) {
+      const n = b.link ? 2 : 4 + (b.rage ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        const a = rnd() * TAU, r = i ? rand(60, 200) : 0;
+        addHaz({ shape: 'circle', x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r, r: 62, warn: 1 + i * .12, act: 5, tick: .5, dmg: b.dmg * .22, kind: 'toxic', src: 'zone', grow: true });
+      }
+    },
+  },
+  // Morgra: Gaskegel in Richtung des Goblins
+  gas: {
+    ck: () => 'toxic', charge: .8,
+    fire(b) { addHaz({ shape: 'cone', x: b.x, y: b.y, a: Math.atan2(P.y - b.y, P.x - b.x), len: 330, spread: .42, warn: .9, act: 1.4, tick: .3, dmg: b.dmg * .24, kind: 'toxic', src: 'gas', owner: b, cancel: true }); },
+  },
+  // Knochenhand: eine Reihe Skelette quer vor ihm, läuft auf den Goblin zu
+  skeletons: {
+    ck: () => 'necro', charge: .8,
+    fire(b) {
+      const alive = run.enemies.filter(e => e.type === 'skeleton' && !e.dead).length, n = Math.min(6 + b.ph * 2, 22 - alive);
+      const a = Math.atan2(P.y - b.y, P.x - b.x), nx = -Math.sin(a), ny = Math.cos(a);
+      for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 34; spawnEnemy('skeleton', { x: b.x + Math.cos(a) * 60 + nx * o, y: b.y + Math.sin(a) * 60 + ny * o }); }
+      ring(b.x, b.y, 10, 120, .5, 'rgba(120,255,110,.8)', 6);
+    },
+  },
+  // Knochenhand: Knochenkäfig um den Goblin, zieht sich zu – raus durch die Lücke
+  cage: {
+    ck: () => 'necro', charge: .7,
+    fire(b) { addHaz({ shape: 'ring', x: P.x, y: P.y, r: 150, r0: 150, r1: 30, w: 24, gap: rnd() * TAU, gapW: .42, warn: 1, act: 3.2, act0: 3.2, tick: .4, dmg: b.dmg * .35, kind: 'necro', src: 'cage' }); },
+  },
+  // Knochenhand Phase 3: Lebensraub-Strahl folgt dem Goblin langsam und heilt ihn (höchstens bis zur Phasengrenze)
+  drain: {
+    ck: () => 'necro', charge: .8, chan: 4.2, move: 0,
+    fire(b) {
+      addHaz({ shape: 'line', x: b.x, y: b.y, x2: b.x, y2: b.y, w: 26, warn: .8, act: 3.4, tick: .3, dmg: b.dmg * .25, kind: 'necro', src: 'beam', owner: b, cancel: true,
+        drain: b, drainMax: PHASE_AT[b.ph] * b.maxHp, spin: { a: Math.atan2(P.y - b.y, P.x - b.x) + .5, w: .75, len: 520, track: true } });
+    },
+  },
   // Eissplitter-Spirale: zwei Arme, dreht sich
   spiral: {
     ck: () => 'frost', charge: .7, chan: 3.4, move: 0,
@@ -268,10 +367,19 @@ export const ATK = {
 };
 
 export function bossAI(b, dt, dx, dy, d) {
-  const ai = b.ai, sp = tempo(b);
-  b.fightT += dt; b.inv -= dt; b.iceCd -= dt; b.blkT -= dt;
-  if (!b.rage && b.fightT >= RAGE_AT) enrage(b);
-  if (b.ice <= 0 && b.iceT > 0) { b.iceT -= dt; if (b.iceT <= 0 && phase(b).shield) raiseShield(b); }
+  const ai = b.ai;
+  if (b.link) {
+    // Teil von Morgra: Wut und Schaden wie der Boss, läuft versetzt um den Goblin
+    b.rage = b.link.rage; b.dmg = b.link.dmg; b.tint = b.link.tint;
+    const a = b.off + run.time * .35, tx = P.x + Math.cos(a) * 150, ty = P.y + Math.sin(a) * 110;
+    dx = tx - b.x; dy = ty - b.y; d = Math.hypot(dx, dy) || 1;
+  } else {
+    b.fightT += dt; b.inv -= dt; b.iceCd -= dt; b.blkT -= dt;
+    if (!b.rage && b.fightT >= RAGE_AT) enrage(b);
+    if (b.ice <= 0 && b.iceT > 0) { b.iceT -= dt; if (b.iceT <= 0 && phase(b).shield) raiseShield(b); }
+    updBurn(dt, b); updRise(b, dt);
+  }
+  const sp = tempo(b);
   // Blickrichtung: dreht sich zum Spieler, mit Eisschild langsam: im Abstand von 150 px umrundet man ihn mit
   // 1,1 rad/s (Sprint 1,7), er dreht nur 0,6 – nach ~6 s Laufen (gut 2 s Sprint) steht man hinter ihm
   let da = Math.atan2(dy, dx) - b.fa; da = Math.atan2(Math.sin(da), Math.cos(da));
@@ -279,7 +387,6 @@ export function bossAI(b, dt, dx, dy, d) {
   if (ai.st !== 'charge' && ai.st !== 'tele') b.fa += clamp(da, -turn, turn);
   b.face = face8(Math.cos(b.fa), Math.sin(b.fa), b.face);
   if (ai.ring2 > 0) { ai.ring2 -= dt; if (ai.ring2 <= 0) bossRing(b, b.ck, Math.PI / (b.ph >= 1 ? 20 : 14)); }
-  updBurn(dt, b);
   // Betäubt nach dem Schildbruch
   if (b.stunT > 0) { b.stunT -= dt; b.spr = mspr(b, 'idle', 1); if (Math.random() < .2) part(b.x + frand(-20, 20), b.y - 70, frand(-20, 20), -30, .5, '#ffe27a', 3); return; }
   ai.t -= dt;
@@ -336,15 +443,18 @@ export function bossRing(b, kind, off) {
 }
 
 // Ignaz Phase 3: der Rand der Arena brennt (wächst auf burnTo px), wer drin steht, nimmt Schaden
+// Morgra Phase 3: Gift steigt von außen (burnKind 'toxic', langsam und breit)
 function updBurn(dt, b) {
   const A = run.arena; if (!A || !A.burnTo) return;
-  A.burn = Math.min(A.burnTo, A.burn + 40 * dt);
-  if (Math.hypot(P.x - A.x, P.y - A.y) > A.r - 22 - A.burn) damagePlayer(b.dmg * .3, 'burn');
+  A.burn = Math.min(A.burnTo, A.burn + A.burnRate * dt);
+  if (Math.hypot(P.x - A.x, P.y - A.y) > A.r - 22 - A.burn) damagePlayer(b.dmg * (A.burnKind === 'toxic' ? .18 : .3), A.burnKind === 'toxic' ? 'poison' : 'burn');
 }
 
 // Feuerarme drehen sich mit dem Boss (vom Gefahren-Update aufgerufen)
+// track: dreht sich mit höchstens w rad/s zum Goblin (Lebensraub-Strahl)
 export function spinHaz(h, dt) {
   const s = h.spin, o = h.owner;
-  s.a += s.w * dt * (h.warn > 0 ? .25 : 1);
+  if (s.track) { let da = Math.atan2(P.y - o.y + 10, P.x - o.x) - s.a; da = Math.atan2(Math.sin(da), Math.cos(da)); s.a += clamp(da, -s.w * dt, s.w * dt); }
+  else s.a += s.w * dt * (h.warn > 0 ? .25 : 1);
   h.x = o.x; h.y = o.y - 10; h.x2 = o.x + Math.cos(s.a) * s.len; h.y2 = o.y - 10 + Math.sin(s.a) * s.len;
 }

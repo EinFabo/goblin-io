@@ -55,13 +55,17 @@ async function fightBoss(si) {
         if (run.arena && run.arena.burn > 0) S.mech.add('burn');
         if (run.storm > 0) S.mech.add('storm');
         if (run.boss && run.boss.ai.spin) S.mech.add('spiral');
+        if (run.enemies.some(e => e.link && !e.dead)) S.mech.add('split');
+        if (run.enemies.some(e => e.type === 'ghost' && !e.dead)) S.mech.add('ghosts');
       }
       const b = run.boss;
       // Wut-Timer: kurz vor 120 s Kampf vorspulen, dann muss die Leiste glühen
       if (b && !b.rage && b.ph === 1 && !run.cut) b.fightT = 119.9;
       if (b && b.rage && document.querySelector('#bossBar').classList.contains('rage')) S.rage = true;
       if (b && !run.cut) {
-        if (b.ice > 0) {
+        const ves = (b.vessels || []).filter(v => !v.dead);
+        if (ves.length) { for (const v of ves) G.hurt(v, v.hp + 1); S.mech.add('vessels'); }
+        else if (b.ice > 0) {
           // hinter ihn stellen: drei Treffer in den Rücken brechen den Schild
           G.P.x = b.x - Math.cos(b.fa) * 120; G.P.y = b.y - Math.sin(b.fa) * 120;
           for (let i = 0; i < 3; i++) { b.iceCd = 0; G.hurt(b, 1); }
@@ -82,7 +86,8 @@ async function fightBoss(si) {
   if (!seen.rage) errs.push(`Wut-Timer Welt ${si + 1}: nicht ausgelöst`);
   if (seen.card.trim().length < 3 || seen.ph.length < 3 || !(end.over && !end.boss)) errs.push(`Bosskampf Welt ${si + 1}: ` + JSON.stringify({ ...seen, mech: [...seen.mech], end }));
   if (id === 'frostbart' && !seen.shield) errs.push('Frostbart: Eisschild nicht gebrochen');
-  if (id === 'ignaz' && !['wall', 'meteor', 'burn'].every(m => seen.mech.has(m))) errs.push('Ignaz: Mechaniken fehlen ' + [...seen.mech]);
+  const MECH = { ignaz: ['wall', 'meteor', 'burn'], frostbart: ['ice', 'storm', 'spiral'], morgra: ['zone', 'gas', 'split', 'burn'], knochenhand: ['cage', 'vessels', 'beam'] };
+  if (MECH[id] && !MECH[id].every(m => seen.mech.has(m))) errs.push(`${id}: Mechaniken fehlen (${MECH[id].filter(m => !seen.mech.has(m))}), gesehen ${[...seen.mech]}`);
 }
 // In der Goblin-Maschine: andere Fähigkeit und Rolle gesperrt, Knöpfe mit Schloss
 await p.evaluate(() => { const G = GOBLIN; G.save.loadout = ['rage', 'mech']; G.go('run', { si: 0, li: 0, seed: 7 }); });

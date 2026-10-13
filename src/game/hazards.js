@@ -9,7 +9,7 @@ import { spinHaz } from './boss.js';
 import { P, onScreen, pR, query, run } from './state.js';
 
 // Einschlag-Animation je Geschossart
-const HIT_FX = { fire: 'f_fireball_hit_', frost: 'e_frostbolt_hit_', void: 'p.shade_hit.' };
+const HIT_FX = { fire: 'f_fireball_hit_', frost: 'e_frostbolt_hit_', void: 'p.shade_hit.', toxic: 'p.glob_hit.', storm: 'p.spark_hit.', necro: 'p.soul_hit.', earth: 'p.rock_hit.', light: 'p.lance_hit.' };
 
 export function updTele(dt) {
   for (const t of run.tele) {
@@ -97,6 +97,13 @@ function segDist(px, py, x1, y1, x2, y2) {
 export function hazDist(h, x, y) {
   switch (h.shape) {
     case 'circle': return [Math.hypot(x - h.x, y - h.y) - h.r, h.x, h.y];
+    case 'ring': {
+      // Knochenkäfig: Band um (x, y), in der Lücke ungefährlich
+      const dx = x - h.x, dy = y - h.y, dd = Math.hypot(dx, dy) || .01;
+      let da = Math.atan2(dy, dx) - h.gap; da = Math.atan2(Math.sin(da), Math.cos(da));
+      if (Math.abs(da) < h.gapW) return [1e9, h.x, h.y];
+      return [Math.abs(dd - h.r) - h.w / 2, h.x + dx / dd * h.r, h.y + dy / dd * h.r];
+    }
     case 'line': { const [d, cx, cy] = segDist(x, y, h.x, h.y, h.x2, h.y2); return [d - h.w / 2, cx, cy]; }
     case 'beam': { const [d, cx, cy] = segDist(x, y, h.a.x, h.a.y - 20, h.b.x, h.b.y - 20); return [d - h.w / 2, cx, cy]; }
     case 'cone': {
@@ -140,12 +147,13 @@ function updHaz(dt) {
       if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) { const b0 = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, b0 - P.hp); } h.done = true; continue; }
     }
     h.act -= dt; h.tk -= dt;
+    if (h.r1 !== undefined) h.r = h.r1 + (h.r0 - h.r1) * Math.max(0, h.act / h.act0);   // Käfig zieht sich zu
     // Eisfleck: rutschig, solange man drauf steht
     if (h.kind === 'ice' && hazDist(h, P.x, P.y)[0] < 0) P.iceT = .12;
     if (h.tk <= 0 && h.dmg > 0 && hazHitsPlayer(h)) {
       h.tk = h.tick;
       const before = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, before - P.hp);
-      if (h.drain && !h.drain.dead) { const got = before - P.hp; h.drain.hp = Math.min(h.drain.maxHp, h.drain.hp + got * 3); }
+      if (h.drain && !h.drain.dead) { const got = before - P.hp; h.drain.hp = Math.max(h.drain.hp, Math.min(h.drainMax ?? h.drain.maxHp, h.drain.hp + got * 3)); }
     }
     if (h.act <= 0) h.done = true;
   }

@@ -5,8 +5,8 @@ import { $ } from '../core/util.js';
 import { chargeAbil, critBonus, dealtMult, onKill, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
 import { hitDamage } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
-import { bossHurt } from './boss.js';
-import { addItem, addNum, animFx, dissolve, dropGem } from './fx.js';
+import { bossHurt, bossOnKill } from './boss.js';
+import { addItem, addNum, animFx, dissolve, dropGem, puff } from './fx.js';
 import { addEvents } from './run.js';
 import { P, run } from './state.js';
 import { banner } from '../ui/hud.js';
@@ -23,14 +23,16 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   dmg *= dealtMult(e);
   const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
   const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
-  e.hp -= d; e.flash = .09;
+  // Teile von Morgra teilen sich das Leben des Bosses
+  const tgt = e.link || e;
+  tgt.hp -= d; e.flash = .09;
   if (e.tb !== undefined && e.freezeT > 0) e.tb += d;   // Zeitbombe sammelt Schaden
   if (kb && !e.boss && !rule.blocked) { const m = e.elite ? .25 : e.traits && e.traits.includes('heavy') ? .2 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }
   if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit);
   else if (rule.blocked) addNum(e.x, e.y - 22 * e.sc, 'Block', '#dff6ff', false);
   sfx.hit();
-  if (e.boss) bossHurt(e);
-  if (e.hp <= 0) kill(e, xpMul);
+  if (tgt.boss) bossHurt(tgt);
+  if (tgt.hp <= 0) kill(tgt, xpMul);
 }
 export function kill(e, xpMul = 1) {
   e.dead = true; run.kills++;
@@ -57,6 +59,7 @@ export function kill(e, xpMul = 1) {
     const r2 = RNG.loot.next();
     if (r2 < .006) addItem('heal', e.x, e.y); else if (r2 < .009) addItem('magnet', e.x, e.y); else if (r2 < .0115) addItem('bomb', e.x, e.y);
   }
+  if (run.boss && e.type === 'skeleton') bossOnKill(e);
   if (e.boss) bossDown(e);
 }
 // Heilungs-Pity (7.5): wer 20 s unter 30 % Leben war, bekommt vom nächsten Elite/Mini-Boss garantiert ein Herz
@@ -64,6 +67,8 @@ export const LOW_HP = .3, LOW_T = 20;
 function healPity(e) { if (run.lowT >= LOW_T) { run.lowT = 0; addItem('heal', e.x, e.y); } }
 export function bossDown(b) {
   run.boss = null; run.arena = null; emit('bossDown', b);
+  // Teile und Seelengefäße gehen mit
+  for (const e of run.enemies) if ((e.link === b || e.of === b) && !e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
   $('#bossBar').hidden = true;
   for (let i = 0; i < 25; i++) addItem('coin', b.x, b.y);
   for (let i = 0; i < 6; i++) setTimeout(() => { if (run && !run.over) { animFx('f_fireball_hit_', 5, b.x + frand(-60, 60), b.y + frand(-60, 60), 3.5); sfx.boom(); } }, i * 150);

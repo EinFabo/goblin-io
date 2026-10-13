@@ -11,7 +11,7 @@ const THEMES = {
   frostbart: { bpm: 124, roots: [123.47, 110, 98, 110], bell: true },
 };
 export const Music = {
-  timer: null, next: 0, step: 0, boss: false, theme: null, hold: false,
+  timer: null, next: 0, step: 0, boss: false, theme: null, hold: false, world: null,   // world: Stück der Welt (data/stages.js music)
   // Boss-Auftritt (~3 s): Trommelwirbel, der anschwillt, dann ein tiefer Schlag mit Akkord
   bossIntro(id) {
     if (!AC || save.settings.musicOff) return;
@@ -25,7 +25,7 @@ export const Music = {
   stop() { if (this.timer) clearInterval(this.timer); this.timer = null; },
   tick() {
     if (!AC) return;
-    const T = this.boss ? THEMES[this.theme] || THEMES.boss : null, spb = 60 / (T ? T.bpm : 116) / 4;
+    const T = this.boss ? THEMES[this.theme] || THEMES.boss : this.world, spb = 60 / (T ? T.bpm : 116) / 4;
     // Während des Boss-Intros schweigt die Schleife (die Zeit läuft weiter, damit sie danach im Takt einsetzt)
     if (this.hold) { while (this.next < AC.currentTime + .12) this.next += spb; return; }
     while (this.next < AC.currentTime + .12) { this.play(this.step, Math.max(0, this.next - AC.currentTime), T); this.next += spb; this.step++; }
@@ -41,6 +41,8 @@ export const Music = {
     if (s % 2 === 0) tone(r * (s % 4 === 0 ? 1 : 1.5), 0, .17, 'triangle', .22, d, B, .005);
     if (s % 4 === 2) { tone(r * 2, 0, .1, 'square', .025, d, B); tone(r * 2.52, 0, .1, 'square', .02, d, B); }
     if (T && T.stab && (s === 0 || s === 6 || s === 10)) tone(r * 2, r * 1.9, .12, 'sawtooth', .03, d, B, .002);
+    // Orgel (Knochenacker, Turm): leiser Akkord je Takt
+    if (T && T.organ && s === 0) for (const m of [2, 2.38, 3]) tone(r * m, 0, 1.6, 'sine', .018, d, B, .25);
     if (T && T.bell && s % 4 === 1) tone(r * [4, 6, 5, 8][(s >> 2) % 4], 0, .5, 'sine', .03, d, B, .002);
     if (Math.floor(step / 64) % 2 === 1) { const n = MEL[bar][s]; if (n !== null) tone(440 * Math.pow(2, n / 12), 0, .16, 'square', .035, d, B, .003); }
   },

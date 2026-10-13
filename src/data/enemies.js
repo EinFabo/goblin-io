@@ -69,6 +69,7 @@ export const ETYPES = {
   ghost: { name: 'Geist', school: 'necro', sprite: 'ghost', tip: 'Ein besiegter Magier, vom Lich zurückgeholt. Fliegt durch alles.', hp: 6, spd: 66, dmg: 6, r: 12, sc: .9, xp: 1, ai: 'chase', traits: ['float'] },
   golem: { name: 'Steingolem', school: 'earth', sprite: 'golem', tip: 'Langsam, zäh und schwer wegzustoßen.', hp: 90, spd: 26, dmg: 14, r: 24, sc: 1.15, xp: 5, ai: 'chase', traits: ['heavy'] },
   void_portal: { name: 'Leerenportal', school: 'shadow', draw: 'portal', tip: 'Spuckt Lehrlinge aus, bis es zerstört ist.', hp: 40, spd: 0, dmg: 0, r: 26, sc: 1, xp: 4, ai: 'still', traits: ['portal', 'heavy'] },
+  soul_vessel: { name: 'Seelengefäß', school: 'necro', draw: 'vessel', tip: 'Solange eins steht, ist Graf Knochenhand unverwundbar. Zerschlag sie!', hp: 40, spd: 0, dmg: 0, r: 22, sc: 1, xp: 6, ai: 'still', traits: ['vessel', 'heavy'] },
   bone_pile: { name: 'Knochenhaufen', school: 'necro', draw: 'bones', tip: 'Zerschlagen, bevor er wieder aufsteht.', hp: 5, spd: 0, dmg: 0, r: 14, sc: 1, xp: 0, ai: 'still', traits: ['bones', 'heavy'] },
   shadow_clone: { name: 'Klon', school: 'shadow', role: 'mage', clone: true, tip: '', hp: 1, spd: 42, dmg: 0, r: 15, xp: 0, ai: 'kite', keep: 260, casts: [{ id: 'fakebolt', cd: [3.5, 5.5], range: 420 }] },
 };
@@ -81,4 +82,4 @@ export const ECOL = new Proxy({}, { get: (_, t) => t === 'boss' ? '#c58cff' : ET
 for (const T of Object.values(ETYPES)) if (T.sc === undefined) T.sc = ROLE_SC[T.role] || 1;
 
 // Zauberfarben der Bosse (alte feste Rotation, bis zum Boss-Rework in Phase 7)
-export const CCOL = { fire: '#ff8a1f', frost: '#7fd8ff', storm: '#ffe45c', blink: '#b26bff', void: '#b26bff' };
+export const CCOL = { fire: '#ff8a1f', frost: '#7fd8ff', storm: '#ffe45c', blink: '#b26bff', void: '#b26bff', toxic: '#7be04a', necro: '#7bff6a', earth: '#c9a36a', light: '#fff3b0' };

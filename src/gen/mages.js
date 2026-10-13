@@ -471,6 +471,46 @@ export const BOSS_LOOKS = {
       }).sort((a, c) => a.d - c.d).map(o => o.el);
     },
   },
+  // Morgra die Seuchenmutter: Moosrobe mit lila Saum, Giftpilze auf dem Hut, Moospolster mit Blasen auf den Schultern
+  morgra: {
+    pal: { robe: '#4f6b21', shade: '#3a5016', trim: '#9a5ad6', mask: '#6b5a3a', beak: '#b9a77a', lens: '#c6ff6a', hat: '#2b2218', boot: '#2a2216' },
+    head(K) {
+      for (const [x, z, h, r] of [[-12, 8, -27, 6.5], [11, 9, -26.5, 5], [3, -14, -27, 5.5], [-3, -3, -40, 5]]) {
+        K.add(3, K.dep(x, z) + 5, rect(K.x(x, z) - 1.6, h, 3.2, 5, 1, '#efe4c4', ' stroke-width="1"'));
+        K.add(3, K.dep(x, z) + 5.1, path(`M${f(K.x(x, z) - r)} ${f(h + .5)} Q${f(K.x(x, z))} ${f(h - r * 1.4)} ${f(K.x(x, z) + r)} ${f(h + .5)} Z`, '#d6402e', ' stroke-width="1"'));
+        if (K.dep(x, z) > -2) for (const o of [-.35, .3]) K.add(3, K.dep(x, z) + 5.2, circ(K.x(x, z) + r * o, h - r * .4, 1, '#fff', NOSTROKE));
+      }
+      // Gifttropfen am Schnabel
+      if (K.face(0, 20, 2)) K.add(2, 32, ell(K.x(0, 24), -1, 1.3, 2, '#9cf06a', ' stroke-width=".8"'));
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(11 * s, 0), w = Math.hypot(6.5 * K.c, 6.5 * K.k);
+        const el = ell(x, -2 + b, w, 5.2, '#5f8f3a') + circ(x - w * .3, -5 + b, 1.6, '#c6ff6a', ' stroke-width=".8"') + circ(x + w * .35, -3.5 + b, 1.1, '#c6ff6a', ' stroke-width=".8"');
+        return { d: K.dep(11 * s, 0), el };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
+  // Graf Knochenhand: Purpur und Gold, Krone auf der Kapuze, hoher Kragen, Knochen-Schulterstücke
+  knochenhand: {
+    pal: { robe: '#3a1a4a', shade: '#24102f', trim: '#e8c35a', hood: '#2a1236', boot: '#160a1c' },
+    head(K) {
+      // hoher Stehkragen hinter dem Kopf
+      for (const s of [-1, 1]) K.poly(0, [[6 * s, -2, -6], [17 * s, -26, -9], [14 * s, -4, -2]], '#5a2a6e', ' stroke-width="1.2"');
+      // Krone
+      const pts = [];
+      for (let i = 0; i <= 8; i++) { const a = Math.PI * (i / 8), y = i % 2 ? -36.5 : -40.5; pts.push([-11 * Math.cos(a), y, 11 * Math.sin(a) * .5]); }
+      K.poly(3, [[-11, -30, 0], ...pts, [11, -30, 0]], '#e8c35a', ' stroke-width="1.2"');
+      if (K.face(0, 6, 0)) K.add(3, 9, circ(K.x(0, 6), -33.5, 1.8, '#7bff6a', ' stroke-width=".8"'));
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(11 * s, 0), w = Math.hypot(6 * K.c, 6 * K.k);
+        const el = ell(x, -2 + b, w, 5, '#ece4cf') + path(`M${f(x - w * .5)} ${f(-5 + b)} L${f(x)} ${f(-11 + b)} L${f(x + w * .5)} ${f(-5 + b)} Z`, '#ece4cf', ' stroke-width="1"');
+        return { d: K.dep(11 * s, 0), el };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
 };
 
 export function drawMage(school, d, p, { master = false, clone = false, boss = null } = {}) {

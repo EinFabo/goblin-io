@@ -21,7 +21,7 @@ const parseTalents = s => Object.fromEntries(String(s || '').split(',').filter(B
 const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln', burn: 'Glutrand', meteor: 'Meteor', ice: 'Eis' };
 if (args.v2) { console.log('--v2 gibt es nicht mehr: die ganzen Stages aus v2 sind jetzt Welten mit 5 Leveln.'); process.exit(1); }
 const LV = args.level ? [+args.level] : [1, 2, 3, 4, 5];
-const configs = (args.stage ? [+args.stage] : [1, 2, 3, 4, 5]).flatMap(s => LV.map(l => [s, args.talents && args.talents !== 'exp' ? parseTalents(args.talents) : EXPECTED[s] || {}, l]));
+const configs = (args.stage ? [+args.stage] : [1, 2, 3, 4, 5, 6, 7, 8]).flatMap(s => LV.map(l => [s, args.talents && args.talents !== 'exp' ? parseTalents(args.talents) : EXPECTED[s] || {}, l]));
 
 // Mehrere Seiten parallel; jede Seite rechnet ihre Läufe nacheinander (Ergebnis hängt nur am Seed)
 // Jede Seite braucht ~550 MB. WSL hat nur 4 GB, und bei einem OOM-Kill reißt systemd dort die ganze

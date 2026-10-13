@@ -38,11 +38,15 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
     vx = vx * .7 + tx * .7; vy = vy * .7 + ty * .7;
     if (px || py) { const pl = Math.hypot(px, py); vx = vx * .3 + px / pl * 1.5; vy = vy * .3 + py / pl * 1.5; }
     { const [hx, hy] = G.dangerVec(P.x, P.y, 50); px += hx * 2; py += hy * 2; }
+    // Anfliegende Giftbeutel/Felsen: raus aus dem roten Zielkreis (wie ein Mensch, der ihn sieht)
+    for (const q of run.eproj) if (q.lob && !q.noZone) { const dx = P.x - q.tx, dy = P.y - q.ty, d = Math.hypot(dx, dy) || 1; if (d < 85) { px += dx / d * 3; py += dy / d * 3; } }
     for (const e of run.enemies) if (e.bomber && e.fuse > 0) { const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1; if (d < 120) { px += dx / d * 3; py += dy / d * 3; } }
     if (px || py) { const pl = Math.hypot(px, py); vx = vx * .3 + px / pl * 1.5; vy = vy * .3 + py / pl * 1.5; }
     if (run.arena) { const cx = run.arena.x - P.x, cy = run.arena.y - P.y, cd = Math.hypot(cx, cy); if (cd > 300) { vx += cx / cd; vy += cy / cd; } }
+    // Seelengefäße (Knochenhand): zum nächsten hin, bis ~110 px
+    const bs = run.boss, ves = bs && bs.vessels ? bs.vessels.filter(v => !v.dead) : [];
+    if (ves.length) { const v = ves.reduce((a, c) => (Math.hypot(c.x - P.x, c.y - P.y) < Math.hypot(a.x - P.x, a.y - P.y) ? c : a)); const gx = v.x - P.x, gy = v.y - P.y, gd = Math.hypot(gx, gy) || 1; if (gd > 110) { vx += gx / gd * 1.6; vy += gy / gd * 1.6; } }
     // Eisschild: im Bogen (Abstand ~160 px) hinter den Boss laufen
-    const bs = run.boss;
     if (bs && bs.ice > 0) {
       const rx = P.x - bs.x, ry = P.y - bs.y, rd = Math.hypot(rx, ry) || 1;
       let da = Math.atan2(ry, rx) - (bs.fa + Math.PI); da = Math.atan2(Math.sin(da), Math.cos(da));

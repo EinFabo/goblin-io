@@ -24,7 +24,9 @@ export const LEVEL_KIND = [
 // Schwierigkeit der Welten in den Leveln: eigene, gleichmäßige Kurve statt dmg/rate der alten Stages
 // (die waren für 4-Minuten-Läufe verbogen, z. B. Stage 4 am schärfsten). Gegner-Leben: halber Zuschlag
 // von STAGE_HP. Neue Welten hängen hier einen Eintrag an.
-export const WORLD_LV = [{ dmg: 1, rate: 1 }, { dmg: 1.08, rate: 1.04 }, { dmg: 1.2, rate: 1.12 }, { dmg: 1.3, rate: 1.18 }, { dmg: 1.38, rate: 1.24 }];
+// boss: Wellen vor dem Boss leichter (Schaden und Spawnrate ×boss) – Welten mit vielen Beschwörern/Pfützen
+export const WORLD_LV = [{ dmg: 1, rate: 1 }, { dmg: 1.08, rate: 1.04 }, { dmg: 1.16, rate: 1.09, boss: .78 }, { dmg: 1.24, rate: 1.14, boss: .85 }, { dmg: 1.31, rate: 1.19 },
+  { dmg: 1.38, rate: 1.24 }, { dmg: 1.45, rate: 1.28, boss: .85 }, { dmg: 1.52, rate: 1.32 }];
 const damp = v => 1 + (v - 1) * .5;
 // Leben des Bosses im Boss-Level (×2500 × STAGE_HP wie bisher)
 export const BOSS_HP = 2.8;
@@ -85,7 +87,7 @@ export function levelStage(si, li = 0) {
   if (st.endless) return { ...st, li: 0, len: STAGE_LEN, lvName: st.name };
   const K = LEVEL_KIND[li], boss = li === LEVELS - 1, W = WORLD_LV[Math.min(si, WORLD_LV.length - 1)];
   return {
-    ...st, li, len: boss ? 0 : LEVEL_LEN, waves: levelWaves(st, li), dmg: W.dmg * K.dmg, rate: W.rate * K.rate, hpT: K.hpT,
+    ...st, li, len: boss ? 0 : LEVEL_LEN, waves: levelWaves(st, li), dmg: W.dmg * K.dmg * (boss && W.boss || 1), rate: W.rate * K.rate * (boss && W.boss || 1), hpT: K.hpT,
     hpMul: damp(STAGE_HP[si]) / STAGE_HP[si],
     lvName: boss ? st.boss.name : K.name, bossHp: boss ? BOSS_HP : 1,
   };

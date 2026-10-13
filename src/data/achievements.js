@@ -26,7 +26,7 @@ export const ACHIEVEMENTS = [
   { id: 'evo', name: 'Weiterentwickelt', desc: 'Entwickle {n}× eine Waffe weiter', v: c('evo'), goals: [1, 15, 75], title: 'Alchemist' },
   { id: 'chests', name: 'Schatzsucher', desc: 'Öffne {n} Truhen', v: s => s.stats.chests, goals: [5, 30, 120], title: 'Schatzsucher' },
   { id: 'upgrades', name: 'Schmied', desc: 'Werte {n}× eine Karte auf', v: c('upgrades'), goals: [5, 30, 100], title: 'Goblin-Schmied' },
-  { id: 'hats', name: 'Hutsammler', desc: 'Sammle {n} Magierhüte', v: hatsTotal, goals: [15, 45, 75], cosm: 'hat.crown', title: 'Hutkönig' },
+  { id: 'hats', name: 'Hutsammler', desc: 'Sammle {n} Magierhüte', v: hatsTotal, goals: [15, 60, 120], cosm: 'hat.crown', title: 'Hutkönig' },
   { id: 'levels', name: 'Weltenbummler', desc: 'Schaffe {n} verschiedene Level', v: levelsDone, goals: [5, 15, 25] },
   { id: 'play', name: 'Sitzfleisch', desc: 'Spiele {n}', v: s => s.stats.playSeconds, goals: [3600, 36000, 180000], fmt: hours },
   { id: 'gold', name: 'Goldgrube', desc: 'Sammle {n} Gold in Läufen', v: c('gold'), goals: [5000, 50000, 300000], title: 'Goldgrube' },

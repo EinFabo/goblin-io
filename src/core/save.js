@@ -12,7 +12,7 @@ import { LEVELS } from '../data/levels.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
-export const VERSION = 3;
+export const VERSION = 4;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -31,6 +31,8 @@ export function defaults() {
     map: { si: 0, li: 0, fresh: false },
     // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
     loadout: [...DEFAULT_LOADOUT],
+    // Fähigkeiten, die schon über Welten freigespielt waren, als die Welten neu geordnet wurden (v4)
+    keep: [],
     // Fähigkeiten-Level und Skill Tree, auch Rolle (dash) und Sprint: { id: { lv, xp, pts: { pow, cd, area, s1, a, s2, s3, b, m } } }
     abilities: {},
     settings: { mute: false, musicOff: false, shake: true, numbers: true, lefty: false },
@@ -94,6 +96,7 @@ export function normalize(raw) {
     },
     map: { si: 0, li: 0, fresh: false },
     loadout: normLoadout(r.loadout),
+    keep: Array.isArray(r.keep) ? [...new Set(r.keep.filter(id => ABILITIES[id]))] : [],
     abilities: normAbilities(r.abilities),
     settings: {
       mute: bool(se.mute, false), musicOff: bool(se.musicOff, false), shake: bool(se.shake, true),
@@ -191,11 +194,20 @@ export function migrateV2(v2) {
   return { ...r, version: 3, talents: out, wallet: w };
 }
 
+// v3 → v4: 8 Welten statt 5 (Aschesteppe und Nebelmoor weg, Turm wird Welt 8). Entschieden mit Fabi:
+// Weltfortschritt beginnt neu; Fähigkeiten, die über Welt-Siege schon frei waren, bleiben frei (keep).
+export function migrateV3(v3) {
+  const r = { ...obj(v3) }, st = obj(r.stages), keep = [];
+  for (const [id, A] of Object.entries(ABILITIES)) if (A.unlock && A.unlock.stage && obj(st[A.unlock.stage]).cleared) keep.push(id);
+  return { ...r, version: 4, stages: {}, map: { si: 0, li: 0, fresh: false }, keep };
+}
+
 // Beliebigen Rohstand auf die aktuelle Version bringen
 export function migrate(raw) {
   let r = obj(raw);
   if (!r.version) r = migrateV1(r);
   if (r.version < 3) r = migrateV2(r);
+  if (r.version < 4) r = migrateV3(r);
   return normalize(r);
 }
 

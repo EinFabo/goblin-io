@@ -7,7 +7,7 @@ import { MINION_ANIMS, minionSvg } from '../gen/minions.js';
 import { FX_KINDS, fxHitSvg, fxSvg } from '../gen/fx.js';
 import { ETYPES } from '../data/enemies.js';
 import { STAGES, stageTypes } from '../data/stages.js';
-import { BOSS_IDS, bossVariant } from '../data/bosses.js';
+import { BOSSES, BOSS_IDS, bossVariant } from '../data/bosses.js';
 import { makeProc } from './proc.js';
 
 // ---------- Sprites ----------
@@ -157,6 +157,7 @@ function stageNeeds(si) {
   // Endlose Nacht: jeder Boss kann kommen
   const st = STAGES[si], ids = st.boss.id === 'random' ? BOSS_IDS : [st.boss.id];
   const out = { mages: new Set(ids.map(bossVariant)), minions: new Set(['rat']) }, seen = new Set();
+  for (const id of ids) for (const t of BOSSES[id].minions || []) typeNeeds(t, out, seen);
   for (const t of stageTypes(st)) typeNeeds(t, out, seen);
   return out;
 }

@@ -29,7 +29,7 @@ function needOf(id) {
   return A.charge === 'cd' ? A.need * m.spd : Math.round(A.need * m.spd);
 }
 export const slotOpen = i => i === 0 || save.profile.level >= SLOT2_ACCT;
-export const canEquip = id => abilityUnlocked(id, save.profile.level, stageCleared);
+export const canEquip = id => save.keep.includes(id) || abilityUnlocked(id, save.profile.level, stageCleared);
 
 export function initAbilities() {
   run.abMods = {}; run.abXp = {};

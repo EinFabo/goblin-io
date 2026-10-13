@@ -6,6 +6,9 @@ export const EXPECTED = {
   3: { atk: 8, hp: 8 },
   4: { atk: 12, hp: 12 },
   5: { atk: 16, hp: 16, spd: 6 },
+  6: { atk: 18, hp: 18, spd: 8 },
+  7: { atk: 20, hp: 20, spd: 10, mag: 4 },
+  8: { atk: 20, hp: 20, spd: 10, mag: 6, stam: 4 },
 };
 
 // Welten (6.1a): Ziel je Level mit den erwarteten Upgrades der Welt. Level 1–4 sind 2:30 überleben,

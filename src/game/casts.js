@@ -11,6 +11,8 @@ import { P, onScreen, query, run } from './state.js';
 
 export const PROJ_CAP = () => 6 + run.si * 2;      // gegnerische Geschosse gleichzeitig
 export const WARN_CAP = 4;                         // Bodenwarnungen gleichzeitig
+export const ZONE_CAP = 5;                         // Giftpfützen gleichzeitig (liegend + im Flug); im Giftsumpf sonst ein Teppich
+const zones = () => run.haz.reduce((n, h) => n + (h.src === 'zone' ? 1 : 0), 0) + run.eproj.reduce((n, p) => n + (p.lob && p.kind === 'toxic' ? 1 : 0), 0);
 const MIN_WINDUP = .6;
 const SHIELD_R = 320;
 
@@ -58,11 +60,11 @@ export const CASTS = {
   },
   // ----- Gift -----
   puddle: {
-    windup: .8, col: '#7be04a', kind: 'ground',
+    windup: .8, col: '#7be04a', kind: 'ground', can: () => zones() < ZONE_CAP,
     release(e, tx, ty) { const [x, y] = lead(.5); lob(e, tx, ty, x, y, { kind: 'toxic', dur: .95, dmg: e.dmg * .8 }); sfx.cast(); },
   },
   puddle3: {
-    windup: .9, col: '#7be04a', kind: 'ground',
+    windup: .9, col: '#7be04a', kind: 'ground', can: () => zones() + 2 < ZONE_CAP,
     release(e, tx, ty) { for (let i = 0; i < 3; i++) { const [x, y] = lead(.5), a = i * TAU / 3 + rnd(), r = i ? 90 : 0; lob(e, tx, ty, x + Math.cos(a) * r, y + Math.sin(a) * r, { kind: 'toxic', dur: .95 + i * .1, dmg: e.dmg * .5 }); } sfx.cast(); },
   },
   gascone: {

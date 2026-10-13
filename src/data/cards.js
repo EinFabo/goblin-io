@@ -67,7 +67,7 @@ export const CHEST_IDS = Object.keys(CHESTS);
 // Pity (9.5): spätestens jede 10. Gold-/Magiertruhe episch, jede 40. legendär
 export const PITY_EPIC = 10, PITY_LEG = 40;
 // Siegtruhe nach jedem Boss-Level, je nach Welt (0-basiert)
-export const victoryChest = si => (si <= 1 ? 'wood' : si <= 3 ? 'iron' : 'gold');
+export const victoryChest = si => (si <= 1 ? 'wood' : si <= 4 ? 'iron' : 'gold');
 export const SHELF = 4;                       // Plätze im Truhenregal
 export const FREE_EVERY = 4 * 3600 * 1000;    // Gratis-Holztruhe alle 4 Stunden
 export const FREE_MAX = 2;                    // höchstens 2 gespeichert

@@ -22,7 +22,7 @@ defineScene('run', {
     $('#stageTxt').textContent = run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`;
     refreshSlots(); setupAbilButtons();
     banner(run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`, '');
-    Music.boss = false; Music.theme = null; Music.hold = false; Music.start();
+    Music.boss = false; Music.theme = null; Music.hold = false; Music.world = run.st.music || null; Music.start();
     offs = [
       on('runEnd', r => go('results', r)),
       // Boss-Auftritt: Musik schweigt für das Intro, danach das Thema des Bosses von vorn
