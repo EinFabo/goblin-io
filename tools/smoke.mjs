@@ -135,11 +135,17 @@ console.log('Maschinen-Sperre:', JSON.stringify(lock));
 if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT });
 // Normales Level: nach 2:30 „Level geschafft“, Ergebnis mit Hüten, Weiter → nächstes Level
 await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 0, li: 1, seed: 3 }); const run = G.run; run.paused = true;
-  while (run.time < 160 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } }
+  while (run.time < 160 && !run.over) {
+    G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); }
+    // kurz vor dem Ende große Kristalle weit weg ablegen: kommen erst nach „Level geschafft“ an → Bonus-Level
+    if (Math.abs(run.time - 149) < .01) for (let i = 0; i < 6; i++) run.items.push({ k: 'gem', x: G.P.x + 500, y: G.P.y, v: 400, mag: false, sp: 0, t: 0, vx: 0, vy: 0, z: 0, vz: 0 });
+  }
   run.paused = false; });
 await p.waitForSelector('#over:not([hidden])');
-const lvRes = await p.evaluate(() => ({ win: GOBLIN.run.result.win, hats: document.querySelectorAll('#overHats .hats i.on').length, next: document.querySelector('#nextBtn').textContent }));
-if (!lvRes.win || lvRes.hats < 1 || lvRes.next !== 'Weiter: 1-3') errs.push('Level-Ende: ' + JSON.stringify(lvRes));
+const lvRes = await p.evaluate(() => ({ win: GOBLIN.run.result.win, hats: document.querySelectorAll('#overHats .hats i.on').length, next: document.querySelector('#nextBtn').textContent,
+  cards: !document.querySelector('#levelup').hidden, bonus: GOBLIN.run.result.bonusLv, row: document.querySelector('#overStats').textContent.includes('Bonus-Level') }));
+if (!lvRes.win || lvRes.hats < 1 || lvRes.next !== 'Weiter: 1-3' || lvRes.cards) errs.push('Level-Ende: ' + JSON.stringify(lvRes));
+if (lvRes.bonus > 0 && !lvRes.row) errs.push('Bonus-Level fehlt im Ergebnis: ' + JSON.stringify(lvRes));
 console.log('Level 1-2 geschafft:', JSON.stringify(lvRes));
 // Tod im echten Spiel (nicht per Hand gesteppt): Sterbe-Animation, Nochmal, Menü
 async function dieForReal() {

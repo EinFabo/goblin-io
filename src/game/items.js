@@ -55,10 +55,21 @@ export function collect(it) {
       aoeScope(() => { for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999); });
       run.flashT = .3; run.shake = 14; sfx.boom(); sfx.ult(); break;
     // Truhen mit festem Inhalt (7.5): Mini-Boss = Wahl aus 3, Elite = 1 Aufwertung, Boss = 3 Aufwertungen
-    case 'chest': if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1); else run.pendingChest++; break;
+    case 'chest':
+      // nach dem Ende: Truhe wird zu Bonus-Leveln (Boss 3, Mini 2, Elite 1)
+      if (run.clearT > 0) { for (let i = it.v === 'boss' ? 3 : it.v === 'elite' ? 1 : 2; i > 0; i--) bonusLevel(); sfx.chest(); }
+      else if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1); else run.pendingChest++;
+      break;
   }
 }
 export function addXp(v) {
   P.xp += v * P.xpMult * xpBonus() * xpCatchUp(run.time, P.lv);
-  while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); run.pendingLv++; }
+  while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); if (run.clearT > 0) bonusLevel(); else run.pendingLv++; }
+}
+// Bonus-Level nach „Level geschafft“: „+1“ über dem Goblin, Ton steigt mit jedem weiteren
+function bonusLevel() {
+  run.bonusLv++;
+  addNum(P.x, P.y - 52 - Math.min(run.bonusLv, 6) * 4, 'Bonus +' + run.bonusLv, '#ffd84a', true);
+  ring(P.x, P.y, 10, 90, .35, 'rgba(255,216,74,.9)', 5);
+  sfx.bonusLv(run.bonusLv);
 }

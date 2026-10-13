@@ -104,6 +104,8 @@ export const sfx = {
   legendary() { noise(1.4, .1, 300, 'lowpass', 0, null, 1, 3000); [262, 330, 392, 523, 659, 784, 1046, 1318].forEach((f, i) => { tone(f, 0, .5, 'sawtooth', .025, .4 + i * .09); tone(f * 2, 0, .4, 'sine', .03, .4 + i * .09); }); },
   // Karte aufwerten: aufsteigende Töne + Amboss
   anvil() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, .12, 'square', .045, i * .06)); tone(1800, 900, .4, 'triangle', .09, .3); tone(2700, 0, .5, 'sine', .05, .3); noise(.08, .15, 4000, 'bandpass', .3, null, 3); },
+  // Bonus-Level am Levelende: Glöckchen, jedes weitere einen Ganzton höher (bis 2 Oktaven)
+  bonusLv(n) { const f = 880 * Math.pow(2, Math.min(n - 1, 12) * 2 / 12); tone(f, 0, .16, 'sine', .07); tone(f * 1.5, 0, .12, 'triangle', .03, .04); },
   abilUp() { [659, 880, 1175].forEach((f, i) => tone(f, 0, .14, 'triangle', .07, i * .07)); tone(1760, 0, .3, 'sine', .04, .22); },
 };
 

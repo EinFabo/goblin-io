@@ -9,7 +9,7 @@ import { levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
 import { icon } from '../render/icons.js';
 import { hatsHtml } from './hats.js';
-import { CHESTS } from '../data/cards.js';
+import { CHESTS, cardName } from '../data/cards.js';
 import { chestSvg } from './cardart.js';
 import { playChest } from './chest-open.js';
 import { cosmTile } from './cosmart.js';
@@ -23,6 +23,8 @@ export function showResults(r) {
   $('#overHats').innerHTML = endless ? '' : `<span class="lvlbl">${levelLabel(run.si, run.li)} ${run.st.lvName}</span>${hatsHtml(r.hats, r.newHats)}`;
   const res = [['Zeit', fmtTime(run.st.len && !endless ? Math.min(run.time, run.st.len) : run.time)], ['Level', P.lv], ['Besiegt', run.kills], ['Gold', '+' + r.gold]];
   res.push(['Konto-XP', '+' + r.xp + (r.up ? ` · Level ${r.level}!` : '')]);
+  // Bonus-Level: Level-Ups nach „Level geschafft“ (Gold, ab 3 ein Kartenpaket)
+  if (r.bonusLv) res.push(['Bonus-Level ×' + r.bonusLv, '+' + r.bonusGold + ' Gold' + (r.bonusCard ? ` · ${r.bonusCard.n}× ${cardName(r.bonusCard.id)}` : '')]);
   if (r.gems) res.push(['Juwelen', '+' + r.gems]);
   $('#overStats').innerHTML = res.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('') +
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +

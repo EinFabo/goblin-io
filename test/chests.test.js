@@ -87,3 +87,12 @@ test('Albtraum: Siegtruhe eine Stufe besser', async () => {
   assert.deepEqual([0, 3, 6].map(si => victoryChest(si)), ['wood', 'iron', 'gold']);
   assert.deepEqual([0, 3, 6].map(si => victoryChest(si, true)), ['iron', 'gold', 'mage']);
 });
+
+test('Bonus-Karte: nur Gewöhnlich/Selten/Episch, ungefähr 70/25/5', async () => {
+  const { pickBonusCard } = await import('../src/game/chests.js');
+  const { CARD_RARITY } = await import('../src/data/cards.js');
+  const { mulberry32 } = await import('../src/core/rng.js');
+  const r = mulberry32(7), n = { common: 0, rare: 0, epic: 0 };
+  for (let i = 0; i < 20000; i++) n[CARD_RARITY[pickBonusCard(r)]]++;
+  assert.ok(Math.abs(n.common / 20000 - .7) < .02 && Math.abs(n.rare / 20000 - .25) < .02 && Math.abs(n.epic / 20000 - .05) < .01, JSON.stringify(n));
+});

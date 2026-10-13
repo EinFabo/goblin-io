@@ -44,6 +44,11 @@ export function rollChest(type, r, pity = { epic: 0, leg: 0 }) {
 export const cardState = (save, id) => save.cards[id] || { lv: RARITY[CARD_RARITY[id]].start, n: 0 };
 export const cardLv = (save, id) => cardState(save, id).lv;
 
+// Karte für das Bonus-Paket: gewöhnlich 70 %, selten 25 %, episch 5 % (r = Zufall 0–1)
+export function pickBonusCard(r) {
+  const x = r(), rar = x < .7 ? 'common' : x < .95 ? 'rare' : 'epic', ids = CARD_IDS.filter(id => CARD_RARITY[id] === rar);
+  return ids[Math.floor(r() * ids.length)];
+}
 // Karten gutschreiben; was über Stufe 10 hinausgeht, wird zu Gold. Gibt das Umtausch-Gold zurück.
 export function grantCards(save, id, n) {
   const st = save.cards[id] || (save.cards[id] = { ...cardState(save, id) });

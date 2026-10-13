@@ -69,7 +69,7 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
   joy.id = null; off(); off2(); off3();
   const win = !!(run.over && P.hp > 0);
   return {
-    win, t: Math.round(run.time), bossT, lv: P.lv, kills: run.kills, gold: run.gold, abil, lvAt, dmg,
+    win, t: Math.round(run.time), bossT, bonus: run.bonusLv, lv: P.lv, kills: run.kills, gold: run.gold, abil, lvAt, dmg,
     weapons: run.weapons.map(w => w.id + w.lv + (w.evo ? '*' : '')).join(','),
   };
 }

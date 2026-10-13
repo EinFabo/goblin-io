@@ -37,3 +37,8 @@ export const hitDamage = (raw, maxHp, src) => Math.min(raw, maxHp * DMG_CAP[capK
 // Level einer Welt (6.1a) sind kürzer: Sieg-/Erstsieg-Bonus voll nur für Boss-Level (und Endlos)
 export const accountXp = ({ kills, seconds, win, firstClear, boss = true }) => Math.floor(kills / 10 + seconds / 4) + (win ? (boss ? 100 : 40) : 0) + (firstClear ? (boss ? 200 : 50) : 0);
 export const accountXpNeed = L => 200 + 60 * L + 8 * L * L;
+
+// Bonus-Level (Wunsch Fabi): was nach „Level geschafft“ noch an Level-Ups kommt, wird zur Belohnung statt zu Karten,
+// die nichts mehr bringen. Je Bonus-Level Gold, ab 4 ein Kartenpaket, je volle 6 ein Juwel.
+// Typisch (Sim): 2–4 Bonus-Level in Level 1–4, 5–8 im Boss-Level → etwa halb so viel wie die Level-Belohnung.
+export const bonusReward = (n, si) => ({ gold: n * (8 + 5 * si), cards: n >= 4 ? 1 + (si >> 1) : 0, gems: Math.floor(n / 6) });

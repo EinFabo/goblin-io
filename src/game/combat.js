@@ -11,7 +11,7 @@ import { addItem, addNum, animFx, dissolve, dropGem, puff } from './fx.js';
 import { addEvents } from './run.js';
 import { P, aoeId, run } from './state.js';
 import { banner } from '../ui/hud.js';
-import { endRun } from './run.js';
+import { endRun, startClear } from './run.js';
 import { count } from './progress.js';
 import { ETYPES } from '../data/enemies.js';
 
@@ -85,7 +85,7 @@ export function bossDown(b) {
   run.shake = 18; run.haz.length = 0;
   banner(b.name + ' besiegt!', '');
   if (run.st.endless) { run.loop++; addEvents(run.loop); }
-  else run.clearT = 3;
+  else startClear(3);
 }
 // src: contact | proj | bomb | strike | zone (für Statistik und Sim)
 export function damagePlayer(d, src = 'contact') {

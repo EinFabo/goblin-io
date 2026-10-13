@@ -3,7 +3,7 @@ import { emit } from '../core/events.js';
 import { mulberry32, newSeed, seedRun } from '../core/rng.js';
 import { abilState, gainAbilXp, gainAccountXp, levelDone, persist, recordLevel, save, talent } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
-import { accountXp } from './balance.js';
+import { accountXp, bonusReward } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
 import { STAGES, STAGE_LEN } from '../data/stages.js';
 import { LEVELS, levelStage, nextLevel } from '../data/levels.js';
@@ -12,11 +12,11 @@ import { doEvent, spawnTick, updEnemy } from './enemies.js';
 import { updCut } from './boss.js';
 import { part, ring } from './fx.js';
 import { updEProj, updTele } from './hazards.js';
-import { updItems } from './items.js';
+import { pullable, updItems } from './items.js';
 import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
-import { addToShelf, cardLv, grantChest, rollChest } from './chests.js';
+import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
 import { ensureDaily, mergeRun } from './progress.js';
 import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
@@ -31,7 +31,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   const r = {
     si, li: st.li, st, seed, nm: !!nm && !st.endless, mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
-    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null,
+    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
     hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, shieldT: 0, shieldHp: 0, shieldMax: 1, shieldShard: 0, mechArmor: .3, mechPow: 1, mechRocket: 1.4, slowT: 0, trail: [], trailT: 0,
@@ -86,6 +86,14 @@ export function addWeapon(id) {
   run.weapons.push({ id, lv: c >= CARD_START_LV2 ? 2 : 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [], card: weaponCardMul(c), fast: c >= CARD_FAST ? 1.15 : 1 });
 }
 export function hint(html) { run.hints.push(html); }
+// Level geschafft bzw. Boss besiegt: unverwundbar, alles fliegt zum Goblin. Offene Level-Ups und Truhen werden zu
+// Bonus-Leveln (Karten würden nichts mehr bringen), weitere Level-Ups bis zum Ende ebenso (items.js addXp).
+export function startClear(t) {
+  run.clearT = t; run.clearAge = 0;
+  run.bonusLv += run.pendingLv + run.pendingChest * 2 + (run.lvDelay > 0 ? (run.lvKind === 'chest' ? 2 : 1) : 0);
+  run.pendingLv = 0; run.pendingChest = 0; run.lvDelay = 0;
+  for (const it of run.items) if (pullable(it) || it.k === 'chest') it.mag = true;
+}
 
 // ---------- Haupt-Update ----------
 // Ein fester Simulationsschritt (60 Hz, siehe core/loop.js)
@@ -121,8 +129,12 @@ export function update(dt) {
   updItems(dt);
   updFx(dt);
   if (run.storm > 0) run.storm = run.boss ? Math.min(1, run.storm + dt * .5) : Math.max(0, run.storm - dt);
-  if (run.clearT > 0) { run.clearT -= dt; if (run.clearT <= 0) endRun(true); }
-  if (!run.over && !run.paused && run.lvDelay <= 0 && (run.pendingChest > 0 || run.pendingLv > 0)) {
+  // Ende erst, wenn die angezogenen Kristalle angekommen sind (höchstens 6 s nach „Level geschafft“)
+  if (run.clearT > 0) {
+    run.clearT -= dt; run.clearAge += dt;
+    if (run.clearT <= 0) { if (run.clearAge < 6 && run.items.some(i => i.mag && !i.got)) run.clearT = .05; else endRun(true); }
+  }
+  if (!run.over && !run.paused && run.clearT <= 0 && run.lvDelay <= 0 && (run.pendingChest > 0 || run.pendingLv > 0)) {
     if (run.pendingChest > 0) { run.pendingChest--; run.lvKind = 'chest'; sfx.chest(); }
     else { run.pendingLv--; run.lvKind = 'lv'; sfx.lvl(); }
     run.lvDelay = .45;
@@ -158,6 +170,13 @@ export function endRun(win) {
   ensureDaily(save);   // Tagesbeginn der Aufgaben festhalten, bevor dieser Lauf irgendetwas verbucht
   const boss = !run.st.endless && run.li === LEVELS - 1;
   let bonus = win ? 25 + run.si * 20 + (boss ? 40 + run.si * 30 : 0) : 0;
+  // Bonus-Level (Level-Ups nach dem Ende): Gold, ab 3 ein Kartenpaket, je 5 zwei Juwelen
+  const br = win && run.bonusLv ? bonusReward(run.bonusLv, run.si) : null;
+  let bonusCard = null;
+  if (br) {
+    bonus += br.gold;
+    if (br.cards) { const id = pickBonusCard(mulberry32(newSeed())); grantCards(save, id, br.cards); bonusCard = { id, n: br.cards }; }
+  }
   // Albtraum (6.1): +50 % Gold und Konto-XP, Siegtruhe eine Stufe besser, erster Albtraum-Sieg je Level gibt Juwelen
   if (win && run.nm) bonus += Math.round((run.gold + bonus) * .5);
   // Magierhüte (6.1a): geschafft, über 50 % Leben am Ende, nie unter 25 % gefallen
@@ -174,7 +193,7 @@ export function endRun(win) {
   const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;
   // Juwelen (9.2): neue Hüte, Konto-Level, Boss-Erstsieg
-  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? GEMS.nightmare : 0);
+  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? GEMS.nightmare : 0) + (br ? br.gems : 0);
   save.wallet.gems += gems;
   // Siegtruhe nach jedem Boss-Level; ist das Regal voll, geht sie sofort auf
   // Boss-Trophäe (9.7, steht beim Boss in data/stages.js): beim ersten Sieg
@@ -192,7 +211,7 @@ export function endRun(win) {
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
 }
 

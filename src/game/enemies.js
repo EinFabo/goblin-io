@@ -1,4 +1,3 @@
-import { pullAll } from './items.js';
 import { RNG, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { DIR8, TAU, face8 } from '../core/util.js';
@@ -11,7 +10,7 @@ import { bossAI, bossDamageRule, spawnBoss } from './boss.js';
 import { CASTS, castAllowed, castWindup } from './casts.js';
 import { damagePlayer, hurt } from './combat.js';
 import { animFx, part, puff, ring } from './fx.js';
-import { hint } from './run.js';
+import { hint, startClear } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
 import { P, onScreen, pR, query, run, viewR } from './state.js';
 import { banner } from '../ui/hud.js';
@@ -105,9 +104,8 @@ export function doEvent(ev) {
 function levelClear() {
   for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
   run.eproj.length = 0; run.haz.length = 0; run.spawnQ.length = 0;
-  pullAll();
   banner('Level geschafft!', ''); sfx.chest();
-  run.clearT = 2.5;
+  startClear(2.5);
 }
 
 // Schwarm-Formen. Jeder sechste Gegner ist "extra", falls angegeben.

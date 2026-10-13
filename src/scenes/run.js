@@ -42,7 +42,7 @@ defineScene('run', {
     // Nach einem Level-Up kurz Zeitlupe, dann die Karten
     if (run.lvDelay > 0) {
       run.lvDelay -= step; update(step * .25);
-      if (run.lvDelay <= 0 && !run.over) openLevelUp(run.lvKind === 'chest');
+      if (run.lvDelay <= 0 && !run.over && !(run.clearT > 0)) openLevelUp(run.lvKind === 'chest');
     } else if (run.slowT > 0) { run.slowT -= step; update(step * .3); }
     else update(step);
   },

@@ -42,3 +42,10 @@ test('angDiff: kürzester Winkelabstand', async () => {
   assert.ok(Math.abs(angDiff(.1, -.1) - .2) < 1e-9);
   assert.ok(Math.abs(angDiff(Math.PI - .1, -Math.PI + .1) + .2) < 1e-9);
 });
+
+test('Bonus-Level: Gold je Level, Kartenpaket ab 4, ein Juwel je 6', async () => {
+  const { bonusReward } = await import('../src/game/balance.js');
+  assert.deepEqual(bonusReward(0, 0), { gold: 0, cards: 0, gems: 0 });
+  assert.deepEqual(bonusReward(3, 0), { gold: 24, cards: 0, gems: 0 });
+  assert.deepEqual(bonusReward(6, 7), { gold: 258, cards: 4, gems: 1 });
+});
