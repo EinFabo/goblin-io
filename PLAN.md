@@ -523,23 +523,71 @@ Jede Fähigkeit lässt sich mit **Karten + Gold** aufwerten (Abschnitt 9.3). Stu
 - Goblin-Maschine Lv5: Flammenwerfer statt MG; Lv10: 2 Raketensalven gleichzeitig.
 - Rolle: Lv5 zwei Aufladungen; Lv10 Rolle hinterlässt Krähenfüße.
 
-### 8.4 Fähigkeiten-Level und Skill Trees (Wunsch Fabi, 2026-10-12)
+### 8.4 Fähigkeiten-Level und Skill Trees (Wunsch Fabi, 2026-10-12, Ausbau 2026-10-13)
 
 Ersetzt das Aufwerten von Fähigkeiten mit Karten + Gold aus 8.3/9.3. Karten gibt es nur noch für Waffen und Passive.
 
-- **XP durch Benutzen:** Jeder Einsatz bringt der Fähigkeit XP. Die Menge hängt von der Aufladung ab, damit ein voller Lauf (Fähigkeit eingesetzt, sobald bereit) jeder Fähigkeit etwa gleich viel bringt (~100 XP). Gutgeschrieben wird am Ende des Laufs, auch bei Niederlage.
-- **Level:** Bedarf 60 + 40 × Level, höchstens Level 18. Jedes Level = 1 Skillpunkt.
-- **Skill Tree je Fähigkeit:**
+- **XP durch Benutzen:** Jeder Einsatz bringt der Fähigkeit XP. Die Menge hängt von der Aufladung ab, damit ein voller Lauf jeder Fähigkeit etwa gleich viel bringt (~100 XP). Gutgeschrieben wird am Ende des Laufs, auch bei Niederlage.
+- **Level:** Bedarf 60 + 40 × Level, **höchstens Level 30** (vorher 18). Jedes Level = 1 Skillpunkt, voll ausgebaut sind es 29 Punkte.
+- **Rolle und Sprint leveln mit:** Sie sind immer dabei und haben einen eigenen Baum. XP: Rolle 3 pro Rolle (+2 bei perfekter Rolle), Sprint 1,5 pro Sekunde Sprinten.
+- Punkte lassen sich jederzeit kostenlos zurücksetzen. Alte Stände, die nicht mehr in den neuen Baum passen, werden zurückgesetzt (die Punkte bleiben frei).
 
-| Stufe | Knoten | Ränge | Wirkung pro Rang |
+#### Aufbau: knorriger Goblin-Baum (Fabi hat gewählt)
+
+Vier Reihen, von unten nach oben. Eine Reihe öffnet sich, wenn in den Reihen darunter genug Punkte stecken.
+
+| Reihe | braucht | Knoten | Ränge × Punkte |
 |---|---|---|---|
-| unten | Kraft | 5 | +8 % Schaden/Heilung/Schild |
-| unten | Tempo | 5 | −5 % Abklingzeit bzw. Kill-/Schrott-Bedarf |
-| unten | Reichweite | 3 | +8 % Fläche bzw. Dauer |
-| Mitte (ab 3 Punkten unten) | Extra A | 1 (2 Punkte) | eigenes Extra der Fähigkeit |
-| oben (ab 6 Punkten unten) | Extra B | 1 (2 Punkte) | stärkeres eigenes Extra |
+| 1 (Wurzeln) | – | Kraft · Tempo · Reichweite | 5 · 5 · 3 |
+| 2 (Äste) | 3 Punkte | eigener Skill 1 · **Extra A** · eigener Skill 2 | 3 · 1×2 · 3 |
+| 3 (Krone) | 9 Punkte | eigener Skill 3 · **Extra B** | 3 · 1×2 |
+| 4 (Spitze) | 15 Punkte | **Meister** (Krone) | 1×3 |
 
-Voll ausgebaut sind das 17 Punkte. Punkte lassen sich jederzeit kostenlos zurücksetzen.
+Summe 13 + 8 + 5 + 3 = 29 Punkte = Level 30. Rolle und Sprint haben eigene Wurzel-Knoten statt Kraft/Tempo/Reichweite.
+
+#### Eigene Skills je Fähigkeit
+
+| Fähigkeit | eigener Skill 1 (3 Ränge) | eigener Skill 2 (3 Ränge) | eigener Skill 3 (3 Ränge) | Meister |
+|---|---|---|---|---|
+| Goblin-Wut | **Blutdurst:** Kills in der Raserei heilen 1/2/3 Leben | **Weite Welle:** Schockwelle +12 % Umkreis und Wucht pro Rang | **Kettenwut:** jeder Kill in der Raserei verlängert sie um 0,1/0,2/0,3 s (höchstens +4 s) | **Berserker:** in der Raserei 30 % weniger Schaden |
+| Bärenfalle | **Scharfe Zähne:** +1 Zuschnappen pro Falle und Rang | **Festbeißen:** +0,4 s Festhalten pro Rang | **Köder:** Fallen ziehen Gegner im Umkreis 50/80/110 an | **Fallensteller:** jede 3. Rolle legt eine Falle |
+| Goblin-Maschine | **Schnellfeuer:** MG +12 % Feuerrate pro Rang | **Schwere Stiefel:** Stampfer +25 % Schaden und Fläche pro Rang | **Schrottsammler:** Kills im Mech füllen 1/2/3 % Schrott zurück | **Überladung:** Schlussexplosion doppelt so stark und größer |
+| Rauchbombe | **Ruhige Hand:** Angriffs-Malus im Rauch 60 → 47 → 33 → 20 % (ersetzt die Senkung über die Wurzel-Punkte) | **Verwirrung:** +12 % Chance pro Rang, dass Gegner sich gegenseitig angreifen | **Schattenschritt:** nach dem Rauch 1/2/3 s +20 % Tempo | **Hinterhalt:** 1,5 s nach dem Rauch machen Waffen doppelten Schaden |
+| Goblin-Katapult | **Splitter:** jeder Einschlag wirft 2/3/4 Splitter | **Flinke Mannschaft:** Felsen fliegen 15 % schneller pro Rang | **Benommen:** Einschläge betäuben 0,3/0,6/0,9 s | **Dauerfeuer:** 2 s später eine zweite Salve mit halbem Schaden |
+| Enterhaken | **Widerhaken:** herangerissene Gegner nehmen +40 % Schaden pro Rang | **Weiter Zug:** Zieh-Umkreis +20 % pro Rang | **Abrollen:** nach der Landung 0,3/0,6/0,9 s unverwundbar | **Doppelhaken:** 2 Aufladungen |
+| Pilzring | **Sporen:** Gegner im Ring nehmen +8 % Schaden pro Rang | **Wurzelgriff:** Gegner im Ring stärker verlangsamt (30 → 40/50/60 %) | **Nachwuchs:** am Ende bleiben 1/2/3 Heilpilze liegen (je 5 % Leben) | **Wandernder Ring:** der Ring folgt dir |
+| Schrottschild | **Spiegelblank:** zurückgeworfene Geschosse +30 % Schaden pro Rang | **Nachladen:** endet der Schild ungebrochen, −10/20/30 % Abklingzeit | **Dornen:** Nahkämpfer, die dich treffen, nehmen 10/20/30 Schaden | **Bollwerk:** mit Schild keine Verlangsamung und kein Wegstoßen, die erste Sekunde schluckt alles |
+| Rattenflut | **Hungrige Ratten:** jede Ratte beißt 1/2/3-mal öfter | **Beuteratten:** Ratten sammeln Kristalle und Münzen auf ihrem Weg | **Seuche:** Gebissene nehmen 3 s lang Gift-Schaden | **Rückkehr:** die Ratten rennen noch einmal zurück |
+| Goblin-Ruf | **Scharfe Speere:** Krieger +12 % Schaden pro Rang | **Flinke Krieger:** Krieger +12 % schneller pro Rang | **Letzter Hieb:** Krieger explodieren beim Gehen (Schaden 20/40/60) | **Häuptling:** ein großer Häuptling mit 3-fachem Schaden kommt mit |
+| Totem der Gier | **Goldader:** Kills im Umkreis lassen +10 % pro Rang öfter Münzen fallen | **Glücksbringer:** +4 % kritische Treffer pro Rang, solange es wirkt | **Weisheit:** +10 % XP pro Rang, solange es wirkt | **Goldener Schutz:** solange es wirkt, schluckt je 25 gesammeltes Gold einen Treffer |
+| Zeitbombe | **Langer Zünder:** +0,5 s Einfrieren pro Rang | **Kettenreaktion:** Explosionen +20 % größer pro Rang | **Splitterregen:** jeder explodierende Gegner schießt 2/3/4 Eissplitter | **Zeitschleife:** Überlebende frieren noch einmal 1,5 s ein |
+| Großer Knall | **Volltreffer:** +15 % Schaden gegen Elite und Boss pro Rang | **Beben:** Überlebende 2 s um 15/30/45 % verlangsamt | **Kristallregen:** Getötete geben +20 % XP pro Rang | **Nachhall:** nach dem Knall startet die Aufladung bei 30 % |
+| Goblin-Amulett | **Glanz:** +0,5 s Unverwundbarkeit nach dem Aufstehen pro Rang | **Rache:** Rettungs-Stoß +50 % Schaden und Umkreis pro Rang | **Schutzgeist:** solange unbenutzt +3 % max. Leben pro Rang | **Wiedergeburt:** nach dem Aufstehen 5 s Raserei |
+
+**Rolle** (Wurzeln: **Flink** −6 % Abklingzeit ×5 · **Weite** +8 % Strecke ×3 · **Deckung** +0,06 s unverwundbar ×3)
+
+| Reihe | Knoten |
+|---|---|
+| 2 | **Perfekter Roller** (3): perfekte Rolle lädt +2 Kills pro Rang mehr, Fenster etwas größer · **Zweite Ladung** (Extra A, 2): zwei Rollen hintereinander · **Staubwolke** (3): Gegner, durch die du rollst, werden weggestoßen und nehmen 10/20/30 Schaden |
+| 3 | **Schwung** (3): nach der Rolle 1,2 s +10 % Tempo pro Rang · **Krähenfüße** (Extra B, 2): jede Rolle streut Krähenfüße (verlangsamen, Schaden) |
+| 4 | **Meister: Dritte Ladung** (3) |
+
+**Sprint** (Wurzeln: **Ausdauer** +8 % Ausdauer ×5 · **Erholung** +8 % Erholung ×5 · **Tempo** +4 % Sprinttempo ×3)
+
+| Reihe | Knoten |
+|---|---|
+| 2 | **Leichtfüßig** (3): Sprinten kostet 8 % weniger Ausdauer pro Rang · **Zweiter Atem** (Extra A, 2): erschöpft kein Abbremsen, Erholung startet sofort · **Ausweichen** (3): beim Sprinten −6 % Schaden pro Rang |
+| 3 | **Windschatten** (3): beim Sprinten +15 % Sammelradius pro Rang · **Rammbock** (Extra B, 2): kleine Gegner, in die du sprintest, fliegen weg und nehmen Schaden |
+| 4 | **Meister: Unermüdlich** (3): die erste Sekunde jedes Sprints kostet nichts |
+
+#### UI (Recherche + Fabis Wünsche)
+
+- **Bild:** Vollbild-Overlay. Ein krummer Baum (SVG) wächst aus Wurzeln am unteren Rand, Äste führen zu den Knoten. Knoten sind runde Pilz-/Runensteine mit Symbol (Faust, Sanduhr, Ringe, eigene Skills mit Fähigkeits-Icon, Meister mit Krone). Zustände klar unterscheidbar: **gesperrt** (grau, Schloss, Ast dunkel), **lernbar** (pulsiert grün), **teilweise** (Rangpunkte am Rand), **voll** (Gold mit Glanz).
+- **Saft im Baum:** Der Stamm füllt sich mit grünem Saft bis zur nächsten Reihe (Fortschritt zu „braucht N Punkte“). Ist die Reihe erreicht, sprießen ihre Knoten (Blätter-Partikel, Ton).
+- **Halten zum Lernen („Charge“):** Knoten gedrückt halten → Ring füllt sich in 0,6 s, der Ton steigt, Funken fliegen in den Knoten. Voll → Knall, Partikel, der Knoten leuchtet auf, Ast füllt sich, Rang-Ton (pro Rang höher, voller Knoten mit Fanfare). Weiter halten lernt den nächsten Rang schneller (0,4 s). Früh loslassen: Ring läuft zurück, kein Punkt weg. Tastatur: Leertaste/Enter halten.
+- **Zettel:** Tippen wählt einen Knoten, der Zettel zeigt Name, Text, Rang und „jetzt → nächster Rang“. Kurz tippen ohne Halten lernt nichts (keine Fehlkäufe).
+- **Level-Up-Feier:** Ergebnis-Screen: „Level N!“ springt rein mit Funken und Ton; in der Rüstkammer pulsiert die Holzmarke, bis man den Baum öffnet.
+- **Rüstkammer:** Rolle und Sprint stehen als feste Marken mit „immer dabei“ im Regal, mit Level und Skill-Tree-Knopf.
 
 ---
 
@@ -879,6 +927,7 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - Stand: Fabi spürt es im PC-Browser (Windows) bei den ersten Gegnern/Tönen. Headless (auch mit 4× CPU-Bremse) kein Start-Ruckler, keine spät erzeugten Bilder/Canvases, JS pro Frame nur wenige ms. GPU über WSL (`GALLIUM_DRIVER=d3d12`, RTX 3070) ruckelt auch im Menü → als Messplatz unbrauchbar.
   - Neu: Mess-Modus `goblin-io.html?perf` (`src/perf.js`) zeichnet auf Fabis Gerät jeden Frame > 50 ms mit Kontext auf (Logik/Zeichnen, Gegner, neue Bilder, Töne, Long Animation Frames); „Kopieren“ liefert den Bericht.
   - Verdacht ohne Beleg: Musik plant nur 0,12 s voraus (setInterval auf dem Haupt-Thread), jeder kurze Hänger lässt sie stolpern.
+- [ ] **Skill Tree v2 (8.4, Ausbau 2026-10-13):** knorriger Baum, Halten zum Lernen mit Ton und Effekten, Level bis 30, eigene Skills je Fähigkeit, Rolle und Sprint mit eigenem Baum
 - [ ] **Skill Tree befriedigender machen (Wunsch Fabi, 2026-10-12):** Animationen beim Lernen (Knoten leuchtet auf, Linie zum nächsten Knoten füllt sich, Partikel), eigene Sounds pro Rang, Level-Up der Fähigkeit mit kleiner Feier.
 - [ ] **Mehr Level und fähigkeitsspezifische Skills im Tree (Wunsch Fabi, 2026-10-12):** höhere Level-Grenze als 18 und mehr eigene Knoten je Fähigkeit statt nur Kraft/Tempo/Reichweite + 2 Extras (z. B. Rauchbombe: Malus im Rauch senken als eigener Knoten).
 - [ ] **Standard-Fähigkeiten leveln, mehrere Dashes (Wunsch Fabi, 2026-10-12):** Rolle und Sprint bekommen ebenfalls Level/Skill Tree, z. B. 2–3 Aufladungen für die Rolle (Idee aus 8.3: Lv5 zwei Aufladungen, Lv10 Krähenfüße).
