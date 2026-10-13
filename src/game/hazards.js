@@ -160,8 +160,8 @@ export function dangerVec(x, y, margin = 40) {
     const [d, cx, cy] = hazDist(h, x, y);
     if (d > margin) continue;
     let dx = x - cx, dy = y - cy, l = Math.hypot(dx, dy);
-    // genau in der Mitte (Blitz/Meteor auf den Spieler): seitlich zur Laufrichtung raus, ohne Zufall (Sim bleibt wiederholbar)
-    if (l < 1) { dx = -P.aimY; dy = P.aimX; l = 1; }
+    // genau in der Mitte (Blitz/Meteor auf den Spieler): Richtung aus dem Punkt selbst, ohne Zufall (Sim bleibt wiederholbar)
+    if (l < 1) { const a = (x * 12.9898 + y * 78.233) % TAU; dx = Math.cos(a); dy = Math.sin(a); l = 1; }
     const w = (margin - d) / margin * 4;
     vx += dx / l * w; vy += dy / l * w;
   }

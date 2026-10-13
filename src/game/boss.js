@@ -60,7 +60,8 @@ export function startCut(kind, b) {
     // Phasenwechsel: Hitstop, alle gegnerischen Geschosse und Bodenwarnungen weg (Fairness)
     run.hitstop = Math.max(run.hitstop, .18);
     run.eproj.length = 0; run.haz.length = 0;
-    b.ai.ring2 = 0; b.ai.spin = null;
+    // laufender Angriff fällt aus (sonst stünde z. B. die Ansturm-Linie die ganze Szene im Bild)
+    b.ai.ring2 = 0; b.ai.spin = null; b.ai.st = 'chase'; b.ft = 0; b.fired = false;
     b.inv = 1.5;
     run.shake = Math.max(run.shake, 10);
     ring(b.x, b.y, 20, 260, .6, b.B.col, 10);
@@ -72,6 +73,8 @@ export function startCut(kind, b) {
 export const skipCut = () => { const c = run && run.cut; if (c && c.kind === 'intro' && c.t > .5) c.t = Math.max(c.t, c.dur - .45); };
 export function updCut(dt) {
   const c = run.cut, b = c.b, cam = run.cam;
+  // Was im Schritt des Phasenwechsels nach dem Treffer noch entstanden ist, verschwindet auch
+  if (c.t === 0 && c.kind === 'phase') { run.eproj.length = 0; run.haz.length = 0; }
   c.t += dt;
   // Kamera: zum Boss, heranzoomen, am Ende zurück zum Spieler
   const back = c.dur - (c.kind === 'intro' ? .7 : .4), out = c.t > back, tz = out ? 1 : c.kind === 'intro' ? 1.3 : 1.2;
@@ -142,10 +145,12 @@ export function bossHurt(b) {
   startCut('phase', b);
 }
 // Unverwundbar, Eisschild
-export function bossDamageRule(b, dmg) {
+// kx/ky: Rückstoß-Richtung des Treffers (vom Angreifer weg). Ohne Richtung (Flächen, Gift) zählt, wo der Goblin steht.
+export function bossDamageRule(b, dmg, kx = 0, ky = 0) {
   if (b.inv > 0 || run.cut) return { dmg: 0, blocked: false };
   if (b.ice > 0) {
-    let da = Math.atan2(P.y - b.y, P.x - b.x) - b.fa; da = Math.atan2(Math.sin(da), Math.cos(da));
+    const from = kx || ky ? Math.atan2(-ky, -kx) : Math.atan2(P.y - b.y, P.x - b.x);
+    let da = from - b.fa; da = Math.atan2(Math.sin(da), Math.cos(da));
     if (Math.abs(da) > 1.9) {
       // von hinten: trifft und knackt den Schild
       if (b.iceCd <= 0) {

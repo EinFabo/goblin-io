@@ -37,6 +37,8 @@ defineScene('run', {
     if (run.paused) return;
     // Hitstop: Spiel steht kurz still (Elite-Kill, Boss besiegt)
     if (run.hitstop > 0) { run.hitstop -= step; return; }
+    // Boss-Szene läuft in Echtzeit; ein offenes Level-Up und Zeitlupe warten, bis sie vorbei ist
+    if (run.cut) { update(step); return; }
     // Nach einem Level-Up kurz Zeitlupe, dann die Karten
     if (run.lvDelay > 0) {
       run.lvDelay -= step; update(step * .25);

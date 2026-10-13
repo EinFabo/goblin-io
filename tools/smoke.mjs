@@ -36,6 +36,9 @@ for (let si = 0; si < stages; si++) {
   console.log(`${endless ? 'Endlos' : `Welt ${si + 1} Boss-Level`}: bis ${st.t} s, Boss erreicht: ${st.boss ? 'ja' : 'nein'}`);
   if (!endless) await fightBoss(si);
 }
+// Angriffsliste der Boss-Daten (geprüft in test/bosses.test.js) muss genau zu game/boss.js ATK passen
+const atk = await p.evaluate(() => ({ list: [...GOBLIN.ATTACKS].sort().join(), impl: Object.keys(GOBLIN.ATK).sort().join() }));
+if (atk.list !== atk.impl) errs.push(`ATTACKS (data/bosses.js) ≠ ATK (game/boss.js): ${atk.list} / ${atk.impl}`);
 // Bosskampf mit Zeichnen: Auftritt mit Namensschild, alle 3 Phasen (Schaden per Hand, Waffen fast wirkungslos,
 // damit jede Phase ein paar Angriffe lang dauert), Eisschild von hinten brechen, Sieg
 async function fightBoss(si) {

@@ -137,9 +137,7 @@ function drawRun(now) {
     if (tl.k === 'flask') {
       const p = tl.t / tl.dur, x = tl.sx + (tl.x - tl.sx) * p, y = tl.sy + (tl.y - tl.sy) * p - Math.sin(p * Math.PI) * 90;
       drawImgC(iconCanvas('poison'), x, y, 28, p * 9);
-    } else if (tl.k === 'meteor') {
-      const p = tl.t / tl.dur;
-      drawSpr('f_fireball_' + ((Math.floor(t * 14) % 4) + 1), tl.x + p * 120, tl.y - p * 520, 2.4, Math.atan2(520, -120));
+    } else if (tl.k === 'meteor') { drawFallingMeteor(tl.x, tl.y, tl.t / tl.dur, t);
     } else if (tl.k === 'barrel' || tl.k === 'mini') {
       const p = Math.min(1, tl.t / tl.dur), x = tl.sx + (tl.x - tl.sx) * p, y = tl.sy + (tl.y - tl.sy) * p - Math.sin(p * Math.PI) * (tl.k === 'mini' ? 50 : 80);
       if (tl.k === 'barrel') {
@@ -218,6 +216,8 @@ function drawRun(now) {
     ctx.fillStyle = 'rgba(111,194,58,.85)'; ctx.beginPath(); ctx.arc(joy.ox + jx, joy.oy + jy, 24, 0, TAU); ctx.fill(); ctx.stroke();
   }
 }
+// Meteor im Anflug (Fähigkeit und Ignaz): q = Rest des Wegs (1 = ganz oben, 0 = Einschlag)
+function drawFallingMeteor(x, y, q, t) { drawSpr('f_fireball_' + ((Math.floor(t * 14) % 4) + 1), x + q * 120, y - q * 520, 2.4, Math.atan2(520, -120)); }
 export function drawArena(A, t) {
   ctx.save();
   ctx.fillStyle = 'rgba(10,6,20,.35)';
@@ -435,7 +435,7 @@ function drawHaz(t, top) {
         ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(h.x, h.y, h.r, ry, 0, 0, TAU); ctx.fill();
         ctx.strokeStyle = 'rgba(255,70,70,.75)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 20; ctx.stroke();
       }
-      if (h.src === 'meteor' && warn) { const q = h.warn / h.dur; drawSpr('f_fireball_' + ((Math.floor(t * 14) % 4) + 1), h.x + q * 120, h.y - q * 520, 2.4, Math.atan2(520, -120)); }
+      if (h.src === 'meteor' && warn) drawFallingMeteor(h.x, h.y, h.warn / h.dur, t);
     } else if (h.shape === 'line') {
       ctx.lineCap = 'round';
       const seg = () => { ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(h.x2, h.y2); };

@@ -39,6 +39,8 @@ export function updPlayer(dt) {
   if (P.dashT > 0) {
     // drei Nachbilder pro Rolle, am Ende ein Landewölkchen
     P.dashT -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
+    // auf Eis: nach der Rolle in Rollrichtung weiterschlittern, nicht mit dem alten Schwung zurück
+    P.ivx = P.aimX * P.speed; P.ivy = P.aimY * P.speed; P.iceT -= dt;
     P.trailT -= dt; if (P.trailT <= 0) { P.trailT = .06; P.trail.push({ x: P.x, y: P.y, spr: curPlayerSpr(), t: .25 }); }
     if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, trailCol(save.look.trail), frand(4, 7));
   } else {

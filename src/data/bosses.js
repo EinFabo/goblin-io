@@ -8,7 +8,7 @@
 // Ignaz und Frostbart sind fertig nach 6.3; die übrigen nutzen bis zu ihrem Umbau die alten Angriffe.
 export const PHASE_AT = [1, .66, .33];
 export const RAGE_AT = 120;   // Wut-Timer: danach +50 % Tempo und Schaden
-// Angriffe, die game/boss.js (ATK) kennt
+// Angriffe, die game/boss.js (ATK) kennt (der Smoke-Test vergleicht beide Listen; die Unit-Tests können boss.js ohne DOM nicht laden)
 export const ATTACKS = ['fan', 'ring', 'strikes', 'summon', 'charge', 'meteors', 'walls', 'spears', 'icefloor', 'spiral'];
 
 export const BOSSES = {

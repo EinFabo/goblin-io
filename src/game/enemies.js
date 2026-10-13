@@ -286,7 +286,7 @@ export function bomberBoom(e, hurtPlayer) {
 
 // Treffer-Regeln je Gegner (vor dem Abziehen der Lebenspunkte). Gibt den Schaden zurück, der durchkommt.
 export function damageRules(e, dmg, kx, ky) {
-  if (e.boss) { const r = bossDamageRule(e, dmg); if (r) return r; }
+  if (e.boss) { const r = bossDamageRule(e, dmg, kx, ky); if (r) return r; }
   if (e.affixes) { dmg = affixDamage(e, dmg, kx, ky); if (dmg <= 0) return { dmg: 0, blocked: true }; }
   // Gletscherwächter: Eisschild vorne blockt fast alles, was aus Blickrichtung kommt
   if (has(e, 'frontShield') && (kx || ky)) {

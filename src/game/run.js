@@ -101,7 +101,7 @@ export function update(dt) {
   updAbilities(dt);
   spawnTick(dt);
   buildGrid();
-  for (const e of run.enemies) if (!e.dead) updEnemy(e, dt);
+  for (const e of run.enemies) if (!e.dead && !run.cut) updEnemy(e, dt);   // Phasenwechsel mitten im Schritt: niemand zaubert mehr
   for (const e of run.enemies) {
     if (e.dead || e.boss || e.obj || (e.traits && e.traits.includes('float'))) continue;
     query(e.x, e.y, e.r * .9, o => {
