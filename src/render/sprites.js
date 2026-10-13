@@ -9,11 +9,11 @@ import { ETYPES } from '../data/enemies.js';
 import { STAGES, stageTypes } from '../data/stages.js';
 import { BOSSES, BOSS_IDS, bossVariant } from '../data/bosses.js';
 import { makeProc } from './proc.js';
-import { sceneName } from '../core/scenes.js';
 
 // ---------- Sprites ----------
 export const U = 0.85;
-export const CACHE = [], SPR = {}, TINT = new Map();
+export const SPR = {}, TINT = new Map();
+let nextIdx = 0;   // Nummer je gerastertem Bild (Schlüssel der Tönungen)
 export let GRASS_IMG = null;
 export function svgSize(s) { const p = s.match(/viewBox="([^"]+)"/)[1].split(/[\s,]+/).map(Number); return [p[2], p[3]]; }
 export function loadImg(src) { return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
@@ -79,9 +79,7 @@ function raster(im, svg, flip = false, scale = 0, group = 'main') {
   if (im) g.drawImage(im, 0, 0, fw, fh);
   const [tx, ty, sw, sh] = opaqueBox(fw, fh), [p, sx, sy] = alloc(group, sw, sh);
   p.g.drawImage(scr, tx, ty, sw, sh, sx, sy, sw, sh);
-  const e = { c: p.c, sx, sy, sw, sh, tx, ty, fw, fh, uw: w, uh: h, idx: CACHE.length, group };
-  CACHE.push(e);
-  return e;
+  return { c: p.c, sx, sy, sw, sh, tx, ty, fw, fh, uw: w, uh: h, idx: nextIdx++, group };
 }
 // Ausschnitt (cx, cy, cw, ch) des vollen Bildes in das Rechteck (dx, dy, dw, dh) zeichnen
 export function blitPart(g, e, cx, cy, cw, ch, dx, dy, dw, dh) {
@@ -94,10 +92,12 @@ export function blitPart(g, e, cx, cy, cw, ch, dx, dy, dw, dh) {
 export const blit = (g, e, x, y, w, h) => blitPart(g, e, 0, 0, e.fw, e.fh, x, y, w, h);
 // Rastern in Häppchen (höchstens 6 ms am Stück), damit das Menü flüssig bleibt, während die Magier
 // der Welten im Hintergrund laden. Wartet jemand auf die Bilder (Ladebildschirm, Stage-Start),
-// wird in großen Stücken gerastert (rushing). Während eines Laufs ruht das Hintergrund-Laden.
+// wird in großen Stücken gerastert (rushing). Während Lauf und Ergebnis ruht das Hintergrund-Laden
+// (die Szenen schalten es mit pauseBackground um).
 const queue = [];
-let pumping = false, rush = 0;
-const resting = () => !rush && sceneName === 'run';
+let pumping = false, rush = 0, bgPaused = false;
+const resting = () => !rush && bgPaused;
+export function pauseBackground(on) { bgPaused = on; if (!on) nextLoad(); }
 function sliced(fns) { return new Promise(res => { queue.push(...fns, res); pump(); }); }
 function pump() {
   if (pumping) return;
@@ -113,14 +113,24 @@ function pump() {
 }
 export async function rushing(pr) { rush++; nextLoad(); try { return await pr; } finally { rush--; } }
 // Im Hintergrund höchstens 3 SVG-Bilder gleichzeitig laden: der Browser liest SVGs auf dem Haupt-Thread,
-// viele auf einmal ergeben Hänger von mehreren 100 ms
+// viele auf einmal ergeben Hänger von mehreren 100 ms. Das SVG selbst entsteht erst, wenn es dran ist
+// (mk), sonst erzeugt eine ganze Welt ihre ~2 000 SVGs in einem Rutsch. Liefert [Bild, SVG].
 let loading = 0, restT = 0;
 const waiting = [];
-function loadQueued(src) {
+function loadQueued(mk) {
   return new Promise(res => {
-    waiting.push(() => { loading++; loadImg(src).then(im => { loading--; res(im); nextLoad(); }); });
+    waiting.push(() => { loading++; const svg = mk(); loadImg(svgUrl(svg)).then(im => { loading--; res([im, svg]); nextLoad(); }); });
     nextLoad();
   });
+}
+const mirrorOf = dir => Object.keys(MIRROR).find(r => MIRROR[r] === dir);
+// Bilder einer Einheit laden und in Häppchen rastern. jobs: [Name, Spiegel-Name oder null, () => SVG]
+function loadFrames(jobs, scale) {
+  return Promise.all(jobs.map(j => loadQueued(j[2]))).then(res => sliced(res.map(([im, svg], i) => () => {
+    const [name, mirror] = jobs[i], e = raster(im, svg, false, scale);
+    SPR[name] = e;
+    if (mirror) SPR[mirror] = { ...e, flip: true };
+  })));
 }
 function nextLoad() {
   while (waiting.length && (rush || loading < 3)) {
@@ -186,13 +196,12 @@ export async function loadGoblin(look = goblinLook()) {
   // alte Goblin-Bilder freigeben (Atlas-Seiten und ihre Tönungen), sonst wächst der Speicher mit jedem Umziehen
   for (const [k, e] of Object.entries(SPR)) {
     if (!k.startsWith('gob.') || !e) continue;
-    CACHE[e.idx] = null;
     for (const t of Object.keys(TINTS)) TINT.delete(e.idx + '|' + t);
   }
   PAGES.gob = []; PAGES.gobtint = [];
   jobs.forEach(([anim, dir, i, svg], j) => {
     SPR[`gob.${anim}.${dir}.${i + 1}`] = raster(imgs[j], svg, false, 0, 'gob');
-    const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
+    const m = mirrorOf(dir);
     if (m) SPR[`gob.${anim}.${m}.${i + 1}`] = { ...SPR[`gob.${anim}.${dir}.${i + 1}`], flip: true };
   });
   for (const anim of ['idle', 'walk']) for (const dir of ['down', 'left', 'up', 'right']) for (let i = 1; i <= ANIMS[anim]; i++) SPR[`${anim}_${dir}_${i}`] = SPR[`gob.${anim}.${dir}.${i}`];
@@ -241,13 +250,9 @@ function loadUnit(key, anim, dirs = Object.keys(DRAWN)) {
   return Promise.all(dirs.map(dir => {
     const id = key + '|' + anim + '|' + dir;
     if (units.has(id)) return units.get(id);
-    const svgs = Array.from({ length: MAGE_ANIMS[anim] }, (_, i) => mageSvg(school, dir, anim, i, opt));
-    const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
-    const pr = Promise.all(svgs.map(s => loadQueued(svgUrl(s)))).then(imgs => sliced(svgs.map((svg, i) => () => {
-      const e = raster(imgs[i], svg, false, opt.master || opt.boss ? 2 : 1.25);
-      SPR[`m.${key}.${anim}.${dir}.${i + 1}`] = e;
-      if (m) SPR[`m.${key}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
-    })));
+    const m = mirrorOf(dir);
+    const jobs = Array.from({ length: MAGE_ANIMS[anim] }, (_, i) => [`m.${key}.${anim}.${dir}.${i + 1}`, m && `m.${key}.${anim}.${m}.${i + 1}`, () => mageSvg(school, dir, anim, i, opt)]);
+    const pr = loadFrames(jobs, opt.master || opt.boss ? 2 : 1.25);
     units.set(id, pr);
     return pr;
   }));
@@ -298,13 +303,11 @@ export function loadMinions(kinds) {
     const id = 'n|' + kind;
     if (units.has(id)) return units.get(id);
     const jobs = [];
-    for (const [anim, n] of Object.entries(MINION_ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, minionSvg(kind, dir, anim, i)]);
-    const pr = Promise.all(jobs.map(j => loadQueued(svgUrl(j[3])))).then(imgs => sliced(jobs.map(([anim, dir, i, svg], j) => () => {
-      const e = raster(imgs[j], svg, false, kind === 'golem' ? 1.5 : 1.25);
-      SPR[`n.${kind}.${anim}.${dir}.${i + 1}`] = e;
-      const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
-      if (m) SPR[`n.${kind}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
-    })));
+    for (const [anim, n] of Object.entries(MINION_ANIMS)) for (const dir of Object.keys(DRAWN)) {
+      const m = mirrorOf(dir);
+      for (let i = 0; i < n; i++) jobs.push([`n.${kind}.${anim}.${dir}.${i + 1}`, m && `n.${kind}.${anim}.${m}.${i + 1}`, () => minionSvg(kind, dir, anim, i)]);
+    }
+    const pr = loadFrames(jobs, kind === 'golem' ? 1.5 : 1.25);
     units.set(id, pr);
     return pr;
   }));

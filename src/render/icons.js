@@ -9,7 +9,7 @@ export function icon(id) {
   const evo = id.endsWith('_evo'); const base = evo ? id.slice(0, -4) : id;
   const c = mk(96, 96, g => {
     g.translate(48, 48); g.scale(1.5, 1.5);
-    const spr = (name, x, y, w, rot = 0) => { const e = SPR[name]; if (!e) return; const h = w * e.fh / e.fw; g.save(); g.translate(x, y); g.rotate(rot); blit(g, e, -w / 2, -h / 2, w, h); g.restore(); };
+    const spr = (name, x, y, w, rot = 0) => { const e = SPR[name]; if (!e) return; const h = w * e.fh / e.fw; g.save(); g.translate(x, y); g.rotate(rot); if (e.flip) g.scale(-1, 1); blit(g, e, -w / 2, -h / 2, w, h); g.restore(); };
     const img = (cc, x, y, w, rot = 0) => { const h = w * cc.height / cc.width; g.save(); g.translate(x, y); g.rotate(rot); g.drawImage(cc, -w / 2, -h / 2, w, h); g.restore(); };
     if (evo) { const gr = g.createRadialGradient(0, 0, 4, 0, 0, 32); gr.addColorStop(0, 'rgba(255,220,90,.85)'); gr.addColorStop(1, 'rgba(255,200,40,0)'); g.fillStyle = gr; g.fillRect(-32, -32, 64, 64); }
     const st = (fill, stroke = '#0a0f06', lw = 2.5) => { g.fillStyle = fill; g.fill(); g.strokeStyle = stroke; g.lineWidth = lw; g.stroke(); };

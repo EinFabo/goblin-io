@@ -6,6 +6,7 @@ import { levelLabel } from '../data/levels.js';
 import { lvToBonus, newRun, update } from '../game/run.js';
 import { run } from '../game/state.js';
 import { renderRun } from '../render/draw-world.js';
+import { pauseBackground } from '../render/sprites.js';
 import { banner, refreshSlots, setupAbilButtons, updHud } from '../ui/hud.js';
 import { openLevelUp } from '../ui/levelup.js';
 import { hideOverlays, showScreen } from '../ui/menus.js';
@@ -16,6 +17,7 @@ function endCine() { document.body.classList.remove('cine'); $('#bossCard').hidd
 
 defineScene('run', {
   enter({ si, li = 0, seed, nm = false }) {
+    pauseBackground(true);   // im Lauf kein Hintergrund-Laden
     newRun(si, seed, li, nm);
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();

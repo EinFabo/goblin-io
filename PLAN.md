@@ -1052,6 +1052,7 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
   - Ergebnis (Headless-PC, vorher → nachher): Ladezeit bis Hub 4,4–4,8 s → 1,3–1,5 s ✓ (Handy-Profil mit 4× CPU-Bremse 21 s → 8,7 s); Bildspeicher mit allen Welten 300 MB → 164 MB ✓ (neuer Spieler 90 → 48 MB); Hub in den ersten 4 s höchstens 2 Ruckler bis 100 ms (ohne Drosselung der SVG-Ladungen waren es bis 500 ms); Datei 0,54 MB ✓; Logik mit 300 Gegnern 1,4 ms je 60-Hz-Schritt (Handy-Profil 6 ms). Offen: die 55 FPS mit 300 Gegnern auf einem echten Mittelklasse-Handy – das kann nur Fabi messen (`?perf`).
   - Nebenbei gefunden: Die Sim war mit gleichen Seeds nicht wiederholbar. Feuerwand (Lücke) und Golem-Beschwörung (Platz der Rune) würfelten mit dem Optik-Zufall `frand` → jetzt `rand`. Zwei gleiche `npm run sim`-Aufrufe geben wieder dasselbe.
   - Cloud: `tools/cloud-setup.sh` verlinkt ein vorinstalliertes Chromium, wenn der Download gesperrt ist.
+  - Code-Review (max, 2026-10-13): SVGs einer ganzen Welt entstanden beim Hintergrund-Laden in einem Rutsch (Hub-Hänger bis 345 ms bei allen Welten frei) → entstehen jetzt erst im Lade-Job, danach keine langen Tasks mehr. Hintergrund-Laden ruht auch im Ergebnis (Szenen schalten es um), Icons beachten gespiegelte Bilder (Ratten schauen wieder nach rechts), Belastungstest landet nicht mehr im ?perf-Bericht.
 - [ ] Linkshänder-Modus, Einstellungen
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
 - [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.

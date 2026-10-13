@@ -13,6 +13,9 @@ const HITCH = 50, MAX = 200;
 export function startPerf() {
   const log = [], t0 = performance.now();
   let canvases = 0, sounds = 0, last = 0, frames = 0, started = false;   // gezählt wird erst ab dem ersten Lauf
+  // Zeitfenster des Belastungstests: dort nichts aufzeichnen (LoAF-Einträge kommen verzögert, daher per Zeit)
+  let stressFrom = Infinity, stressTo = Infinity;
+  const inStress = at => at >= stressFrom && at <= stressTo;
   // Zähler seit dem letzten Frame
   const ce = Document.prototype.createElement;
   Document.prototype.createElement = function (t, ...a) { if (t === 'canvas') canvases++; return ce.call(this, t, ...a); };
@@ -23,7 +26,7 @@ export function startPerf() {
   try {
     new PerformanceObserver(l => {
       for (const e of l.getEntries()) {
-        if (!started) continue;
+        if (!started || inStress(e.startTime)) continue;
         loaf.push({
           at: Math.round(e.startTime - t0), dur: Math.round(e.duration), block: Math.round(e.blockingDuration || 0),
           layout: Math.round(e.startTime + e.duration - (e.styleAndLayoutStart || e.startTime + e.duration)),
@@ -45,8 +48,9 @@ export function startPerf() {
   sbtn.addEventListener('click', async () => {
     if (sceneName !== 'menu' || sbtn.disabled) { stxt.textContent = 'Test nur aus dem Menü'; return; }
     sbtn.disabled = true; stxt.textContent = 'Test läuft (12 s) …';
+    stressFrom = performance.now(); stressTo = Infinity;
     let r = null;
-    try { r = await stressTest(); } catch (err) { console.error(err); } finally { sbtn.disabled = false; }
+    try { r = await stressTest(); } catch (err) { console.error(err); } finally { sbtn.disabled = false; stressTo = performance.now(); }
     if (!r) { stxt.textContent = 'Test abgebrochen'; return; }
     stress = r;
     const f1 = x => x.toFixed(1);
@@ -69,8 +73,8 @@ export function startPerf() {
     requestAnimationFrame(frame);
     frames++;
     const gap = last ? now - last : 0; last = now;
-    if (sceneName === 'run') started = true;
-    if (started && gap > HITCH && !sbtn.disabled) {   // während des Belastungstests nicht mitschreiben
+    if (sceneName === 'run' && !inStress(now)) started = true;
+    if (started && gap > HITCH && !inStress(now)) {
       log.push({
         at: Math.round(now - t0), gap: Math.round(gap), scene: sceneName, time: run ? +run.time.toFixed(2) : null,
         upd: +loopStats.upd.toFixed(1), ren: +loopStats.ren.toFixed(1), steps: loopStats.steps,

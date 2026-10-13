@@ -4,12 +4,14 @@ import { defineScene } from '../core/scenes.js';
 import { $ } from '../core/util.js';
 import { setRun } from '../game/state.js';
 import { renderMenuScene } from '../render/menu-scene.js';
+import { pauseBackground } from '../render/sprites.js';
 import { hideOverlays, showScreen } from '../ui/menus.js';
 
 // Titelmusik läuft im Menü; ohne Tipp/Taste gibt es noch keinen Ton (dann startet sie mit audioReady)
 let off = null;
 defineScene('menu', {
   enter(screen = '#menu') {
+    pauseBackground(false);   // Magier der übrigen Welten dürfen weiterladen
     setRun(null, null); Music.stop();
     Music.boss = false; Music.hold = false; Music.world = 'title'; Music.start();
     off = on('audioReady', () => Music.start());
