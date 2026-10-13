@@ -6,6 +6,7 @@ import { accountXpNeed } from '../game/balance.js';
 import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 import { WEAPONS } from '../data/weapons.js';
 import { CARD_MAX, CARD_RARITY, CHESTS, FREE_MAX, RARITY, SHELF } from '../data/cards.js';
+import { COSM, DEFAULT_LOOK_KEYS, SLOTS, START_COSM } from '../data/cosmetics.js';
 import { LEVELS } from '../data/levels.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
@@ -38,6 +39,9 @@ export function defaults() {
     pity: { epic: 0, leg: 0 },
     // Laden (9.6): Tag der Angebote und was davon gekauft wurde
     shop: { day: '', bought: [] },
+    // Kosmetik (9.7): besessene Teile (ids "slot.key") und was angezogen ist
+    cosm: [...START_COSM],
+    look: { ...DEFAULT_LOOK_KEYS },
   };
 }
 
@@ -94,7 +98,12 @@ export function normalize(raw) {
     chests: { shelf: [], free: { n: 1, t: 0 } },
     pity: { epic: 0, leg: 0 },
     shop: { day: '', bought: [] },
+    cosm: [...START_COSM],
+    look: { ...DEFAULT_LOOK_KEYS },
   };
+  if (Array.isArray(r.cosm)) for (const id of r.cosm) if (COSM[id] && !out.cosm.includes(id)) out.cosm.push(id);
+  const lk = obj(r.look);
+  for (const s of SLOTS) if (typeof lk[s.id] === 'string' && out.cosm.includes(s.id + '.' + lk[s.id])) out.look[s.id] = lk[s.id];
   for (const [k, v] of Object.entries(obj(r.cards))) {
     if (!CARD_RARITY[k]) continue;
     const c = obj(v), start = RARITY[CARD_RARITY[k]].start;

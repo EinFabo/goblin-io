@@ -32,7 +32,19 @@ export function favWeapon() {
 }
 
 let editing = false;
+// Reiter im Profil: Profil · Garderobe · Erfolge
+let psub = 'prof', subRender = {};
+export function profileHooks(r) { subRender = r; }
+export function showProfileSub(s) { psub = s; renderProfile(); }
+$('#profile').addEventListener('click', e => { const b = e.target.closest('[data-psub]'); if (!b || b.dataset.psub === psub) return; psub = b.dataset.psub; sfx.tab(); renderProfile(); });
 export function renderProfile() {
+  document.querySelectorAll('#profile [data-psub]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.psub === psub)));
+  $('#profView').hidden = psub !== 'prof'; $('#wardView').hidden = psub !== 'ward'; $('#achView').hidden = psub !== 'ach';
+  if (psub === 'ward') { subRender.ward(); return; }
+  if (psub === 'ach') { subRender.ach(); return; }
+  renderProfMain();
+}
+function renderProfMain() {
   const p = save.profile, s = save.stats, need = accountXpNeed(p.level), max = p.level >= 50;
   $('#profName').innerHTML = editing
     ? `<form id="nameForm"><input id="nameIn" maxlength="16" value="" aria-label="Name" autocomplete="off" spellcheck="false"><button class="btn primary small">OK</button></form><small class="nerr" id="nameErr"></small>`

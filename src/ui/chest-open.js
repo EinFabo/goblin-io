@@ -4,6 +4,9 @@ import { $ } from '../core/util.js';
 import { CARD_MAX, CHESTS, RARITIES, RARITY, cardName, upgradeCost } from '../data/cards.js';
 import { cardState } from '../game/chests.js';
 import { cardHtml, chestSvg } from './cardart.js';
+import { COSM, COSMO_CHEST } from '../data/cosmetics.js';
+import { cosmTile } from './cosmart.js';
+const chestName = t => (CHESTS[t] || COSMO_CHEST).name;
 
 // ---------- Truhe öffnen (PLAN 9.5): Wackeln → Deckel auf, Lichtsäule → Karten einzeln → Zusammenfassung ----------
 // res kommt aus rollChest und ist schon gutgeschrieben (grantChest hat c.before gesetzt).
@@ -17,7 +20,7 @@ export function playChest(res, done = () => {}) {
   S = { res, step: 'wobble', i: -1, timers: [], done, best: RARITIES.indexOf(res.best) };
   const ov = $('#chestOpen');
   ov.hidden = false; ov.classList.toggle('dark', S.best >= 2); ov.style.setProperty('--bc', RARITY[res.best].color);
-  coStage().innerHTML = `<div class="co-chest drop">${chestSvg(res.type)}</div><div class="co-beam"></div><div class="co-name">${CHESTS[res.type].name}</div>`;
+  coStage().innerHTML = `<div class="co-chest drop">${chestSvg(res.type)}</div><div class="co-beam"></div><div class="co-name">${chestName(res.type)}</div>`;
   hint('Tippen zum Öffnen');
   startFx();
   // je besser der Inhalt, desto öfter wackelt sie (2–5 Mal)
@@ -44,6 +47,14 @@ function openLid() {
 function nextCard() {
   clearTimers();
   S.i++; S.step = 'card';
+  // Kosmetiktruhe: ein Teil, groß gezeigt
+  if (S.res.cosmetic) {
+    if (S.i > 0) { summary(); return; }
+    const ri = RARITIES.indexOf(COSM[S.res.cosmetic].rarity);
+    coStage().insertAdjacentHTML('beforeend', `<div class="co-card co-cosm r${ri}">${cosmTile(S.res.cosmetic, 'big')}<span class="co-new">Neu!</span></div>`);
+    sfx.reveal(ri); sparks(60, 50, 14 + ri * 12, RARITY[S.res.best].color);
+    hint('Tippen für die Übersicht'); return;
+  }
   const c = S.res.cards[S.i];
   if (!c) { summary(); return; }
   const now = cardState(save, c.id), b = c.before, ri = RARITIES.indexOf(c.rarity);
@@ -65,8 +76,8 @@ function summary() {
   coStage().querySelectorAll('.co-card').forEach(e => e.remove());
   const r = S.res;
   coStage().insertAdjacentHTML('beforeend', `<div class="co-sum">
-    <h2>${CHESTS[r.type].name}</h2>
-    <p class="co-gold"><span class="coin"></span>+${r.gold.toLocaleString('de-DE')} Gold</p>
+    <h2>${chestName(r.type)}</h2>
+    ${r.cosmetic ? `<div class="co-cosm-sum">${cosmTile(r.cosmetic, 'big')}<p>In der Garderobe (Profil) anziehen.</p></div>` : `<p class="co-gold"><span class="coin"></span>+${r.gold.toLocaleString('de-DE')} Gold</p>`}
     <div class="co-list">${r.cards.map(c => `<div class="co-mini" style="--rc:${RARITY[c.rarity].color}" title="${cardName(c.id)}">${cardHtml(c.id, cardState(save, c.id))}<span class="co-n">×${c.n}</span></div>`).join('')}</div>
     <button class="btn primary" id="coDone">Weiter</button></div>`);
   hint('');

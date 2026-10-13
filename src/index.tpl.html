@@ -72,6 +72,8 @@
 
 <section class="screen" id="profile" hidden>
   <div class="panel wide prof">
+    <div class="phead protabs"><div class="subtabs" role="tablist"><button class="sub" data-psub="prof" role="tab">Profil</button><button class="sub" data-psub="ward" role="tab">Garderobe</button><button class="sub" data-psub="ach" role="tab">Erfolge<i class="dot" id="achDot" hidden></i></button></div></div>
+    <div id="profView">
     <div class="profhead">
       <canvas id="profGob" width="200" height="200" aria-hidden="true"></canvas>
       <div class="pid">
@@ -86,6 +88,15 @@
     <div class="pstages" id="profStages"></div>
     <h3 class="sec">Konto-Level schaltet frei</h3>
     <ol class="punlocks" id="profUnlocks"></ol>
+  </div>
+    <div id="wardView" hidden>
+      <div class="ward">
+        <div class="wprev"><canvas id="wardGob" width="240" height="240" aria-hidden="true"></canvas><div class="wslots" id="wardSlots" role="tablist"></div></div>
+        <div class="wgrid"><h3 class="sect" id="wardTitle"></h3><div class="ctiles" id="wardItems"></div>
+          <div class="wchest" id="wardChest"></div></div>
+      </div>
+    </div>
+    <div id="achView" hidden></div>
   </div>
 </section>
 

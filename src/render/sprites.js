@@ -1,4 +1,6 @@
 import { ANIMS, DEFAULT_LOOK, goblinSvg } from '../gen/goblin.js';
+import { save } from '../core/save.js';
+import { DAGGER_TINT } from '../data/cosmetics.js';
 import { DRAWN, MIRROR } from '../gen/svg.js';
 import { MAGE_ANIMS, castOffsets, mageSvg } from '../gen/mages.js';
 import { MINION_ANIMS, minionSvg } from '../gen/minions.js';
@@ -41,7 +43,7 @@ export async function loadAssets(onStep = () => {}, wantStage = () => true) {
       for (const [name, i] of Object.entries(SPRMAP)) SPR[name] = fixed[i];
     }],
     ['Feuerbälle werden geknetet …', 2, () => loadFx()],
-    ['Goblin übt Rollen …', 5, () => loadGoblin(DEFAULT_LOOK)],
+    ['Goblin übt Rollen …', 5, () => loadGoblin()],
     ['Wiese wird gemäht …', 1, async () => { GRASS_IMG = await loadImg(GRASS); makeProc(); }],
     ['Magier ziehen ihre Roben an …', 3, () => loadMenuMages()],
     // nur freigeschaltete Stages; der Rest lädt beim ersten Start der Stage
@@ -67,10 +69,15 @@ async function loadGoblinRun() {
 
 // Goblin aus dem Generator: gob.<anim>.<richtung>.<n> für alle 8 Richtungen.
 // Rechte Richtungen werden beim Rastern gespiegelt. Alte Namen (idle_down_1 …) zeigen auf die neuen Bilder.
-export async function loadGoblin(look) {
+// Aussehen aus dem Spielstand (Garderobe); ein späterer Aufruf gewinnt, falls zwei gleichzeitig laufen
+export const goblinLook = () => ({ skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat });
+let gobToken = 0;
+export async function loadGoblin(look = goblinLook()) {
+  const me = ++gobToken;
   const jobs = [];
   for (const [anim, n] of Object.entries(ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, goblinSvg(dir, anim, i, look)]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[3]))));
+  if (me !== gobToken) return;
   jobs.forEach(([anim, dir, i, svg], j) => {
     SPR[`gob.${anim}.${dir}.${i + 1}`] = raster(imgs[j], svg);
     const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
@@ -83,6 +90,9 @@ export const TINTS = {
   storm: ['#ffe23a', .5], toxic: ['#32c22a', .5], void: ['#1e0638', .62], holy: ['#fff7d6', .58],
   voidp: ['#a45cff', .6], toxp: ['#5be03a', .7], white: ['#ffffff', 1], trail: ['#8fe6ff', .7],
 };
+// Dolch-Skins als Tönungen (data/cosmetics.js)
+for (const [k, t] of Object.entries(DAGGER_TINT)) if (t) TINTS['dagger_' + k] = t;
+export const daggerTint = () => (DAGGER_TINT[save.look.dagger] ? 'dagger_' + save.look.dagger : null);
 export function tinted(entry, tint) {
   const key = entry.idx + '|' + tint;
   let c = TINT.get(key);

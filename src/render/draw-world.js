@@ -15,6 +15,8 @@ import { iconCanvas } from './icons.js';
 import { PROC } from './proc.js';
 import { drawGround } from './tiles.js';
 import { drawAbilGround, drawAbilTop } from './draw-abilities.js';
+import { daggerTint } from './sprites.js';
+import { MECH_PAINT, TRAIL } from '../data/cosmetics.js';
 
 const CALL_LOOK = { sc: .62 };   // Krieger vom Goblin-Ruf: etwas größer als die Bande
 const CHIEF_LOOK = { sc: .95 };  // Häuptling (Meister des Goblin-Rufs)
@@ -98,7 +100,8 @@ function drawRun(now) {
   for (const al of run.tmpAllies) list.push(al);
   list.push(P);
   list.sort((a, b) => a.y - b.y);
-  for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, 'trail', tr.t * 2.4);
+  const trT = (TRAIL[save.look.trail] || TRAIL.dust).tint;
+  for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, trT, tr.t * 2.4);
   const gang = run.weapons.find(w => w.id === 'gang');
   for (const o of list) {
     if (o === P) { if (P.mechT > 0) drawMech(); else drawPlayer(t); }
@@ -112,11 +115,11 @@ function drawRun(now) {
   for (const w of run.weapons) if (w.id === 'orbit') {
     ctx.strokeStyle = w.evo ? 'rgba(255,230,120,.25)' : 'rgba(255,255,255,.14)'; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.arc(P.x, P.y - 8, w.r || 80, 0, TAU); ctx.stroke();
-    for (const [bx, by, a] of w.blades) drawSpr('dagger', bx, by, w.evo ? 1.5 : 1.25, a + Math.PI / 2);
+    for (const [bx, by, a] of w.blades) drawSpr('dagger', bx, by, w.evo ? 1.5 : 1.25, a + Math.PI / 2, daggerTint());
   }
   // Geschosse
   for (const p of run.pproj) {
-    if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a);
+    if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a, daggerTint());
     else if (p.k === 'spear') drawSpr('e_frostbolt_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.25, p.a);
     else if (p.k === 'fireball') drawSpr('f_fireball_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.3, p.a);
     else if (p.k === 'boomer') drawImgC(PROC.bone, p.x, p.y, 40 * p.sc, p.t * 16);
@@ -350,11 +353,12 @@ export function drawMech() {
   ctx.fillStyle = '#e5484d'; for (const o of [-4, 4]) { ctx.beginPath(); ctx.arc(x - side * 30 + o, by - 26, 3, Math.PI, 0); ctx.fill(); }
   ctx.fillStyle = '#3d4148'; ctx.beginPath(); ctx.rect(x - side * 18 - 4, by - 34, 8, 18); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#5a5f66'; ctx.beginPath(); ctx.rect(x - side * 18 - 6, by - 36, 12, 4); ctx.fill(); ctx.stroke();
-  const g = ctx.createLinearGradient(x, by - 16, x, by + 18); g.addColorStop(0, '#e8b85a'); g.addColorStop(1, '#8a5a22');
+  const paint = MECH_PAINT[save.look.mech] || MECH_PAINT.brass;   // Lackierung (Kosmetik)
+  const g = ctx.createLinearGradient(x, by - 16, x, by + 18); g.addColorStop(0, paint[0]); g.addColorStop(1, paint[1]);
   ctx.fillStyle = g; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x - 31, by - 16, 62, 34, 9); ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#2a2f36'; ctx.beginPath(); ctx.roundRect(x - 15, by - 2, 30, 12, 3); ctx.fill();
   ctx.strokeStyle = '#e0a83a'; ctx.lineWidth = 1.5; for (const o of [-8, 0, 8]) { ctx.beginPath(); ctx.moveTo(x + o, by); ctx.lineTo(x + o, by + 8); ctx.stroke(); }
-  ctx.fillStyle = '#6b4a12'; for (const [ox, oy] of [[-25, -10], [25, -10], [-25, 12], [25, 12]]) { ctx.beginPath(); ctx.arc(x + ox, by + oy, 2.2, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = paint[2]; for (const [ox, oy] of [[-25, -10], [25, -10], [-25, 12], [25, 12]]) { ctx.beginPath(); ctx.arc(x + ox, by + oy, 2.2, 0, TAU); ctx.fill(); }
   ctx.save(); ctx.translate(x + side * 28, by + 2); ctx.rotate(P.gunA);
   ctx.fillStyle = '#5d636b'; ctx.strokeStyle = '#0a0f06'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.roundRect(-6, -7, 20, 14, 4); ctx.fill(); ctx.stroke();

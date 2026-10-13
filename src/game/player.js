@@ -7,6 +7,8 @@ import { abilReady, bulwark, lockOf, shieldThorns } from './abilities.js';
 import { ABILITIES, SLOT_KEYS } from '../data/abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { part } from './fx.js';
+import { save } from '../core/save.js';
+import { trailCol } from '../data/cosmetics.js';
 import { hint } from './run.js';
 import { P, pR, query, run } from './state.js';
 
@@ -38,7 +40,7 @@ export function updPlayer(dt) {
     // drei Nachbilder pro Rolle, am Ende ein Landewölkchen
     P.dashT -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
     P.trailT -= dt; if (P.trailT <= 0) { P.trailT = .06; P.trail.push({ x: P.x, y: P.y, spr: curPlayerSpr(), t: .25 }); }
-    if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, 'rgba(220,210,170,.75)', frand(4, 7));
+    if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, trailCol(save.look.trail), frand(4, 7));
   } else if (P.moving) {
     const sp = P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? P.sprintMul : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * (P.hasteT > 0 ? 1 + P.haste : 1) * Math.min(1, len);
     P.x += P.aimX * sp * dt; P.y += P.aimY * sp * dt;

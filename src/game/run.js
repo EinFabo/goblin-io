@@ -16,6 +16,7 @@ import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantChest, rollChest } from './chests.js';
+import { grantCosmetic } from './cosmetics.js';
 import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 
@@ -161,6 +162,8 @@ export function endRun(win) {
   const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0);
   save.wallet.gems += gems;
   // Siegtruhe nach jedem Boss-Level; ist das Regal voll, geht sie sofort auf
+  // Boss-Trophäe (9.7): Malvorns Magierhut beim ersten Sieg im Turm der Magier
+  const trophy = win && boss && STAGES[run.si].boss.name === 'Erzmagier Malvorn' && grantCosmetic(save, 'hat.wizard') ? 'hat.wizard' : null;
   let chest = null;
   if (win && boss) {
     const type = victoryChest(run.si);
@@ -173,7 +176,7 @@ export function endRun(win) {
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, next, hats, newHats: rec.newHats, first: rec.first, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, newHats: rec.newHats, first: rec.first, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
 }
 

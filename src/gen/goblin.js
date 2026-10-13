@@ -3,15 +3,24 @@
 // um die Hochachse gedreht werden (siehe turn). down/left/up entsprechen den alten Sprites.
 import { DRAWN, MIRROR, NOSTROKE, circ, ell, f, group, line, path, poly, rect, star, svgDoc, turn } from './svg.js';
 
-// ---------- Kosmetik (Phase 6 füllt das auf) ----------
+// ---------- Kosmetik (PLAN 9.7, Namen und Quellen in data/cosmetics.js) ----------
 export const SKINS = {
-  green: { name: 'Grün', skin: '#6fc23a', dark: '#4f9a2a' },
+  green: { skin: '#6fc23a', dark: '#4f9a2a' }, moss: { skin: '#7d9a3a', dark: '#5a7228' }, cave: { skin: '#8a948c', dark: '#646d66' },
+  swamp: { skin: '#4fa0a8', dark: '#367a80' }, fire: { skin: '#e0583a', dark: '#a83a22' }, gold: { skin: '#f0c93a', dark: '#b8901a' },
 };
+// trim: Zierfarbe (Knöpfe, Krawatte, Nieten), plate: Rüstungsglanz
 export const OUTFITS = {
-  vest: { name: 'Lederweste', body: '#8a5a32', belt: '#3b2414', boot: '#5a3a22' },
+  vest: { body: '#8a5a32', belt: '#3b2414', boot: '#5a3a22' },
+  rags: { body: '#9a8a62', belt: '#5a4a2a', boot: '#4a3a22', patch: '#6a5a3a' },
+  suit: { body: '#2a2d36', belt: '#16181e', boot: '#16181e', trim: '#d63a3a' },
+  overall: { body: '#3a6ab0', belt: '#24467a', boot: '#3a2a1a', trim: '#e8c35a' },
+  knight: { body: '#a8b0b8', belt: '#5a6068', boot: '#6a7078', plate: '#e8eef2' },
 };
+// shape: Form im Generator (siehe hatShape)
 export const HATS = {
-  zipfel: { name: 'Lila Zipfelmütze', col: '#7b3fc4' },
+  zipfel: { col: '#7b3fc4', shape: 'zipfel' }, chef: { col: '#f4f4ee', shape: 'chef' }, pot: { col: '#8a9298', shape: 'pot' },
+  pirate: { col: '#26232a', shape: 'pirate', trim: '#e8d36a' }, viking: { col: '#9aa3aa', shape: 'viking', trim: '#efe6c8' },
+  wizard: { col: '#2a3a8a', shape: 'wizard', trim: '#ffd84a' }, crown: { col: '#f4c430', shape: 'crown', trim: '#d63a3a' },
 };
 export const DEFAULT_LOOK = { skin: 'green', outfit: 'vest', hat: 'zipfel' };
 
@@ -102,6 +111,15 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
   // Körper (Outfit-Ebene)
   const bw = 18 + 4 * ac;
   const body = [rect(-bw / 2, -2, bw, 20, 6, O.body), rect(-bw / 2 + 1, 9, bw - 2, 4, 0, O.belt, NOSTROKE)];
+  // Outfit-Details auf der Vorderseite (wandern mit der Drehung zur Seite)
+  if (c > -0.2) {
+    const [mx] = T(0, 9), w = 1 - .5 * ak;
+    if (O.trim && O.body === '#2a2d36') body.push(poly([[mx - 2.5 * w, -1], [mx + 2.5 * w, -1], [mx + 1.8 * w, 8], [mx, 10], [mx - 1.8 * w, 8]], O.trim, ' stroke-width="1"'));   // Krawatte
+    else if (O.trim) for (const s of [-1, 1]) { const [sx] = T(5 * s, 8); body.push(line(sx, -2, sx, 9, ` stroke="${O.belt}" stroke-width="2.4"`), circ(sx, 1, 1.3, O.trim, NOSTROKE)); }   // Träger
+    if (O.plate) { body.push(rect(mx - 6 * w, 0, 12 * w, 7, 3, O.plate, ' stroke-width="1.2"')); for (const s of [-1, 1]) body.push(circ(mx + s * 7 * w, 5, 1.2, '#5a6068', NOSTROKE)); }
+    if (O.patch) { const [px] = T(-4, 9); body.push(rect(px - 3, 2, 6, 5, 1, O.patch, ' stroke-width="1"')); }
+  }
+  if (O.patch) body.push(poly([[-bw / 2, 15], [-bw / 4, 19], [0, 15], [bw / 4, 19], [bw / 2, 15], [bw / 2, 18], [-bw / 2, 18]], O.body, NOSTROKE));   // ausgefranster Saum
 
   // Ohren: schräg nach hinten, in Schrägansichten weniger, damit das ferne Ohr sichtbar bleibt
   const zt = -25 * ak ** 4 - 10 * p.earBack, eb = p.earBack;
@@ -118,21 +136,8 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
   // Kopf
   const head = [ell(0, -13, 16 + 2 * ac, 16, S.skin)];
 
-  // Hut (Ebene "hat"): Kappe + Zipfel
-  const hat = [];
-  const hy = p.hatHop;
-  if (c > -0.1) {
-    const rx = 16 + 2 * ac;
-    hat.push(path(`M${f(-rx)} ${f(-13 + hy)} A${f(rx)} ${f(15 + 2 * ac)} 0 0 1 ${f(rx)} ${f(-13 + hy)} Q0 ${f(-21 + hy)} ${f(-rx)} ${f(-13 + hy)}Z`, H.col));
-  } else {
-    const cx = 3 * k;
-    hat.push(ell(cx, -12 + hy, 16 + 2 * ac, 15.5, H.col));
-  }
-  {
-    const [bc] = T(2, -7), [ax] = T(3, -14);
-    hat.push(poly([[bc - 6, -28 + hy], [ax, -41 + hy], [bc + 6, -27 + hy]], H.col));
-  }
-  if (c <= -0.1) { const cx = 3 * k, w = 10 * ac; hat.push(line(cx - w, -7 + hy, cx + w, -7 + hy)); }
+  // Hut (Ebene "hat")
+  const hat = hatShape(H, p.hatHop, { k, c, ak, ac, T });
 
   // Gesicht: nur was zur Kamera zeigt
   const face = [];
@@ -190,6 +195,74 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
     }
   }
   return shadow.concat(all);
+}
+
+// Hutformen. Kappe/Kuppel liegt auf dem Kopf (Mitte y -13, Radius ~16), alles Weitere darüber.
+function hatShape(H, hy, { k, c, ak, ac, T }) {
+  const out = [], rx = 16 + 2 * ac, front = c > -0.1, col = H.col;
+  // Kappe wie bei der Zipfelmütze (vorn als Kuppel bis zur Stirn, hinten den Kopf bedeckend)
+  const cap = (fill, top = 21) => front
+    ? path(`M${f(-rx)} ${f(-13 + hy)} A${f(rx)} ${f(15 + 2 * ac)} 0 0 1 ${f(rx)} ${f(-13 + hy)} Q0 ${f(-top + hy)} ${f(-rx)} ${f(-13 + hy)}Z`, fill)
+    : ell(3 * k, -12 + hy, rx, 15.5, fill);
+  switch (H.shape) {
+    case 'zipfel': {
+      out.push(cap(col));
+      const [bc] = T(2, -7), [ax] = T(3, -14);
+      out.push(poly([[bc - 6, -28 + hy], [ax, -41 + hy], [bc + 6, -27 + hy]], col));
+      if (!front) { const cx = 3 * k, w = 10 * ac; out.push(line(cx - w, -7 + hy, cx + w, -7 + hy)); }
+      break;
+    }
+    case 'chef': {
+      // weißer Bund, darüber drei Puffs
+      out.push(rect(-rx + 2, -30 + hy, 2 * rx - 4, 10, 3, col));
+      for (const [x, y, r] of [[-8, -36, 8], [8, -36, 8], [0, -41, 9]]) { const [tx] = T(x, 0); out.push(circ(tx, y + hy, r, col)); }
+      out.push(line(-rx + 4, -25 + hy, rx - 4, -25 + hy, ' stroke="#c9c9c0" stroke-width="1.4"'));
+      break;
+    }
+    case 'pot': {
+      out.push(rect(-rx + 1, -33 + hy, 2 * rx - 2, 16, 3, col), rect(-rx - 2, -19 + hy, 2 * rx + 4, 4, 2, '#6d747c'));
+      for (const s of [-1, 1]) { const [hx, hd] = T((rx + 3) * s, 0); if (hd > -8) out.push(rect(hx - 4, -29 + hy, 8, 3.5, 1.5, '#3d4148')); }   // Griffe
+      out.push(path(`M${f(-rx + 4)} ${f(-30 + hy)} Q0 ${f(-33 + hy)} ${f(rx - 4)} ${f(-30 + hy)}`, 'none', ' stroke="#c9d1d8" stroke-width="1.6"'));
+      break;
+    }
+    case 'pirate': {
+      // Dreispitz: breite Krempe, hohe Krone, Totenkopf vorn
+      out.push(cap(col, 30));
+      out.push(path(`M${f(-rx - 8)} ${f(-22 + hy)} Q0 ${f(-14 + hy)} ${f(rx + 8)} ${f(-22 + hy)} Q${f(rx * .5)} ${f(-31 + hy)} 0 ${f(-27 + hy)} Q${f(-rx * .5)} ${f(-31 + hy)} ${f(-rx - 8)} ${f(-22 + hy)}Z`, col));
+      if (front && c > .3) { const [sx] = T(0, 16); out.push(circ(sx, -24 + hy, 3.2, '#f2f0e8', ' stroke-width="1"'), line(sx - 3, -20 + hy, sx + 3, -18 + hy, ' stroke="#f2f0e8" stroke-width="1.2"')); }
+      out.push(path(`M${f(-rx - 6)} ${f(-21 + hy)} Q0 ${f(-14 + hy)} ${f(rx + 6)} ${f(-21 + hy)}`, 'none', ` stroke="${H.trim}" stroke-width="1.6"`));
+      break;
+    }
+    case 'viking': {
+      out.push(cap(col, 26));
+      out.push(path(`M${f(-rx)} ${f(-14 + hy)} Q0 ${f(-19 + hy)} ${f(rx)} ${f(-14 + hy)}`, 'none', ' stroke="#5d636b" stroke-width="4"'));
+      for (const s of [-1, 1]) {
+        const [hx, hd] = T(15 * s, 0);
+        if (hd < -6 && ak < .5) continue;
+        const o = Math.sign(hx || s);
+        out.push(path(`M${f(hx)} ${f(-24 + hy)} Q${f(hx + 12 * o)} ${f(-26 + hy)} ${f(hx + 14 * o)} ${f(-40 + hy)} Q${f(hx + 6 * o)} ${f(-31 + hy)} ${f(hx - 2 * o)} ${f(-30 + hy)}Z`, H.trim));
+      }
+      break;
+    }
+    case 'wizard': {
+      // breite Krempe, hoher geknickter Spitzhut mit Stern (Trophäe von Malvorn)
+      out.push(ell(3 * k * (front ? 0 : 1), -19 + hy, rx + 9, 6, col));
+      const [bc] = T(0, -3), [ax] = T(6, -10);
+      out.push(path(`M${f(bc - 13)} ${f(-21 + hy)} L${f(ax + 4)} ${f(-50 + hy)} Q${f(ax + 14)} ${f(-56 + hy)} ${f(ax + 16)} ${f(-48 + hy)} L${f(ax + 8)} ${f(-46 + hy)} L${f(bc + 13)} ${f(-21 + hy)}Z`, col));
+      if (front) out.push(poly(star(T(0, 12)[0] + 1, -31 + hy, 4.5, 1.8, 5, 0), H.trim, ' stroke-width="1"'));
+      break;
+    }
+    case 'crown': {
+      // Goldreif mit fünf Zacken und roten Steinen
+      const pts = [[-rx + 3, -18]];
+      for (let i = 0; i <= 8; i++) pts.push([-rx + 3 + i * (2 * rx - 6) / 8, i % 2 ? -26 : -35]);
+      pts.push([rx - 3, -18]);
+      out.push(poly(pts.map(([x, y]) => [x, y + hy]), col));
+      if (c > .6) for (const x of [-8, 0, 8]) { const [tx, td] = T(x, 14); if (td > 2) out.push(circ(tx, -22 + hy, 2.2, H.trim, ' stroke-width="1"')); }
+      break;
+    }
+  }
+  return out;
 }
 
 function dagger(hx, hy) {

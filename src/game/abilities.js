@@ -3,6 +3,7 @@ import { ROLL_T } from './player.js';
 import { RNG, frand, rand, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { save, stageCleared } from '../core/save.js';
+import { trailCol } from '../data/cosmetics.js';
 import { ABILITIES, MOVE_IDS, SLOT2_ACCT, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
 import { hurt } from './combat.js';
 import { addItem, addNum, animFx, explode, part, puff, ring } from './fx.js';
@@ -189,7 +190,7 @@ export function doDash() {
   // Fallensteller (Meister der Bärenfalle): jede 3. Rolle legt eine Falle
   if (hasAbil('trap') && M('trap').m && ++run.trapRolls % 3 === 0) layTraps(M('trap'), 1);
   run.abXp.dash = (run.abXp.dash || 0) + xpPerUse('dash');
-  for (let i = 0; i < 8; i++) part(P.x + frand(-10, 10), P.y + 16, -P.aimX * 90 + frand(-40, 40), frand(-50, -10), .4, 'rgba(220,210,170,.8)', frand(4, 7));
+  for (let i = 0; i < 8; i++) part(P.x + frand(-10, 10), P.y + 16, -P.aimX * 90 + frand(-40, 40), frand(-50, -10), .4, trailCol(save.look.trail), frand(4, 7));
   sfx.dash();
 }
 

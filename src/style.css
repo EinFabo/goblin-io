@@ -536,6 +536,33 @@ body.hub .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px);padding-b
 .co-mini .co-n{font-size:18px;right:-4px;top:22%}
 @media (prefers-reduced-motion:reduce){.co-chest.wob,.co-card,.chest.bob,.ccard.up,.tab .dot{animation:none}}
 
+/* ---------- Garderobe und Kosmetik (9.7) ---------- */
+.protabs{margin-bottom:10px}.protabs .subtabs{margin-left:0}
+.sub{position:relative}.sub .dot{position:absolute;top:-5px;right:-5px;width:11px;height:11px;border-radius:50%;background:var(--danger);border:2px solid var(--edge)}
+.ward{display:grid;grid-template-columns:260px 1fr;gap:18px;align-items:start}
+.wprev{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px;border-radius:14px;border:3px solid var(--edge);background:radial-gradient(circle at 50% 40%,var(--moss-3),var(--moss) 75%)}
+#wardGob{width:200px;height:200px}
+.wslots{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:100%}
+.wslot{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px;border-radius:10px;border:2px solid var(--edge);background:var(--moss-2);color:var(--muted);font-weight:800;font-size:11px}
+.wslot img{width:44px;height:44px}.wslot.on{background:var(--leaf);color:var(--edge)}
+.ctiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.cbtn{position:relative;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:center}
+.ctile{--rc:#c9c9c0;display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 6px;border-radius:12px;border:3px solid var(--edge);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 25%,var(--moss-3)),var(--moss-3) 60%);box-shadow:0 4px 0 var(--edge),inset 0 0 0 2px color-mix(in srgb,var(--rc) 70%,transparent)}
+.ctile img{width:64px;height:64px}.ctile b{font-family:var(--font-display);font-weight:400;font-size:13px;line-height:1.1}.ctile small{font-size:10px;color:var(--rc);font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+.ctile.on{box-shadow:0 4px 0 var(--edge),inset 0 0 0 2px var(--rc),0 0 0 3px var(--leaf)}
+.ctile.on::after{content:"an";position:absolute;top:-6px;right:-4px;background:var(--leaf);color:var(--edge);font-weight:900;font-size:11px;padding:0 6px;border-radius:6px;border:2px solid var(--edge)}
+.ctile.locked img{filter:brightness(0) opacity(.45)}.ctile.locked{opacity:.75}
+.cbtn .src{display:block;margin-top:5px;font-size:10.5px;color:var(--muted);line-height:1.2}
+.cbtn:not([aria-disabled]):hover .ctile{filter:brightness(1.12)}
+.ctile.big img{width:120px;height:120px}.ctile.big b{font-size:20px}.ctile.big small{font-size:12px}
+.wchest{display:flex;flex-direction:column;gap:6px;margin-top:16px;max-width:420px}.wchest small{color:var(--muted);font-size:12px}
+.offer .tag.cosm{background:var(--hat)}.offer .ofig .ctile{zoom:.7}.offer .spare{font-size:11px;color:var(--gold)}
+.co-cosm{top:10%}.co-cosm .ctile{padding:14px 10px}
+.co-cosm-sum{display:flex;flex-direction:column;align-items:center;gap:6px}.co-cosm-sum p{margin:0;color:var(--muted)}
+.vchest.trophy .ctile{zoom:.45}
+@media (max-width:640px){.ward{grid-template-columns:1fr}.wprev{flex-direction:row;flex-wrap:wrap;justify-content:center}#wardGob{width:150px;height:150px}.wslots{flex:1;min-width:180px}}
+
 /* Profil */
 .prof .profhead{display:flex;align-items:center;gap:16px}
 #profGob{width:120px;height:120px;flex:none;filter:drop-shadow(0 5px 0 rgba(10,15,6,.5))}

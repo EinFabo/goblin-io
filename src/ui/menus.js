@@ -12,6 +12,8 @@ import { renderProfile } from './profile.js';
 import { mapKey, onStart, renderMap } from './worldmap.js';
 import { renderStore, storeChanged, storeHasNews } from './store.js';
 import { anyUpgrade, renderWorkshop, workshopHooks } from './workshop.js';
+import { renderWardrobe, wardrobeChanged } from './wardrobe.js';
+import { profileHooks } from './profile.js';
 
 // ---------- Hub (PLAN 10.1): Leiste oben, Tabs unten ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
@@ -57,6 +59,8 @@ export function renderTopbar() {
   $('#storeDot').hidden = !storeHasNews(); $('#shopDot').hidden = !anyUpgrade();
 }
 storeChanged(renderTopbar);
+wardrobeChanged(renderTopbar);
+profileHooks({ ward: renderWardrobe, ach: () => {} });
 workshopHooks(renderTopbar, () => renderShop());
 setInterval(() => { if (document.body.classList.contains('hub')) $('#storeDot').hidden = !storeHasNews(); }, 5000);
 $('#tabbar').addEventListener('click', e => {

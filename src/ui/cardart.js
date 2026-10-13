@@ -1,11 +1,12 @@
 import { CARD_MAX, CARD_RARITY, CHESTS, RARITY, cardName, isWeapon, upgradeCost } from '../data/cards.js';
+import { COSMO_CHEST } from '../data/cosmetics.js';
 import { icon } from '../render/icons.js';
 
 // ---------- Bilder für Truhen und Karten (SVG/HTML) ----------
 // Truhe: Korpus aus Brettern mit Metallbeschlägen, Deckel als eigene Gruppe (.lid) zum Aufklappen
 export function chestSvg(type, cls = '') {
-  const C = CHESTS[type], c = C.color, m = C.metal, dark = 'rgba(0,0,0,.28)';
-  const rune = type === 'mage' ? `<path d="M60 58l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7-5.5-4.5 7-.5Z" fill="${m}" stroke="#1a1408" stroke-width="1.2"/>` : '';
+  const C = CHESTS[type] || COSMO_CHEST, c = C.color, m = C.metal, dark = 'rgba(0,0,0,.28)';
+  const rune = type === 'cosmo' ? `<path d="M52 60h16M60 52v16" stroke="${m}" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="60" r="4" fill="${m}"/>` : type === 'mage' ? `<path d="M60 58l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7-5.5-4.5 7-.5Z" fill="${m}" stroke="#1a1408" stroke-width="1.2"/>` : '';
   return `<svg class="chest ${cls}" viewBox="0 0 120 104" aria-hidden="true">
     <ellipse cx="60" cy="96" rx="48" ry="7" fill="rgba(0,0,0,.35)"/>
     <g class="body">

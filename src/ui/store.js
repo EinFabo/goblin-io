@@ -7,6 +7,10 @@ import { cardState, chestLeft, chestReady, freeChests, grantCards, grantChest, r
 import { GOLD_PACKS, canPay, dailyOffers, msToMidnight, pay, shopToday } from '../game/shop.js';
 import { cardHtml, chestSvg } from './cardart.js';
 import { playChest } from './chest-open.js';
+import { COSM, COSMO_CHEST } from '../data/cosmetics.js';
+import { grantCosmetic, missing, owns } from '../game/cosmetics.js';
+import { cosmTile } from './cosmart.js';
+import { openCosmoChest } from './wardrobe.js';
 
 // ---------- Laden (PLAN 9.5, 9.6): Truhenregal, Tagesangebote, Truhen, Gold ----------
 let onChange = () => {};
@@ -68,12 +72,13 @@ function renderOffers() {
   offerDay = sh.day;
   $('#offerReset').textContent = 'neu in ' + fmtClock(msToMidnight() / 1000);
   $('#offers').innerHTML = offers.map((o, i) => {
-    const got = sh.bought.includes(i), full = o.k === 'cards' && cardState(save, o.id).lv >= CARD_MAX, ok = canPay(save, o.price) && !full;
+    const got = sh.bought.includes(i), full = (o.k === 'cards' && cardState(save, o.id).lv >= CARD_MAX) || (o.k === 'cosm' && owns(save, o.id)), ok = canPay(save, o.price) && !full;
     let body;
     if (o.k === 'gold') body = `<div class="ofig gold"><span class="coin big"></span></div><b>${o.n} Gold</b>`;
     else if (o.k === 'cards') body = `<div class="ofig">${cardHtml(o.id, cardState(save, o.id))}</div><b>${o.n}× ${cardName(o.id)}</b>`;
+    else if (o.k === 'cosm') body = `<div class="ofig">${cosmTile(o.id)}</div><b>${COSM[o.id].name}</b><span class="tag cosm">Kosmetik</span>`;
     else body = `<div class="ofig">${chestSvg(o.type)}</div><b>${CHESTS[o.type].name}</b><span class="tag">−${Math.round(o.off * 100)} %</span>`;
-    return `<div class="offer${got ? ' sold' : ''}">${body}<button class="btn ${got ? 'ghost' : 'primary'} small" data-offer="${i}" ${got || full ? 'disabled' : ok ? '' : 'aria-disabled="true"'}>${got ? 'Gekauft' : full ? 'Schon voll' : price(o.price)}</button>${spareMsg[i] ? `<small class="spare">${spareMsg[i]}</small>` : ''}</div>`;
+    return `<div class="offer${got ? ' sold' : ''}">${body}<button class="btn ${got ? 'ghost' : 'primary'} small" data-offer="${i}" ${got || full ? 'disabled' : ok ? '' : 'aria-disabled="true"'}>${got ? 'Gekauft' : full ? (o.k === 'cosm' ? 'Schon da' : 'Schon voll') : price(o.price)}</button>${spareMsg[i] ? `<small class="spare">${spareMsg[i]}</small>` : ''}</div>`;
   }).join('');
   $('#goldPacks').innerHTML = GOLD_PACKS.map((g, i) => `<div class="offer"><div class="ofig gold"><span class="coin big"></span>${i ? '<span class="coin big"></span>' : ''}${i > 1 ? '<span class="coin big"></span>' : ''}</div><b>${g.gold.toLocaleString('de-DE')} Gold</b>
     <button class="btn primary small" data-pack="${i}" ${canPay(save, { gems: g.gems }) ? '' : 'aria-disabled="true"'}>${price({ gems: g.gems })}</button></div>`).join('');
@@ -81,7 +86,10 @@ function renderOffers() {
 
 // ---------- Truhen kaufen (öffnen sofort), ⓘ zeigt Wahrscheinlichkeiten ----------
 function renderBuy() {
-  $('#chestBuy').innerHTML = CHEST_IDS.map(t => {
+  const left = missing(save).length;
+  const cosmo = `<div class="offer chestoffer">${chestSvg('cosmo')}<b>${COSMO_CHEST.name}</b><small>1 Kosmetik-Teil, das du noch nicht hast (noch ${left})</small>
+      <div class="row"><button class="btn primary small" data-cosmo ${left ? (canPay(save, COSMO_CHEST.price) ? '' : 'aria-disabled="true"') : 'disabled'}>${left ? price(COSMO_CHEST.price) : 'Alles da'}</button></div></div>`;
+  $('#chestBuy').innerHTML = cosmo + CHEST_IDS.map(t => {
     const C = CHESTS[t];
     return `<div class="offer chestoffer">${chestSvg(t)}<b>${C.name}</b><small>${C.cards} Karten · ${C.gold[0]}–${C.gold[1]} Gold</small>
       <div class="row"><button class="iconbtn info" data-odds="${t}" aria-label="Wahrscheinlichkeiten">i</button><button class="btn primary small" data-buy-chest="${t}" ${canPay(save, C.price) ? '' : 'aria-disabled="true"'}>${price(C.price)}</button></div></div>`;
@@ -107,14 +115,16 @@ $('#store').addEventListener('click', e => {
   if (d.skip !== undefined) { if (skipUnlock(save, +d.skip)) { persist(); sfx.buy(); renderShelf(); onChange(); } else nope(b); return; }
   if (d.open !== undefined) { const t = takeFromShelf(save, +d.open); if (t) openChest(t); return; }
   if (d.odds) { showOdds(d.odds); return; }
+  if (d.cosmo !== undefined) { if (!openCosmoChest(renderStore)) nope(b); return; }
   if (d.buyChest) { const C = CHESTS[d.buyChest]; if (!pay(save, C.price)) { nope(b); return; } openChest(d.buyChest); return; }
   if (d.pack !== undefined) { const g = GOLD_PACKS[+d.pack]; if (!pay(save, { gems: g.gems })) { nope(b); return; } save.wallet.gold += g.gold; persist(); sfx.chest(); renderStore(); onChange(); return; }
   if (d.offer !== undefined) {
     const sh = shopToday(save), i = +d.offer, o = dailyOffers(sh.day)[i];
     if (sh.day !== offerDay) { spareMsg = {}; renderOffers(); nope(b); return; }
-    if (sh.bought.includes(i) || (o.k === 'cards' && cardState(save, o.id).lv >= CARD_MAX) || !pay(save, o.price)) { nope(b); return; }
+    if (sh.bought.includes(i) || (o.k === 'cards' && cardState(save, o.id).lv >= CARD_MAX) || (o.k === 'cosm' && owns(save, o.id)) || !pay(save, o.price)) { nope(b); return; }
     sh.bought.push(i);
     if (o.k === 'gold') { save.wallet.gold += o.n; sfx.coin(); }
+    else if (o.k === 'cosm') { grantCosmetic(save, o.id); sfx.chest(); spareMsg[i] = 'In der Garderobe (Profil) anziehen'; }
     else if (o.k === 'cards') { const g = grantCards(save, o.id, o.n); if (g) spareMsg[i] = `+${g} Gold für Karten über Stufe 10`; sfx.anvil(); }
     if (o.k === 'chest') { openChest(o.type); return; }
     persist(); renderStore(); onChange();
