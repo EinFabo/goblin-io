@@ -5,15 +5,15 @@ import { BOSSES, bossVariant } from '../data/bosses.js';
 import { stageUnlocked } from '../core/save.js';
 import { M, pathAt, tickMap } from '../ui/worldmap.js';
 import { DPR, ZOOM, ctx, cv } from './canvas.js';
-import { SPR, tinted } from './sprites.js';
+import { SPR, blit, tinted } from './sprites.js';
 import { drawGround } from './tiles.js';
 
 // ---------- Weltkarte zeichnen (Logik und Knöpfe in ui/worldmap.js) ----------
 // Bild mittig auf (x, y) mit Höhe h; gespiegelte Richtungen beachten
-function img(e, x, y, h, c = e.c) {
-  const w = h * c.width / c.height;
+function img(e, x, y, h, src = e) {
+  const w = h * e.fw / e.fh;
   ctx.save(); ctx.translate(x, y); if (e.flip) ctx.scale(-1, 1);
-  ctx.drawImage(c, -w / 2, -h / 2, w, h); ctx.restore();
+  blit(ctx, src, -w / 2, -h / 2, w, h); ctx.restore();
 }
 // Pfad von Strecke d0 bis d1 als Linienzug
 function trace(d0, d1) {
@@ -59,7 +59,7 @@ export function renderMapScene(t, dt) {
     const e = SPR[`m.${v}.idle.down.${(Math.floor(t * 5) % 4) + 1}`] || SPR[`m.${v}.idle.left.1`];
     if (e) {
       ctx.globalAlpha = open ? 1 : .35;
-      img(e, bn.x + 62, bn.y - 30 + Math.sin(t * 2) * 2, 96, tint ? tinted(e, tint) : e.c);
+      img(e, bn.x + 62, bn.y - 30 + Math.sin(t * 2) * 2, 96, tint ? tinted(e, tint) : e);
       ctx.globalAlpha = 1;
     }
   }
@@ -76,6 +76,6 @@ export function renderMapScene(t, dt) {
     gc.style.translate = `${p.x - 48}px ${p.y - 106}px`;
     g2.clearRect(0, 0, S, S);
     g2.fillStyle = 'rgba(10,15,6,.35)'; g2.beginPath(); g2.ellipse(S / 2, S * .86, S * .2, S * .07, 0, 0, 7); g2.fill();
-    if (e) { g2.save(); g2.translate(S / 2, S * .5); if (e.flip) g2.scale(-1, 1); g2.drawImage(e.c, -S * .44, -S * .44, S * .88, S * .88); g2.restore(); }
+    if (e) { g2.save(); g2.translate(S / 2, S * .5); if (e.flip) g2.scale(-1, 1); blit(g2, e, -S * .44, -S * .44, S * .88, S * .88); g2.restore(); }
   } else { (gobCv || (gobCv = $('#mapGob'))).hidden = true; ctx.fillStyle = 'rgba(40,44,48,.45)'; ctx.fillRect(0, 0, cv.width, cv.height); }
 }

@@ -3,12 +3,14 @@ import { save, stageUnlocked } from '../core/save.js';
 import { $ } from '../core/util.js';
 import { icon } from '../render/icons.js';
 import { renderLoading } from '../render/loading-scene.js';
-import { loadAssets, preloadAllMages } from '../render/sprites.js';
+import { loadAssets, loadStagesLater, preloadAllMages } from '../render/sprites.js';
 import { setMusic, setMute, setShake } from '../ui/settings.js';
 
 // Für Bot und Tests: lädt beim ersten Abfragen alle übrigen Magier (im Spiel nie, sonst ruckelt das Menü)
 let allPr = null;
 export const allLoaded = () => allPr || (allPr = preloadAllMages());
+// Hintergrund-Laden nach dem Hub (für npm run perf)
+export let bgLoaded = null;
 
 // Tipps, die man beim Warten lesen kann
 const TIPS = [
@@ -25,12 +27,13 @@ defineScene('boot', {
   async enter() {
     $('#loadTip').textContent = TIPS[(Math.random() * TIPS.length) | 0];
     const fonts = document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 1500))]).catch(() => {}) : null;
-    await loadAssets((p, txt) => { $('#loadFill').style.width = (p * 100).toFixed(0) + '%'; $('#loadMsg').textContent = txt; }, stageUnlocked);
+    await loadAssets((p, txt) => { $('#loadFill').style.width = (p * 100).toFixed(0) + '%'; $('#loadMsg').textContent = txt; });
     await fonts;
     document.querySelectorAll('[data-icon]').forEach(im => { im.src = icon(im.dataset.icon); });
     setMute(save.settings.mute); setMusic(save.settings.musicOff); setShake(save.settings.shake);
     $('#loading').hidden = true;
     go('menu');
+    bgLoaded = loadStagesLater(stageUnlocked, save.map.si);
   },
   render(now) { renderLoading(now / 1000); },
 });

@@ -35,7 +35,7 @@ export const CASTS = {
     // Feuerwand quer zur Blickrichtung, mitten durch den Spieler: Lücke suchen oder durchrollen
     windup: .8, col: '#ff7a1a', kind: 'ground',
     release(e) {
-      const a = angTo(e.x, e.y) + Math.PI / 2, L = 230, gap = frand(-60, 60);
+      const a = angTo(e.x, e.y) + Math.PI / 2, L = 230, gap = rand(-60, 60);
       for (const [s0, s1] of [[-L, gap - 34], [gap + 34, L]]) {
         addHaz({ shape: 'line', x: P.x + Math.cos(a) * s0, y: P.y + Math.sin(a) * s0, x2: P.x + Math.cos(a) * s1, y2: P.y + Math.sin(a) * s1, w: 26,
           warn: 1, act: 3, tick: .4, dmg: e.dmg * .5, kind: 'fire', src: 'wall' });
@@ -157,7 +157,7 @@ export const CASTS = {
   summon_golem: {
     windup: 1.2, col: '#c9a36a', kind: 'ground',
     can(e) { return run.enemies.filter(o => o.golemOf === e && !o.dead).length < 2; },
-    start(e) { e.runeX = e.x + frand(-50, 50); e.runeY = e.y + 60; addHaz({ shape: 'circle', x: e.runeX, y: e.runeY, r: 50, warn: 1.2, dmg: 0, kind: 'earth', src: 'runes', owner: e, cancel: true }); },
+    start(e) { e.runeX = e.x + rand(-50, 50); e.runeY = e.y + 60; addHaz({ shape: 'circle', x: e.runeX, y: e.runeY, r: 50, warn: 1.2, dmg: 0, kind: 'earth', src: 'runes', owner: e, cancel: true }); },
     release(e, tx, ty, spawn) { const g = spawn('golem', { x: e.runeX, y: e.runeY }); g.golemOf = e; g.spawnT = .5; run.shake = Math.max(run.shake, 5); sfx.stomp(); },
   },
   // ----- Licht -----

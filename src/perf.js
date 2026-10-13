@@ -1,10 +1,12 @@
 // Mess-Modus für Ruckler auf echten Geräten: goblin-io.html?perf
 // Zeichnet jeden Frame über 50 ms mit Kontext auf (Spiellogik/Zeichnen, Gegner, neue Bilder, Töne,
 // Long Animation Frames des Browsers). Kasten oben links, „Kopieren“ legt den Bericht in die Zwischenablage.
+// „Test 300 Gegner“ (aus dem Menü) misst die Bildrate wie npm run perf, aber mit der echten GPU des Geräts.
 import { AC } from './core/audio.js';
 import { loopStats } from './core/loop.js';
 import { sceneName } from './core/scenes.js';
 import { run } from './game/state.js';
+import { stressTest } from './stress.js';
 
 const HITCH = 50, MAX = 200;
 
@@ -34,11 +36,24 @@ export function startPerf() {
 
   const box = document.createElement('div');
   box.style.cssText = 'position:fixed;left:6px;top:40px;z-index:9999;background:rgba(0,0,0,.75);color:#fff;font:12px monospace;padding:6px 8px;border-radius:6px;max-width:460px;pointer-events:auto;white-space:pre';
-  const txt = document.createElement('div'), btn = document.createElement('button');
+  const txt = document.createElement('div'), btn = document.createElement('button'), sbtn = document.createElement('button'), stxt = document.createElement('div');
   btn.textContent = 'Kopieren'; btn.style.cssText = 'margin-top:4px;font:12px sans-serif';
   btn.addEventListener('pointerdown', e => e.stopPropagation());
+  sbtn.textContent = 'Test 300 Gegner'; sbtn.style.cssText = 'margin:4px 0 0 6px;font:12px sans-serif';
+  sbtn.addEventListener('pointerdown', e => e.stopPropagation());
+  let stress = null;
+  sbtn.addEventListener('click', async () => {
+    if (sceneName !== 'menu' || sbtn.disabled) { stxt.textContent = 'Test nur aus dem Menü'; return; }
+    sbtn.disabled = true; stxt.textContent = 'Test läuft (12 s) …';
+    let r = null;
+    try { r = await stressTest(); } catch (err) { console.error(err); } finally { sbtn.disabled = false; }
+    if (!r) { stxt.textContent = 'Test abgebrochen'; return; }
+    stress = r;
+    const f1 = x => x.toFixed(1);
+    stxt.textContent = `300 Gegner: ${f1(r.fps)} FPS ${r.fps >= 55 ? '✓' : '✗'} (Ziel ≥ 55)\nFrame p50 ${f1(r.p50)} / p95 ${f1(r.p95)} ms, ${Math.round(r.slow * 100)} % über 25 ms\nLogik ${f1(r.upd)} ms, Zeichnen ${f1(r.ren)} ms je Frame`;
+  });
   btn.addEventListener('click', () => {
-    const rep = JSON.stringify({ ua: navigator.userAgent, dpr: devicePixelRatio, size: [innerWidth, innerHeight], hitches: log, loaf }, null, 1);
+    const rep = JSON.stringify({ ua: navigator.userAgent, dpr: devicePixelRatio, size: [innerWidth, innerHeight], stress, hitches: log, loaf }, null, 1);
     // Über die LAN-Adresse (http) gibt es navigator.clipboard nicht: dann altes execCommand, sonst Konsole
     const old = () => {
       const ta = document.createElement('textarea'); ta.value = rep; document.body.appendChild(ta); ta.select();
@@ -48,14 +63,14 @@ export function startPerf() {
     };
     if (navigator.clipboard) navigator.clipboard.writeText(rep).then(() => { btn.textContent = 'Kopiert!'; }, old); else old();
   });
-  box.append(txt, btn); document.body.appendChild(box);
+  box.append(txt, btn, sbtn, stxt); document.body.appendChild(box);
 
   function frame(now) {
     requestAnimationFrame(frame);
     frames++;
     const gap = last ? now - last : 0; last = now;
     if (sceneName === 'run') started = true;
-    if (started && gap > HITCH) {
+    if (started && gap > HITCH && !sbtn.disabled) {   // während des Belastungstests nicht mitschreiben
       log.push({
         at: Math.round(now - t0), gap: Math.round(gap), scene: sceneName, time: run ? +run.time.toFixed(2) : null,
         upd: +loopStats.upd.toFixed(1), ren: +loopStats.ren.toFixed(1), steps: loopStats.steps,

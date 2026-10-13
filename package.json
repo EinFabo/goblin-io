@@ -9,6 +9,7 @@
     "test": "node --test \"test/**/*.test.js\"",
     "lint": "eslint src tools sim test",
     "smoke": "node tools/smoke.mjs",
+    "perf": "node tools/perf.mjs",
     "build:app": "node tools/build.mjs --app",
     "app": "tauri dev",
     "app:build": "tauri build",

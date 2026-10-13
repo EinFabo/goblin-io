@@ -1,7 +1,7 @@
 import { $, TAU, face8 } from '../core/util.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawSpr } from './canvas.js';
 import { drawGround } from './tiles.js';
-import { SPR } from './sprites.js';
+import { SPR, blit, blitPart } from './sprites.js';
 import { renderMapScene } from './map-scene.js';
 
 // Menü-Szene
@@ -47,6 +47,6 @@ function paint(sel, e, crop) {
   shown[sel] = e;
   const c = el(sel), g = ctxs[sel] || (ctxs[sel] = c.getContext('2d'));
   g.clearRect(0, 0, c.width, c.height);
-  if (crop) g.drawImage(e.c, crop[0] * e.c.width / 144, crop[1] * e.c.height / 144, crop[2] * e.c.width / 144, crop[2] * e.c.height / 144, 0, 0, c.width, c.height);
-  else g.drawImage(e.c, 0, 0, c.width, c.height);
+  if (crop) blitPart(g, e, crop[0] * e.fw / 144, crop[1] * e.fh / 144, crop[2] * e.fw / 144, crop[2] * e.fh / 144, 0, 0, c.width, c.height);
+  else blit(g, e, 0, 0, c.width, c.height);
 }

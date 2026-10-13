@@ -35,6 +35,9 @@ export function explode(x, y, rad, dmg, kind = 'fire') {
 // Gegner löst sich in seiner Schulfarbe auf
 export function dissolve(e) {
   const col = ECOL[e.boss ? 'boss' : e.type] || '#ffffff';
-  run.fx.push({ k: 'dissolve', spr: e.spr || e.pre + '.idle.down.1', x: e.x, y: e.y, sc: e.sc, col, t: 0, dur: .45 });
+  // Immer das erste Stand-Bild der Blickrichtung: so braucht eine Gegnerart nur wenige getönte Bilder
+  // statt eines je Animationsbild, die sonst mitten im Kampf erzeugt würden
+  const spr = (e.spr || e.pre + '.idle.down.1').replace(/\.(idle|walk|cast)\.(\w+)\.\d+$/, '.idle.$2.1');
+  run.fx.push({ k: 'dissolve', spr, x: e.x, y: e.y, sc: e.sc, col, t: 0, dur: .45 });
   for (let i = 0; i < 8; i++) part(e.x + frand(-12, 12) * e.sc, e.y + frand(-22, 10) * e.sc, frand(-30, 30), frand(-90, -30), frand(.4, .7), col, frand(3, 6) * Math.min(e.sc, 1.6));
 }

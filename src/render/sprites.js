@@ -9,6 +9,7 @@ import { ETYPES } from '../data/enemies.js';
 import { STAGES, stageTypes } from '../data/stages.js';
 import { BOSSES, BOSS_IDS, bossVariant } from '../data/bosses.js';
 import { makeProc } from './proc.js';
+import { sceneName } from '../core/scenes.js';
 
 // ---------- Sprites ----------
 export const U = 0.85;
@@ -17,25 +18,123 @@ export let GRASS_IMG = null;
 export function svgSize(s) { const p = s.match(/viewBox="([^"]+)"/)[1].split(/[\s,]+/).map(Number); return [p[2], p[3]]; }
 export function loadImg(src) { return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
 export const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
-// SVG-Bild in eine Canvas rastern (größer als nötig, damit es beim Zoomen scharf bleibt)
-function raster(im, svg, flip = false, scale = 0) {
+// ---------- Atlas ----------
+// Alle Sprite-Bilder liegen ohne durchsichtigen Rand auf wenigen großen Atlas-Seiten (2048², Tönungen 512²).
+// Das spart gut die Hälfte Speicher und der Browser muss beim Zeichnen nicht zwischen Hunderten
+// kleiner Bilder (je eine eigene GPU-Textur) wechseln.
+// Eintrag: c Seite, sx/sy/sw/sh Ausschnitt darin, fw/fh volle Rastergröße, tx/ty Lage des Ausschnitts
+// im vollen Bild, uw/uh Größe in SVG-Einheiten. Gezeichnet wird mit blit()/blitPart().
+// Gruppen: 'gob' und 'gobtint' werden beim Umziehen des Goblins komplett verworfen.
+// Getönte Bilder entstehen auch mitten im Lauf: kleine Seiten, denn eine Seite, in die nach dem Zeichnen
+// noch geschrieben wird, muss der Browser vorher kopieren.
+// PAD: Abstand zwischen den Bildern, groß genug für Mipmaps (kleine Bilder werden bis auf ¼ verkleinert)
+const PAD = 6, pageSize = group => (group.endsWith('tint') ? 512 : 2048);
+export const PAGES = {};
+function alloc(group, w, h) {
+  const list = PAGES[group] || (PAGES[group] = []);
+  let p = list[list.length - 1];
+  if (p && p.x + w > p.size) { p.x = 0; p.y += p.rowH + PAD; p.rowH = 0; }
+  if (!p || p.x + w > p.size || p.y + h > p.size) {
+    // ein Bild, das größer als eine Seite ist, bekommt eine eigene
+    const size = Math.max(pageSize(group), w, h), c = document.createElement('canvas'); c.width = c.height = size;
+    p = { c, g: c.getContext('2d'), size, x: 0, y: 0, rowH: 0 };
+    list.push(p);
+  }
+  const at = [p, p.x, p.y];
+  p.x += w + PAD; p.rowH = Math.max(p.rowH, h);
+  return at;
+}
+// Arbeitsfläche zum Rastern und Zuschneiden (liest Pixel, daher willReadFrequently)
+let scr = null, sg = null;
+function scratch(w, h) {
+  if (!scr || scr.width < w || scr.height < h) {
+    const c = document.createElement('canvas');
+    c.width = Math.max(w, scr ? scr.width : 0); c.height = Math.max(h, scr ? scr.height : 0);
+    scr = c; sg = c.getContext('2d', { willReadFrequently: true });
+  }
+  sg.setTransform(1, 0, 0, 1, 0, 0); sg.clearRect(0, 0, w, h);
+  return sg;
+}
+// Rechteck mit sichtbaren Pixeln, 1 px durchsichtiger Rand (sauberes Filtern an den Kanten)
+function opaqueBox(w, h) {
+  const px = new Uint32Array(sg.getImageData(0, 0, w, h).data.buffer);
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) {
+    const row = y * w;
+    let a = 0; while (a < w && px[row + a] >>> 24 < 3) a++;
+    if (a === w) continue;
+    let b = w - 1; while (px[row + b] >>> 24 < 3) b--;
+    if (a < x0) x0 = a; if (b > x1) x1 = b; if (y0 === h) y0 = y; y1 = y;
+  }
+  if (x1 < 0) return [0, 0, 1, 1];
+  x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1);
+  return [x0, y0, Math.min(w, x1 + 2) - x0, Math.min(h, y1 + 2) - y0];
+}
+// SVG-Bild rastern (größer als nötig, damit es beim Zoomen scharf bleibt), zuschneiden, in den Atlas legen
+function raster(im, svg, flip = false, scale = 0, group = 'main') {
   const [w, h] = svgSize(svg);
   const k = scale || (w < 40 ? 4 : w <= 48 ? 2 : 1.5);
-  const c = document.createElement('canvas'); c.width = Math.ceil(w * k); c.height = Math.ceil(h * k);
-  const g = c.getContext('2d');
-  if (flip) { g.translate(c.width, 0); g.scale(-1, 1); }
-  if (im) g.drawImage(im, 0, 0, c.width, c.height);
-  const e = { c, uw: w, uh: h, idx: CACHE.length };
+  const fw = Math.ceil(w * k), fh = Math.ceil(h * k), g = scratch(fw, fh);
+  if (flip) { g.translate(fw, 0); g.scale(-1, 1); }
+  if (im) g.drawImage(im, 0, 0, fw, fh);
+  const [tx, ty, sw, sh] = opaqueBox(fw, fh), [p, sx, sy] = alloc(group, sw, sh);
+  p.g.drawImage(scr, tx, ty, sw, sh, sx, sy, sw, sh);
+  const e = { c: p.c, sx, sy, sw, sh, tx, ty, fw, fh, uw: w, uh: h, idx: CACHE.length, group };
   CACHE.push(e);
   return e;
+}
+// Ausschnitt (cx, cy, cw, ch) des vollen Bildes in das Rechteck (dx, dy, dw, dh) zeichnen
+export function blitPart(g, e, cx, cy, cw, ch, dx, dy, dw, dh) {
+  const x0 = Math.max(cx, e.tx), y0 = Math.max(cy, e.ty), x1 = Math.min(cx + cw, e.tx + e.sw), y1 = Math.min(cy + ch, e.ty + e.sh);
+  if (x1 <= x0 || y1 <= y0) return;
+  const kx = dw / cw, ky = dh / ch;
+  g.drawImage(e.c, e.sx + x0 - e.tx, e.sy + y0 - e.ty, x1 - x0, y1 - y0, dx + (x0 - cx) * kx, dy + (y0 - cy) * ky, (x1 - x0) * kx, (y1 - y0) * ky);
+}
+// Das ganze Bild in das Rechteck (x, y, w, h)
+export const blit = (g, e, x, y, w, h) => blitPart(g, e, 0, 0, e.fw, e.fh, x, y, w, h);
+// Rastern in Häppchen (höchstens 6 ms am Stück), damit das Menü flüssig bleibt, während die Magier
+// der Welten im Hintergrund laden. Wartet jemand auf die Bilder (Ladebildschirm, Stage-Start),
+// wird in großen Stücken gerastert (rushing). Während eines Laufs ruht das Hintergrund-Laden.
+const queue = [];
+let pumping = false, rush = 0;
+const resting = () => !rush && sceneName === 'run';
+function sliced(fns) { return new Promise(res => { queue.push(...fns, res); pump(); }); }
+function pump() {
+  if (pumping) return;
+  pumping = true;
+  setTimeout(function slice() {
+    if (resting()) { setTimeout(slice, 500); return; }
+    const end = performance.now() + (rush ? 50 : 6);
+    while (queue.length && performance.now() < end) {
+      try { queue.shift()(); } catch (err) { console.error(err); }   // ein kaputtes Bild hält den Rest nicht auf
+    }
+    if (queue.length) setTimeout(slice, 0); else pumping = false;
+  }, 0);
+}
+export async function rushing(pr) { rush++; nextLoad(); try { return await pr; } finally { rush--; } }
+// Im Hintergrund höchstens 3 SVG-Bilder gleichzeitig laden: der Browser liest SVGs auf dem Haupt-Thread,
+// viele auf einmal ergeben Hänger von mehreren 100 ms
+let loading = 0, restT = 0;
+const waiting = [];
+function loadQueued(src) {
+  return new Promise(res => {
+    waiting.push(() => { loading++; loadImg(src).then(im => { loading--; res(im); nextLoad(); }); });
+    nextLoad();
+  });
+}
+function nextLoad() {
+  while (waiting.length && (rush || loading < 3)) {
+    if (resting()) { if (!restT) restT = setTimeout(() => { restT = 0; nextLoad(); }, 500); return; }
+    waiting.shift()();
+  }
 }
 // Dem Browser kurz Luft lassen, damit der Ladebildschirm zwischen den Schritten weiter animiert
 const breathe = () => new Promise(r => setTimeout(r, 0));
 
 // Alles laden, was das Spiel braucht. onStep(Anteil 0…1, Text) meldet den Fortschritt.
-// Erst die Lauf-Bilder des Goblins (für den Ladebildschirm), dann der Rest, zuletzt alle Magier –
-// danach lädt nichts mehr im Hintergrund nach und das Menü ruckelt nicht.
-export async function loadAssets(onStep = () => {}, wantStage = () => true) {
+// Erst die Lauf-Bilder des Goblins (für den Ladebildschirm), dann der Rest. Die Magier der
+// freigeschalteten Welten lädt danach loadStagesLater() im Hintergrund.
+export async function loadAssets(onStep = () => {}) {
   const steps = [
     ['Goblin schnürt die Stiefel …', 1, () => loadGoblinRun()],
     ['Waffen werden geschliffen …', 2, async () => {
@@ -46,30 +145,35 @@ export async function loadAssets(onStep = () => {}, wantStage = () => true) {
     ['Feuerbälle werden geknetet …', 2, () => loadFx()],
     ['Goblin übt Rollen …', 5, () => loadGoblin()],
     ['Wiese wird gemäht …', 1, async () => { GRASS_IMG = await loadImg(GRASS); makeProc(); }],
-    ['Magier ziehen ihre Roben an …', 3, () => loadMenuMages()],
-    // nur freigeschaltete Stages; der Rest lädt beim ersten Start der Stage
-    ...STAGES.map((st, si) => [`Magier für ${st.name} …`, 3, () => ensureStage(si)]).filter((_, si) => wantStage(si)),
+    ['Magier ziehen ihre Roben an …', 3, () => Promise.all([loadMenuMages(), loadMinions(['rat'])])],   // Ratten: Icon „Rattenflut“
   ];
   const total = steps.reduce((a, s) => a + s[1], 0);
   let done = 0;
   for (const [txt, w, fn] of steps) {
     onStep(done / total, txt);
-    await fn(); await breathe();
+    await rushing(fn()); await breathe();
     done += w;
   }
   onStep(1, 'Fertig!');
+}
+// Magier der freigeschalteten Welten, eine nach der anderen in Häppchen (die zuletzt gespielte zuerst).
+// Eine gesperrte Welt lädt beim ersten Start; startStage wartet notfalls mit „Lade Magier …“.
+export async function loadStagesLater(want, first = 0) {
+  const order = [first, ...STAGES.keys()].filter((si, i, a) => a.indexOf(si) === i && STAGES[si] && want(si));
+  await Promise.all(MENU_MAGES.map(k => loadUnit(k, 'walk')));
+  for (const si of order) await ensureStage(si);
 }
 // Nur Sprint (seitlich) und ein Magier zum Hinterherlaufen – reicht für den Ladebildschirm
 async function loadGoblinRun() {
   const jobs = [];
   for (let i = 0; i < ANIMS.sprint; i++) jobs.push([i, goblinSvg('left', 'sprint', i, goblinLook())]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[1]))));
-  jobs.forEach(([i, svg], j) => { SPR[`gob.sprint.right.${i + 1}`] = raster(imgs[j], svg, true); });
+  jobs.forEach(([i, svg], j) => { SPR[`gob.sprint.right.${i + 1}`] = raster(imgs[j], svg, true, 0, 'gob'); });
   await loadUnit('fire', 'walk');
 }
 
 // Goblin aus dem Generator: gob.<anim>.<richtung>.<n> für alle 8 Richtungen.
-// Rechte Richtungen werden beim Rastern gespiegelt. Alte Namen (idle_down_1 …) zeigen auf die neuen Bilder.
+// Rechte Richtungen zeigen auf dasselbe Bild und werden beim Zeichnen gespiegelt. Alte Namen (idle_down_1 …) zeigen auf die neuen Bilder.
 // Aussehen aus dem Spielstand (Garderobe); ein späterer Aufruf gewinnt, falls zwei gleichzeitig laufen
 export const goblinLook = () => ({ skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat });
 let gobToken = 0;
@@ -79,16 +183,17 @@ export async function loadGoblin(look = goblinLook()) {
   for (const [anim, n] of Object.entries(ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, goblinSvg(dir, anim, i, look)]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[3]))));
   if (me !== gobToken) return;
-  // alte Goblin-Bilder freigeben (Canvas und ihre Tönungen), sonst wächst der Speicher mit jedem Umziehen
+  // alte Goblin-Bilder freigeben (Atlas-Seiten und ihre Tönungen), sonst wächst der Speicher mit jedem Umziehen
   for (const [k, e] of Object.entries(SPR)) {
     if (!k.startsWith('gob.') || !e) continue;
     CACHE[e.idx] = null;
     for (const t of Object.keys(TINTS)) TINT.delete(e.idx + '|' + t);
   }
+  PAGES.gob = []; PAGES.gobtint = [];
   jobs.forEach(([anim, dir, i, svg], j) => {
-    SPR[`gob.${anim}.${dir}.${i + 1}`] = raster(imgs[j], svg);
+    SPR[`gob.${anim}.${dir}.${i + 1}`] = raster(imgs[j], svg, false, 0, 'gob');
     const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
-    if (m) SPR[`gob.${anim}.${m}.${i + 1}`] = raster(imgs[j], svg, true);
+    if (m) SPR[`gob.${anim}.${m}.${i + 1}`] = { ...SPR[`gob.${anim}.${dir}.${i + 1}`], flip: true };
   });
   for (const anim of ['idle', 'walk']) for (const dir of ['down', 'left', 'up', 'right']) for (let i = 1; i <= ANIMS[anim]; i++) SPR[`${anim}_${dir}_${i}`] = SPR[`gob.${anim}.${dir}.${i}`];
 }
@@ -100,17 +205,20 @@ export const TINTS = {
 // Dolch-Skins als Tönungen (data/cosmetics.js)
 for (const [k, t] of Object.entries(DAGGER_TINT)) if (t) TINTS['dagger_' + k] = t;
 export const daggerTint = () => (DAGGER_TINT[save.look.dagger] ? 'dagger_' + save.look.dagger : null);
-export function tinted(entry, tint) {
-  const key = entry.idx + '|' + tint;
-  let c = TINT.get(key);
-  if (!c) {
-    c = document.createElement('canvas'); c.width = entry.c.width; c.height = entry.c.height;
-    const g = c.getContext('2d'); g.drawImage(entry.c, 0, 0);
+// Getönte Fassung als eigener Atlas-Eintrag (ohne flip: das Spiegeln übernimmt der Aufrufer)
+export function tinted(e, tint) {
+  const key = e.idx + '|' + tint;
+  let t = TINT.get(key);
+  if (!t) {
+    const [p, sx, sy] = alloc(e.group === 'gob' ? 'gobtint' : 'tint', e.sw, e.sh), g = p.g;
+    g.drawImage(e.c, e.sx, e.sy, e.sw, e.sh, sx, sy, e.sw, e.sh);
+    // source-atop nur über dem eigenen Feld: die Nachbarn auf der Seite bleiben unberührt
     const [col, a] = TINTS[tint] || [tint, .85];
-    g.globalCompositeOperation = 'source-atop'; g.globalAlpha = a; g.fillStyle = col; g.fillRect(0, 0, c.width, c.height);
-    TINT.set(key, c);
+    g.save(); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = a; g.fillStyle = col; g.fillRect(sx, sy, e.sw, e.sh); g.restore();
+    t = { c: p.c, sx, sy, sw: e.sw, sh: e.sh, tx: e.tx, ty: e.ty, fw: e.fw, fh: e.fh, uw: e.uw, uh: e.uh };
+    TINT.set(key, t);
   }
-  return c;
+  return t;
 }
 
 // Magier aus dem Generator: m.<schule>[.m].<anim>.<richtung>.<n>.
@@ -126,23 +234,23 @@ const variantOf = key => {
   return [school, { master: v === 'm', clone: v === 'c' || v.endsWith('-c'), boss }];
 };
 
-function loadUnit(key, anim) {
-  const id = key + '|' + anim;
-  if (units.has(id)) return units.get(id);
+// Einheit = Variante × Animation × Richtung (das Menü braucht von den Bossen nur „unten“)
+function loadUnit(key, anim, dirs = Object.keys(DRAWN)) {
   const [school, opt] = variantOf(key);
   if (!MAGE_OFF['m.' + key]) MAGE_OFF['m.' + key] = castOffsets(school, opt);
-  const jobs = [];
-  for (const dir of Object.keys(DRAWN)) for (let i = 0; i < MAGE_ANIMS[anim]; i++) jobs.push([dir, i, mageSvg(school, dir, anim, i, opt)]);
-  const pr = Promise.all(jobs.map(j => loadImg(svgUrl(j[2])))).then(imgs => {
-    jobs.forEach(([dir, i, svg], j) => {
-      const e = raster(imgs[j], svg, false, opt.master || opt.boss ? 2 : 1.25);
+  return Promise.all(dirs.map(dir => {
+    const id = key + '|' + anim + '|' + dir;
+    if (units.has(id)) return units.get(id);
+    const svgs = Array.from({ length: MAGE_ANIMS[anim] }, (_, i) => mageSvg(school, dir, anim, i, opt));
+    const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
+    const pr = Promise.all(svgs.map(s => loadQueued(svgUrl(s)))).then(imgs => sliced(svgs.map((svg, i) => () => {
+      const e = raster(imgs[i], svg, false, opt.master || opt.boss ? 2 : 1.25);
       SPR[`m.${key}.${anim}.${dir}.${i + 1}`] = e;
-      const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
       if (m) SPR[`m.${key}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
-    });
-  });
-  units.set(id, pr);
-  return pr;
+    })));
+    units.set(id, pr);
+    return pr;
+  }));
 }
 const loadVariant = key => Promise.all(Object.keys(MAGE_ANIMS).map(a => loadUnit(key, a)));
 
@@ -173,14 +281,15 @@ export function ensureStage(si) {
   const n = stageNeeds(si);
   return Promise.all([...[...n.mages].map(loadVariant), loadMinions([...n.minions])]);
 }
-// Menü: laufende Demo-Magier + je ein Bossbild für die Stage-Vorschau
+// Menü: je ein Bossbild für die Weltkarte; die laufenden Demo-Magier (Hintergrund der anderen Tabs)
+// kommen erst mit loadStagesLater
 export const MENU_MAGES = ['fire', 'frost', 'storm', 'toxic', 'shadow', 'light', 'fire.m'];
 export async function loadMenuMages() {
-  await Promise.all([...MENU_MAGES.map(k => loadUnit(k, 'walk')), ...STAGES.filter(st => !st.endless).map(st => loadUnit(bossVariant(st.boss.id), 'idle'))]);
+  await Promise.all(STAGES.filter(st => !st.endless).map(st => loadUnit(bossVariant(st.boss.id), 'idle', ['down'])));
 }
 // Alle Stages (für Bot und Tests; im Spiel lädt eine gesperrte Stage erst beim ersten Start)
 export async function preloadAllMages() {
-  for (let si = 0; si < STAGES.length; si++) await ensureStage(si);
+  for (let si = 0; si < STAGES.length; si++) await rushing(ensureStage(si));
 }
 
 // Diener (Skelett, Geist, Golem, Ratte): n.<art>.<anim>.<richtung>.<n>, nur bei Bedarf geladen
@@ -190,12 +299,12 @@ export function loadMinions(kinds) {
     if (units.has(id)) return units.get(id);
     const jobs = [];
     for (const [anim, n] of Object.entries(MINION_ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, minionSvg(kind, dir, anim, i)]);
-    const pr = Promise.all(jobs.map(j => loadImg(svgUrl(j[3])))).then(imgs => jobs.forEach(([anim, dir, i, svg], j) => {
+    const pr = Promise.all(jobs.map(j => loadQueued(svgUrl(j[3])))).then(imgs => sliced(jobs.map(([anim, dir, i, svg], j) => () => {
       const e = raster(imgs[j], svg, false, kind === 'golem' ? 1.5 : 1.25);
       SPR[`n.${kind}.${anim}.${dir}.${i + 1}`] = e;
       const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
       if (m) SPR[`n.${kind}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
-    }));
+    })));
     units.set(id, pr);
     return pr;
   }));

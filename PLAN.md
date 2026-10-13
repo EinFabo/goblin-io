@@ -927,6 +927,7 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - Stand: Fabi spürt es im PC-Browser (Windows) bei den ersten Gegnern/Tönen. Headless (auch mit 4× CPU-Bremse) kein Start-Ruckler, keine spät erzeugten Bilder/Canvases, JS pro Frame nur wenige ms. GPU über WSL (`GALLIUM_DRIVER=d3d12`, RTX 3070) ruckelt auch im Menü → als Messplatz unbrauchbar.
   - Neu: Mess-Modus `goblin-io.html?perf` (`src/perf.js`) zeichnet auf Fabis Gerät jeden Frame > 50 ms mit Kontext auf (Logik/Zeichnen, Gegner, neue Bilder, Töne, Long Animation Frames); „Kopieren“ liefert den Bericht.
   - Verdacht ohne Beleg: Musik plant nur 0,12 s voraus (setInterval auf dem Haupt-Thread), jeder kurze Hänger lässt sie stolpern.
+  - Neuer Verdacht (2026-10-13, Performance-Budget in Phase 8): Jedes Sprite-Bild war eine eigene kleine Canvas; der Browser lädt sie erst beim ersten Zeichnen als Textur auf die GPU – genau bei den ersten Gegnern. Dazu entstanden beim ersten Kill jeder Gegnerart getönte Bilder. Beides ist mit dem Sprite-Atlas weg. Fabi soll prüfen, ob der Start-Ruckler damit verschwunden ist (sonst `?perf`-Bericht schicken).
 - [x] **Skill Tree v2 (8.4, Ausbau 2026-10-13):** knorriger Baum, Halten zum Lernen mit Ton und Effekten, Level bis 30, eigene Skills je Fähigkeit, Rolle und Sprint mit eigenem Baum
   - Daten: `TREE`/`ROWS`/`MOVES`, Texte je Fähigkeit in `skills`/`master` (`src/data/abilities.js`). Wirkung in `src/game/abilities.js` (Haken `onKill`, `takenMult`, `dealtMult`, Rolle/Sprint in `initMoves`/`updMoves`), dazu combat/items/player/hazards/enemies.
   - Neue Gegner-Felder: `slowK` (stärkere Verlangsamung, sonst 50 %), `vuln`/`vulnT` (nimmt mehr Schaden). Fähigkeiten-Slots haben `max`/`stock` für mehrere Ladungen (Doppelhaken), die Rolle `dashN`/`dashMax`; Zahl am Knopf.
@@ -1043,7 +1044,14 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
 - [x] **Musik im Takt** (Fabi: „nicht zum Takt passendes Gedudel“): jedes Stück mit Tonart und Akkordfolge, alles aus dem Akkord des Takts, Melodien in die Tonart umgerechnet, Glöckchen auf den Achteln, nach Rucklern neu einsetzen statt nachholen (`src/core/music.js`, Test `test/music.test.js`).
 
 ### Phase 8 – Feinschliff und Test
-- [ ] Performance-Budget prüfen (12.3)
+- [x] Performance-Budget prüfen (12.3) – erledigt 2026-10-13
+  - Neu: `npm run perf` (`tools/perf.mjs`) misst Ladezeit bis Hub, Ruckler im Hub, Bildrate mit 300 Gegnern (`src/stress.js`), Speicher und Dateigröße, als „PC“ und als „Handy“ (915×412, DPR 2, CPU 4× gebremst). Headless rastert ohne GPU, die Bildrate dort ist nur ein Vergleichswert. Auf echten Geräten: `goblin-io.html?perf` → Knopf „Test 300 Gegner“ (12 s, wird nicht gewertet, Ergebnis landet auch im „Kopieren“-Bericht).
+  - **Sprite-Atlas:** Alle Bilder werden beim Laden auf den sichtbaren Bereich zugeschnitten und auf wenige 2048²-Seiten gepackt (`src/render/sprites.js`, Zeichnen über `blit`). Vorher war jedes Animationsbild eine eigene Canvas (≈ 2 900 Stück, beim Zeichnen ≈ 700 verschiedene Bildquellen je Frame → 700 GPU-Texturen, die beim ersten Auftauchen eines Gegners hochgeladen werden), jetzt 17 je Frame. Gespiegelte Goblin-Richtungen werden nicht mehr doppelt gerastert.
+  - Getönte Bilder (Elite gold, Auflösen in Schulfarbe …) liegen auf eigenen kleinen Seiten (512²). Das Auflösen nimmt immer das erste Stand-Bild der Blickrichtung, damit nicht bei jedem Kill ein neues getöntes Bild entsteht. Elite-/Wut-Tönungen entstehen weiter beim ersten Zeigen eines Bildes (selten, ein Elite-Typ hat bis zu ~70 Bilder).
+  - **Laden:** Vor dem Hub nur noch Goblin, Waffen, Effekte, Ratten (Icon) und je ein Boss-Bild für die Karte. Die Magier der freigeschalteten Welten (zuletzt gespielte zuerst) und die Demo-Magier laden danach im Hintergrund: höchstens 3 SVGs gleichzeitig, Rastern in 6-ms-Häppchen, Pause während eines Laufs. Startet man eine Welt, bevor sie fertig ist, wird ohne Pause zu Ende geladen („Lade Magier …“).
+  - Ergebnis (Headless-PC, vorher → nachher): Ladezeit bis Hub 4,4–4,8 s → 1,3–1,5 s ✓ (Handy-Profil mit 4× CPU-Bremse 21 s → 8,7 s); Bildspeicher mit allen Welten 300 MB → 164 MB ✓ (neuer Spieler 90 → 48 MB); Hub in den ersten 4 s höchstens 2 Ruckler bis 100 ms (ohne Drosselung der SVG-Ladungen waren es bis 500 ms); Datei 0,54 MB ✓; Logik mit 300 Gegnern 1,4 ms je 60-Hz-Schritt (Handy-Profil 6 ms). Offen: die 55 FPS mit 300 Gegnern auf einem echten Mittelklasse-Handy – das kann nur Fabi messen (`?perf`).
+  - Nebenbei gefunden: Die Sim war mit gleichen Seeds nicht wiederholbar. Feuerwand (Lücke) und Golem-Beschwörung (Platz der Rune) würfelten mit dem Optik-Zufall `frand` → jetzt `rand`. Zwei gleiche `npm run sim`-Aufrufe geben wieder dasselbe.
+  - Cloud: `tools/cloud-setup.sh` verlinkt ein vorinstalliertes Chromium, wenn der Download gesperrt ist.
 - [ ] Linkshänder-Modus, Einstellungen
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
 - [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.
@@ -1086,6 +1094,8 @@ Aus v2 übernehmen (`sim.js`) und ausbauen:
 | Ladezeit bis Hub | < 2 s |
 | Größe `goblin-io.html` | < 4 MB (mit Atlas) |
 | Speicher | < 250 MB |
+
+Prüfen mit `npm run perf` (Headless, ohne GPU) und auf echten Geräten mit `goblin-io.html?perf` → „Test 300 Gegner“. Stand 2026-10-13 siehe Phase 8.
 
 ---
 

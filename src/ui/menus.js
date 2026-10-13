@@ -5,7 +5,7 @@ import { $ } from '../core/util.js';
 import { TALENT, TALENTS, talentCost } from '../data/talents.js';
 import { accountXpNeed } from '../game/balance.js';
 import { icon } from '../render/icons.js';
-import { ensureStage } from '../render/sprites.js';
+import { ensureStage, rushing } from '../render/sprites.js';
 import { setMusic, setMute, setShake } from './settings.js';
 import { cleanLoadout, renderArmory } from './armory.js';
 import { renderProfile } from './profile.js';
@@ -23,7 +23,7 @@ import { shownWallet } from './rewardfx.js';
 export async function startStage(si, li = 0, nm = false) {
   const t = setTimeout(() => { $('#loadMsg').textContent = 'Lade Magier …'; $('#loading').classList.add('solo'); $('#loading').hidden = false; }, 120);
   cleanLoadout();
-  await ensureStage(si);
+  await rushing(ensureStage(si));
   clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
   go('run', { si, li, nm });
 }

@@ -1,7 +1,7 @@
 import { RARITY } from '../data/cards.js';
 import { COSM, MECH_PAINT, TRAIL } from '../data/cosmetics.js';
 import { DEFAULT_LOOK, goblinSvg } from '../gen/goblin.js';
-import { SPR, svgUrl, tinted } from '../render/sprites.js';
+import { SPR, blit, svgUrl, tinted } from '../render/sprites.js';
 
 // ---------- Vorschaubilder für Kosmetik ----------
 // Haut, Hut, Outfit: der Goblin mit genau diesem Teil (sonst Standard), als SVG-Bild.
@@ -14,9 +14,9 @@ export function cosmImg(id, base = DEFAULT_LOOK) {
   if (c.slot === 'skin' || c.slot === 'hat' || c.slot === 'outfit') url = svgUrl(goblinSvg('down', 'idle', 0, { ...base, [c.slot]: c.key }));
   else if (c.slot === 'dagger') {
     const e = SPR.dagger; if (!e) return '';
-    const src = c.key === 'steel' ? e.c : tinted(e, 'dagger_' + c.key), cv = document.createElement('canvas');
+    const src = c.key === 'steel' ? e : tinted(e, 'dagger_' + c.key), cv = document.createElement('canvas');
     cv.width = cv.height = 96; const g = cv.getContext('2d');
-    g.translate(48, 48); g.rotate(-Math.PI / 4); const w = 70, h = w * src.height / src.width; g.drawImage(src, -w / 2, -h / 2, w, h);
+    g.translate(48, 48); g.rotate(-Math.PI / 4); const w = 70, h = w * src.fh / src.fw; blit(g, src, -w / 2, -h / 2, w, h);
     url = cv.toDataURL();
   } else if (c.slot === 'trail') {
     const cols = TRAIL[c.key].cols, dots = Array.from({ length: 7 }, (_, i) => cols[i % cols.length]).map((col, i) => `<circle cx="${14 + i * 11}" cy="${54 - Math.sin(i * .9) * 14}" r="${8 - i * .6}" fill="${col}" stroke="#1d2b14" stroke-width="1.5"/>`).join('');
