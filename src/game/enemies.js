@@ -64,6 +64,8 @@ function spawnGroup(type) {
 
 // ---------- Director: Wellen-Skript der Stage (data/stages.js) ----------
 // Lokale Zeit innerhalb der aktuellen Runde (Endlos: jede Runde spielt das Skript erneut)
+// Verlangsamt: 50 %; Wurzelgriff (Pilzring) stärker, aber nur solange der Gegner im Ring steht
+const slowMul = e => (e.slowT > 0 ? (e.slowKT > run.time ? e.slowK : .5) : 1);
 const localT = () => run.time - run.loop * STAGE_LEN;
 // Aktive Phase, in Ruhepausen die letzte (für Elite-Typen)
 function phaseAt(t, active) {
@@ -174,7 +176,7 @@ export function updEnemy(e, dt) {
   }
   if (e.affixes) updAffixes(e, dt, spawnEnemy);
   if (e.flash > 0) e.flash -= dt;
-  if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowK = 0; }
+  if (e.slowT > 0) e.slowT -= dt;
   if (e.vulnT > 0) { e.vulnT -= dt; if (e.vulnT <= 0) e.vuln = 0; }
   e.x += e.kx * dt; e.y += e.ky * dt;
   const kd = Math.exp(-9 * dt); e.kx *= kd; e.ky *= kd;
@@ -229,7 +231,7 @@ export function updEnemy(e, dt) {
   let [mx, my] = move(e, dt, dx, dy, d), back = 1;
   if (e.backT > 0) { e.backT -= dt; mx = -dx / d; my = -dy / d; back = .7; }
   // im Rauch: am Suchpunkt weich abbremsen statt drüberzuschießen
-  const sp = e.spd * (e.slowT > 0 ? e.slowK || .5 : 1) * back * (blind ? Math.min(1, d / 40) : 1);
+  const sp = e.spd * slowMul(e) * back * (blind ? Math.min(1, d / 40) : 1);
   e.x += mx * sp * dt; e.y += my * sp * dt;
   e.face = face8(dx, dy, e.face); e.at += dt * (e.slowT > 0 ? .5 : 1);
   e.spr = mspr(e, 'walk', (Math.floor(e.at * 9) % 6) + 1);
@@ -266,7 +268,7 @@ export function updBomber(e, dt, dx, dy, d) {
     if (e.fuse <= 0) bomberBoom(e, true);
     return;
   }
-  const sp = e.spd * (e.slowT > 0 ? e.slowK || .5 : 1);
+  const sp = e.spd * slowMul(e);
   e.x += dx / d * sp * dt; e.y += dy / d * sp * dt;
   e.face = face8(dx, dy, e.face); e.at += dt;
   e.spr = mspr(e, 'walk', (Math.floor(e.at * 12) % 6) + 1);

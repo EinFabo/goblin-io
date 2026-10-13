@@ -12,7 +12,8 @@ import { banner } from '../ui/hud.js';
 import { endRun } from './run.js';
 
 // ---------- Schaden ----------
-export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null) {
+// xpMul: tötet dieser Treffer, gibt der Gegner so viel mehr Erfahrung (Kristallregen)
+export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   if (e.dead) return;
   const crit = rnd() < P.crit + critBonus();
   if (e.tbShock && e.freezeT > 0) dmg *= 1.5;   // Zeitbombe: Kälteschock
@@ -25,14 +26,14 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null) {
   if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit);
   else if (rule.blocked) addNum(e.x, e.y - 22 * e.sc, 'Block', '#dff6ff', false);
   sfx.hit();
-  if (e.hp <= 0) kill(e);
+  if (e.hp <= 0) kill(e, xpMul);
 }
-export function kill(e) {
+export function kill(e, xpMul = 1) {
   e.dead = true; run.kills++;
   emit('enemyKilled', e);
   if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
   onKill(e);
-  dropGem(e.x, e.y, e.xp);
+  dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);
   if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);
   if (e.boss) run.hitstop = Math.max(run.hitstop, .08);

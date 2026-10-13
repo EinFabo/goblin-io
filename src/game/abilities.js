@@ -140,7 +140,7 @@ export function updAbilities(dt) {
     if (al.t <= 0) {
       al.done = true; puff(al.x, al.y, .6);
       // Letzter Hieb: Krieger explodieren beim Gehen
-      if (al.boom) { query(al.x, al.y, 70, e => { hurt(e, al.boom, 200, e.x - al.x, e.y - al.y, '#9be36a'); }); ring(al.x, al.y, 6, 70, .3, 'rgba(160,230,100,.9)', 5); }
+      if (al.boom) { query(al.x, al.y, 70, e => { const d = Math.hypot(e.x - al.x, e.y - al.y) || 1; hurt(e, al.boom, 200, (e.x - al.x) / d, (e.y - al.y) / d, '#9be36a'); }); ring(al.x, al.y, 6, 70, .3, 'rgba(160,230,100,.9)', 5); }
     }
   });
   run.tmpAllies = run.tmpAllies.filter(a => !a.done);
@@ -160,7 +160,8 @@ function updMoves(dt) {
   if (P.dashN < P.dashMax) { P.dashCd -= dt; if (P.dashCd <= 0) { P.dashN++; P.dashCd = P.dashN < P.dashMax ? dashCdOf() : 0; } }
   if (P.hasteT > 0) P.hasteT -= dt;
   const d = M('dash'), s = M('sprint');
-  // Staubwolke: Gegner, durch die man rollt, fliegen weg
+  // Staubwolke: Gegner, durch die man rollt, fliegen weg (der Enterhaken setzt auch dashT, aber kein rollHit)
+  if (P.dashT <= 0) P.rollHit = null;
   if (P.dashT > 0 && P.rollHit) query(P.x, P.y, pR() + 14, e => {
     if (P.rollHit.has(e) || e.obj) return; P.rollHit.add(e);
     const dd = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, 10 * d.s2 * P.dmgMult, 420, (e.x - P.x) / dd, (e.y - P.y) / dd, '#e6d7a8');
@@ -319,7 +320,7 @@ function throwHook(m) {
   const tx = e ? e.x : P.x + P.aimX * far, ty = e ? e.y : P.y + P.aimY * far;
   const dx = tx - P.x, dy = ty - P.y, d = Math.hypot(dx, dy) || 1, stop = e ? e.r + 18 : 0, go = Math.max(0, d - stop), T = .2;
   P.dashT = T; P.dvx = dx / d * go / T; P.dvy = dy / d * go / T; P.inv = Math.max(P.inv, T + .2);
-  P.rollT = ROLL_T; P.perfect = false; P.trailT = 0;
+  P.rollT = ROLL_T; P.perfect = false; P.trailT = 0; P.rollHit = null;
   run.abfx.push({ k: 'hook', x: P.x, y: P.y, tx, ty, t: 0, dur: .3, land: (40 + P.lv * 6) * P.dmgMult * m.pow, r: 100 * m.area, stun: m.b, roll: .3 * m.s3 });
   // Kleine Gegner am Ziel werden zu dir gerissen; Widerhaken: sie nehmen danach mehr Schaden
   query(tx, ty, 150 * (1 + .2 * m.s2), o => {
@@ -350,7 +351,7 @@ export const bulwark = () => P.shieldT > 0 && M('shield').m;
 export function shieldThorns(e) {
   const k = M('shield').s3;
   if (!k || !(P.shieldT > 0) || e.thornT > run.time) return;
-  e.thornT = run.time + .4; hurt(e, 10 * k * P.dmgMult, 200, e.x - P.x, e.y - P.y, '#dfe6ea');
+  e.thornT = run.time + .4; const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, 10 * k * P.dmgMult, 200, (e.x - P.x) / d, (e.y - P.y) / d, '#dfe6ea');
 }
 // Splitterschild: beim Brechen oder Ende fliegen Splitter um dich
 function shieldShards() {
@@ -424,11 +425,10 @@ function bigBang(m) {
 function bang(dmg, o) {
   for (const e of run.enemies) {
     if (e.dead || !onScreen(e.x, e.y)) continue;
-    const big = e.boss || e.elite || e.miniboss ? o.big : 1, xp = e.xp;
-    if (o.xp > 1 && !e.boss) e.xp = xp * o.xp;   // Kristallregen: nur wenn der Knall tötet
-    hurt(e, (e.boss ? dmg * .4 : dmg) * big, 300, 0, 0, '#ffe08a');
+    const big = e.boss || e.elite || e.miniboss ? o.big : 1;
+    // Kristallregen: Gegner, die der Knall tötet, geben mehr XP
+    hurt(e, (e.boss ? dmg * .4 : dmg) * big, 300, 0, 0, '#ffe08a', e.boss ? 1 : o.xp);
     if (e.dead) continue;
-    e.xp = xp;
     if (o.stun && !e.boss) e.freezeT = Math.max(e.freezeT, 1.5);
     if (o.quake) e.slowT = Math.max(e.slowT, o.quake);
   }
@@ -462,7 +462,7 @@ const FX_UPD = {
     query(f.x, f.y, 34, e => {
       if (e.obj) return;
       hurt(e, f.dmg, 0, 0, 0, '#d9c9a0'); if (!e.boss) e.freezeT = Math.max(e.freezeT, f.hold); else e.slowT = 2;
-      query(f.x, f.y, f.splash, o => { if (o !== e) hurt(o, f.dmg * f.sf, 120, o.x - f.x, o.y - f.y, '#d9c9a0'); });
+      query(f.x, f.y, f.splash, o => { if (o !== e) { const d = Math.hypot(o.x - f.x, o.y - f.y) || 1; hurt(o, f.dmg * f.sf, 120, (o.x - f.x) / d, (o.y - f.y) / d, '#d9c9a0'); } });
       if (f.sf >= 1) ring(f.x, f.y, 6, f.splash, .3, 'rgba(230,210,160,.8)', 5);
       f.snap = .4; f.uses--; sfx.stomp(); return false;
     });
@@ -497,17 +497,29 @@ const FX_UPD = {
     if ((P.x - f.x) ** 2 + (P.y - f.y) ** 2 < f.r * f.r && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.maxHp * f.heal * dt);
     f.tick -= dt; const bite = f.dmg && f.tick <= 0; if (bite) f.tick = 1;
     query(f.x, f.y, f.r, e => {
-      e.slowT = Math.max(e.slowT, .2); if (f.slowK < .5) e.slowK = Math.min(e.slowK || .5, f.slowK);
+      e.slowT = Math.max(e.slowT, .2); if (f.slowK < .5) { e.slowK = f.slowK; e.slowKT = run.time + .25; }
       if (f.vuln) { e.vulnT = Math.max(e.vulnT || 0, .2); e.vuln = Math.max(e.vuln || 0, f.vuln); }
       if (bite) hurt(e, f.dmg, 0, 0, 0, '#9cf06a');
     });
     if (Math.random() < dt * 10) { const a = Math.random() * TAU, r = Math.random() * f.r; part(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * .6, 0, -40, .6, 'rgba(150,255,140,.8)', 3); }
   },
   rats(f, dt) {
-    if (f.t >= f.dur) {
-      // Rückkehr: einmal zurückrennen
-      if (!f.back) { f.done = true; return; }
-      f.back = false; f.t = 0; f.dir *= -1; for (const r of f.rats) { r.hit.clear(); r.x -= f.dir * 40; }
+    if (f.t >= f.dur && f.rats.length) {
+      // Rückkehr: einmal zurückrennen; sonst sind die Ratten weg, die Seuche wirkt noch nach
+      if (f.back) { f.back = false; f.t = 0; f.dir *= -1; for (const r of f.rats) { r.hit.clear(); r.x -= f.dir * 40; } }
+      else f.rats = [];
+    }
+    if (!f.rats.length && !f.sick.length) { f.done = true; return; }
+    // Beuteratten: Ratten nach Zeilen einsortieren, dann jeden Gegenstand nur gegen die Ratten seiner Nachbarzeilen prüfen
+    if (f.loot && f.rats.length && (f.lootT = (f.lootT || 0) - dt) <= 0) {
+      f.lootT = .1;
+      const rows = new Map(), row = y => Math.floor(y / f.loot);
+      for (const r of f.rats) { const k = row(r.y); if (!rows.has(k)) rows.set(k, []); rows.get(k).push(r.x); }
+      for (const it of run.items) {
+        if (it.mag || !pullable(it)) continue;
+        const k = row(it.y);
+        for (let d = -1; d <= 1 && !it.mag; d++) for (const x of rows.get(k + d) || []) if (Math.abs(x - it.x) < f.loot) { it.mag = true; break; }
+      }
     }
     for (const r of f.rats) {
       r.x += f.dir * r.sp * dt; r.a += dt;
@@ -519,7 +531,6 @@ const FX_UPD = {
         hurt(e, f.dmg, 60, f.dir, 0, '#e0c090'); if (f.pest) e.slowT = Math.max(e.slowT, 3);
         if (f.plague && !e.dead) { e.plagueT = 3; if (!f.sick.includes(e)) f.sick.push(e); }
       });
-      if (f.loot) for (const it of run.items) if (!it.mag && pullable(it) && Math.abs(it.x - r.x) < f.loot && Math.abs(it.y - r.y) < f.loot) it.mag = true;
     }
     // Seuche: Giftschaden jede halbe Sekunde
     if (f.plague && (f.sickT -= dt) <= 0) {

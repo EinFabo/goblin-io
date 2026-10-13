@@ -46,6 +46,7 @@ export function openTree(which, changed) {
   sel = firstLearnable() || 'pow';
   build(); render(false);
   $('#tree').hidden = false; sfx.treeOpen();
+  nodeBtn(sel).focus({ preventScroll: true });   // Tastatur: Pfeile, Leertaste und Escape gehen sofort
   startFx();
 }
 function firstLearnable() { for (const R of ROWS) for (const k of R.keys) if (canLearn(st(), k)) return k; return null; }
@@ -123,13 +124,16 @@ let hold = null;   // { k, t, dur, tone, btn }
 function startHold(k, btn) {
   audioInit();
   if (sel !== k) { sel = k; render(false); }
-  if (!canLearn(st(), k)) { if (!(st().pts[k] >= TREE[k].max)) { sfx.buzz(); shake(btn); } return; }
-  const n = spentPoints(st().pts), dur = hold && hold.chain ? .4 : .6;
+  // Nur ein Halten zur Zeit: ein zweiter Finger oder Leertaste + Maus beendet das alte sauber
+  const chain = !!(hold && hold.chain);
+  if (hold && hold.tone) endHold(false);
+  if (!canLearn(st(), k)) { hold = null; if (!(st().pts[k] >= TREE[k].max)) { sfx.buzz(); shake(btn); } return; }
+  const n = spentPoints(st().pts), dur = chain ? .4 : .6;
   hold = { k, t: 0, dur, btn, chain: false, tone: chargeTone(n, dur) };
   btn.classList.add('charging');
 }
 function endHold(ok) {
-  if (!hold) return;
+  if (!hold || !hold.tone) { hold = null; return; }
   hold.tone.stop(ok || hold.t < .12);   // nur angetippt: leise aus, kein Abbruch-Ton
   const b = nodeBtn(hold.k); b.classList.remove('charging'); b.style.setProperty('--c', 0);
   hold = null;
@@ -201,20 +205,25 @@ function leaves(x, y) {
 }
 
 // ---------- Eingaben ----------
+const capture = (el, e) => { try { el.setPointerCapture(e.pointerId); } catch (err) { /* Zeiger schon weg: Loslassen fängt window ab */ } };
 $('#treeNodes').addEventListener('pointerdown', e => {
   const b = e.target.closest('[data-node]'); if (!b) return;
-  e.preventDefault(); b.setPointerCapture(e.pointerId); startHold(b.dataset.node, b);
+  e.preventDefault(); capture(b, e); startHold(b.dataset.node, b);
 });
 $('#treeNote').addEventListener('pointerdown', e => {
   const h = e.target.closest('[data-hold]'); if (!h) return;
-  e.preventDefault(); h.setPointerCapture(e.pointerId); startHold(sel, nodeBtn(sel));
+  e.preventDefault(); capture(h, e); startHold(sel, nodeBtn(sel));
 });
-for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) { $('#treeNodes').addEventListener(ev, () => endHold(false)); $('#treeNote').addEventListener(ev, () => endHold(false)); }
+// Loslassen irgendwo beendet das Halten (der Halten-Knopf im Zettel wird beim Lernen neu gezeichnet und verliert dabei den Zeiger)
+for (const ev of ['pointerup', 'pointercancel']) window.addEventListener(ev, () => endHold(false));
+window.addEventListener('blur', () => endHold(false));
 // Tastatur: Pfeile wählen, Leertaste/Enter halten
 const ORDER = ['m', 's3', 'b', 's1', 'a', 's2', 'pow', 'cd', 'area'];
 $('#tree').addEventListener('keydown', e => {
   if (e.code === 'Escape') { close(); return; }
-  if ((e.code === 'Space' || e.code === 'Enter') && !e.repeat) { e.preventDefault(); if (!hold) startHold(sel, nodeBtn(sel)); return; }
+  // Leertaste/Enter auf ✕ oder „Zurücksetzen“ bleiben normale Klicks
+  const other = e.target.closest('button') && !e.target.closest('#treeNodes, [data-hold]');
+  if ((e.code === 'Space' || e.code === 'Enter') && !other) { e.preventDefault(); if (!e.repeat && !hold) startHold(sel, nodeBtn(sel)); return; }
   const d = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -3, ArrowDown: 3 }[e.code]; if (!d) return;
   e.preventDefault();
   const i = Math.max(0, Math.min(ORDER.length - 1, ORDER.indexOf(sel) + d)); sel = ORDER[i]; sfx.hover(); render(false); nodeBtn(sel).focus();

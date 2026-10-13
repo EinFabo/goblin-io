@@ -85,7 +85,8 @@ export const sfx = {
   treeOpen() { noise(.35, .05, 320, 'bandpass', 0, null, 6, 180); tone(150, 110, .3, 'triangle', .04); },
   sprout() { noise(.4, .06, 2600, 'bandpass', 0, null, 1.5, 5200); [784, 988, 1175].forEach((f, i) => tone(f, f * 1.5, .12, 'sine', .035, .1 + i * .06)); },
   learn(n, full) {
-    const P5 = [0, 2, 4, 7, 9], st = P5[n % 5] + 12 * Math.floor(n / 5) % 36, f = 330 * Math.pow(2, st / 12);
+    // alle 2 Punkte eine Stufe höher, über 3 Oktaven (29 Punkte = voll)
+    const P5 = [0, 2, 4, 7, 9], i = Math.floor(Math.min(n, 29) / 2), st = P5[i % 5] + 12 * Math.floor(i / 5), f = 262 * Math.pow(2, st / 12);
     tone(95, 50, .16, 'sine', .14); noise(.06, .1, 900, 'bandpass', 0, null, 2);   // Holz-Klopfer
     tone(f, 0, .16, 'triangle', .08); tone(f * 1.5, 0, .2, 'triangle', .06, .06); tone(f * 2, 0, .3, 'sine', .05, .12);
     if (full) [1, 1.25, 1.5, 2].forEach((k, i) => tone(f * k, 0, .22, 'square', .035, .22 + i * .07));
