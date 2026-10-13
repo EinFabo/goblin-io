@@ -15,9 +15,16 @@ name: Release
 on:
   push:
     tags: ["v*"]
+  # Nur die APK für ein schon bestehendes Release nachbauen (Actions → Release → Run workflow)
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release-Tag, z. B. v3.0.0"
+        required: true
 
 jobs:
   windows:
+    if: github.event_name == 'push'
     runs-on: windows-latest
     permissions:
       contents: write
@@ -62,11 +69,17 @@ jobs:
   # Läuft nach Windows, weil erst dann das Release existiert, an das die APK gehängt wird
   android:
     needs: windows
+    # beim Nachbauen per Hand ist der Windows-Job übersprungen
+    if: ${{ !failure() && !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
 
       - uses: actions/setup-node@v4
         with:
@@ -78,7 +91,9 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - uses: android-actions/setup-android@v3
+      # SDK und NDK hat der Runner schon (ANDROID_HOME, ANDROID_NDK_LATEST_HOME); fehlende Plattformen lädt Gradle
+      - name: Android-Lizenzen
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -115,4 +130,4 @@ jobs:
           [ -n "$apk" ] || { echo "keine signierte APK gefunden"; find src-tauri/gen/android/app/build/outputs; exit 1; }
           v=$(node -p "require('./package.json').version")
           cp "$apk" "Goblin.io_${v}_android.apk"
-          gh release upload "$GITHUB_REF_NAME" "Goblin.io_${v}_android.apk" --clobber
+          gh release upload "$TAG" "Goblin.io_${v}_android.apk" --clobber
