@@ -50,7 +50,7 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
     // Eisschild: im Bogen (Abstand ~160 px) hinter den Boss laufen
     if (bs && bs.ice > 0) {
       const rx = P.x - bs.x, ry = P.y - bs.y, rd = Math.hypot(rx, ry) || 1;
-      let da = Math.atan2(ry, rx) - (bs.fa + Math.PI); da = Math.atan2(Math.sin(da), Math.cos(da));
+      let da = Math.atan2(ry, rx) - (bs.fa + Math.PI); da = Math.atan2(Math.sin(da), Math.cos(da));   // (Bot läuft im Browser ohne Module, daher kein angDiff)
       const dir = da > 0 ? -1 : 1, rr = (160 - rd) / 60;
       vx += -ry / rd * dir * 1.6 + rx / rd * rr; vy += rx / rd * dir * 1.6 + ry / rd * rr;
     }

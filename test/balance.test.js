@@ -36,3 +36,9 @@ test('Gegner-Leben ist in jeder Welt und in der Endlosen Nacht eine Zahl', async
   const { enemyHp, stageHp } = await import('../src/game/balance.js');
   STAGES.forEach((st, si) => { assert.ok(Number.isFinite(enemyHp(10, si, 120)) && stageHp(si) > 0, st.name); });
 });
+
+test('angDiff: kürzester Winkelabstand', async () => {
+  const { angDiff } = await import('../src/core/util.js');
+  assert.ok(Math.abs(angDiff(.1, -.1) - .2) < 1e-9);
+  assert.ok(Math.abs(angDiff(Math.PI - .1, -Math.PI + .1) + .2) < 1e-9);
+});

@@ -10,7 +10,7 @@ import { part } from './fx.js';
 import { save } from '../core/save.js';
 import { trailCol } from '../data/cosmetics.js';
 import { hint } from './run.js';
-import { P, pR, query, run } from './state.js';
+import { P, clampToArena, pR, query, run } from './state.js';
 
 // ---------- Spieler ----------
 export function updPlayer(dt) {
@@ -64,10 +64,10 @@ export function updPlayer(dt) {
   }
   if (P.stam < P.stamMax * .25 && (P.sprinting || P.exhaust)) sfx.breath();
   for (const t of P.trail) t.t -= dt; P.trail = P.trail.filter(t => t.t > 0);
+  // Arena: Goblin und alle Boss-Körper (Boss, Teile, Spiegelbilder, Schatten) bleiben drin
   if (run.arena) {
-    const A = run.arena, dx = P.x - A.x, dy = P.y - A.y, d = Math.hypot(dx, dy);
-    if (d > A.r - 22) { P.x = A.x + dx / d * (A.r - 22); P.y = A.y + dy / d * (A.r - 22); }
-    if (run.boss) { const b = run.boss, bx = b.x - A.x, by = b.y - A.y, bd = Math.hypot(bx, by); if (bd > A.r - 30) { b.x = A.x + bx / bd * (A.r - 30); b.y = A.y + by / bd * (A.r - 30); } }
+    clampToArena(P, 22);
+    for (const e of run.enemies) if (e.boss && !e.dead) clampToArena(e, 30);
   }
   P.vx = (P.x - ox) / Math.max(dt, 1e-4); P.vy = (P.y - oy) / Math.max(dt, 1e-4);
   P.inv -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);

@@ -6,7 +6,7 @@ import { autoChest } from './levelup.js';
 import { chargeAbil, xpBonus } from './abilities.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
-import { P, onScreen, pR, run, xpNeed } from './state.js';
+import { P, aoeScope, onScreen, pR, run, xpNeed } from './state.js';
 import { GEM_COL } from '../render/proc.js';
 
 export const gemTier = v => v >= 100 ? 3 : v >= 20 ? 2 : v >= 5 ? 1 : 0;
@@ -52,7 +52,7 @@ export function collect(it) {
     case 'heal': P.hp = Math.min(P.maxHp, P.hp + 35); addNum(P.x, P.y - 40, '+35', '#7dff7a'); sfx.heal(); break;
     case 'magnet': pullAll(); sfx.heal(); ring(P.x, P.y, 10, 300, .5, 'rgba(110,220,255,.8)', 6); break;
     case 'bomb':
-      for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999);
+      aoeScope(() => { for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999); });
       run.flashT = .3; run.shake = 14; sfx.boom(); sfx.ult(); break;
     // Truhen mit festem Inhalt (7.5): Mini-Boss = Wahl aus 3, Elite = 1 Aufwertung, Boss = 3 Aufwertungen
     case 'chest': if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1); else run.pendingChest++; break;

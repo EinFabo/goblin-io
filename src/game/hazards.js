@@ -1,6 +1,6 @@
 import { frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
-import { TAU } from '../core/util.js';
+import { TAU, angDiff } from '../core/util.js';
 import { damagePlayer, hurt } from './combat.js';
 import { animFx, boltFx, explode, part, ring } from './fx.js';
 import { bulwark, perfectRoll, reflect } from './abilities.js';
@@ -101,7 +101,7 @@ export function hazDist(h, x, y) {
     case 'ring': {
       // Knochenkäfig: Band um (x, y), in der Lücke ungefährlich
       const dx = x - h.x, dy = y - h.y, dd = Math.hypot(dx, dy) || .01;
-      let da = Math.atan2(dy, dx) - h.gap; da = Math.atan2(Math.sin(da), Math.cos(da));
+      const da = angDiff(Math.atan2(dy, dx), h.gap);
       if (Math.abs(da) < h.gapW) return [1e9, h.x, h.y];
       return [Math.abs(dd - h.r) - h.w / 2, h.x + dx / dd * h.r, h.y + dy / dd * h.r];
     }
@@ -109,7 +109,7 @@ export function hazDist(h, x, y) {
     case 'beam': { const [d, cx, cy] = segDist(x, y, h.a.x, h.a.y - 20, h.b.x, h.b.y - 20); return [d - h.w / 2, cx, cy]; }
     case 'cone': {
       const dx = x - h.x, dy = y - h.y, d = Math.hypot(dx, dy);
-      let da = Math.atan2(dy, dx) - h.a; da = Math.atan2(Math.sin(da), Math.cos(da));
+      const da = angDiff(Math.atan2(dy, dx), h.a);
       const inside = d < h.len && Math.abs(da) < h.spread;
       return [inside ? -Math.min(h.len - d, (h.spread - Math.abs(da)) * d) : Math.min(Math.abs(d - h.len), Math.abs(Math.abs(da) - h.spread) * d), h.x, h.y];
     }

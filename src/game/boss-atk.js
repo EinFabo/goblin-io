@@ -52,14 +52,6 @@ export const ATK = {
       for (let i = 1; i < n; i++) { const a = rnd() * TAU, r = rand(70, 200); addHaz({ shape: 'circle', x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r, r: 60, warn: 1 + i * .08, dmg: b.dmg * .7, kind: 'storm', src: 'strike' }); }
     },
   },
-  summon: {
-    ck: () => 'blink', charge: .9,
-    fire(b) {
-      const n = b.ph >= 1 ? 7 : 5;
-      for (let i = 0; i < n; i++) { const a = i * TAU / n; spawnEnemy(run.st.boss.minion || 'fire_apprentice', { x: b.x + Math.cos(a) * 80, y: b.y + Math.sin(a) * 80 }); }
-      ring(b.x, b.y, 10, 120, .5, 'rgba(180,120,255,.8)', 6);
-    },
-  },
   // Ansturm: Linie anzeigen, dann quer durch die Arena
   charge: { special: true },
   // Ignaz Phase 3: Meteorregen, der erste genau auf den Spieler

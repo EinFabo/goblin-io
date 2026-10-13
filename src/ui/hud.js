@@ -33,7 +33,7 @@ export function updHud(dt) {
   const mini = run.mini && !run.mini.dead ? run.mini : null;
   if (hudCache.mini !== mini) { hudCache.mini = mini; $('#miniBar').hidden = !mini; if (mini) $('#miniName').textContent = 'Mini-Boss · ' + ETYPES[mini.type].name; }
   if (mini) $('#miniFill').style.width = (Math.max(0, mini.hp / mini.maxHp) * 100).toFixed(1) + '%';
-  if (!run.paused) {
+  if (!run.paused && !run.cut) {
     run.hintT -= dt;
     if (run.hintT <= 0) {
       const h = $('#hint');

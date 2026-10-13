@@ -15,7 +15,7 @@ window.addEventListener('keydown', e => {
   keys[e.code] = true;
   audioInit();
   if (!run || run.over) return;
-  if (run.cut && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); skipCut(); return; }
+  if (run.cut && !run.paused && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); skipCut(); return; }
   if (e.code === 'Space') { e.preventDefault(); doDash(); }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();
   if (e.code === 'KeyQ') useAbility(0);

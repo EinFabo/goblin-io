@@ -1,7 +1,7 @@
 import { RNG, frand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
-import { $, TAU, clamp, face8 } from '../core/util.js';
+import { $, TAU, angDiff, clamp, face8 } from '../core/util.js';
 import { CCOL } from '../data/enemies.js';
 import { BOSSES, BOSS_IDS, RAGE_AT, bossVariant } from '../data/bosses.js';
 import { stageHp } from './balance.js';
@@ -176,6 +176,7 @@ function enterPhase(b) {
   if (ph.armor) initArmor(b, ph.armor);
   if (ph.dismount) dismount(b);
   if (ph.schools) setSchool(b, b.school || 'fire');
+  else b.school = null;   // Verzweiflung: feste Angriffe, kein Schul-Schein mehr
   if (ph.shades) spawnShades(b, ph.shades);
   setBossBar(b);
 }
@@ -233,7 +234,7 @@ export function bossAI(b, dt, dx, dy, d) {
   const sp = tempo(b);
   // Blickrichtung: dreht sich zum Spieler, mit Eisschild langsam: im Abstand von 150 px umrundet man ihn mit
   // 1,1 rad/s (Sprint 1,7), er dreht nur 0,6 – nach ~6 s Laufen (gut 2 s Sprint) steht man hinter ihm
-  let da = Math.atan2(dy, dx) - b.fa; da = Math.atan2(Math.sin(da), Math.cos(da));
+  const da = angDiff(Math.atan2(dy, dx), b.fa);
   const turn = (b.ice > 0 ? .6 : 7) * dt;
   if (ai.st !== 'charge' && ai.st !== 'tele') b.fa += clamp(da, -turn, turn);
   b.face = face8(Math.cos(b.fa), Math.sin(b.fa), b.face);

@@ -67,6 +67,8 @@ async function fightBoss(si) {
         if (bb && bb.armor > 0) S.mech.add('armor');
         if (bb && bb.B.mount && !bb.mount) S.mech.add('foot');
         if (bb && bb.school) S.mech.add('school.' + bb.school);
+        // nach dem Auftritt nie mehr „im Boden“ (Knochenhand verschwand, weil sich zwei Dinge rise teilten)
+        if (bb && !run.cut && bb.rise !== null && bb.rise !== undefined) S.mech.add('BUG:rise');
       }
       const b = run.boss;
       // Wut-Timer: kurz vor 120 s Kampf vorspulen, dann muss die Leiste glühen
@@ -98,6 +100,7 @@ async function fightBoss(si) {
   if (id === 'frostbart' && !seen.shield) errs.push('Frostbart: Eisschild nicht gebrochen');
   const MECH = { ignaz: ['wall', 'meteor', 'burn'], frostbart: ['ice', 'storm', 'spiral'], morgra: ['zone', 'gas', 'split', 'burn'], knochenhand: ['cage', 'vessels', 'beam'],
     spiegelmeister: ['clones', 'portals'], tempestra: ['strike', 'pillars', 'beam', 'wind'], gromm: ['quake', 'rock', 'armor', 'foot', 'spikes'], malvorn: ['school.fire', 'school.frost', 'shades', 'meteor'] };
+  if (seen.mech.has('BUG:rise')) errs.push(`${id}: Boss nach dem Auftritt noch „im Boden“ (rise)`);
   if (MECH[id] && !MECH[id].every(m => seen.mech.has(m))) errs.push(`${id}: Mechaniken fehlen (${MECH[id].filter(m => !seen.mech.has(m))}), gesehen ${[...seen.mech]}`);
 }
 // Mini-Boss (Level 4 jeder Welt, bei 1:40): 2 Elite-Eigenschaften, eigene Leiste oben

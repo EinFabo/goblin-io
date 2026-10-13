@@ -1,6 +1,6 @@
 import { RNG, rnd, frand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
-import { TAU, clamp } from '../core/util.js';
+import { TAU, angDiff, clamp } from '../core/util.js';
 import { BOSSES, BOSS_IDS, bossVariant } from '../data/bosses.js';
 import { SCHOOL_COL } from '../data/enemies.js';
 import { phase } from './boss-atk.js';
@@ -10,7 +10,7 @@ import { animFx, part, puff, ring } from './fx.js';
 import { addHaz } from './hazards.js';
 import { spawnEnemy } from './enemies.js';
 import { hint } from './run.js';
-import { P, run } from './state.js';
+import { P, clampToArena, run } from './state.js';
 import { banner } from '../ui/hud.js';
 
 // ---------- Besondere Boss-Mechaniken (PLAN 6.3) ----------
@@ -20,7 +20,7 @@ import { banner } from '../ui/hud.js';
 export function clearBossWorld() { run.portals = []; run.pillars = []; run.wind = null; }
 // Weitere Körper eines Bosses: Morgras Teile, Spiegelbilder, Malvorns Schatten (eigene Gegner mit Bild des Bosses)
 function body(b, extra) {
-  const e = { ...b, ph: 0, xp: 0, ice: 0, vessels: null, armor: 0, rise: null, flash: .3, at: rnd() * 5, ...extra };
+  const e = { ...b, ph: 0, xp: 0, ice: 0, vessels: null, armor: 0, rise: null, ghostQ: null, flash: .3, at: rnd() * 5, ...extra };
   e.ai = { st: 'chase', t: 1.2 + rnd(), i: 0, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0, chan: 0, spin: null };
   run.enemies.push(e);
   return e;
@@ -58,24 +58,24 @@ export const vesselsUp = b => !!(b.vessels && b.vessels.some(v => !v.dead));
 export function bossOnKill(e) {
   const b = run.boss;
   if (!b || e.type !== 'skeleton' || !phase(b).ghosts) return;
-  (b.rise || (b.rise = [])).push({ x: e.x, y: e.y, t: 1.2 });
+  (b.ghostQ || (b.ghostQ = [])).push({ x: e.x, y: e.y, t: 1.2 });
 }
 export function updRise(b, dt) {
-  if (!b.rise || !b.rise.length) return;
+  if (!b.ghostQ || !b.ghostQ.length) return;
   let ghosts = run.enemies.reduce((n, e) => n + (e.type === 'ghost' && !e.dead ? 1 : 0), 0);
-  for (const r of b.rise) {
+  for (const r of b.ghostQ) {
     r.t -= dt;
     if (Math.random() < .3) part(r.x + frand(-10, 10), r.y, 0, -60, .5, '#7bff6a', 3);
     if (r.t <= 0 && ghosts < 14) { spawnEnemy('ghost', { x: r.x, y: r.y }); ghosts++; }
   }
-  b.rise = b.rise.filter(r => r.t > 0);
+  b.ghostQ = b.ghostQ.filter(r => r.t > 0);
 }
 
 // ---------- Frostbart: Eisschild ----------
 // kx/ky: Rückstoß-Richtung des Treffers (vom Angreifer weg). Ohne Richtung (Flächen, Gift) zählt, wo der Goblin steht.
 export function iceRule(b, dmg, kx, ky) {
   const from = kx || ky ? Math.atan2(-ky, -kx) : Math.atan2(P.y - b.y, P.x - b.x);
-  let da = from - b.fa; da = Math.atan2(Math.sin(da), Math.cos(da));
+  const da = angDiff(from, b.fa);
   if (Math.abs(da) > 1.9) {
     // von hinten: trifft und knackt den Schild
     if (b.iceCd <= 0) {
@@ -118,7 +118,7 @@ export function updBurn(dt, b) {
 // track: dreht sich mit höchstens w rad/s zum Goblin (Lebensraub-Strahl)
 export function spinHaz(h, dt) {
   const s = h.spin, o = h.owner;
-  if (s.track) { let da = Math.atan2(P.y - o.y + 10, P.x - o.x) - s.a; da = Math.atan2(Math.sin(da), Math.cos(da)); s.a += clamp(da, -s.w * dt, s.w * dt); }
+  if (s.track) s.a += clamp(angDiff(Math.atan2(P.y - o.y + 10, P.x - o.x), s.a), -s.w * dt, s.w * dt);
   else s.a += s.w * dt * (h.warn > 0 ? .25 : 1);
   h.x = o.x; h.y = o.y - 10; h.x2 = o.x + Math.cos(s.a) * s.len; h.y2 = o.y - 10 + Math.sin(s.a) * s.len;
 }
@@ -133,25 +133,23 @@ export function spawnClones(b, n) {
 }
 // Alle Körper (echter + Spiegelbilder) tauschen die Plätze auf einem Kreis um den Goblin
 export function blinkBoss(b) {
-  const bodies = [b, ...run.enemies.filter(e => e.decoyOf === b && !e.dead)], A = run.arena, n = bodies.length;
+  const bodies = [b, ...run.enemies.filter(e => e.decoyOf === b && !e.dead)], n = bodies.length;
   const a0 = rnd() * TAU, R = n > 1 ? 230 : 260, order = bodies.map((_, i) => i).sort(() => rnd() - .5);
   bodies.forEach((e, k) => {
     puff(e.x, e.y, e.sc * .6); animFx('p.shade_hit.', 5, e.x, e.y - 30, 3);
     const a = a0 + order[k] * TAU / n;
-    let x = P.x + Math.cos(a) * R, y = P.y + Math.sin(a) * R * .8;
-    if (A) { const dx = x - A.x, dy = y - A.y, d = Math.hypot(dx, dy); if (d > A.r - 60) { x = A.x + dx / d * (A.r - 60); y = A.y + dy / d * (A.r - 60); } }
-    e.x = e.px = x; e.y = e.py = y; e.flash = .2;
-    e.fa = Math.atan2(P.y - y, P.x - x);
+    e.x = P.x + Math.cos(a) * R; e.y = P.y + Math.sin(a) * R * .8; clampToArena(e, 60);
+    e.px = e.x; e.py = e.y; e.flash = .2;
+    e.fa = Math.atan2(P.y - e.y, P.x - e.x);
     if (e !== b) { e.ai.st = 'chase'; e.ai.t = .7 + rnd() * .8; }
   });
   sfx.portal();
 }
 // Phase 3: Spiegeltor vor dem Boss, Ausgang neben dem Goblin (4,5 s)
 export function makePortal(b) {
-  const a = Math.atan2(P.y - b.y, P.x - b.x), A = run.arena, o = rnd() * TAU;
-  let bx = P.x + Math.cos(o) * 220, by = P.y + Math.sin(o) * 170;
-  if (A) { const dx = bx - A.x, dy = by - A.y, d = Math.hypot(dx, dy); if (d > A.r - 50) { bx = A.x + dx / d * (A.r - 50); by = A.y + dy / d * (A.r - 50); } }
-  const pt = { ax: b.x + Math.cos(a) * 110, ay: b.y + Math.sin(a) * 80 - 20, bx, by, t: 4.5, dur: 4.5 };
+  const a = Math.atan2(P.y - b.y, P.x - b.x), o = rnd() * TAU;
+  const out = clampToArena({ x: P.x + Math.cos(o) * 220, y: P.y + Math.sin(o) * 170 }, 50);
+  const pt = { ax: b.x + Math.cos(a) * 110, ay: b.y + Math.sin(a) * 80 - 20, bx: out.x, by: out.y, t: 4.5, dur: 4.5 };
   run.portals.push(pt);
   ring(pt.ax, pt.ay, 5, 50, .4, 'rgba(178,107,255,.9)', 5); ring(pt.bx, pt.by, 5, 50, .4, 'rgba(178,107,255,.9)', 5);
   return pt;
@@ -222,7 +220,7 @@ export function armorRule(b, dmg) {
 // Phase 3: der Golem zerbricht, Gromm zu Fuß – kleiner und schneller
 export function dismount(b) {
   if (!b.mount) return;
-  b.mount = false; b.sc = 2; b.r = 30; b.spd *= 1.6;
+  b.mount = false; b.armor = 0; b.sc = 2; b.r = 30; b.spd *= 1.6;
   run.shake = Math.max(run.shake, 16); sfx.boom(); sfx.stomp();
   for (let i = 0; i < 40; i++) { const a = i * TAU / 40; part(b.x, b.y - 30, Math.cos(a) * frand(120, 320), Math.sin(a) * frand(80, 240) - 60, .8, i % 3 ? '#8a7a62' : '#6a5c48', frand(5, 9)); }
   ring(b.x, b.y, 10, 200, .6, 'rgba(201,163,106,.9)', 10);

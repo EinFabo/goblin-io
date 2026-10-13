@@ -9,7 +9,7 @@ import { bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, puff } from './fx.js';
 import { addEvents } from './run.js';
-import { P, run } from './state.js';
+import { P, aoeId, run } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun } from './run.js';
 import { count } from './progress.js';
@@ -24,13 +24,12 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   dmg *= dealtMult(e);
   const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
   const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
-  // Teile von Morgra teilen sich das Leben des Bosses. Ein Flächentreffer, der mehrere Körper im selben Schritt
-  // mit gleicher Stärke trifft, zählt nur einmal (sonst ×3 auf das gemeinsame Leben)
+  // Teile von Morgra teilen sich das Leben des Bosses. Ein Treffer-Ereignis (Explosion, Zone, Geschoss = ein query),
+  // das mehrere ihrer Körper erwischt, zählt nur einmal (sonst ×3 auf das gemeinsame Leben)
   const tgt = e.link || e;
-  if (tgt.split) {
-    const k = run.time + ':' + dmg;
-    if (tgt.aoeKey === k && tgt.aoeBody !== e) return;
-    tgt.aoeKey = k; tgt.aoeBody = e;
+  if (tgt.split && aoeId) {
+    if (tgt.aoeId === aoeId) return;
+    tgt.aoeId = aoeId;
   }
   tgt.hp -= d; e.flash = .09;
   if (e.tb !== undefined && e.freezeT > 0) e.tb += d;   // Zeitbombe sammelt Schaden
