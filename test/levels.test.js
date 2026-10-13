@@ -12,7 +12,10 @@ for (const si of WORLDS) for (let li = 0; li < LEVELS; li++) test(`Level ${si + 
   }
   const end = st.waves.find(w => w.event === (boss ? 'boss' : 'clear'));
   assert.equal(end.at, boss ? BOSS_AT : LEVEL_LEN);
-  assert.equal(st.waves.some(w => w.event === 'miniboss'), li === 3, 'Mini-Boss nur in Level 4');
+  // Mini-Boss in jedem Level außer dem Boss-Level, Eigenschaften steigen 0/1/2/2
+  const mb = st.waves.filter(w => w.event === 'miniboss');
+  assert.equal(mb.length, boss ? 0 : 1, 'ein Mini-Boss je Level, keiner im Boss-Level');
+  if (!boss) assert.equal(mb[0].affixes, [0, 1, 2, 2][li]);
   for (const w of st.waves) if (w.mix) assert.ok(w.at + w.dur <= end.at, 'Spawns laufen über das Ende hinaus');
 });
 

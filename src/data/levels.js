@@ -15,10 +15,10 @@ export const ENDLESS = STAGES.findIndex(st => st.endless);
 // Thema und Schwierigkeit je Level: Schaden/Spawnrate relativ zur Welt, hpT = Gegner-Leben wie nach
 // so vielen Sekunden mehr (enemyHp wächst mit der Zeit; die Level sind kürzer als die alten Stages)
 export const LEVEL_KIND = [
-  { name: 'Vorposten', sub: 'Die Magier der Welt.', dmg: .9, rate: .95, hpT: 0 },
-  { name: 'Verstärkung', sub: 'Neue Magier kommen dazu.', dmg: 1, rate: 1.05, hpT: 20 },
-  { name: 'Elitetrupp', sub: 'Elites und Schwärme.', dmg: 1.2, rate: 1.2, hpT: 45 },
-  { name: 'Der Meister', sub: 'Ein Mini-Boss wartet.', dmg: 1.15, rate: 1.2, hpT: 55 },
+  { name: 'Vorposten', sub: 'Die Magier der Welt und ein erster Mini-Boss.', dmg: .9, rate: .95, hpT: 0 },
+  { name: 'Verstärkung', sub: 'Neue Magier kommen dazu, der Mini-Boss wird stärker.', dmg: 1, rate: 1.05, hpT: 20 },
+  { name: 'Elitetrupp', sub: 'Elites, Schwärme und ein harter Mini-Boss.', dmg: 1.35, rate: 1.25, hpT: 50 },
+  { name: 'Der Meister', sub: 'Der stärkste Mini-Boss der Welt wartet.', dmg: 1.3, rate: 1.27, hpT: 60 },
   { name: 'Boss', sub: '', dmg: 1.1, rate: 1.15, hpT: 60 },
 ];
 // Schwierigkeit der Welten in den Leveln: eigene, gleichmäßige Kurve statt dmg/rate der alten Stages
@@ -55,25 +55,28 @@ export function levelWaves(st, li) {
   const sw = i => (P.swarms.length ? { count: 30, ...P.swarms[i % P.swarms.length] } : { type: Object.keys(main)[0], count: 24 });
   const both = merge([main, 1], [side, .6]), el = P.elite ? { type: P.elite } : {};
   const sideEl = Object.keys(side).find(k => !k.endsWith('_apprentice') && !k.endsWith('_master'));
+  // Mini-Boss in jedem Level außer dem Boss-Level (Wunsch Fabi), von Level zu Level stärker:
+  // Elite-Eigenschaften 0/1/2/2, Leben ×3/×4/×5/×5
+  const mini = (at, affixes, hp) => ev(at, 'miniboss', { type: P.mini, affixes, hp });
   if (li === 0) return [
-    ph(0, 28, [.6, 1.2], main), ph(32, 36, [1.3, 2.2], main), ev(70, 'elite', el),
+    ph(0, 28, [.6, 1.2], main), ph(32, 36, [1.3, 2.2], main), ev(70, 'elite', el), mini(90, 0, 3),
     ph(74, 34, [2.2, 3], main), ev(110, 'swarm', { ...sw(0), count: Math.round(sw(0).count * .8), shape: 'ring' }),
     ph(114, 36, [3, 3.4], both), ev(LEVEL_LEN, 'clear'),
   ];
   if (li === 1) return [
     ph(0, 25, [.8, 1.4], main), ph(28, 30, [1.5, 2.4], both), ev(60, 'swarm', { ...sw(1), shape: 'wall' }),
-    ph(64, 34, [2.4, 3.3], merge([main, 1], [side, 1])), ev(100, 'elite', sideEl ? { type: sideEl } : {}),
+    ph(64, 34, [2.4, 3.3], merge([main, 1], [side, 1])), mini(90, 1, 4), ev(100, 'elite', sideEl ? { type: sideEl } : {}),
     ev(104, 'swarm', { ...sw(2), shape: 'pincer' }), ph(108, 42, [3.3, 4], full), ev(LEVEL_LEN, 'clear'),
   ];
   if (li === 2) return [
     ph(0, 20, [1, 1.6], main), ev(24, 'elite', el), ph(24, 36, [1.8, 2.8], full), ev(45, 'swarm', { ...sw(0), shape: 'stream' }),
-    ev(64, 'elite'), ph(64, 40, [2.8, 3.8], full), ev(85, 'swarm', { ...sw(1), shape: 'pincer' }), ev(104, 'elite'),
+    ev(64, 'elite'), ph(64, 40, [2.8, 3.8], full), mini(75, 2, 5), ev(85, 'swarm', { ...sw(1), shape: 'pincer' }), ev(104, 'elite'),
     ph(108, 42, [3.8, 4.4], full), ev(118, 'swarm', { ...sw(2), count: Math.round(sw(2).count * 1.2), shape: 'wall' }), ev(134, 'elite'),
     ev(LEVEL_LEN, 'clear'),
   ];
   if (li === 3) return [
     ph(0, 25, [1, 1.8], both), ev(38, 'elite', el), ph(28, 40, [2, 3.2], full), ev(64, 'swarm', { ...sw(0), shape: 'ring' }),
-    ph(72, 24, [3, 3.4], full), ev(100, 'miniboss', { type: P.mini }), ph(104, 46, [3, 4.6], full),
+    ph(72, 24, [3, 3.4], full), mini(100, 2, 5), ph(104, 46, [3, 4.6], full),
     ev(128, 'swarm', { ...sw(1), shape: 'stream' }), ev(LEVEL_LEN, 'clear'),
   ];
   return [

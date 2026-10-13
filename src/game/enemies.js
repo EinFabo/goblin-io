@@ -45,7 +45,7 @@ export function spawnEnemy(type, opt = {}) {
   };
   if (opt.mini) { e.sc *= .65; e.r *= .7; e.hp *= .3; e.xp = Math.ceil(e.xp / 3); e.mini = true; }
   if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; rollAffixes(e, opt.affixes); }
-  if (opt.miniboss) { e.miniboss = true; e.hp *= 5; e.sc *= 1.3; e.r *= 1.3; e.xp = 40; e.spd *= .9; }
+  if (opt.miniboss) { e.miniboss = true; e.hp *= opt.hpMul ?? 5; e.sc *= 1.3; e.r *= 1.3; e.xp = 40; e.spd *= .9; }
   e.maxHp = e.hp;
   // Sichtbare Spawns kommen durch ein Portal (0,4 s, solange nicht angreifbar)
   if ((opt.x !== undefined && opt.portal !== false) || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (onScreen(x, y)) sfx.portal(); }
@@ -89,10 +89,10 @@ export function doEvent(ev) {
     banner(el.affixes.length ? 'Elite: ' + affixNames(el) + '!' : 'Elite-Magier!', '');
   } else if (ev.event === 'miniboss') {
     // Mini-Boss (6.3): Meister der Schule mit 2 Elite-Eigenschaften und eigener Leiste oben
-    const e = spawnEnemy(ev.type, { miniboss: true });
-    rollAffixes(e, 2); run.mini = e;
+    const e = spawnEnemy(ev.type, { miniboss: true, hpMul: ev.hp });
+    rollAffixes(e, ev.affixes ?? 2); run.mini = e;
     banner('Mini-Boss: ' + ETYPES[ev.type].name + '!', 'danger'); sfx.warn();
-    hint(`<b>${ETYPES[ev.type].name}</b> ${affixNames(e)} – er hat die erste Truhe.`);
+    hint(`<b>${ETYPES[ev.type].name}</b> ${e.affixes.length ? affixNames(e) + ' – ' : ''}er trägt eine Truhe.`);
     return e;
   } else if (ev.event === 'swarm') { swarm(ev); banner('Ansturm!', 'danger'); }
   else if (ev.event === 'warn') { banner('Der Boss naht …', 'danger'); sfx.warn(); }
