@@ -4,19 +4,38 @@ import { icon } from '../render/icons.js';
 import { ABILITIES } from '../data/abilities.js';
 import { ETYPES } from '../data/enemies.js';
 import { abilCount, abilReady, dashCdOf, lockOf } from '../game/abilities.js';
+import { sfx } from '../core/audio.js';
+import { part, ring } from '../game/fx.js';
+import { on } from '../core/events.js';
 
 // ---------- HUD ----------
 export const hudCache = {};
 export function setTxt(id, v) { if (hudCache[id] !== v) { hudCache[id] = v; $(id).textContent = v; } }
+// Kurz-Animation am Knopf neu starten (Klasse weg, Reflow, Klasse dran)
+export function flashBtn(b, cls) { b.classList.remove('tick', 'pop', 'fire'); void b.offsetWidth; b.classList.add(cls); }
 export function setAbil(id, p, ready, on = false, lock = false) {
-  const b = $(id), ps = clamp(p, 0, 1).toFixed(3);
-  if (hudCache[id + 'p'] !== ps) { hudCache[id + 'p'] = ps; b.style.setProperty('--p', ps); }
-  if (hudCache[id + 'r'] !== ready) { hudCache[id + 'r'] = ready; b.classList.toggle('ready', ready); }
+  const b = $(id), ps = clamp(p, 0, 1).toFixed(3), was = hudCache[id + 'p'];
+  if (was !== ps) {
+    hudCache[id + 'p'] = ps; b.style.setProperty('--p', ps);
+    // beim Aufladen kurz aufleuchten, wenn 50 % bzw. 75 % überschritten werden
+    if (was !== undefined && !ready && [.5, .75].some(m => +was < m && +ps >= m)) flashBtn(b, 'tick');
+  }
+  if (hudCache[id + 'r'] !== ready) {
+    // nicht bereit → bereit: Pop mit Lichtring und Ton (nicht beim ersten Zeichnen eines Laufs)
+    if (ready && hudCache[id + 'r'] === false && id !== '#sprintBtn') { flashBtn(b, 'pop'); if (id !== '#dashBtn') sfx.abilReady(id === '#ab1Btn' ? 1 : 0); }
+    hudCache[id + 'r'] = ready; b.classList.toggle('ready', ready);
+  }
   if (hudCache[id + 'o'] !== on) { hudCache[id + 'o'] = on; b.classList.toggle('on', on); }
   if (hudCache[id + 'l'] !== lock) { hudCache[id + 'l'] = lock; b.classList.toggle('locked', lock); }
 }
 // Zahl der bereiten Ladungen (nur bei mehreren Ladungen)
-function setCount(id, n) { if (hudCache[id + 'n'] !== n) { hudCache[id + 'n'] = n; $(id + ' .cnt').textContent = n; } }
+function setCount(id, n) {
+  if (hudCache[id + 'n'] === n) return;
+  const el = $(id + ' .cnt'), more = +n > +(hudCache[id + 'n'] || 0) && hudCache[id + 'n'] !== undefined;
+  hudCache[id + 'n'] = n; el.textContent = n;
+  // neue Ladung: Zahl hüpft, bei der Rolle ein leiser Klick
+  if (more) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); if (id === '#dashBtn') sfx.dashBack(); }
+}
 export function updHud(dt) {
   if (!run) return;
   $('#xpFill').style.width = (P.xp / P.need * 100).toFixed(1) + '%';
@@ -58,6 +77,8 @@ export function setupAbilButtons() {
     b.style.setProperty('--c', ABIL_COL[s.id] || '#e0a83a');
     for (const k of ['p', 'r', 'o', 'l', 'n']) delete hudCache['#ab' + i + 'Btn' + k];
   });
+  // Rolle/Sprint: neuer Lauf ohne Pop und Klick vom Stand des letzten
+  for (const id of ['#dashBtn', '#sprintBtn']) for (const k of ['p', 'r', 'n']) delete hudCache[id + k];
 }
 const ABIL_COL = { rage: '#ff5a3c', mech: '#e0a83a', trap: '#c9a26a', smoke: '#b8b8c8', catapult: '#a08a6a', hook: '#8fd0ff', shroom: '#7be04a', shield: '#dfe6ea', rats: '#d9a066', call: '#6fc23a', totem: '#ffd84a', timebomb: '#8fe6ff', bigbang: '#ff9a2e', charm: '#ffd84a' };
 export function slotHtml(ic, lv, evo) { return `<div class="slot${evo ? ' evo' : ''}"><img src="${ic}" alt=""><i>${evo ? '★' : lv}</i></div>`; }
@@ -66,3 +87,11 @@ export function refreshSlots() {
   $('#pSlots').innerHTML = Object.entries(run.passives).map(([id, lv]) => slotHtml(icon(id), lv, false)).join('');
 }
 export function banner(txt, cls) { const b = $('#banner'); b.className = ''; void b.offsetWidth; b.textContent = txt; b.className = 'show ' + (cls || ''); }
+
+// Fähigkeit ausgelöst (game/abilities.js useAbility): Druckwelle am Knopf, Schlag-Ton, Funken am Goblin
+on('abilUse', ({ i, id }) => {
+  flashBtn($('#ab' + i + 'Btn'), 'fire'); sfx.abilUse();
+  const col = ABIL_COL[id] || '#e0a83a';
+  ring(P.x, P.y, 12, 110, .35, col, 7);
+  for (let k = 0; k < 14; k++) { const a = k * Math.PI * 2 / 14; part(P.x, P.y - 12, Math.cos(a) * 240, Math.sin(a) * 240, .35, col, 3.5); }
+});

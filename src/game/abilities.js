@@ -1,3 +1,4 @@
+import { emit } from '../core/events.js';
 import { pullAll, pullable } from './items.js';
 import { count } from './progress.js';
 import { ROLL_T } from './player.js';
@@ -107,6 +108,7 @@ export function useAbility(i) {
   if (s.stock > 0) s.stock--; else s.ch = 0;
   run.abXp[s.id] = (run.abXp[s.id] || 0) + xpPerUse(s.id);   // XP durch Benutzen, gutgeschrieben am Laufende
   count(run, 'abil');
+  emit('abilUse', { i, id: s.id });   // Rückmeldung am Knopf (ui/hud.js)
   return true;
 }
 

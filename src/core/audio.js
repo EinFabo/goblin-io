@@ -106,6 +106,12 @@ export const sfx = {
   anvil() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, .12, 'square', .045, i * .06)); tone(1800, 900, .4, 'triangle', .09, .3); tone(2700, 0, .5, 'sine', .05, .3); noise(.08, .15, 4000, 'bandpass', .3, null, 3); },
   // Bonus-Level am Levelende: Glöckchen, jedes weitere einen Ganzton höher (bis 2 Oktaven)
   bonusLv(n) { const f = 880 * Math.pow(2, Math.min(n - 1, 12) * 2 / 12); tone(f, 0, .16, 'sine', .07); tone(f * 1.5, 0, .12, 'triangle', .03, .04); },
+  // Fähigkeit bereit: aufsteigender Zweiklang mit Glanz (Slot 0 etwas tiefer als Slot 1)
+  abilReady(i = 0) { const f = i ? 659 : 523; tone(f, 0, .12, 'triangle', .06); tone(f * 1.5, 0, .22, 'triangle', .06, .08); tone(f * 3, 0, .25, 'sine', .025, .1); },
+  // Fähigkeit ausgelöst: kurzer Schlag + Rauschen, das hochzieht (unter dem eigenen Ton der Fähigkeit)
+  abilUse() { tone(160, 50, .14, 'sine', .3); noise(.18, .1, 600, 'bandpass', 0, null, 1, 3200); },
+  // Rolle wieder geladen: leiser Klick
+  dashBack() { thr('dashB', 120) && (tone(1400, 0, .03, 'square', .025), tone(2100, 0, .04, 'sine', .02, .03)); },
   abilUp() { [659, 880, 1175].forEach((f, i) => tone(f, 0, .14, 'triangle', .07, i * .07)); tone(1760, 0, .3, 'sine', .04, .22); },
 };
 

@@ -110,6 +110,20 @@ body.cine #hud,body.cine #ctrl,body.cine #hint{opacity:0;transition:opacity .3s}
 #dashBtn{right:0;bottom:98px;width:70px;height:70px;--c:var(--ice)}
 #sprintBtn{right:84px;bottom:84px;width:62px;height:62px;--c:var(--gold)}
 @media (hover:none){.abil .key{display:none}}
+/* Fähigkeiten-Rückmeldung (Wunsch Fabi): Ring füllt sich weich, kurzes Aufleuchten bei 50/75 %, „Pop“ mit
+   Lichtring, wenn sie bereit wird, Druckwelle beim Auslösen, Zahl hüpft bei neuer Ladung */
+@property --p{syntax:'<number>';inherits:true;initial-value:0}
+.abil{transition:--p .12s linear}
+.abil.tick{animation:abilTick .28s ease-out}
+.abil.pop{animation:abilPop .38s cubic-bezier(.3,1.6,.5,1),abilRing .7s ease-out}
+.abil.fire{animation:abilFire .32s ease-out}
+.abil .cnt.bump{animation:cntBump .3s ease-out}
+@keyframes abilTick{40%{filter:brightness(1.6)}}
+@keyframes abilPop{0%{transform:scale(1)}40%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes abilRing{0%{box-shadow:0 4px 0 var(--edge),0 0 0 0 var(--c)}100%{box-shadow:0 4px 0 var(--edge),0 0 0 26px rgba(0,0,0,0)}}
+@keyframes abilFire{0%{transform:scale(.84);filter:brightness(2.2)}60%{transform:scale(1.06)}100%{transform:scale(1);filter:none}}
+@keyframes cntBump{50%{transform:scale(1.5)}}
+@media (prefers-reduced-motion:reduce){.abil.tick,.abil.pop,.abil.fire,.abil .cnt.bump{animation:none}}
 @media (max-height:520px){#ctrl{transform:scale(.8);transform-origin:bottom right}}
 
 /* ---------- Hinweis-Toast ---------- */
