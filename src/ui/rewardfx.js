@@ -33,22 +33,30 @@ function setCounter(kind) {
 }
 const center = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
 
-// n Teile (6–16, je nach Menge) platzen bei fromEl heraus und fliegen zum Zähler (kind: 'gold' | 'gems')
-export function flyReward(fromEl, kind, amount) {
+// n Teile (6–16, je nach Menge) platzen bei fromEl heraus und fliegen zum Zähler (kind: 'gold' | 'gems').
+// to: anderes Ziel-Element (z. B. die Juwelen-Zeile im Ergebnis); dann zählt die Leiste oben nicht mit.
+export function flyReward(fromEl, kind, amount, to = null) {
   if (!amount) return;
   const from = fromEl && fromEl.getBoundingClientRect ? center(fromEl) : { x: W / 2, y: H / 2 };
-  const n = Math.max(6, Math.min(16, Math.round(Math.sqrt(amount) * (kind === 'gems' ? 2 : .9))));
-  pend[kind] += amount;
+  const n = Math.max(to ? 4 : 6, Math.min(16, Math.round(Math.sqrt(amount) * (kind === 'gems' ? 2 : .9))));
+  if (!to) pend[kind] += amount;
   let rest = amount;
   for (let i = 0; i < n; i++) {
     const a = Math.random() * Math.PI * 2, sp = 180 + Math.random() * 260, share = i === n - 1 ? rest : Math.floor(amount / n);
     rest -= share;
-    flyers.push({ kind, x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, t: 0, delay: .32 + i * .045, share, rot: Math.random() * 6 });
+    flyers.push({ kind, to, x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 120, t: 0, delay: .32 + i * .045, share, rot: Math.random() * 6 });
   }
   burstAt(from.x, from.y, kind === 'gems' ? ['#dc9bff', '#9a45e8', '#ffffff'] : ['#ffd84a', '#ff9a1f', '#ffffff'], 22);
-  setCounter(kind);
+  if (!to) setCounter(kind);
   run();
 }
+// Zahl in einem Element hochzählen („+120“), Dauer ms
+export function countUp(el, to, ms = 600, prefix = '+') {
+  const t0 = performance.now();
+  const step = now => { const q = Math.min(1, (now - t0) / ms), v = Math.round(to * (1 - Math.pow(1 - q, 3))); el.textContent = prefix + v.toLocaleString('de-DE'); if (q < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+export const centerOf = center;
 // Funken-Explosion an einer Bildschirmstelle
 export function burstAt(x, y, cols = ['#ffd84a', '#ffffff'], n = 18) {
   for (let i = 0; i < n; i++) {
@@ -83,7 +91,7 @@ function tick(now) {
     if (f.t < f.delay) { f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= .9; f.vy = f.vy * .9 + 300 * dt; }
     else {
       // zum Zähler: weich beschleunigen, das Ziel kann sich bewegen (Fenstergröße)
-      const el = counter(f.kind), to = el ? center(el) : { x: W - 40, y: 20 };
+      const el = f.to || counter(f.kind), to = el ? center(el) : { x: W - 40, y: 20 };
       const dx = to.x - f.x, dy = to.y - f.y, d = Math.hypot(dx, dy), sp = 300 + (f.t - f.delay) * 2400;
       if (d < 16 || f.t > f.delay + 1.6) { f.done = true; arrive(f); continue; }
       f.vx += (dx / d * sp - f.vx) * Math.min(1, dt * 10); f.vy += (dy / d * sp - f.vy) * Math.min(1, dt * 10);
@@ -96,12 +104,12 @@ function tick(now) {
   else { raf = 0; g.clearRect(0, 0, W, H); arrived = 0; }
 }
 function arrive(f) {
-  pend[f.kind] = Math.max(0, pend[f.kind] - f.share);
-  setCounter(f.kind);
+  if (f.to) { f.to.classList.remove('bump'); void f.to.offsetWidth; f.to.classList.add('bump'); }
+  else { pend[f.kind] = Math.max(0, pend[f.kind] - f.share); setCounter(f.kind); }
   // Ton steigt mit jedem angekommenen Teil (wie beim Kristalle-Sammeln)
   const k = Math.min(arrived++, 14), fr = (f.kind === 'gems' ? 990 : 1320) * Math.pow(2, k / 12);
   tone(fr, 0, .07, f.kind === 'gems' ? 'sine' : 'square', f.kind === 'gems' ? .05 : .025); tone(fr * 1.5, 0, .05, 'triangle', .02, .02);
-  const el = counter(f.kind); if (el) { const c = center(el); for (let i = 0; i < 3; i++) parts.push({ x: c.x, y: c.y, vx: (Math.random() - .5) * 160, vy: (Math.random() - .5) * 160, t: 0, life: .3, c: f.kind === 'gems' ? '#dc9bff' : '#ffd84a', s: 2 }); }
+  const el = f.to || counter(f.kind); if (el) { const c = center(el); for (let i = 0; i < 3; i++) parts.push({ x: c.x, y: c.y, vx: (Math.random() - .5) * 160, vy: (Math.random() - .5) * 160, t: 0, life: .3, c: f.kind === 'gems' ? '#dc9bff' : '#ffd84a', s: 2 }); }
 }
 function drawIcon(f) {
   g.save(); g.translate(f.x, f.y);

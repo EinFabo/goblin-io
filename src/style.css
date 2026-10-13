@@ -755,7 +755,23 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 .overhats{display:flex;flex-direction:column;align-items:center;gap:4px;margin:-6px 0 12px}
 .overhats:empty{display:none}
 .overhats .lvlbl{font-family:var(--font-display);color:var(--muted);letter-spacing:.03em}
-.overhats .hats i{width:48px;height:48px}
+.overhats .hats i{width:48px;height:48px;position:relative}
+/* Hüte-Folge im Ergebnis (ui/results.js hatSequence) */
+.overhats .hats i.wait{filter:grayscale(1) brightness(.45);opacity:.6;animation:none}
+.overhats .hats i.won{animation:hatDrop .5s cubic-bezier(.3,1.4,.5,1) both}
+.overhats .hats i.miss{animation:hatMiss .5s ease-in-out}
+.hatnew{position:absolute;left:50%;bottom:-12px;transform:translateX(-50%);font:900 11px/1 var(--font-display);font-style:normal;color:#1a1408;background:var(--gold);padding:2px 5px;border-radius:6px;box-shadow:0 2px 0 var(--edge);animation:hatIn .4s .1s both}
+.hatwhy{margin:2px 0 0;font-size:13px;color:var(--muted)}
+@keyframes hatDrop{0%{transform:translateY(-60px) scale(.6);opacity:0}55%{transform:translateY(4px) scale(1.25,.8);opacity:1}75%{transform:scale(.92,1.1)}100%{transform:none}}
+@keyframes hatMiss{20%,60%{transform:rotate(-12deg)}40%,80%{transform:rotate(12deg)}}
+.results:not(.show)>*{opacity:0}
+.results.show>*{animation:rowIn .3s both}
+.results.show>.abxp.up{animation:abUp .6s cubic-bezier(.3,1.6,.5,1) both}
+/* Weltkarte: neue Hüte am Levelpunkt hüpfen einmal */
+.mnode .hats.pop i.on{animation:hatIn .55s var(--d,0s) both}
+@keyframes rowIn{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:none}}
+.results b.bump{animation:walletBump .22s ease-out}
+@media (prefers-reduced-motion:reduce){.overhats .hats i.won,.overhats .hats i.miss,.results.show>*{animation:none}}
 @media (max-height:700px){
   .mnode .disc{width:46px;height:46px;border-width:3px}.mnode .disc b{font-size:22px}
   .mnode.boss .disc{width:60px;height:60px}.mnode .skull{width:34px;height:34px}

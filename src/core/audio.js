@@ -112,6 +112,13 @@ export const sfx = {
   abilUse() { tone(160, 50, .14, 'sine', .3); noise(.18, .1, 600, 'bandpass', 0, null, 1, 3200); },
   // Rolle wieder geladen: leiser Klick
   dashBack() { thr('dashB', 120) && (tone(1400, 0, .03, 'square', .025), tone(2100, 0, .04, 'sine', .02, .03)); },
+  // Magierhut im Ergebnis: Glöckchen, jeder Hut höher (Grundton, große Terz, Quinte); der dritte mit Akkord
+  hat(i, big = false) {
+    const f = 784 * Math.pow(2, [0, 4, 7][i] / 12);
+    tone(f, 0, .3, 'sine', .08); tone(f * 2, 0, .22, 'triangle', .03, .02); noise(.08, .05, 6000, 'highpass');
+    if (big) for (const m of [1, 1.26, 1.5, 2]) tone(f * m / 2, 0, .7, 'triangle', .035, .08);
+  },
+  hatMiss() { tone(220, 150, .25, 'triangle', .05); },
   abilUp() { [659, 880, 1175].forEach((f, i) => tone(f, 0, .14, 'triangle', .07, i * .07)); tone(1760, 0, .3, 'sine', .04, .22); },
 };
 

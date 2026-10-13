@@ -85,7 +85,7 @@ export function renderMap() {
     M.open = prev.d;
   } else { M.gob.d = M.gob.to = M.nodes[sel].d; M.gob.sel = sel; M.reveal = null; M.open = openDist(); }
   if (m.fresh) { m.fresh = false; persist(); }
-  renderNodes(); renderNote(!M.reveal);
+  renderNodes(); renderNote(!M.reveal); playHatPop();
 }
 function build() {
   layout();
@@ -132,6 +132,19 @@ function renderNote(show = true) {
     ${open ? `<button class="btn primary go" data-go>Los!</button>` : `<p class="lock">${!stageUnlocked(n.si) ? `Besiege zuerst den Boss von Welt ${M.wi}.` : `Schaffe zuerst ${levelLabel(n.si, n.li - 1)}.`}</p>`}`;
 }
 
+// Neue Hüte aus dem letzten Ergebnis: auf der Karte hüpfen sie einmal, der Hutzähler der Welt zählt hoch
+let hatPop = null;
+export function noteNewHats(si, li, n) { hatPop = n > 0 ? { si, li, n } : null; }
+function playHatPop() {
+  const h = hatPop; hatPop = null;
+  if (!h || worldSi() !== h.si) return;
+  const i = M.nodes.findIndex(n => !n.endless && n.li === h.li), el = i >= 0 && document.querySelectorAll('#mapNodes .mnode')[i];
+  const hats = el && el.querySelector('.hats'); if (hats) setTimeout(() => { hats.classList.add('pop'); sfx.hat(0); }, 500);
+  const b = $('#wHats b'); if (!b) return;
+  const total = parseInt(b.textContent, 10), rest = b.textContent.slice(String(total).length);
+  let v = total - h.n; b.textContent = v + rest;
+  const iv = setInterval(() => { v++; b.textContent = v + rest; sfx.coin(); if (v >= total) clearInterval(iv); }, 160);
+}
 // Albtraum-Schalter (6.1): erst wenn der Boss der Welt besiegt ist
 const nmOn = si => !!save.map.nm && stageCleared(si);
 function nmHtml() {
