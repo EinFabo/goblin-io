@@ -1,4 +1,5 @@
 import { pullAll, pullable } from './items.js';
+import { count } from './progress.js';
 import { ROLL_T } from './player.js';
 import { RNG, frand, rand, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
@@ -105,6 +106,7 @@ export function useAbility(i) {
   if (USE[s.id](M(s.id)) === false) return false;
   if (s.stock > 0) s.stock--; else s.ch = 0;
   run.abXp[s.id] = (run.abXp[s.id] || 0) + xpPerUse(s.id);   // XP durch Benutzen, gutgeschrieben am Laufende
+  count(run, 'abil');
   return true;
 }
 
@@ -189,7 +191,7 @@ export function doDash() {
   if (d.b) run.abfx.push({ k: 'caltrop', x: P.x, y: P.y + 10, r: 48, t: 0, dur: 2.5, tick: 0, dmg: (8 + P.lv) * P.dmgMult, seed: Math.random() * 100 });
   // Fallensteller (Meister der Bärenfalle): jede 3. Rolle legt eine Falle
   if (hasAbil('trap') && M('trap').m && ++run.trapRolls % 3 === 0) layTraps(M('trap'), 1);
-  run.abXp.dash = (run.abXp.dash || 0) + xpPerUse('dash');
+  run.abXp.dash = (run.abXp.dash || 0) + xpPerUse('dash'); count(run, 'rolls');
   for (let i = 0; i < 8; i++) part(P.x + frand(-10, 10), P.y + 16, -P.aimX * 90 + frand(-40, 40), frand(-50, -10), .4, trailCol(save.look.trail), frand(4, 7));
   sfx.dash();
 }
@@ -199,7 +201,7 @@ export function perfectRoll(x, y) {
   if (P.perfect) return;
   P.perfect = true; run.slowT = .15;
   chargeAbil('kills', 5 + 2 * M('dash').s1);
-  run.abXp.dash = (run.abXp.dash || 0) + 2;
+  run.abXp.dash = (run.abXp.dash || 0) + 2; count(run, 'perfect');
   for (let i = 0; i < 12; i++) { const a = i * TAU / 12; part(x, y, Math.cos(a) * 160, Math.sin(a) * 160, .4, i % 2 ? '#fff6b0' : '#8fe6ff', 2.8); }
   addNum(P.x, P.y - 52, 'Perfekt!', '#8fe6ff', true);
   sfx.perfect();

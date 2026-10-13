@@ -7,6 +7,7 @@ import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 import { WEAPONS } from '../data/weapons.js';
 import { CARD_MAX, CARD_RARITY, CHESTS, FREE_MAX, RARITY, SHELF } from '../data/cards.js';
 import { COSM, DEFAULT_LOOK_KEYS, SLOTS, START_COSM } from '../data/cosmetics.js';
+import { ACH } from '../data/achievements.js';
 import { LEVELS } from '../data/levels.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
@@ -24,7 +25,8 @@ export function defaults() {
     talents: {},
     stages: {},
     // weapons: in wie vielen Läufen welche Waffe dabei war (Lieblingswaffe)
-    stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0, bestKills: 0, bestLevel: 0, weapons: {}, chests: 0 },
+    // c: Zähler für Erfolge und Tagesaufgaben (game/progress.js)
+    stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0, bestKills: 0, bestLevel: 0, weapons: {}, chests: 0, c: {} },
     // Platz des Goblins auf der Weltkarte (si = Welt 0-basiert, li = Level); fresh: gerade freigespielt
     map: { si: 0, li: 0, fresh: false },
     // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
@@ -42,6 +44,9 @@ export function defaults() {
     // Kosmetik (9.7): besessene Teile (ids "slot.key") und was angezogen ist
     cosm: [...START_COSM],
     look: { ...DEFAULT_LOOK_KEYS },
+    // Erfolge (9.8): abgeholte Stufe je Erfolg; Tagesaufgaben: Tag, Zählerstand am Tagesbeginn, abgeholt
+    ach: {},
+    daily: { day: '', base: {}, claimed: [false, false, false], bonus: false },
   };
 }
 
@@ -85,7 +90,7 @@ export function normalize(raw) {
     stages: {},
     stats: {
       runs: num(st.runs) | 0, wins: num(st.wins) | 0, kills: num(st.kills) | 0, playSeconds: num(st.playSeconds),
-      bestKills: num(st.bestKills) | 0, bestLevel: num(st.bestLevel) | 0, weapons: {},
+      bestKills: num(st.bestKills) | 0, bestLevel: num(st.bestLevel) | 0, weapons: {}, c: {},
     },
     map: { si: 0, li: 0, fresh: false },
     loadout: normLoadout(r.loadout),
@@ -100,7 +105,17 @@ export function normalize(raw) {
     shop: { day: '', bought: [] },
     cosm: [...START_COSM],
     look: { ...DEFAULT_LOOK_KEYS },
+    ach: {},
+    daily: { day: '', base: {}, claimed: [false, false, false], bonus: false },
   };
+  for (const [k, v] of Object.entries(obj(st.c))) { const n = num(v); if (n) out.stats.c[k] = n; }
+  for (const [k, v] of Object.entries(obj(r.ach))) if (ACH[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.ach[k] = n; }
+  const dl = obj(r.daily);
+  if (typeof dl.day === 'string') {
+    const base = {}; for (const [k, v] of Object.entries(obj(dl.base))) base[k] = num(v);
+    const cl = Array.isArray(dl.claimed) ? dl.claimed : [];
+    out.daily = { day: dl.day, base, claimed: [0, 1, 2].map(i => cl[i] === true), bonus: bool(dl.bonus, false) };
+  }
   if (Array.isArray(r.cosm)) for (const id of r.cosm) if (COSM[id] && !out.cosm.includes(id)) out.cosm.push(id);
   const lk = obj(r.look);
   for (const s of SLOTS) if (typeof lk[s.id] === 'string' && out.cosm.includes(s.id + '.' + lk[s.id])) out.look[s.id] = lk[s.id];

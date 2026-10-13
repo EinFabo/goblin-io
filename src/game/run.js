@@ -17,6 +17,7 @@ import { newOfferState } from './offer.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantChest, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
+import { mergeRun } from './progress.js';
 import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 
@@ -35,6 +36,7 @@ export function newRun(si, seed = newSeed(), li = 0) {
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
     mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
+  r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
   // Kartenstufen für diesen Lauf (9.3)
   r.cards = Object.fromEntries(CARD_IDS.map(id => [id, cardLv(save, id)]));
   r.cam = { x: 0, y: 0, z: 1 }; r.hitstop = 0; r.slowT = 0; r.caster = null;
@@ -173,6 +175,7 @@ export function endRun(win) {
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   s.bestKills = Math.max(s.bestKills, run.kills); s.bestLevel = Math.max(s.bestLevel, P.lv);
   for (const w of run.weapons) s.weapons[w.id] = (s.weapons[w.id] || 0) + 1;
+  mergeRun(save, run, win);
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();

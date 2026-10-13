@@ -563,6 +563,28 @@ body.hub .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px);padding-b
 .vchest.trophy .ctile{zoom:.45}
 @media (max-width:640px){.ward{grid-template-columns:1fr}.wprev{flex-direction:row;flex-wrap:wrap;justify-content:center}#wardGob{width:150px;height:150px}.wslots{flex:1;min-width:180px}}
 
+/* ---------- Erfolge und Tagesaufgaben (9.8) ---------- */
+.tasks{display:flex;flex-direction:column;gap:8px}
+.task,.ach{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:2px solid var(--edge);background:var(--moss-3)}
+.task .tt,.ach .tt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.task b,.ach b{font-family:var(--font-display);font-weight:400;font-size:15px}
+.ach .tt>span{font-size:13px;color:var(--muted)}.ach .ex{font-size:11.5px;color:var(--gold)}
+.tbar2{position:relative;height:14px;border-radius:7px;background:rgba(10,15,6,.8);border:2px solid var(--edge);overflow:hidden;max-width:420px}
+.tbar2 i{display:block;height:100%;background:#3e8fc2}.tbar2 span{position:absolute;inset:0;text-align:center;font-size:10px;line-height:11px;font-weight:900;text-shadow:0 1px 0 #000}
+.task.done .tbar2 i,.ach.can .tbar2 i{background:var(--leaf)}.ach.max .tbar2 i{background:var(--gold)}
+.task .rw{display:flex;align-items:center;gap:4px;font-weight:900;white-space:nowrap}.task .rw .chest{width:40px;height:35px}.task .rw span:not(.coin):not(.gem){font-size:12px}
+.task.got{opacity:.6}.task .ok,.ach .ok{font-size:22px;color:var(--leaf);width:72px;text-align:center}
+.task.done,.ach.can{box-shadow:0 0 0 2px var(--leaf),0 0 14px rgba(111,194,58,.4)}
+.task.bonus{background:linear-gradient(90deg,#4d2f7a,var(--moss-3))}
+.titlepick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 4px}.titlepick span{font-family:var(--font-display);font-size:17px}
+.titlepick select{font:inherit;font-weight:800;padding:6px 10px;border-radius:10px;border:2px solid var(--edge);background:var(--moss-2);color:var(--ink)}.titlepick small{color:var(--muted)}
+.achs{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:8px}
+.medals{display:flex;flex-direction:column;gap:3px}
+.medals i{width:16px;height:16px;border-radius:50%;border:2px solid var(--edge);background:rgba(10,15,6,.6)}
+.medals i.on{background:radial-gradient(circle at 35% 35%,#fff,var(--mc) 55%)}
+.medals i.ready{background:var(--mc);animation:dotPulse 1.2s ease-in-out infinite}
+@media (max-width:520px){.achs{grid-template-columns:1fr}.task{flex-wrap:wrap}.task .tt{flex-basis:100%}}
+
 /* Profil */
 .prof .profhead{display:flex;align-items:center;gap:16px}
 #profGob{width:120px;height:120px;flex:none;filter:drop-shadow(0 5px 0 rgba(10,15,6,.5))}

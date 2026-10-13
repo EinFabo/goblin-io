@@ -14,6 +14,7 @@ import { renderStore, storeChanged, storeHasNews } from './store.js';
 import { anyUpgrade, renderWorkshop, workshopHooks } from './workshop.js';
 import { renderWardrobe, wardrobeChanged } from './wardrobe.js';
 import { profileHooks } from './profile.js';
+import { achChanged, achNews, renderAch } from './achievements.js';
 
 // ---------- Hub (PLAN 10.1): Leiste oben, Tabs unten ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
@@ -56,11 +57,12 @@ export function renderTopbar() {
   $('#topGold').textContent = save.wallet.gold.toLocaleString('de-DE');
   $('#topGems').textContent = save.wallet.gems.toLocaleString('de-DE');
   // Hinweis-Punkte: Truhe bereit / Karte aufwertbar
-  $('#storeDot').hidden = !storeHasNews(); $('#shopDot').hidden = !anyUpgrade();
+  $('#storeDot').hidden = !storeHasNews(); $('#shopDot').hidden = !anyUpgrade(); $('#achDot').hidden = $('#profDot').hidden = !achNews();
 }
 storeChanged(renderTopbar);
 wardrobeChanged(renderTopbar);
-profileHooks({ ward: renderWardrobe, ach: () => {} });
+profileHooks({ ward: renderWardrobe, ach: renderAch });
+achChanged(renderTopbar);
 workshopHooks(renderTopbar, () => renderShop());
 setInterval(() => { if (document.body.classList.contains('hub')) $('#storeDot').hidden = !storeHasNews(); }, 5000);
 $('#tabbar').addEventListener('click', e => {

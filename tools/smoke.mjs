@@ -186,6 +186,15 @@ await p.waitForSelector('#over:not([hidden])');
 const vc = await p.evaluate(() => ({ chest: GOBLIN.run.result.chest, shelf: GOBLIN.save.chests.shelf.length, html: !!document.querySelector('#overStats .vchest') }));
 if (!vc.chest || vc.shelf !== 1 || !vc.html) errs.push('Siegtruhe: ' + JSON.stringify(vc));
 console.log('Laden, Truhe, Aufwerten, Siegtruhe:', JSON.stringify({ shop, dag, shelf: vc.shelf }));
+// Garderobe und Erfolge: Hut anziehen, Erfolg abholen, Zähler aus dem Lauf
+await p.evaluate(() => { const S = GOBLIN.save; S.cosm.push('hat.viking'); S.stats.kills = Math.max(S.stats.kills, 1000); GOBLIN.go('menu', '#profile'); });
+await p.waitForTimeout(200);
+await p.click('[data-psub="ward"]'); await p.click('[data-wslot="hat"]'); await p.click('[data-cosm="hat.viking"]');
+await p.click('[data-psub="ach"]'); await p.click('[data-ach="kills"]');
+await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 0, seed: 6 }); G.run.paused = false; G.doDash(); G.endRun(false); G.go('menu'); });
+const prog = await p.evaluate(() => ({ hat: GOBLIN.save.look.hat, ach: GOBLIN.save.ach.kills, rolls: GOBLIN.save.stats.c.rolls || 0, levels: GOBLIN.save.stats.c.levels || 0 }));
+if (prog.hat !== 'viking' || prog.ach !== 1 || !prog.rolls || !prog.levels) errs.push('Garderobe/Erfolge/Zähler: ' + JSON.stringify(prog));
+console.log('Garderobe, Erfolge, Zähler:', JSON.stringify(prog));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

@@ -988,9 +988,16 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 - [x] Shop mit Tagesangeboten (9.6)
   - Laden: Truhenregal, Tagesangebote (Gratis-Gold, 3 Kartenpakete für Gold, 1 Truhe −30 % für Juwelen; gleich für alle per Datum-Seed, neu um Mitternacht), alle Truhen zum Kaufen, Gold gegen Juwelen (20/80/200 → 300/1 400/4 000).
   - Der Kosmetik-Platz der Tagesangebote fehlt noch, kommt mit der Garderobe.
-- [ ] Garderobe, Kosmetik im Generator und im Spiel (9.7)
-- [ ] Tagesaufgaben und Erfolge (9.8)
-- [ ] **Mehr Wiederspielwert und längerer Grind (Wunsch Fabi, 2026-10-12):** Erfolge (9.8) so auslegen, dass sie lange tragen (mehrstufig, seltene Ziele), dazu weitere Langzeit-Ziele, damit man immer etwas zu jagen hat.
+- [x] Garderobe, Kosmetik im Generator und im Spiel (9.7)
+  - Profil hat Reiter: Profil · Garderobe · Erfolge. Garderobe: Goblin dreht sich durch alle 8 Richtungen, 6 Slots, Auswahl mit Seltenheit; gesperrte Teile als Schatten mit Quelle. Anziehen erzeugt die Spiel-Bilder im Hintergrund neu.
+  - 33 Teile (`src/data/cosmetics.js`): Haut ×6, Hut ×7 (Zipfelmütze, Kochmütze, Kochtopf, Piratenhut, Wikingerhelm, Magierhut, Krone – eigene Formen in `gen/goblin.js`), Outfit ×5 (mit Krawatte, Trägern, Platten, Flicken), Dolch ×6 (Tönung der Wurfdolche und Klingen), Roll-Spur ×5 (Partikel und Nachbilder), Maschine ×5 (Lack).
+  - Quellen: Kosmetiktruhe (120 Juwelen, keine Doppelten, 70/22/7/1), Tagesangebot im Laden (Juwelen nach Seltenheit), Magierhut als Trophäe beim ersten Sieg gegen Malvorn, Krone über den Erfolg „Hutsammler“ (alle 75 Hüte).
+  - Sieg-Posen fehlen noch (brauchen eigene Animationen) → später.
+- [x] Tagesaufgaben und Erfolge (9.8)
+  - Zähler im Lauf (`run.cnt`) → `save.stats.c` am Laufende (`src/game/progress.js`): Kills je Schule, Elite/Mini-Boss/Boss, Rollen, perfekte Rollen, Fähigkeiten, Weiterentwicklungen, Gold, geschaffte Level, Siege je Waffe, längste Endlose Nacht; dazu Karten-Aufwertungen.
+  - 39 Erfolge mit Bronze/Silber/Gold (10/25/60 Juwelen), Belohnung abholen per Knopf, Titel bei Gold (auswählbar, steht unter dem Namen), roter Punkt am Profil-Tab.
+  - Tagesaufgaben: 3 pro Tag aus 9 Vorlagen (gleich für alle per Datum), Fortschritt ab Tagesbeginn, Belohnung Gold/Juwelen/Holztruhe, Bonus 20 Juwelen für alle drei.
+- [x] **Mehr Wiederspielwert und längerer Grind (Wunsch Fabi, 2026-10-12):** Erfolge tragen lange (z. B. 100 000 Kills, 300 Siege, 50 h, 20 000 Magier je Schule, alle 75 Hüte), dazu Fähigkeiten bis Level 30, Karten bis Stufe 10 und 33 Kosmetik-Teile.
 
 ### Phase 7 – Stages und Bosse
 - [ ] 8 Stages mit Deko und Musik (6.1), Sterne, Albtraum-Modus

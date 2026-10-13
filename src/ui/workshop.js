@@ -4,6 +4,7 @@ import { $ } from '../core/util.js';
 import { CARD_IDS, CARD_MAX, CARD_RARITY, RARITIES, RARITY, cardName, cardPerks, isWeapon, upgradeCost } from '../data/cards.js';
 import { PASSIVES, WEAPONS } from '../data/weapons.js';
 import { canUpgrade, cardState, upgradeCard } from '../game/chests.js';
+import { countMeta } from '../game/progress.js';
 import { cardHtml } from './cardart.js';
 
 // ---------- Werkstatt: Reiter Karten (9.3) und Talente (9.4) ----------
@@ -42,7 +43,7 @@ function showCard(id) {
 }
 function doUpgrade() {
   if (!upgradeCard(save, cur)) { sfx.buzz(); const b = $('#cardUp'); b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope'); return; }
-  persist(); sfx.anvil();
+  countMeta(save, 'upgrades'); persist(); sfx.anvil();
   showCard(cur);
   const big = $('#cardBig'); big.classList.add('forged');
   renderCards(); onChange();

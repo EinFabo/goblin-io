@@ -4,6 +4,7 @@ import { PASSIVES, WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
 import { drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
 import { P, run } from './state.js';
+import { count } from './progress.js';
 import { banner, refreshSlots } from '../ui/hud.js';
 
 // ---------- Level-Up ----------
@@ -54,7 +55,7 @@ export function autoChest(n) {
 export function applyChoice(c) {
   if (c.k === 'newW') addWeapon(c.id);
   else if (c.k === 'upW') run.weapons.find(w => w.id === c.id).lv++;
-  else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; banner(WEAPONS[c.id].evo + '!', ''); }
+  else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; banner(WEAPONS[c.id].evo + '!', ''); count(run, 'evo'); }
   else if (c.k === 'newP' || c.k === 'upP') run.passives[c.id] = (run.passives[c.id] || 0) + 1;
   else if (c.k === 'heal') P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .4);
   else if (c.k === 'gold') run.gold += 25;

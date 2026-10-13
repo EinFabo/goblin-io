@@ -10,6 +10,8 @@ import { addEvents } from './run.js';
 import { P, run } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun } from './run.js';
+import { count } from './progress.js';
+import { ETYPES } from '../data/enemies.js';
 
 // ---------- Schaden ----------
 // xpMul: tötet dieser Treffer, gibt der Gegner so viel mehr Erfahrung (Kristallregen)
@@ -33,6 +35,8 @@ export function kill(e, xpMul = 1) {
   emit('enemyKilled', e);
   if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
   onKill(e);
+  count(run, e.boss ? 'bosses' : e.miniboss ? 'minis' : e.elite ? 'elites' : null);
+  if (ETYPES[e.type]) count(run, 'k.' + ETYPES[e.type].school);
   dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);
   if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);
