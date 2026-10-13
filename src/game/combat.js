@@ -36,7 +36,9 @@ export function kill(e, xpMul = 1) {
   if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
   onKill(e);
   count(run, e.boss ? 'bosses' : e.miniboss ? 'minis' : e.elite ? 'elites' : null);
-  if (ETYPES[e.type]) count(run, 'k.' + ETYPES[e.type].school);
+  // je Schule nur echte Magier (keine Diener, Klone, Portale oder Knochenhaufen)
+  const T = ETYPES[e.type];
+  if (T && !T.sprite && !e.clone && !e.obj) count(run, 'k.' + T.school);
   dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);
   if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);

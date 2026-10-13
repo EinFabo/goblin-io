@@ -1,4 +1,4 @@
-import { ANIMS, DEFAULT_LOOK, goblinSvg } from '../gen/goblin.js';
+import { ANIMS, goblinSvg } from '../gen/goblin.js';
 import { save } from '../core/save.js';
 import { DAGGER_TINT } from '../data/cosmetics.js';
 import { DRAWN, MIRROR } from '../gen/svg.js';
@@ -15,7 +15,7 @@ export const CACHE = [], SPR = {}, TINT = new Map();
 export let GRASS_IMG = null;
 export function svgSize(s) { const p = s.match(/viewBox="([^"]+)"/)[1].split(/[\s,]+/).map(Number); return [p[2], p[3]]; }
 export function loadImg(src) { return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
-const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+export const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
 // SVG-Bild in eine Canvas rastern (größer als nötig, damit es beim Zoomen scharf bleibt)
 function raster(im, svg, flip = false, scale = 0) {
   const [w, h] = svgSize(svg);
@@ -61,7 +61,7 @@ export async function loadAssets(onStep = () => {}, wantStage = () => true) {
 // Nur Sprint (seitlich) und ein Magier zum Hinterherlaufen – reicht für den Ladebildschirm
 async function loadGoblinRun() {
   const jobs = [];
-  for (let i = 0; i < ANIMS.sprint; i++) jobs.push([i, goblinSvg('left', 'sprint', i, DEFAULT_LOOK)]);
+  for (let i = 0; i < ANIMS.sprint; i++) jobs.push([i, goblinSvg('left', 'sprint', i, goblinLook())]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[1]))));
   jobs.forEach(([i, svg], j) => { SPR[`gob.sprint.right.${i + 1}`] = raster(imgs[j], svg, true); });
   await loadUnit('fire', 'walk');
@@ -78,6 +78,12 @@ export async function loadGoblin(look = goblinLook()) {
   for (const [anim, n] of Object.entries(ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, goblinSvg(dir, anim, i, look)]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[3]))));
   if (me !== gobToken) return;
+  // alte Goblin-Bilder freigeben (Canvas und ihre Tönungen), sonst wächst der Speicher mit jedem Umziehen
+  for (const [k, e] of Object.entries(SPR)) {
+    if (!k.startsWith('gob.') || !e) continue;
+    CACHE[e.idx] = null;
+    for (const t of Object.keys(TINTS)) TINT.delete(e.idx + '|' + t);
+  }
   jobs.forEach(([anim, dir, i, svg], j) => {
     SPR[`gob.${anim}.${dir}.${i + 1}`] = raster(imgs[j], svg);
     const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);

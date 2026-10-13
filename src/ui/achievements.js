@@ -5,7 +5,7 @@ import { ACHIEVEMENTS, DAILY_BONUS, TIERS } from '../data/achievements.js';
 import { CHESTS } from '../data/cards.js';
 import { COSM } from '../data/cosmetics.js';
 import { achState, claimAch, claimDaily, claimDailyBonus, claimableCount, dailyOpen, dailyTasks, titles } from '../game/progress.js';
-import { msToMidnight } from '../game/shop.js';
+import { dayKey, msToMidnight } from '../game/shop.js';
 import { chestSvg } from './cardart.js';
 import { openChest } from './store.js';
 
@@ -17,7 +17,8 @@ const fmtN = n => Math.floor(n).toLocaleString('de-DE');
 const reward = r => r.gold ? `<span class="coin"></span>${r.gold}` : r.gems ? `<span class="gem"></span>${r.gems}` : `${chestSvg(r.chest)}<span>${CHESTS[r.chest].name}</span>`;
 
 export function renderAch() {
-  const tasks = dailyTasks(save), all = tasks.every(t => t.claimed);
+  shownDay = dayKey();
+  const tasks = dailyTasks(save, shownDay), all = tasks.every(t => t.claimed);
   const daily = `<h3 class="sect">Tagesaufgaben <small>neu in ${fmtClock(msToMidnight() / 1000)}</small></h3><div class="tasks">${tasks.map((t, i) => `
     <div class="task${t.claimed ? ' got' : t.done ? ' done' : ''}"><div class="tt"><b>${t.text}</b><div class="tbar2"><i style="width:${(t.prog / t.n * 100).toFixed(0)}%"></i><span>${fmtN(t.prog)} / ${fmtN(t.n)}</span></div></div>
       <div class="rw">${reward(t.reward)}</div>
@@ -42,12 +43,19 @@ export function renderAch() {
 $('#achView').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.daily !== undefined) {
-    const r = claimDaily(save, +b.dataset.daily); if (!r) { sfx.buzz(); return; }
+    const r = claimDaily(save, +b.dataset.daily); if (!r) { sfx.buzz(); renderAch(); return; }   // z. B. Mitternacht vorbei
     persist(); sfx.chest();
     if (r.chest) openChest(r.chest);
-  } else if (b.dataset.dbonus !== undefined) { if (!claimDailyBonus(save)) { sfx.buzz(); return; } persist(); sfx.chest(); }
+  } else if (b.dataset.dbonus !== undefined) { if (!claimDailyBonus(save)) { sfx.buzz(); renderAch(); return; } persist(); sfx.chest(); }
   else if (b.dataset.ach) { const r = claimAch(save, b.dataset.ach); if (!r) { sfx.buzz(); return; } persist(); if (r.cosm) sfx.master(); else sfx.lvl(); }
   else return;
   renderAch(); onChange();
 });
+// Countdown und Tageswechsel auffrischen, solange der Reiter offen ist
+let shownDay = '';
+setInterval(() => {
+  if ($('#achView').hidden || $('#profile').hidden) return;
+  if (dayKey() !== shownDay) { renderAch(); return; }
+  const el = $('#achView .sect small'); if (el) el.textContent = 'neu in ' + fmtClock(msToMidnight() / 1000);
+}, 1000);
 $('#achView').addEventListener('change', e => { if (e.target.id !== 'titleSel') return; save.profile.title = e.target.value; persist(); sfx.click(); onChange(); });

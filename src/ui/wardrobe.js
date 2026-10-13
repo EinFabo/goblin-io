@@ -7,14 +7,14 @@ import { equip, equipped, grantCosmetic, missing, owns, rollCosmetic } from '../
 import { canPay, pay } from '../game/shop.js';
 import { goblinSvg } from '../gen/goblin.js';
 import { DIRS8 } from '../gen/svg.js';
-import { loadGoblin, loadImg } from '../render/sprites.js';
+import { goblinLook, loadGoblin, loadImg, svgUrl } from '../render/sprites.js';
+import { RARITIES, RARITY } from '../data/cards.js';
 import { cosmImg, cosmTile } from './cosmart.js';
 import { playChest } from './chest-open.js';
 
 // ---------- Garderobe (PLAN 10.1, 9.7): Goblin dreht sich, Slots, Auswahl ----------
 let slot = 'hat', onChange = () => {};
 export function wardrobeChanged(fn) { onChange = fn; }
-const look = () => ({ skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat });
 
 export function renderWardrobe() {
   $('#wardSlots').innerHTML = SLOTS.map(s => `<button class="wslot${s.id === slot ? ' on' : ''}" data-wslot="${s.id}" role="tab" aria-selected="${s.id === slot}"><img src="${cosmImg(s.id + '.' + save.look[s.id])}" alt=""><span>${s.name}</span></button>`).join('');
@@ -27,7 +27,7 @@ export function renderWardrobe() {
   }).join('');
   const left = missing(save).length, ok = left && canPay(save, COSMO_CHEST.price);
   $('#wardChest').innerHTML = `<button class="btn ${left ? 'primary' : 'ghost'}" data-cosmo ${left ? (ok ? '' : 'aria-disabled="true"') : 'disabled'}>${left ? `Kosmetiktruhe · <span class="gem"></span>${COSMO_CHEST.price.gems}` : 'Alles aus Truhen gesammelt!'}</button>
-    <small>${left ? `Ein Teil, das du noch nicht hast (noch ${left}). Gewöhnlich 70 %, selten 22 %, episch 7 %, legendär 1 %.` : ''}</small>`;
+    <small>${left ? `Ein Teil, das du noch nicht hast (noch ${left}). ${RARITIES.map((r, i) => `${RARITY[r].name} ${COSMO_CHEST.odds[i]} %`).join(', ')}.` : ''}</small>`;
   preview();
 }
 
@@ -35,7 +35,7 @@ export function renderWardrobe() {
 export function openCosmoChest(after = () => {}) {
   if (!missing(save).length || !pay(save, COSMO_CHEST.price)) return false;
   const id = rollCosmetic(save, mulberry32(newSeed()));
-  grantCosmetic(save, id); persist();
+  grantCosmetic(save, id); save.stats.chests++; persist();   // zählt für „Schatzsucher“
   const c = COSM[id];
   playChest({ type: 'cosmo', gold: 0, cards: [], cosmetic: id, best: c.rarity }, () => { slot = c.slot; renderWardrobe(); onChange(); after(); });
   return true;
@@ -44,10 +44,10 @@ export function openCosmoChest(after = () => {}) {
 // ---------- Vorschau: Goblin dreht sich langsam durch alle 8 Richtungen ----------
 let frames = null, frameKey = '', raf = 0;
 async function preview() {
-  const L = look(), key = JSON.stringify(L);
+  const L = goblinLook(), key = JSON.stringify(L);
   if (key !== frameKey) {
     frameKey = key;
-    const imgs = await Promise.all(DIRS8.map(d => loadImg('data:image/svg+xml;charset=utf-8,' + encodeURIComponent(goblinSvg(d, 'idle', 0, L)))));
+    const imgs = await Promise.all(DIRS8.map(d => loadImg(svgUrl(goblinSvg(d, 'idle', 0, L)))));
     if (frameKey === key) frames = imgs;
   }
   if (!raf) raf = requestAnimationFrame(draw);
@@ -69,8 +69,11 @@ $('#wardView').addEventListener('click', e => {
   if (s) { slot = s.dataset.wslot; sfx.tab(); renderWardrobe(); return; }
   if (e.target.closest('[data-cosmo]')) { if (!openCosmoChest()) sfx.buzz(); else onChange(); return; }
   const b = e.target.closest('[data-cosm]'); if (!b) return;
-  if (!equip(save, b.dataset.cosm)) { sfx.buzz(); return; }
+  const id = b.dataset.cosm;
+  if (equipped(save, id)) return;
+  if (!equip(save, id)) { sfx.buzz(); return; }
   persist(); sfx.pickCard(); renderWardrobe(); onChange();
-  // Spiel-Sprites im Hintergrund neu erzeugen (kurz warten, falls schnell weitergeklickt wird)
-  clearTimeout(reload); reload = setTimeout(() => loadGoblin(), 400);
+  // Nur Haut, Hut und Outfit stecken in den Goblin-Bildern: dann im Hintergrund neu erzeugen
+  // (kurz warten, falls schnell weitergeklickt wird). Dolch, Spur und Maschine wirken sofort.
+  if (['skin', 'hat', 'outfit'].includes(COSM[id].slot)) { clearTimeout(reload); reload = setTimeout(() => loadGoblin(), 400); }
 });

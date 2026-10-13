@@ -9,17 +9,17 @@ import { grantCosmetic } from './cosmetics.js';
 export function count(run, key, n = 1) { if (run && run.cnt && key) run.cnt[key] = (run.cnt[key] || 0) + n; }
 export function countMeta(save, key, n = 1) { ensureDaily(save); save.stats.c[key] = (save.stats.c[key] || 0) + n; }
 
-// Laufende in den Spielstand: Zähler, Gold, geschaffte Level, Siege je Waffe, längste Endlose Nacht
+// Laufende in den Spielstand: Zähler, Gold, geschaffte Level, Siege je Waffe, längste Endlose Nacht.
+// Der Tagesbeginn der Aufgaben muss vorher feststehen (endRun ruft ensureDaily, bevor es Statistiken ändert).
 export function mergeRun(save, run, win) {
-  ensureDaily(save);
   const c = save.stats.c, add = (k, n) => { if (n) c[k] = (c[k] || 0) + n; };
   for (const [k, n] of Object.entries(run.cnt)) add(k, n);
   add('gold', run.gold);
   if (win && !run.st.endless) { add('levels', 1); for (const w of run.weapons) add('w.' + w.id, 1); }
   if (run.st.endless) c.endless = Math.max(c.endless || 0, Math.floor(run.time));
 }
-// Zählerwert für Tagesaufgaben (Kills stehen seit jeher in stats.kills)
-const val = (save, key) => key === 'kills' ? save.stats.kills : (save.stats.c[key] || 0);
+// Zählerwert für Tagesaufgaben (Kills stehen seit jeher in stats.kills; „elites“ zählt Mini-Bosse mit)
+const val = (save, key) => key === 'kills' ? save.stats.kills : key === 'elites' ? (save.stats.c.elites || 0) + (save.stats.c.minis || 0) : (save.stats.c[key] || 0);
 
 // ---------- Erfolge ----------
 export function achState(save, a) {
@@ -41,7 +41,8 @@ export function claimAch(save, id) {
 export const titles = save => ACHIEVEMENTS.filter(a => a.title && (save.ach[a.id] || 0) >= 3).map(a => a.title);
 
 // ---------- Tagesaufgaben ----------
-// Drei Aufgaben je Tag (gleich für alle, Seed = Datum), Fortschritt seit dem ersten Blick des Tages bzw. Laufende
+// Drei Aufgaben je Tag (gleich für alle, Seed = Datum). Der Tagesbeginn (Zählerstand) wird nur an festen Stellen
+// genommen: Laufstart, Laufende (vor dem Verbuchen), Karte aufwerten, Abholen. Anzeigen ändern nichts.
 export function ensureDaily(save, day = dayKey()) {
   const d = save.daily;
   if (d.day === day) return d;
@@ -51,15 +52,17 @@ export function ensureDaily(save, day = dayKey()) {
   return save.daily;
 }
 export function dailyTasks(save, day = dayKey()) {
-  const d = ensureDaily(save, day), r = mulberry32(hashSeed('goblin-aufgaben-' + day)), pool = DAILY_POOL.slice();
+  // Noch kein Eintrag für heute: alles bei null (ohne den Spielstand zu ändern)
+  const d = save.daily.day === day ? save.daily : { base: null, claimed: [false, false, false], bonus: false }, r = mulberry32(hashSeed('goblin-aufgaben-' + day)), pool = DAILY_POOL.slice();
   return [0, 1, 2].map(i => {
     const t = pool.splice((r() * pool.length) | 0, 1)[0], n = t.n[(r() * t.n.length) | 0];
-    const prog = Math.max(0, val(save, t.key) - (d.base[t.key] || 0));
+    const prog = d.base ? Math.max(0, val(save, t.key) - (d.base[t.key] || 0)) : 0;
     return { ...t, n, text: typeof t.desc === 'function' ? t.desc(n) : t.desc.replace('{n}', n), prog: Math.min(n, prog), done: prog >= n, claimed: d.claimed[i] };
   });
 }
 // Belohnung abholen; gibt die Belohnung zurück ({ gold } | { gems } | { chest }), Gold/Juwelen sind schon gutgeschrieben
 export function claimDaily(save, i, day = dayKey()) {
+  ensureDaily(save, day);
   const t = dailyTasks(save, day)[i];
   if (!t || !t.done || t.claimed) return null;
   save.daily.claimed[i] = true;
@@ -73,4 +76,4 @@ export function claimDailyBonus(save, day = dayKey()) {
   d.bonus = true; save.wallet.gems += DAILY_BONUS.gems;
   return DAILY_BONUS;
 }
-export const dailyOpen = save => { const t = dailyTasks(save); return t.some(x => x.done && !x.claimed) || (t.every(x => x.claimed) && !save.daily.bonus); };
+export const dailyOpen = (save, day = dayKey()) => { const t = dailyTasks(save, day); return t.some(x => x.done && !x.claimed) || (t.every(x => x.claimed) && save.daily.day === day && !save.daily.bonus); };

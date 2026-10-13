@@ -114,7 +114,7 @@ export const STAGES = [
       ev(222, 'warn'),
       ev(240, 'boss'),
     ],
-    boss: { name: 'Erzmagier Malvorn', school: 'light', kind: 'both', tint: null, minion: 'light_apprentice' } },
+    boss: { name: 'Erzmagier Malvorn', school: 'light', kind: 'both', tint: null, minion: 'light_apprentice', trophy: 'hat.wizard' } },
 
   { name: 'Endlose Nacht', sub: 'Kein Ende, alle 4 Minuten ein Boss. Wie lange hältst du durch?', tint: ['#5a6cb0', .62], dark: .32, dmg: 1.7, rate: 1.4, endless: true,
     waves: [

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { defaults, normalize } from '../src/core/save.js';
 import { ACHIEVEMENTS, ACH, TIERS } from '../src/data/achievements.js';
-import { achState, claimAch, claimDaily, claimDailyBonus, claimableCount, count, dailyTasks, mergeRun, titles } from '../src/game/progress.js';
+import { achState, claimAch, claimDaily, claimDailyBonus, claimableCount, count, dailyTasks, ensureDaily, mergeRun, titles } from '../src/game/progress.js';
 
 test('jeder Erfolg hat drei steigende Ziele und einen Wert', () => {
   const s = defaults();
@@ -49,6 +49,8 @@ test('Tagesaufgaben: gleich für alle am Tag, Fortschritt ab Tagesbeginn, Bonus'
   const a = dailyTasks(s, day), b = dailyTasks(defaults(), day);
   assert.deepEqual(a.map(t => t.text), b.map(t => t.text));
   assert.equal(new Set(a.map(t => t.id)).size, 3, 'drei verschiedene');
+  assert.equal(s.daily.day, '', 'Anzeigen ändert den Spielstand nicht');
+  ensureDaily(s, day);   // wie beim Laufstart
   // alles erfüllen: Zähler hochsetzen
   for (const t of a) { if (t.key === 'kills') s.stats.kills += t.n; else s.stats.c[t.key] = (s.stats.c[t.key] || 0) + t.n; }
   const done = dailyTasks(s, day);
@@ -63,6 +65,14 @@ test('Tagesaufgaben: gleich für alle am Tag, Fortschritt ab Tagesbeginn, Bonus'
   assert.equal(claimDailyBonus(s, day), null);
   // neuer Tag: Fortschritt beginnt bei null
   assert.ok(dailyTasks(s, '2026-10-15').every(t => t.prog === 0 && !t.claimed));
+});
+
+test('Tagesaufgabe Elite zählt Mini-Bosse mit', () => {
+  // einen Tag suchen, an dem die Elite-Aufgabe dran ist
+  let day = null; for (let d = 1; d < 60 && !day; d++) { const k = `2026-11-${String(d).padStart(2, '0')}`; if (dailyTasks(defaults(), k).some(t => t.id === 'elites')) day = k; }
+  const s = defaults(); ensureDaily(s, day);
+  s.stats.c.minis = 3; s.stats.c.elites = 2;
+  assert.equal(dailyTasks(s, day).find(t => t.id === 'elites').prog, 5);
 });
 
 test('Spielstand: Zähler, Erfolge und Tagesaufgaben werden repariert', () => {

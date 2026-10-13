@@ -17,7 +17,7 @@ import { newOfferState } from './offer.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantChest, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
-import { mergeRun } from './progress.js';
+import { ensureDaily, mergeRun } from './progress.js';
 import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 
@@ -37,6 +37,7 @@ export function newRun(si, seed = newSeed(), li = 0) {
     mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
+  ensureDaily(save);
   // Kartenstufen für diesen Lauf (9.3)
   r.cards = Object.fromEntries(CARD_IDS.map(id => [id, cardLv(save, id)]));
   r.cam = { x: 0, y: 0, z: 1 }; r.hitstop = 0; r.slowT = 0; r.caster = null;
@@ -145,6 +146,7 @@ function savePrev() {
 export function endRun(win) {
   if (run.over) return;
   run.over = true; run.paused = true;
+  ensureDaily(save);   // Tagesbeginn der Aufgaben festhalten, bevor dieser Lauf irgendetwas verbucht
   const boss = !run.st.endless && run.li === LEVELS - 1;
   const bonus = win ? 25 + run.si * 20 + (boss ? 40 + run.si * 30 : 0) : 0;
   // Magierhüte (6.1a): geschafft, über 50 % Leben am Ende, nie unter 25 % gefallen
@@ -164,8 +166,8 @@ export function endRun(win) {
   const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0);
   save.wallet.gems += gems;
   // Siegtruhe nach jedem Boss-Level; ist das Regal voll, geht sie sofort auf
-  // Boss-Trophäe (9.7): Malvorns Magierhut beim ersten Sieg im Turm der Magier
-  const trophy = win && boss && STAGES[run.si].boss.name === 'Erzmagier Malvorn' && grantCosmetic(save, 'hat.wizard') ? 'hat.wizard' : null;
+  // Boss-Trophäe (9.7, steht beim Boss in data/stages.js): beim ersten Sieg
+  const tr = STAGES[run.si].boss.trophy, trophy = win && boss && tr && grantCosmetic(save, tr) ? tr : null;
   let chest = null;
   if (win && boss) {
     const type = victoryChest(run.si);

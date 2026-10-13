@@ -14,7 +14,7 @@ import { dangerVec } from './game/hazards.js';
 import { spawnEnemy } from './game/enemies.js';
 import { ETYPES } from './data/enemies.js';
 import { allLoaded } from './scenes/boot.js';
-import { SPR, loadMinions } from './render/sprites.js';
+import { CACHE, SPR, loadMinions } from './render/sprites.js';
 import { M as MAP } from './ui/worldmap.js';
 
 const api = {
@@ -22,6 +22,7 @@ const api = {
   newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES,
 };
 Object.defineProperties(api, {
+  liveCanvases: { value: () => CACHE.filter(Boolean).length },
   run: { get: () => run }, allLoaded: { get: () => allLoaded() }, P: { get: () => P }, save: { get: () => save }, scene: { get: () => sceneName },
 });
 window.GOBLIN = api;

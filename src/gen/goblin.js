@@ -12,8 +12,8 @@ export const SKINS = {
 export const OUTFITS = {
   vest: { body: '#8a5a32', belt: '#3b2414', boot: '#5a3a22' },
   rags: { body: '#9a8a62', belt: '#5a4a2a', boot: '#4a3a22', patch: '#6a5a3a' },
-  suit: { body: '#2a2d36', belt: '#16181e', boot: '#16181e', trim: '#d63a3a' },
-  overall: { body: '#3a6ab0', belt: '#24467a', boot: '#3a2a1a', trim: '#e8c35a' },
+  suit: { body: '#2a2d36', belt: '#16181e', boot: '#16181e', trim: '#d63a3a', deco: 'tie' },
+  overall: { body: '#3a6ab0', belt: '#24467a', boot: '#3a2a1a', trim: '#e8c35a', deco: 'straps' },
   knight: { body: '#a8b0b8', belt: '#5a6068', boot: '#6a7078', plate: '#e8eef2' },
 };
 // shape: Form im Generator (siehe hatShape)
@@ -114,8 +114,8 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
   // Outfit-Details auf der Vorderseite (wandern mit der Drehung zur Seite)
   if (c > -0.2) {
     const [mx] = T(0, 9), w = 1 - .5 * ak;
-    if (O.trim && O.body === '#2a2d36') body.push(poly([[mx - 2.5 * w, -1], [mx + 2.5 * w, -1], [mx + 1.8 * w, 8], [mx, 10], [mx - 1.8 * w, 8]], O.trim, ' stroke-width="1"'));   // Krawatte
-    else if (O.trim) for (const s of [-1, 1]) { const [sx] = T(5 * s, 8); body.push(line(sx, -2, sx, 9, ` stroke="${O.belt}" stroke-width="2.4"`), circ(sx, 1, 1.3, O.trim, NOSTROKE)); }   // Träger
+    if (O.deco === 'tie') body.push(poly([[mx - 2.5 * w, -1], [mx + 2.5 * w, -1], [mx + 1.8 * w, 8], [mx, 10], [mx - 1.8 * w, 8]], O.trim, ' stroke-width="1"'));   // Krawatte
+    else if (O.deco === 'straps') for (const s of [-1, 1]) { const [sx] = T(5 * s, 8); body.push(line(sx, -2, sx, 9, ` stroke="${O.belt}" stroke-width="2.4"`), circ(sx, 1, 1.3, O.trim, NOSTROKE)); }   // Träger
     if (O.plate) { body.push(rect(mx - 6 * w, 0, 12 * w, 7, 3, O.plate, ' stroke-width="1.2"')); for (const s of [-1, 1]) body.push(circ(mx + s * 7 * w, 5, 1.2, '#5a6068', NOSTROKE)); }
     if (O.patch) { const [px] = T(-4, 9); body.push(rect(px - 3, 2, 6, 5, 1, O.patch, ' stroke-width="1"')); }
   }
@@ -215,7 +215,7 @@ function hatShape(H, hy, { k, c, ak, ac, T }) {
     case 'chef': {
       // weißer Bund, darüber drei Puffs
       out.push(rect(-rx + 2, -30 + hy, 2 * rx - 4, 10, 3, col));
-      for (const [x, y, r] of [[-8, -36, 8], [8, -36, 8], [0, -41, 9]]) { const [tx] = T(x, 0); out.push(circ(tx, y + hy, r, col)); }
+      for (const [x, y, r] of [[-8, -34, 7], [8, -34, 7], [0, -37, 7.5]]) { const [tx] = T(x, 0); out.push(circ(tx, y + hy, r, col)); }   // oben bleibt Platz fürs Hüpfen
       out.push(line(-rx + 4, -25 + hy, rx - 4, -25 + hy, ' stroke="#c9c9c0" stroke-width="1.4"'));
       break;
     }
@@ -248,8 +248,8 @@ function hatShape(H, hy, { k, c, ak, ac, T }) {
       // breite Krempe, hoher geknickter Spitzhut mit Stern (Trophäe von Malvorn)
       out.push(ell(3 * k * (front ? 0 : 1), -19 + hy, rx + 9, 6, col));
       const [bc] = T(0, -3), [ax] = T(6, -10);
-      out.push(path(`M${f(bc - 13)} ${f(-21 + hy)} L${f(ax + 4)} ${f(-50 + hy)} Q${f(ax + 14)} ${f(-56 + hy)} ${f(ax + 16)} ${f(-48 + hy)} L${f(ax + 8)} ${f(-46 + hy)} L${f(bc + 13)} ${f(-21 + hy)}Z`, col));
-      if (front) out.push(poly(star(T(0, 12)[0] + 1, -31 + hy, 4.5, 1.8, 5, 0), H.trim, ' stroke-width="1"'));
+      out.push(path(`M${f(bc - 13)} ${f(-21 + hy)} L${f(ax + 4)} ${f(-43 + hy)} Q${f(ax + 13)} ${f(-48 + hy)} ${f(ax + 15)} ${f(-41 + hy)} L${f(ax + 8)} ${f(-40 + hy)} L${f(bc + 13)} ${f(-21 + hy)}Z`, col));
+      if (front) out.push(poly(star(T(0, 12)[0] + 1, -29 + hy, 4, 1.6, 5, 0), H.trim, ' stroke-width="1"'));
       break;
     }
     case 'crown': {
@@ -274,14 +274,26 @@ function dagger(hx, hy) {
   ], ` transform="translate(${f(hx)} ${f(hy - 2)})"`);
 }
 
+// Hut auf der Kugel (Kopf oben bei y -9): Kappe in Hutfarbe plus das Kennzeichen der Form
+function ballHat(H) {
+  const cap = path('M-12 -3 A15 15 0 0 1 12 -3 Q0 1 -12 -3Z', H.col), c = H.col;
+  switch (H.shape) {
+    case 'chef': return [rect(-11, -10, 22, 7, 2, c), circ(-6, -13, 5, c), circ(6, -13, 5, c), circ(0, -16, 5.5, c)];
+    case 'pot': return [rect(-12, -14, 24, 11, 2, c), rect(-14, -5, 28, 3, 1, '#6d747c')];
+    case 'pirate': return [cap, path('M-19 -2 Q0 4 19 -2 Q8 -9 0 -7 Q-8 -9 -19 -2Z', c)];
+    case 'viking': return [cap, path('M-11 -4 Q-20 -6 -20 -16 Q-15 -9 -9 -9Z', H.trim), path('M11 -4 Q20 -6 20 -16 Q15 -9 9 -9Z', H.trim)];
+    case 'wizard': return [ell(0, -3, 19, 4, c), poly([[-9, -4], [4, -24], [9, -4]], c)];
+    case 'crown': return [poly([[-11, -2], [-11, -9], [-7, -5], [-3, -12], [0, -6], [3, -12], [7, -5], [11, -9], [11, -2]], c)];
+    default: return [cap, poly([[2, -8], [13, -19], [10, -5]], c)];
+  }
+}
 function ball(angle, S, O, H) {
   return [group([
     poly([[-6, -8], [-20, -20], [-11, 0]], S.dark),
     poly([[7, -7], [23, -15], [12, 3]], S.skin),
     circ(0, 6, 15, S.skin),
     path('M-14.5 9.5 A15 15 0 0 0 14.5 9.5 Q0 14 -14.5 9.5Z', O.body),
-    path('M-12 -3 A15 15 0 0 1 12 -3 Q0 1 -12 -3Z', H.col),
-    poly([[2, -8], [13, -19], [10, -5]], H.col),
+    ...ballHat(H),
     path('M-9 4 Q-6 6.5 -3 4', 'none', ' stroke-width="2"'),
     ell(-3, 9, 3, 2.2, S.dark),
   ], ` transform="rotate(${f(angle)} 0 6)"`)];

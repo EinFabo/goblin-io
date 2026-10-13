@@ -1,14 +1,13 @@
 import { RARITY } from '../data/cards.js';
 import { COSM, MECH_PAINT, TRAIL } from '../data/cosmetics.js';
-import { goblinSvg } from '../gen/goblin.js';
-import { SPR, tinted } from '../render/sprites.js';
+import { DEFAULT_LOOK, goblinSvg } from '../gen/goblin.js';
+import { SPR, svgUrl, tinted } from '../render/sprites.js';
 
 // ---------- Vorschaubilder für Kosmetik ----------
 // Haut, Hut, Outfit: der Goblin mit genau diesem Teil (sonst Standard), als SVG-Bild.
 // Dolch: getönter Dolch. Roll-Spur: Farbtupfer. Maschine: Lack-Schild mit Nieten.
-const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
 const CACHE = new Map();
-export function cosmImg(id, base = { skin: 'green', outfit: 'vest', hat: 'zipfel' }) {
+export function cosmImg(id, base = DEFAULT_LOOK) {
   const c = COSM[id], key = id + JSON.stringify(base);
   if (CACHE.has(key)) return CACHE.get(key);
   let url;
@@ -20,7 +19,7 @@ export function cosmImg(id, base = { skin: 'green', outfit: 'vest', hat: 'zipfel
     g.translate(48, 48); g.rotate(-Math.PI / 4); const w = 70, h = w * src.height / src.width; g.drawImage(src, -w / 2, -h / 2, w, h);
     url = cv.toDataURL();
   } else if (c.slot === 'trail') {
-    const dots = TRAIL[c.key].cols.concat(TRAIL[c.key].cols).slice(0, 7).map((col, i) => `<circle cx="${14 + i * 11}" cy="${54 - Math.sin(i * .9) * 14}" r="${8 - i * .6}" fill="${col}" stroke="#1d2b14" stroke-width="1.5"/>`).join('');
+    const cols = TRAIL[c.key].cols, dots = Array.from({ length: 7 }, (_, i) => cols[i % cols.length]).map((col, i) => `<circle cx="${14 + i * 11}" cy="${54 - Math.sin(i * .9) * 14}" r="${8 - i * .6}" fill="${col}" stroke="#1d2b14" stroke-width="1.5"/>`).join('');
     url = svgUrl(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">${dots}</svg>`);
   } else {
     const [a, b, r] = MECH_PAINT[c.key];

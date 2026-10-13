@@ -12,6 +12,7 @@ import { CHESTS } from '../data/cards.js';
 import { chestSvg } from './cardart.js';
 import { playChest } from './chest-open.js';
 import { cosmTile } from './cosmart.js';
+import { COSM } from '../data/cosmetics.js';
 
 // ---------- Ergebnis ----------
 let showT = 0;
@@ -24,7 +25,7 @@ export function showResults(r) {
   if (r.gems) res.push(['Juwelen', '+' + r.gems]);
   $('#overStats').innerHTML = res.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('') +
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +
-    (r.trophy ? `<p class="vchest trophy">${cosmTile(r.trophy)}<span>Trophäe: <b>Magierhut</b><br><small>in der Garderobe (Profil)</small></span></p>` : '') +
+    (r.trophy ? `<p class="vchest trophy">${cosmTile(r.trophy)}<span>Trophäe: <b>${COSM[r.trophy].name}</b><br><small>in der Garderobe (Profil)</small></span></p>` : '') +
     (r.chest ? `<p class="vchest">${chestSvg(r.chest.type)}<span>Siegtruhe: <b>${CHESTS[r.chest.type].name}</b><br><small>${r.chest.shelf ? 'liegt im Truhenregal (Laden)' : 'Regal voll – sie ist sofort aufgegangen'}</small></span>${r.chest.shelf ? '' : '<button class="btn small" id="vchestBtn">Ansehen</button>'}</p>` : '') +
     r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}</b></p>`).join('');
   $('#nextBtn').hidden = !r.next;
