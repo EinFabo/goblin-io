@@ -454,6 +454,16 @@ body.hub .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px);padding-b
 .lvrow{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--gold);white-space:nowrap}
 .lvrow .acctbar{margin:0;width:80px}
 #topbar .goldline{font-size:16px;font-variant-numeric:tabular-nums}
+/* Belohnungs-Flug (ui/rewardfx.js): Canvas über allem, Zähler pulst beim Ankommen */
+#rewardFx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60}
+.goldline b.bump{animation:walletBump .22s ease-out}
+@keyframes walletBump{50%{transform:scale(1.3);color:#fff}}
+.ach.claimed{animation:achGlow .9s ease-out}
+.ach.claimed .medals i.on:nth-last-child(1 of .on){animation:medalPop .6s cubic-bezier(.3,1.7,.5,1)}
+@keyframes achGlow{0%{box-shadow:0 0 0 3px var(--gold),0 0 24px var(--gold)}100%{box-shadow:none}}
+@keyframes medalPop{0%{transform:scale(.2) rotate(-30deg)}60%{transform:scale(1.5) rotate(10deg)}100%{transform:none}}
+.goldline b{display:inline-block}
+@media (prefers-reduced-motion:reduce){.goldline b.bump{animation:none}}
 #optBtn{color:var(--muted)}
 
 #tabbar{position:fixed;left:0;right:0;bottom:0;z-index:12;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:end;gap:4px;

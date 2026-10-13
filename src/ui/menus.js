@@ -15,6 +15,7 @@ import { anyUpgrade, renderWorkshop, workshopHooks } from './workshop.js';
 import { renderWardrobe, wardrobeChanged } from './wardrobe.js';
 import { profileHooks } from './profile.js';
 import { achChanged, achNews, renderAch } from './achievements.js';
+import { shownWallet } from './rewardfx.js';
 
 // ---------- Hub (PLAN 10.1): Leiste oben, Tabs unten ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
@@ -55,8 +56,10 @@ export function renderTopbar() {
   $('#topName').textContent = p.name;
   $('#topLv').textContent = 'Lv ' + p.level;
   $('#topXp').style.width = (p.level >= 50 ? 100 : Math.min(100, p.xp / need * 100)).toFixed(0) + '%';
-  $('#topGold').textContent = save.wallet.gold.toLocaleString('de-DE');
-  $('#topGems').textContent = save.wallet.gems.toLocaleString('de-DE');
+  // was gerade zum Zähler fliegt, zählt erst beim Ankommen (ui/rewardfx.js)
+  const w = shownWallet();
+  $('#topGold').textContent = w.gold.toLocaleString('de-DE');
+  $('#topGems').textContent = w.gems.toLocaleString('de-DE');
   // Hinweis-Punkte: Truhe bereit / Karte aufwertbar
   $('#storeDot').hidden = !storeHasNews(); $('#shopDot').hidden = !anyUpgrade(); $('#achDot').hidden = $('#profDot').hidden = !achNews();
 }

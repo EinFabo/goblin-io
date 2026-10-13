@@ -10,6 +10,7 @@ import { playChest } from './chest-open.js';
 import { COSM, COSMO_CHEST } from '../data/cosmetics.js';
 import { grantCosmetic, missing, owns } from '../game/cosmetics.js';
 import { cosmTile } from './cosmart.js';
+import { flyReward } from './rewardfx.js';
 import { openCosmoChest } from './wardrobe.js';
 
 // ---------- Laden (PLAN 9.5, 9.6): Truhenregal, Tagesangebote, Truhen, Gold ----------
@@ -117,13 +118,13 @@ $('#store').addEventListener('click', e => {
   if (d.odds) { showOdds(d.odds); return; }
   if (d.cosmo !== undefined) { if (!openCosmoChest(renderStore)) nope(b); return; }
   if (d.buyChest) { const C = CHESTS[d.buyChest]; if (!pay(save, C.price)) { nope(b); return; } openChest(d.buyChest); return; }
-  if (d.pack !== undefined) { const g = GOLD_PACKS[+d.pack]; if (!pay(save, { gems: g.gems })) { nope(b); return; } save.wallet.gold += g.gold; persist(); sfx.chest(); renderStore(); onChange(); return; }
+  if (d.pack !== undefined) { const g = GOLD_PACKS[+d.pack]; if (!pay(save, { gems: g.gems })) { nope(b); return; } save.wallet.gold += g.gold; persist(); sfx.chest(); flyReward(b, 'gold', g.gold); renderStore(); onChange(); return; }
   if (d.offer !== undefined) {
     const sh = shopToday(save), i = +d.offer, o = dailyOffers(sh.day)[i];
     if (sh.day !== offerDay) { spareMsg = {}; renderOffers(); nope(b); return; }
     if (sh.bought.includes(i) || (o.k === 'cards' && cardState(save, o.id).lv >= CARD_MAX) || (o.k === 'cosm' && owns(save, o.id)) || !pay(save, o.price)) { nope(b); return; }
     sh.bought.push(i);
-    if (o.k === 'gold') { save.wallet.gold += o.n; sfx.coin(); }
+    if (o.k === 'gold') { save.wallet.gold += o.n; sfx.coin(); flyReward(b, 'gold', o.n); }
     else if (o.k === 'cosm') { grantCosmetic(save, o.id); sfx.chest(); spareMsg[i] = 'In der Garderobe (Profil) anziehen'; }
     else if (o.k === 'cards') { const g = grantCards(save, o.id, o.n); if (g) spareMsg[i] = `+${g} Gold für Karten über Stufe 10`; sfx.anvil(); }
     if (o.k === 'chest') { openChest(o.type); return; }

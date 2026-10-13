@@ -1,13 +1,14 @@
 import { sfx } from '../core/audio.js';
 import { persist, save } from '../core/save.js';
 import { $, fmtClock } from '../core/util.js';
-import { ACHIEVEMENTS, DAILY_BONUS, TIERS } from '../data/achievements.js';
+import { ACH, ACHIEVEMENTS, DAILY_BONUS, TIERS } from '../data/achievements.js';
 import { CHESTS } from '../data/cards.js';
 import { COSM } from '../data/cosmetics.js';
 import { achState, claimAch, claimDaily, claimDailyBonus, claimableCount, dailyOpen, dailyTasks, titles } from '../game/progress.js';
 import { dayKey, msToMidnight } from '../game/shop.js';
 import { chestSvg } from './cardart.js';
 import { openChest } from './store.js';
+import { burstAt, flashScreen, flyReward } from './rewardfx.js';
 
 // ---------- Erfolge-Reiter im Profil: Tagesaufgaben, Titel, Erfolge (PLAN 9.8) ----------
 let onChange = () => {};
@@ -33,7 +34,7 @@ export function renderAch() {
   const ach = `<h3 class="sect">Erfolge <small>${done} / ${ACHIEVEMENTS.length * 3} Stufen</small></h3><div class="achs">${list.map(({ a, s }) => {
     const fmt = a.fmt || fmtN, goal = a.goals[Math.min(s.claimed, 2)], max = s.claimed >= 3;
     const prog = max ? 1 : Math.min(1, s.v / goal), extra = a.title || a.cosm ? `<small class="ex">Gold: ${[a.title && `Titel „${a.title}“`, a.cosm && COSM[a.cosm].name].filter(Boolean).join(' + ')}</small>` : '';
-    return `<div class="ach${s.can ? ' can' : ''}${max ? ' max' : ''}"><div class="medals">${TIERS.map((T, i) => `<i style="--mc:${T.col}" class="${i < s.claimed ? 'on' : i < s.tier ? 'ready' : ''}" title="${T.name}"></i>`).join('')}</div>
+    return `<div class="ach${s.can ? ' can' : ''}${max ? ' max' : ''}" data-aid="${a.id}"><div class="medals">${TIERS.map((T, i) => `<i style="--mc:${T.col}" class="${i < s.claimed ? 'on' : i < s.tier ? 'ready' : ''}" title="${T.name}"></i>`).join('')}</div>
       <div class="tt"><b>${a.name}</b><span>${a.desc.replace('{n}', fmt(goal))}</span>${extra}<div class="tbar2"><i style="width:${(prog * 100).toFixed(0)}%"></i><span>${max ? 'Alles geschafft' : `${fmt(Math.min(s.v, goal))} / ${fmt(goal)}`}</span></div></div>
       ${s.can ? `<button class="btn primary small" data-ach="${a.id}"><span class="gem"></span>${TIERS.slice(s.claimed, s.tier).reduce((n, T) => n + T.gems, 0)}</button>` : ''}</div>`;
   }).join('')}</div>`;
@@ -45,9 +46,22 @@ $('#achView').addEventListener('click', e => {
   if (b.dataset.daily !== undefined) {
     const r = claimDaily(save, +b.dataset.daily); if (!r) { sfx.buzz(); renderAch(); return; }   // z. B. Mitternacht vorbei
     persist(); sfx.chest();
+    flyReward(b, 'gold', r.gold || 0); flyReward(b, 'gems', r.gems || 0);
     if (r.chest) openChest(r.chest);
-  } else if (b.dataset.dbonus !== undefined) { if (!claimDailyBonus(save)) { sfx.buzz(); renderAch(); return; } persist(); sfx.chest(); }
-  else if (b.dataset.ach) { const r = claimAch(save, b.dataset.ach); if (!r) { sfx.buzz(); return; } persist(); if (r.cosm) sfx.master(); else sfx.lvl(); }
+  } else if (b.dataset.dbonus !== undefined) { const r = claimDailyBonus(save); if (!r) { sfx.buzz(); renderAch(); return; } persist(); sfx.chest(); flyReward(b, 'gems', r.gems); }
+  else if (b.dataset.ach) {
+    const r = claimAch(save, b.dataset.ach); if (!r) { sfx.buzz(); return; }
+    persist(); if (r.cosm) sfx.master(); else sfx.lvl();
+    // Medaille: Lichtstrahlen und Funken, dann fliegen die Juwelen zum Zähler; Gold-Stufe mit Titel: goldener Blitz
+    const card = b.closest('.ach') || b, rc = card.getBoundingClientRect();
+    burstAt(rc.left + 40, rc.top + rc.height / 2, ['#ffd84a', '#fff3b0', '#ffffff'], 26);
+    flyReward(b, 'gems', r.gems);
+    if (r.cosm || ACH[b.dataset.ach] && save.ach[b.dataset.ach] >= 3) flashScreen();
+    renderAch(); onChange();
+    // neu gewonnene Medaille springt an ihrem (neu sortierten) Platz
+    const c = $(`#achView [data-aid="${b.dataset.ach}"]`); if (c) c.classList.add('claimed');
+    return;
+  }
   else return;
   renderAch(); onChange();
 });
