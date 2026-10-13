@@ -3,7 +3,7 @@ import { Music } from '../core/music.js';
 import { defineScene, go } from '../core/scenes.js';
 import { $ } from '../core/util.js';
 import { levelLabel } from '../data/levels.js';
-import { newRun, update } from '../game/run.js';
+import { lvToBonus, newRun, update } from '../game/run.js';
 import { run } from '../game/state.js';
 import { renderRun } from '../render/draw-world.js';
 import { banner, refreshSlots, setupAbilButtons, updHud } from '../ui/hud.js';
@@ -42,7 +42,8 @@ defineScene('run', {
     // Nach einem Level-Up kurz Zeitlupe, dann die Karten
     if (run.lvDelay > 0) {
       run.lvDelay -= step; update(step * .25);
-      if (run.lvDelay <= 0 && !run.over && !(run.clearT > 0)) openLevelUp(run.lvKind === 'chest');
+      // Level zu Ende, während die Zeitlupe lief: kein Kartenfenster mehr, das Level-Up wird Bonus-Level
+      if (run.lvDelay <= 0 && !run.over) { if (run.clearT > 0) lvToBonus(); else { run.lvOpen = false; openLevelUp(run.lvKind === 'chest'); } }
     } else if (run.slowT > 0) { run.slowT -= step; update(step * .3); }
     else update(step);
   },

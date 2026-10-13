@@ -25,8 +25,9 @@ export function showResults(r) {
   $('#overHats').innerHTML = endless ? '' : `<span class="lvlbl">${levelLabel(run.si, run.li)} ${run.st.lvName}</span>${hatsHtml(r.hats, r.newHats)}`;
   const res = [['Zeit', fmtTime(run.st.len && !endless ? Math.min(run.time, run.st.len) : run.time)], ['Level', P.lv], ['Besiegt', run.kills], ['Gold', '+' + r.gold, 'ovGold']];
   res.push(['Konto-XP', '+' + r.xp + (r.up ? ` · Level ${r.level}!` : '')]);
-  // Bonus-Level: Level-Ups nach „Level geschafft“ (Gold, ab 3 ein Kartenpaket)
-  if (r.bonusLv) res.push(['Bonus-Level ×' + r.bonusLv, '+' + r.bonusGold + ' Gold' + (r.bonusCard ? ` · ${r.bonusCard.n}× ${cardName(r.bonusCard.id)}` : '')]);
+  // Bonus-Level: Level-Ups nach „Level geschafft“ (bonusReward in game/balance.js)
+  const bc = r.bonusCard, bcTxt = !bc ? '' : bc.gold ? ` · ${cardName(bc.id)} voll → Gold` : ` · ${bc.n}× ${cardName(bc.id)}`;
+  if (r.bonusLv) res.push(['Bonus-Level ×' + r.bonusLv, '+' + r.bonusGold + ' Gold' + bcTxt]);
   if (r.gems) res.push(['Juwelen', '+' + r.gems, 'ovGems']);
   $('#overStats').innerHTML = res.map(([k, v, id]) => `<div><span>${k}</span><b${id ? ` id="${id}"` : ''}>${v}</b></div>`).join('') +
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +
@@ -38,7 +39,7 @@ export function showResults(r) {
   $('#againBtn').textContent = r.win ? 'Nochmal' : 'Nochmal versuchen';
   $('#menuBtn').textContent = 'Karte';
   $('#overStats').classList.remove('show');
-  if (!endless) noteNewHats(run.si, run.li, r.newHats);
+  noteNewHats(run.si, run.li, endless ? 0 : r.newHats);   // auch Endlos: alte Notiz löschen
   showT = setTimeout(() => { $('#over').hidden = false; hatSequence(r); }, r.win ? 200 : 700);
 }
 
@@ -48,10 +49,10 @@ export function showResults(r) {
 // Ein verpasster Hut wackelt grau, darunter steht, was gefehlt hat. Danach kommen die Zeilen, Gold zählt hoch.
 // Tippen überspringt die Folge.
 let seqT = [], seqDone = null;
+const at = (ms, fn) => seqT.push(setTimeout(fn, ms));   // alle Zeitgeber der Folge, hideResults räumt sie ab
 function hatSequence(r) {
   const hats = [...document.querySelectorAll('#overHats .hats i')];
   seqT.forEach(clearTimeout); seqT = [];
-  const at = (ms, fn) => seqT.push(setTimeout(fn, ms));
   let t = 250;
   if (hats.length && r.win) {
     hats.forEach(h => h.classList.add('wait'));
@@ -60,30 +61,32 @@ function hatSequence(r) {
       at(t, () => {
         h.classList.remove('wait'); h.classList.add('won'); sfx.hat(i, i === 2);
         const c = centerOf(h); burstAt(c.x, c.y, ['#c99bff', '#f4d03f', '#ffffff'], i === 2 ? 30 : 18);
-        if (neu) { h.insertAdjacentHTML('beforeend', '<em class="hatnew">NEU!</em>'); }
+        if (neu) markNew(h);
       });
       t += 450;
     }
-    const miss = [0, 1, 2].filter(i => i >= r.hats);
-    if (miss.length) at(t, () => {
-      for (const i of miss) hats[i].classList.add('miss');
-      sfx.hatMiss();
-      $('#overHats').insertAdjacentHTML('beforeend', `<p class="hatwhy">Es fehlt: ${miss.map(i => HAT_TXT[i]).join(' · ')}</p>`);
-    });
-    if (miss.length) t += 400;
+    if (r.hats < 3) { at(t, () => { showMiss(r, hats); sfx.hatMiss(); }); t += 400; }
   }
   seqDone = () => {
     seqT.forEach(clearTimeout); seqT = []; seqDone = null;
-    for (const h of hats) { h.classList.remove('wait'); if (h.classList.contains('on')) h.classList.add('won'); }
+    // übersprungen: Endzustand herstellen (NEU-Schilder, verpasste Hüte mit Grund)
+    hats.forEach((h, i) => { h.classList.remove('wait'); if (h.classList.contains('on')) { h.classList.add('won'); if (r.win && i >= r.hats - r.newHats) markNew(h); } });
+    if (r.win && hats.length && r.hats < 3) showMiss(r, hats);
     const st = $('#overStats'); st.classList.add('show');
     [...st.children].forEach((el, i) => { el.style.animationDelay = (i * .07) + 's'; });
     const g = $('#ovGold'); if (g) countUp(g, r.gold, 700);
     // Juwelen der neuen Hüte fliegen zur Juwelen-Zeile
     const gem = $('#ovGems');
-    if (gem && r.newHats) hats.slice(r.hats - r.newHats, r.hats).forEach((h, k) => setTimeout(() => flyReward(h, 'gems', GEMS.hat, gem), 150 + k * 120));
-    if (r.abil.some(a => a.up)) setTimeout(() => sfx.abilUp(), 450);
+    if (gem && r.newHats) hats.slice(r.hats - r.newHats, r.hats).forEach((h, k) => at(150 + k * 120, () => flyReward(h, 'gems', GEMS.hat, gem)));
+    if (r.abil.some(a => a.up)) at(450, () => sfx.abilUp());
   };
   at(t, () => seqDone && seqDone());
+}
+const markNew = h => { if (!h.querySelector('.hatnew')) h.insertAdjacentHTML('beforeend', '<em class="hatnew">NEU!</em>'); };
+function showMiss(r, hats) {
+  const miss = [0, 1, 2].filter(i => i >= r.hats);
+  for (const i of miss) hats[i].classList.add('miss');
+  if (!$('#overHats .hatwhy')) $('#overHats').insertAdjacentHTML('beforeend', `<p class="hatwhy">Es fehlt: ${miss.map(i => HAT_TXT[i]).join(' · ')}</p>`);
 }
 $('#over').addEventListener('pointerdown', e => { if (seqDone && !e.target.closest('button')) seqDone(); });
 export function hideResults() { clearTimeout(showT); seqT.forEach(clearTimeout); seqT = []; seqDone = null; $('#over').hidden = true; }

@@ -4,6 +4,7 @@ import { $, fmtTime } from '../core/util.js';
 import { ENDLESS, LEVELS, LEVEL_KIND, WORLDS, levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
 import { HAT_TXT, hatSvg, hatsHtml } from './hats.js';
+import { countUp } from './rewardfx.js';
 
 // ---------- Weltkarte (PLAN 6.1a) ----------
 // Eine Karte pro Welt: Pfad mit 5 Level-Punkten (der letzten Welt hängt Endlos als 6. Punkt an).
@@ -140,10 +141,9 @@ function playHatPop() {
   if (!h || worldSi() !== h.si) return;
   const i = M.nodes.findIndex(n => !n.endless && n.li === h.li), el = i >= 0 && document.querySelectorAll('#mapNodes .mnode')[i];
   const hats = el && el.querySelector('.hats'); if (hats) setTimeout(() => { hats.classList.add('pop'); sfx.hat(0); }, 500);
-  const b = $('#wHats b'); if (!b) return;
-  const total = parseInt(b.textContent, 10), rest = b.textContent.slice(String(total).length);
-  let v = total - h.n; b.textContent = v + rest;
-  const iv = setInterval(() => { v++; b.textContent = v + rest; sfx.coin(); if (v >= total) clearInterval(iv); }, 160);
+  const b = $('#wHats b'), total = b ? parseInt(b.textContent, 10) : NaN;
+  if (!Number.isFinite(total)) return;
+  countUp(b, total, 160 * h.n, '', total - h.n, b.textContent.slice(String(total).length));
 }
 // Albtraum-Schalter (6.1): erst wenn der Boss der Welt besiegt ist
 const nmOn = si => !!save.map.nm && stageCleared(si);

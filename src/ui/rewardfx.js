@@ -1,6 +1,6 @@
 import { tone } from '../core/audio.js';
 import { save } from '../core/save.js';
-import { $ } from '../core/util.js';
+import { $, restart } from '../core/util.js';
 
 // ---------- Belohnungs-Effekte (Wunsch Fabi: Erfolg abholen mit Juwelen-Explosion, Geld usw.) ----------
 // Ein Vollbild-Canvas über allem. flyReward: Juwelen/Münzen platzen am Knopf heraus und fliegen gestaffelt im Bogen
@@ -29,7 +29,7 @@ const counter = kind => $(kind === 'gold' ? '#topGold' : '#topGems');
 function setCounter(kind) {
   const el = counter(kind); if (!el) return;
   el.textContent = shownWallet()[kind].toLocaleString('de-DE');
-  el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+  restart(el, 'bump');
 }
 const center = el => { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; };
 
@@ -50,10 +50,17 @@ export function flyReward(fromEl, kind, amount, to = null) {
   if (!to) setCounter(kind);
   run();
 }
-// Zahl in einem Element hochzählen („+120“), Dauer ms
-export function countUp(el, to, ms = 600, prefix = '+') {
-  const t0 = performance.now();
-  const step = now => { const q = Math.min(1, (now - t0) / ms), v = Math.round(to * (1 - Math.pow(1 - q, 3))); el.textContent = prefix + v.toLocaleString('de-DE'); if (q < 1) requestAnimationFrame(step); };
+// Zahl in einem Element hochzählen („+120“), Dauer ms. Ein neuer Aufruf für dasselbe Element bricht den alten ab;
+// ist das Element nicht mehr im Dokument, hört es auf.
+const counting = new WeakMap();
+export function countUp(el, to, ms = 600, prefix = '+', from = 0, suffix = '') {
+  const t0 = performance.now(), id = {}; counting.set(el, id);
+  const step = now => {
+    if (counting.get(el) !== id || !el.isConnected) return;
+    const q = Math.min(1, (now - t0) / ms), v = Math.round(from + (to - from) * (1 - Math.pow(1 - q, 3)));
+    el.textContent = prefix + v.toLocaleString('de-DE') + suffix;
+    if (q < 1) requestAnimationFrame(step);
+  };
   requestAnimationFrame(step);
 }
 export const centerOf = center;
@@ -86,12 +93,14 @@ function tick(now) {
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
   }
   for (let i = parts.length - 1; i >= 0; i--) if (parts[i].t >= parts[i].life) parts.splice(i, 1);
+  // Ziele einmal pro Bild messen (nicht je Teil)
+  const targets = new Map(), targetOf = f => { const el = f.to || counter(f.kind); if (!targets.has(el)) targets.set(el, el && el.isConnected ? center(el) : { x: W - 40, y: 20 }); return targets.get(el); };
   for (const f of flyers) {
     f.t += dt; f.rot += dt * 6;
     if (f.t < f.delay) { f.x += f.vx * dt; f.y += f.vy * dt; f.vx *= .9; f.vy = f.vy * .9 + 300 * dt; }
     else {
       // zum Zähler: weich beschleunigen, das Ziel kann sich bewegen (Fenstergröße)
-      const el = f.to || counter(f.kind), to = el ? center(el) : { x: W - 40, y: 20 };
+      const to = targetOf(f);
       const dx = to.x - f.x, dy = to.y - f.y, d = Math.hypot(dx, dy), sp = 300 + (f.t - f.delay) * 2400;
       if (d < 16 || f.t > f.delay + 1.6) { f.done = true; arrive(f); continue; }
       f.vx += (dx / d * sp - f.vx) * Math.min(1, dt * 10); f.vy += (dy / d * sp - f.vy) * Math.min(1, dt * 10);
@@ -104,7 +113,7 @@ function tick(now) {
   else { raf = 0; g.clearRect(0, 0, W, H); arrived = 0; }
 }
 function arrive(f) {
-  if (f.to) { f.to.classList.remove('bump'); void f.to.offsetWidth; f.to.classList.add('bump'); }
+  if (f.to) restart(f.to, 'bump');
   else { pend[f.kind] = Math.max(0, pend[f.kind] - f.share); setCounter(f.kind); }
   // Ton steigt mit jedem angekommenen Teil (wie beim Kristalle-Sammeln)
   const k = Math.min(arrived++, 14), fr = (f.kind === 'gems' ? 990 : 1320) * Math.pow(2, k / 12);

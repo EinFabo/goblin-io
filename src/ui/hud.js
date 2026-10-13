@@ -1,4 +1,4 @@
-import { $, clamp, fmtTime } from '../core/util.js';
+import { $, clamp, fmtTime, restart } from '../core/util.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
 import { ABILITIES } from '../data/abilities.js';
@@ -34,7 +34,7 @@ function setCount(id, n) {
   const el = $(id + ' .cnt'), more = +n > +(hudCache[id + 'n'] || 0) && hudCache[id + 'n'] !== undefined;
   hudCache[id + 'n'] = n; el.textContent = n;
   // neue Ladung: Zahl hüpft, bei der Rolle ein leiser Klick
-  if (more) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); if (id === '#dashBtn') sfx.dashBack(); }
+  if (more) { restart(el, 'bump'); if (id === '#dashBtn') sfx.dashBack(); }
 }
 export function updHud(dt) {
   if (!run) return;

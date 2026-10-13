@@ -146,6 +146,11 @@ const lvRes = await p.evaluate(() => ({ win: GOBLIN.run.result.win, hats: docume
   cards: !document.querySelector('#levelup').hidden, bonus: GOBLIN.run.result.bonusLv, row: document.querySelector('#overStats').textContent.includes('Bonus-Level') }));
 if (!lvRes.win || lvRes.hats < 1 || lvRes.next !== 'Weiter: 1-3' || lvRes.cards) errs.push('Level-Ende: ' + JSON.stringify(lvRes));
 if (lvRes.bonus > 0 && !lvRes.row) errs.push('Bonus-Level fehlt im Ergebnis: ' + JSON.stringify(lvRes));
+// Tippen überspringt die Hüte-Folge: Zeilen sofort da, alle Hüte gelandet
+await p.waitForTimeout(100);
+await p.mouse.click(640, 200);
+const skip = await p.evaluate(() => ({ rows: document.querySelector('#overStats').classList.contains('show'), wait: document.querySelectorAll('#overHats .hats i.wait').length }));
+if (!skip.rows || skip.wait) errs.push('Hüte-Folge überspringen: ' + JSON.stringify(skip));
 console.log('Level 1-2 geschafft:', JSON.stringify(lvRes));
 // Tod im echten Spiel (nicht per Hand gesteppt): Sterbe-Animation, Nochmal, Menü
 async function dieForReal() {

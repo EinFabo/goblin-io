@@ -86,12 +86,16 @@ export function addWeapon(id) {
   run.weapons.push({ id, lv: c >= CARD_START_LV2 ? 2 : 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [], card: weaponCardMul(c), fast: c >= CARD_FAST ? 1.15 : 1 });
 }
 export function hint(html) { run.hints.push(html); }
+// Level-Up, dessen Zeitlupe läuft (Karten noch nicht offen), wird zum Bonus-Level, wenn das Level endet.
+// lvOpen: zwischen Start der Zeitlupe und Öffnen der Karten (bzw. Wahl durch den Bot)
+export function lvToBonus() { if (!run.lvOpen) return; run.lvOpen = false; run.bonusLv += run.lvKind === 'chest' ? 2 : 1; }
 // Level geschafft bzw. Boss besiegt: unverwundbar, alles fliegt zum Goblin. Offene Level-Ups und Truhen werden zu
 // Bonus-Leveln (Karten würden nichts mehr bringen), weitere Level-Ups bis zum Ende ebenso (items.js addXp).
 export function startClear(t) {
   run.clearT = t; run.clearAge = 0;
-  run.bonusLv += run.pendingLv + run.pendingChest * 2 + (run.lvDelay > 0 ? (run.lvKind === 'chest' ? 2 : 1) : 0);
+  run.bonusLv += run.pendingLv + run.pendingChest * 2;
   run.pendingLv = 0; run.pendingChest = 0; run.lvDelay = 0;
+  lvToBonus();
   for (const it of run.items) if (pullable(it) || it.k === 'chest') it.mag = true;
 }
 
@@ -137,7 +141,7 @@ export function update(dt) {
   if (!run.over && !run.paused && run.clearT <= 0 && run.lvDelay <= 0 && (run.pendingChest > 0 || run.pendingLv > 0)) {
     if (run.pendingChest > 0) { run.pendingChest--; run.lvKind = 'chest'; sfx.chest(); }
     else { run.pendingLv--; run.lvKind = 'lv'; sfx.lvl(); }
-    run.lvDelay = .45;
+    run.lvDelay = .45; run.lvOpen = true;
     const col = run.lvKind === 'chest' ? '#ffd84a' : '#8fe6ff';
     ring(P.x, P.y, 10, 160, .45, col, 8);
     for (let i = 0; i < 18; i++) { const a = i * TAU / 18; part(P.x, P.y - 10, Math.cos(a) * 220, Math.sin(a) * 220, .45, col, 3.5); }
@@ -170,12 +174,16 @@ export function endRun(win) {
   ensureDaily(save);   // Tagesbeginn der Aufgaben festhalten, bevor dieser Lauf irgendetwas verbucht
   const boss = !run.st.endless && run.li === LEVELS - 1;
   let bonus = win ? 25 + run.si * 20 + (boss ? 40 + run.si * 30 : 0) : 0;
-  // Bonus-Level (Level-Ups nach dem Ende): Gold, ab 3 ein Kartenpaket, je 5 zwei Juwelen
+  // Bonus-Level (Level-Ups nach dem Ende): siehe bonusReward (balance.js)
   const br = win && run.bonusLv ? bonusReward(run.bonusLv, run.si) : null;
   let bonusCard = null;
   if (br) {
+    if (br.cards) {
+      // Karte schon voll: grantCards tauscht in Gold um – das zählt hier zum Bonus-Gold (und steht im Ergebnis)
+      const id = pickBonusCard(mulberry32(newSeed())), spare = grantCards(save, id, br.cards);
+      save.wallet.gold -= spare; br.gold += spare; bonusCard = { id, n: br.cards, gold: spare };
+    }
     bonus += br.gold;
-    if (br.cards) { const id = pickBonusCard(mulberry32(newSeed())); grantCards(save, id, br.cards); bonusCard = { id, n: br.cards }; }
   }
   // Albtraum (6.1): +50 % Gold und Konto-XP, Siegtruhe eine Stufe besser, erster Albtraum-Sieg je Level gibt Juwelen
   if (win && run.nm) bonus += Math.round((run.gold + bonus) * .5);

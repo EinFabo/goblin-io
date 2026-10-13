@@ -26,6 +26,7 @@ export function ban(offer, i) {
 
 // Wahl abschließen. i = Index der Karte, oder 'gold'/'heal' zum Überspringen. lockIdx = gesperrte Karte (oder -1)
 export function choose(offer, i, lockIdx = -1) {
+  run.lvOpen = false;   // Bot wählt ohne Kartenfenster
   const skip = typeof i !== 'number';
   if (lockIdx >= 0 && lockIdx !== i) run.locks--;
   settleOffer(run.offer, offer, skip ? -1 : i, lockIdx);

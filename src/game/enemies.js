@@ -9,7 +9,7 @@ import { enemyHp } from './balance.js';
 import { bossAI, bossDamageRule, spawnBoss } from './boss.js';
 import { CASTS, castAllowed, castWindup } from './casts.js';
 import { damagePlayer, hurt } from './combat.js';
-import { animFx, part, puff, ring } from './fx.js';
+import { addItem, animFx, part, puff, ring } from './fx.js';
 import { hint, startClear } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
 import { P, onScreen, pR, query, run, viewR } from './state.js';
@@ -102,6 +102,8 @@ export function doEvent(ev) {
 
 // Level überlebt (6.1a): alle Magier lösen sich auf, Kristalle fliegen zum Goblin, kurz danach das Ergebnis
 function levelClear() {
+  // ein noch lebender Mini-Boss lässt seine Truhe trotzdem fallen (der Hinweis hat sie versprochen)
+  if (run.mini && !run.mini.dead) addItem('chest', run.mini.x, run.mini.y, 'mini');
   for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
   run.eproj.length = 0; run.haz.length = 0; run.spawnQ.length = 0;
   banner('Level geschafft!', ''); sfx.chest();
