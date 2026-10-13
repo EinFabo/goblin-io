@@ -4,7 +4,7 @@ import { emit } from '../core/events.js';
 import { $, TAU, clamp, face8 } from '../core/util.js';
 import { CCOL } from '../data/enemies.js';
 import { BOSSES, BOSS_IDS, PHASE_AT, RAGE_AT, bossVariant } from '../data/bosses.js';
-import { STAGE_HP } from './balance.js';
+import { stageHp } from './balance.js';
 import { eShot, mspr, spawnEnemy, tipPos } from './enemies.js';
 import { damagePlayer } from './combat.js';
 import { dropGem, part, puff, ring } from './fx.js';
@@ -19,7 +19,7 @@ import { banner } from '../ui/hud.js';
 // (kleine Szene, 1,5 s unverwundbar, Geschosse weg), Wut-Timer nach 120 s Kampf.
 // Auftritt und Phasenwechsel laufen als Szene (run.cut): die Welt steht, die Kamera zeigt den Boss.
 
-const shotKind = k => (k === 'storm' || k === 'blink' ? 'void' : k);
+const shotKind = k => (k === 'blink' ? 'void' : k);
 const kindOf = b => (b.B.kind === 'both' ? (rnd() < .5 ? 'fire' : 'frost') : b.B.kind);
 const phase = b => b.B.phases[b.ph];
 // Tempo: Phase × Wut
@@ -35,7 +35,7 @@ export function spawnBoss() {
   const lf = 1 + run.loop * 1.5;
   const b = {
     type: 'boss', boss: true, id, B, pre: 'm.' + bossVariant(id), name: B.name, x: P.x, y: P.y - 300, r: 38, sc: 2.7, spd: 52 * (B.spd || 1), dmg: 13 * st.dmg * lf,
-    hp: 2500 * STAGE_HP[run.si] * lf * (st.bossHp || 1) * (B.hp || 1), xp: 150, tint: B.tint || null, state: 'walk', face: 'down', fa: Math.PI / 2, at: 0, ft: 0, fired: false, charge: .7, ck: 'fire',
+    hp: 2500 * stageHp(run.si) * lf * (st.bossHp || 1) * (B.hp || 1), xp: 150, tint: B.tint || null, state: 'walk', face: 'down', fa: Math.PI / 2, at: 0, ft: 0, fired: false, charge: .7, ck: 'fire',
     kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, dead: false,
     ph: 0, fightT: 0, rage: false, inv: 0, ice: 0, iceT: 0, iceCd: 0, blkT: 0, stunT: 0,
     ai: { st: 'chase', t: 2.2, i: 0, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0, chan: 0, spin: null },
@@ -147,11 +147,11 @@ function enterPhase(b) {
 const SPLIT_SC = { 2: 2.1, 3: 1.8 };
 function splitBoss(b, n) {
   for (const e of run.enemies) if (e.link === b && !e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
-  b.sc = SPLIT_SC[n] || b.sc; b.r = 38 * b.sc / 2.7;
+  b.split = n; b.sc = SPLIT_SC[n] || b.sc; b.r = 38 * b.sc / 2.7;
   for (let i = 1; i < n; i++) {
     const a = Math.atan2(b.y - P.y, b.x - P.x) + i * TAU / n;
     const l = {
-      ...b, link: b, x: b.x + Math.cos(a) * 90, y: b.y + Math.sin(a) * 60, ph: 0, hp: 1, maxHp: 1, xp: 0, ice: 0, vessels: null,
+      ...b, link: b, x: b.x + Math.cos(a) * 90, y: b.y + Math.sin(a) * 60, ph: 0, xp: 0, ice: 0, vessels: null,
       B: { ...b.B, phases: [{ atk: ['gas', 'puddles'], gap: 4 }] }, off: a, flash: .3,
       ai: { st: 'chase', t: 1.5 + i * .9, i: i % 2, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0, chan: 0, spin: null },
     };
@@ -181,10 +181,11 @@ export function bossOnKill(e) {
 }
 function updRise(b, dt) {
   if (!b.rise || !b.rise.length) return;
+  let ghosts = run.enemies.reduce((n, e) => n + (e.type === 'ghost' && !e.dead ? 1 : 0), 0);
   for (const r of b.rise) {
     r.t -= dt;
     if (Math.random() < .3) part(r.x + frand(-10, 10), r.y, 0, -60, .5, '#7bff6a', 3);
-    if (r.t <= 0 && run.enemies.filter(e => e.type === 'ghost' && !e.dead).length < 14) { spawnEnemy('ghost', { x: r.x, y: r.y }); }
+    if (r.t <= 0 && ghosts < 14) { spawnEnemy('ghost', { x: r.x, y: r.y }); ghosts++; }
   }
   b.rise = b.rise.filter(r => r.t > 0);
 }
@@ -341,7 +342,7 @@ export const ATK = {
   // Knochenhand: Knochenkäfig um den Goblin, zieht sich zu – raus durch die Lücke
   cage: {
     ck: () => 'necro', charge: .7,
-    fire(b) { addHaz({ shape: 'ring', x: P.x, y: P.y, r: 150, r0: 150, r1: 30, w: 24, gap: rnd() * TAU, gapW: .42, warn: 1, act: 3.2, act0: 3.2, tick: .4, dmg: b.dmg * .35, kind: 'necro', src: 'cage' }); },
+    fire(b) { addHaz({ shape: 'ring', x: P.x, y: P.y, r: 150, r0: 150, r1: 0, w: 24, gap: rnd() * TAU, gapW: .42, warn: 1, act: 3.2, act0: 3.2, tick: .4, dmg: b.dmg * .35, kind: 'necro', src: 'cage' }); },
   },
   // Knochenhand Phase 3: Lebensraub-Strahl folgt dem Goblin langsam und heilt ihn (höchstens bis zur Phasengrenze)
   drain: {
@@ -370,7 +371,7 @@ export function bossAI(b, dt, dx, dy, d) {
   const ai = b.ai;
   if (b.link) {
     // Teil von Morgra: Wut und Schaden wie der Boss, läuft versetzt um den Goblin
-    b.rage = b.link.rage; b.dmg = b.link.dmg; b.tint = b.link.tint;
+    b.rage = b.link.rage; b.dmg = b.link.dmg; b.tint = b.link.tint; b.hp = b.link.hp; b.maxHp = b.link.maxHp;   // Leben nur zur Anzeige/für Prozent-Abfragen
     const a = b.off + run.time * .35, tx = P.x + Math.cos(a) * 150, ty = P.y + Math.sin(a) * 110;
     dx = tx - b.x; dy = ty - b.y; d = Math.hypot(dx, dy) || 1;
   } else {

@@ -1,5 +1,6 @@
 // ---------- Kraftkurve (PLAN 7.3, Formeln 14.3) ----------
 // Alle Balance-Formeln an einer Stelle. Rein, ohne Lauf-Zustand, damit Tests sie direkt prüfen können.
+import { STAGES } from '../data/stages.js';
 
 // Ziel-Level nach Sekunden im Lauf; nach 4:00 (Endlos) 4 Level pro Minute weiter
 export const LEVEL_CURVE = [[0, 1], [30, 3], [60, 6], [120, 11], [180, 16], [240, 20]];
@@ -18,11 +19,14 @@ export function xpCatchUp(t, lv) {
 
 export const xpNeed = l => Math.round(4 + l * 3 + l * l * 0.3);
 
-// Gegner-Leben: Grundwert × Stage × Zeitkurve. Stage-Index 0…7, Endlos nutzt Index 5.
+// Gegner-Leben: Grundwert × Welt × Zeitkurve. Welt-Index 0…7; die Endlose Nacht (Index 8) hat ihren eigenen Wert
+// (wie früher, als sie Index 5 war). stageHp nie über das Ende der Tabelle hinaus (sonst NaN-Leben, unbesiegbar).
 export const STAGE_HP = [1, 1.25, 1.5, 1.8, 2.1, 2.4, 2.8, 3.2];
+export const ENDLESS_HP = 2.4;
+export const stageHp = si => (STAGES[si] && STAGES[si].endless ? ENDLESS_HP : STAGE_HP[Math.min(Math.max(0, si), STAGE_HP.length - 1)]);
 export const HP_T1 = .012, HP_T2 = .000035;
 export const hpTime = t => 1 + HP_T1 * t + HP_T2 * t * t;
-export const enemyHp = (base, si, t) => base * STAGE_HP[si] * hpTime(t);
+export const enemyHp = (base, si, t) => base * stageHp(si) * hpTime(t);
 
 // Spielerschaden gedeckelt nach Art: niemand stirbt in einer Sekunde durch Pech
 export const DMG_CAP = { contact: .08, proj: .12, special: .25 };

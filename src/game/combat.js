@@ -23,8 +23,14 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   dmg *= dealtMult(e);
   const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
   const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
-  // Teile von Morgra teilen sich das Leben des Bosses
+  // Teile von Morgra teilen sich das Leben des Bosses. Ein Flächentreffer, der mehrere Körper im selben Schritt
+  // mit gleicher Stärke trifft, zählt nur einmal (sonst ×3 auf das gemeinsame Leben)
   const tgt = e.link || e;
+  if (tgt.split) {
+    const k = run.time + ':' + dmg;
+    if (tgt.aoeKey === k && tgt.aoeBody !== e) return;
+    tgt.aoeKey = k; tgt.aoeBody = e;
+  }
   tgt.hp -= d; e.flash = .09;
   if (e.tb !== undefined && e.freezeT > 0) e.tb += d;   // Zeitbombe sammelt Schaden
   if (kb && !e.boss && !rule.blocked) { const m = e.elite ? .25 : e.traits && e.traits.includes('heavy') ? .2 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }
@@ -35,6 +41,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   if (tgt.hp <= 0) kill(tgt, xpMul);
 }
 export function kill(e, xpMul = 1) {
+  if (e.link) return;   // Teile von Morgra sterben nur mit ihr (bossDown)
   e.dead = true; run.kills++;
   emit('enemyKilled', e);
   if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
@@ -59,7 +66,7 @@ export function kill(e, xpMul = 1) {
     const r2 = RNG.loot.next();
     if (r2 < .006) addItem('heal', e.x, e.y); else if (r2 < .009) addItem('magnet', e.x, e.y); else if (r2 < .0115) addItem('bomb', e.x, e.y);
   }
-  if (run.boss && e.type === 'skeleton') bossOnKill(e);
+  bossOnKill(e);
   if (e.boss) bossDown(e);
 }
 // Heilungs-Pity (7.5): wer 20 s unter 30 % Leben war, bekommt vom nächsten Elite/Mini-Boss garantiert ein Herz

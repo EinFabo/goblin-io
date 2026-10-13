@@ -1005,7 +1005,7 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - **Spielstand v4 (Fabi hat gewählt: „Alles neu“):** Weltfortschritt beginnt neu, Gold, Karten, Talente, Fähigkeiten und Kosmetik bleiben. Fähigkeiten, die über Welt-Siege schon frei waren, bleiben frei (`save.keep`).
   - Freischaltungen „Welt 6/8 schaffen“ (Zeitbombe, Großer Knall) sind jetzt erreichbar. Hutsammler: 15/60/120 Hüte (8 Welten × 15).
   - Giftpfützen höchstens 5 gleichzeitig (liegend + im Flug, `ZONE_CAP`): im Giftsumpf sind Giftmischer die Hauptgegner, ohne Grenze lag ein Teppich. Der Sim-Bot weicht jetzt den roten Zielkreisen anfliegender Lobs aus (wie ein Mensch).
-  - Balance (30–40 Läufe, Seeds 1/101): Level 1–4 aller Welten 83–100 % (Level 3/4 meist etwas zu leicht → Phase 8). Boss-Level: Welt 1 63 %, 2 80 %, 3 60 %, 4 73 %, 5 93 % (Platzhalter-Boss), 6 70 %, 7 70 %, 8 60 %. Welt 3/4/7 mit leichteren Wellen vor dem Boss (`WORLD_LV[].boss`), weniger Beschwörer in der vollen Mischung von Welt 4/7.
+  - Balance (30–40 Läufe, Seeds 1/101): Level 1–4 aller Welten 83–100 % (Level 3/4 meist etwas zu leicht → Phase 8). Boss-Level: Welt 1 63 %, 2 80 %, 3 60 %, 4 73 %, 5 93 % (Platzhalter-Boss), 6 70 %, 7 70 %, 8 60 %. Welt 3/4/7 mit leichterem Boss-Level (`WORLD_LV[].boss`: Schaden und Spawnrate, der Schaden gilt auch für den Boss), weniger Beschwörer in der vollen Mischung von Welt 4/7.
   - Offen: Sterne gibt es als Hüte schon; Albtraum-Modus.
 - [x] Boss-Runner mit Phasen, Wut-Timer, Phasenwechsel-Regeln (6.2)
   - Daten in `src/data/bosses.js` (3 Phasen je Boss: Angriffs-Rotation, Tempo, Pause, Extras), Ablauf in `src/game/boss.js` (Angriffe als Bausteine `ATK`). Stages verweisen per `boss.id` darauf.

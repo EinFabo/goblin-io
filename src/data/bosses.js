@@ -35,7 +35,7 @@ export const BOSSES = {
   },
   // Morgra die Seuchenmutter: Giftpfützen-Regen, Gaskegel; teilt sich (gemeinsames Leben), zuletzt läuft die Arena von außen voll Gift
   morgra: {
-    name: 'Morgra', title: 'die Seuchenmutter', school: 'toxic', look: 'morgra', kind: 'toxic', col: '#8be04a', hp: 1.35,
+    name: 'Morgra', title: 'die Seuchenmutter', school: 'toxic', look: 'morgra', kind: 'toxic', col: '#8be04a', hp: 1.15,
     hint: 'Ihre Hälften teilen sich ein Leben – triff, was am nächsten ist.',
     phases: [
       { atk: ['puddles', 'gas', 'fan', 'puddles', 'gas'], gap: 2 },

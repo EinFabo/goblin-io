@@ -38,7 +38,8 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
     vx = vx * .7 + tx * .7; vy = vy * .7 + ty * .7;
     if (px || py) { const pl = Math.hypot(px, py); vx = vx * .3 + px / pl * 1.5; vy = vy * .3 + py / pl * 1.5; }
     { const [hx, hy] = G.dangerVec(P.x, P.y, 50); px += hx * 2; py += hy * 2; }
-    // Anfliegende Giftbeutel/Felsen: raus aus dem roten Zielkreis (wie ein Mensch, der ihn sieht)
+    // Anfliegende Giftbeutel: raus aus dem roten Zielkreis (wie ein Mensch, der ihn sieht). Felsen sind harmlos;
+    // ihr Einschlag ist eine eigene Bodenwarnung, der dangerVec schon ausweicht
     for (const q of run.eproj) if (q.lob && !q.noZone) { const dx = P.x - q.tx, dy = P.y - q.ty, d = Math.hypot(dx, dy) || 1; if (d < 85) { px += dx / d * 3; py += dy / d * 3; } }
     for (const e of run.enemies) if (e.bomber && e.fuse > 0) { const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1; if (d < 120) { px += dx / d * 3; py += dy / d * 3; } }
     if (px || py) { const pl = Math.hypot(px, py); vx = vx * .3 + px / pl * 1.5; vy = vy * .3 + py / pl * 1.5; }

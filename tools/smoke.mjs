@@ -32,7 +32,8 @@ for (let si = 0; si < stages; si++) {
     }, until);
     await p.waitForTimeout(120);   // ein paar echte Bilder zeichnen lassen
   }
-  const st = await p.evaluate(() => ({ t: Math.round(GOBLIN.run.time), boss: !!GOBLIN.run.boss || GOBLIN.run.over }));
+  const st = await p.evaluate(() => ({ t: Math.round(GOBLIN.run.time), boss: !!GOBLIN.run.boss || GOBLIN.run.over, kills: GOBLIN.run.kills, bossHp: GOBLIN.run.boss ? GOBLIN.run.boss.hp : 0 }));
+  if (!st.kills || !Number.isFinite(st.bossHp)) errs.push(`${endless ? 'Endlos' : 'Welt ' + (si + 1)}: Kills ${st.kills}, Boss-Leben ${st.bossHp}`);
   console.log(`${endless ? 'Endlos' : `Welt ${si + 1} Boss-Level`}: bis ${st.t} s, Boss erreicht: ${st.boss ? 'ja' : 'nein'}`);
   if (!endless) await fightBoss(si);
 }

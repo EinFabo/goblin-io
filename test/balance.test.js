@@ -30,3 +30,9 @@ test('Schadensdeckel nach Art', () => {
   assert.equal(hitDamage(50, 100, 'zone'), 100 * DMG_CAP.special);
   assert.equal(hitDamage(5, 100, 'contact'), 5);
 });
+
+test('Gegner-Leben ist in jeder Welt und in der Endlosen Nacht eine Zahl', async () => {
+  const { STAGES } = await import('../src/data/stages.js');
+  const { enemyHp, stageHp } = await import('../src/game/balance.js');
+  STAGES.forEach((st, si) => { assert.ok(Number.isFinite(enemyHp(10, si, 120)) && stageHp(si) > 0, st.name); });
+});
