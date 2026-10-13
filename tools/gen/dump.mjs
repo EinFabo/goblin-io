@@ -34,19 +34,22 @@ if (process.argv.includes('--png')) {
 }
 
 // ---------- Magier: alle Schulen, Ruhepose in allen gezeichneten Richtungen + Cast nach unten ----------
-const { SCHOOL_IDS, mageSvg, MAGE_ANIMS } = await import('../../src/gen/mages.js');
+const { SCHOOL_IDS, BOSS_LOOKS, mageSvg } = await import('../../src/gen/mages.js');
+const { BOSSES } = await import('../../src/data/bosses.js');
 mkdirSync(join(out, 'mages'), { recursive: true });
 let mrows = '';
-for (const sc of SCHOOL_IDS) {
+// Schulen, danach die Bosse mit eigenem Modell
+const rowsM = [...SCHOOL_IDS.map(sc => [sc, sc, undefined]), ...Object.keys(BOSS_LOOKS).map(id => [id, Object.values(BOSSES).find(B => B.look === id).school, { boss: id }])];
+for (const [sc, school, opt] of rowsM) {
   let cells = '';
   for (const dir of ['down', 'downleft', 'left', 'upleft', 'up']) {
     const name = `${sc}_idle_${dir}_1.svg`;
-    writeFileSync(join(out, 'mages', name), mageSvg(sc, dir, 'idle', 0));
+    writeFileSync(join(out, 'mages', name), mageSvg(school, dir, 'idle', 0, opt));
     cells += `<td><img src="mages/${name}" width="128" height="128"></td>`;
   }
   for (const i of [1, 3, 5, 6, 8]) {
     const name = `${sc}_cast_downleft_${i}.svg`;
-    writeFileSync(join(out, 'mages', name), mageSvg(sc, 'downleft', 'cast', i - 1));
+    writeFileSync(join(out, 'mages', name), mageSvg(school, 'downleft', 'cast', i - 1, opt));
     cells += `<td><img src="mages/${name}" width="128" height="128"></td>`;
   }
   mrows += `<tr><th>${sc}</th>${cells}</tr>`;
@@ -54,7 +57,7 @@ for (const sc of SCHOOL_IDS) {
 writeFileSync(join(out, 'mages.html'), `<!doctype html><meta charset="utf-8"><style>body{background:#5fae3a;font:12px sans-serif;margin:4px}td{background:rgba(255,255,255,.12);padding:0}</style><table id="m">${mrows}</table>`);
 if (process.argv.includes('--png')) {
   const { chromium } = await import('playwright');
-  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1400, height: 1100 } });
+  const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1400, height: 1400 } });
   await p.goto('file://' + join(out, 'mages.html')); await (await p.$('#m')).screenshot({ path: join(out, 'mages.png') }); await b.close();
   console.log('png', join(out, 'mages.png'));
 }

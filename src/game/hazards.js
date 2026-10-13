@@ -5,6 +5,7 @@ import { damagePlayer, hurt } from './combat.js';
 import { animFx, boltFx, explode, part, ring } from './fx.js';
 import { bulwark, perfectRoll, reflect } from './abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
+import { spinHaz } from './boss.js';
 import { P, onScreen, pR, query, run } from './state.js';
 
 // Einschlag-Animation je Geschossart
@@ -123,6 +124,7 @@ function hazFx(h) {
     if (onScreen(x, y)) sfx.stomp();
   } else if (h.boom) { animFx('f_fireball_hit_', 5, h.x, h.y, h.r / 16); run.shake = Math.max(run.shake, 8); sfx.boom(); }
   else if (h.kind === 'fire') { if (onScreen(x, y)) sfx.boom(); }
+  else if (h.kind === 'ice') { for (let i = 0; i < 10; i++) part(x + frand(-h.r, h.r) * .7, y + frand(-h.r, h.r) * .5, 0, frand(-40, -10), .5, '#eafcff', 3); if (onScreen(x, y)) sfx.frost(); }
 }
 
 function updHaz(dt) {
@@ -130,6 +132,7 @@ function updHaz(dt) {
     h.t += dt;
     if (h.owner && h.cancel && h.owner.dead) { h.done = true; continue; }
     if (h.shape === 'beam' && (h.a.dead || h.b.dead)) { h.done = true; continue; }
+    if (h.spin) spinHaz(h, dt);
     if (h.warn > 0) {
       h.warn -= dt;
       if (h.warn > 0) continue;
@@ -137,6 +140,8 @@ function updHaz(dt) {
       if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) { const b0 = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, b0 - P.hp); } h.done = true; continue; }
     }
     h.act -= dt; h.tk -= dt;
+    // Eisfleck: rutschig, solange man drauf steht
+    if (h.kind === 'ice' && hazDist(h, P.x, P.y)[0] < 0) P.iceT = .12;
     if (h.tk <= 0 && h.dmg > 0 && hazHitsPlayer(h)) {
       h.tk = h.tick;
       const before = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, before - P.hp);
@@ -155,7 +160,8 @@ export function dangerVec(x, y, margin = 40) {
     const [d, cx, cy] = hazDist(h, x, y);
     if (d > margin) continue;
     let dx = x - cx, dy = y - cy, l = Math.hypot(dx, dy);
-    if (l < 1) { dx = Math.random() - .5; dy = Math.random() - .5; l = Math.hypot(dx, dy); }
+    // genau in der Mitte (Blitz/Meteor auf den Spieler): seitlich zur Laufrichtung raus, ohne Zufall (Sim bleibt wiederholbar)
+    if (l < 1) { dx = -P.aimY; dy = P.aimX; l = 1; }
     const w = (margin - d) / margin * 4;
     vx += dx / l * w; vy += dy / l * w;
   }

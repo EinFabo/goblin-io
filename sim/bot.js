@@ -9,6 +9,9 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
   const run = G.run, P = G.P;
   const dmg = {};
   const off = G.events.on('playerHurt', h => { dmg[h.src] = (dmg[h.src] || 0) + h.amount; });
+  // Bosskampf: Dauer vom Ende des Auftritts bis zum Sieg
+  let bossT0 = null, bossT = null;
+  const off2 = G.events.on('bossSpawn', () => { bossT0 = run.time; }), off3 = G.events.on('bossDown', () => { if (bossT0 !== null) bossT = run.time - bossT0; });
   const lvAt = {};
   const pr = { evo: 0, upW: 1, newW: 2, upP: 3, newP: 4, heal: 5, gold: 6 };
   const pickCard = () => {
@@ -38,6 +41,14 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
     for (const e of run.enemies) if (e.bomber && e.fuse > 0) { const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1; if (d < 120) { px += dx / d * 3; py += dy / d * 3; } }
     if (px || py) { const pl = Math.hypot(px, py); vx = vx * .3 + px / pl * 1.5; vy = vy * .3 + py / pl * 1.5; }
     if (run.arena) { const cx = run.arena.x - P.x, cy = run.arena.y - P.y, cd = Math.hypot(cx, cy); if (cd > 300) { vx += cx / cd; vy += cy / cd; } }
+    // Eisschild: im Bogen (Abstand ~160 px) hinter den Boss laufen
+    const bs = run.boss;
+    if (bs && bs.ice > 0) {
+      const rx = P.x - bs.x, ry = P.y - bs.y, rd = Math.hypot(rx, ry) || 1;
+      let da = Math.atan2(ry, rx) - (bs.fa + Math.PI); da = Math.atan2(Math.sin(da), Math.cos(da));
+      const dir = da > 0 ? -1 : 1, rr = (160 - rd) / 60;
+      vx += -ry / rd * dir * 1.6 + rx / rd * rr; vy += rx / rd * dir * 1.6 + ry / rd * rr;
+    }
     let gem = null, gd = 1e12;
     for (const it of run.items) { if (it.k === 'bomb' || it.k === 'magnet') continue; const d = (it.x - P.x) ** 2 + (it.y - P.y) ** 2; if (d < gd && d < 350 * 350) { gd = d; gem = it; } }
     if (gem) { const dx = gem.x - P.x, dy = gem.y - P.y, d = Math.hypot(dx, dy) || 1; vx += dx / d * .8; vy += dy / d * .8; }
@@ -50,10 +61,10 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
     const m = Math.floor(run.time / 60);
     if (m >= 1 && !(m in lvAt)) lvAt[m] = P.lv;
   }
-  joy.id = null; off();
+  joy.id = null; off(); off2(); off3();
   const win = !!(run.over && P.hp > 0);
   return {
-    win, t: Math.round(run.time), lv: P.lv, kills: run.kills, gold: run.gold, abil, lvAt, dmg,
+    win, t: Math.round(run.time), bossT, lv: P.lv, kills: run.kills, gold: run.gold, abil, lvAt, dmg,
     weapons: run.weapons.map(w => w.id + w.lv + (w.evo ? '*' : '')).join(','),
   };
 }

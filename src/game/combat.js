@@ -5,6 +5,7 @@ import { $ } from '../core/util.js';
 import { chargeAbil, critBonus, dealtMult, onKill, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
 import { hitDamage } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
+import { bossHurt } from './boss.js';
 import { addItem, addNum, animFx, dissolve, dropGem } from './fx.js';
 import { addEvents } from './run.js';
 import { P, run } from './state.js';
@@ -28,6 +29,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit);
   else if (rule.blocked) addNum(e.x, e.y - 22 * e.sc, 'Block', '#dff6ff', false);
   sfx.hit();
+  if (e.boss) bossHurt(e);
   if (e.hp <= 0) kill(e, xpMul);
 }
 export function kill(e, xpMul = 1) {
@@ -79,6 +81,6 @@ export function damagePlayer(d, src = 'contact') {
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
-  emit('playerHurt', { amount: d, src: run.boss ? 'boss' : src });
+  emit('playerHurt', { amount: d, src: run.boss ? 'boss.' + src : src });   // im Bosskampf mit Vorsilbe (Sim: Schaden je Boss-Angriff)
   if (P.hp <= 0 && !tryRevive()) { P.hp = 0; endRun(false); }
 }

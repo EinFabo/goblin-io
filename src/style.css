@@ -51,6 +51,27 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .bossbar{margin:8px auto 0;max-width:520px;position:relative;height:22px;border-radius:6px;background:rgba(10,15,6,.85);border:2px solid var(--edge);overflow:hidden}
 .bossfill{position:absolute;inset:0 auto 0 0;width:100%;background:linear-gradient(180deg,#ff7a6b,var(--danger) 60%,#9e2328);transition:width .15s}
 .bossbar span{position:relative;z-index:1;display:block;text-align:center;font-family:var(--font-display);font-size:14px;line-height:18px;letter-spacing:.04em;text-shadow:0 1px 0 #000}
+/* Phasen-Markierungen bei 66 % und 33 % (6.2), Wut: pulsiert */
+.bossbar::before,.bossbar::after{content:'';position:absolute;top:0;bottom:0;width:3px;background:var(--edge);z-index:1}
+.bossbar::before{left:33%}.bossbar::after{left:66%}
+.bossbar.rage{border-color:#ff5a3c;animation:bossRage .6s ease-in-out infinite alternate}
+.bossbar.rage .bossfill{background:linear-gradient(180deg,#ffb35c,#ff5a1f 60%,#b8320f)}
+@keyframes bossRage{to{box-shadow:0 0 14px #ff5a3c}}
+/* Boss-Auftritt: schwarze Balken oben/unten, HUD weg, Namensschild unten links */
+#cine{position:fixed;inset:0;pointer-events:none;z-index:7}
+#cine i{position:absolute;left:0;right:0;height:11vh;background:#000;transition:transform .45s ease}
+#cine i:first-child{top:0;transform:translateY(-100%)}
+#cine i:last-child{bottom:0;transform:translateY(100%)}
+body.cine #cine i{transform:none}
+body.cine #hud,body.cine #ctrl,body.cine #hint{opacity:0;transition:opacity .3s}
+#bossCard{position:fixed;left:max(24px,6vw);bottom:calc(11vh + 18px);z-index:8;pointer-events:none;display:flex;flex-direction:column;
+  padding:6px 0 8px 16px;border-left:6px solid var(--c,#ff8a1f);animation:bossCard 2.3s ease-out both}
+#bossCard small{font-family:var(--font-display);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+#bossCard b{font-family:var(--font-display);font-size:clamp(34px,min(9vw,12vh),76px);line-height:1;color:var(--c,#ff8a1f);text-shadow:0 4px 0 #000,0 0 24px rgba(0,0,0,.6);letter-spacing:.02em}
+#bossCard span{font-family:var(--font-display);font-size:clamp(16px,min(3.4vw,5vh),28px);color:var(--ink);text-shadow:0 2px 0 #000}
+#bossCard em{margin-top:8px;font-style:normal;font-size:12px;color:var(--muted);opacity:.8}
+@keyframes bossCard{0%{opacity:0;transform:translateX(-60px)}14%{opacity:1;transform:none}88%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#bossCard{animation:none}#cine i{transition:none}}
 
 /* ---------- Fähigkeiten-Buttons ---------- */
 #ctrl{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));width:196px;height:196px;z-index:6;pointer-events:none}

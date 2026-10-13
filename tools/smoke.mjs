@@ -17,7 +17,7 @@ const stages = await p.evaluate(() => GOBLIN.STAGES.length);
 for (let si = 0; si < stages; si++) {
   const endless = await p.evaluate(si => !!GOBLIN.STAGES[si].endless, si);
   await p.evaluate(([si, li]) => { const G = GOBLIN; G.save.profile.level = 20; G.save.loadout = ['rage', 'mech']; G.go('run', { si, li, seed: 11 + si }); }, [si, endless ? 0 : 4]);
-  for (const until of endless ? [30, 60, 90, 120, 150, 200, 239, 241, 250, 262] : [30, 60, 89, 91, 100, 115, 130]) {
+  for (const until of endless ? [30, 60, 90, 120, 150, 200, 239, 241, 250, 262] : [30, 60, 89, 91]) {
     await p.evaluate(until => {
       const G = GOBLIN, run = G.run;
       if (!run || run.over) return;
@@ -34,6 +34,52 @@ for (let si = 0; si < stages; si++) {
   }
   const st = await p.evaluate(() => ({ t: Math.round(GOBLIN.run.time), boss: !!GOBLIN.run.boss || GOBLIN.run.over }));
   console.log(`${endless ? 'Endlos' : `Welt ${si + 1} Boss-Level`}: bis ${st.t} s, Boss erreicht: ${st.boss ? 'ja' : 'nein'}`);
+  if (!endless) await fightBoss(si);
+}
+// Bosskampf mit Zeichnen: Auftritt mit Namensschild, alle 3 Phasen (Schaden per Hand, Waffen fast wirkungslos,
+// damit jede Phase ein paar Angriffe lang dauert), Eisschild von hinten brechen, Sieg
+async function fightBoss(si) {
+  await p.evaluate(() => { const G = GOBLIN; window.__boss = { ph: [0], mech: new Set(), shield: false, rage: false, off: G.events.on('bossPhase', b => window.__boss.ph.push(b.ph)) }; });
+  for (let k = 0; k < 40; k++) {
+    const r = await p.evaluate(() => {
+      const G = GOBLIN, run = G.run, S = window.__boss;
+      if (!run || run.over) return { done: true };
+      run.paused = true;
+      for (let n = 0; n < 60 * 4 && !run.over; n++) {
+        G.P.inv = 9; G.P.dmgMult = .001; G.update(1 / 60);
+        if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); }
+        for (const h of run.haz) if (h.src) S.mech.add(h.src);
+        if (run.arena && run.arena.burn > 0) S.mech.add('burn');
+        if (run.storm > 0) S.mech.add('storm');
+        if (run.boss && run.boss.ai.spin) S.mech.add('spiral');
+      }
+      const b = run.boss;
+      // Wut-Timer: kurz vor 120 s Kampf vorspulen, dann muss die Leiste glühen
+      if (b && !b.rage && b.ph === 1 && !run.cut) b.fightT = 119.9;
+      if (b && b.rage && document.querySelector('#bossBar').classList.contains('rage')) S.rage = true;
+      if (b && !run.cut) {
+        if (b.ice > 0) {
+          // hinter ihn stellen: drei Treffer in den Rücken brechen den Schild
+          G.P.x = b.x - Math.cos(b.fa) * 120; G.P.y = b.y - Math.sin(b.fa) * 120;
+          for (let i = 0; i < 3; i++) { b.iceCd = 0; G.hurt(b, 1); }
+          if (b.ice === 0 && b.stunT > 0) S.shield = true;
+        } else G.hurt(b, b.maxHp * .07);
+      }
+      run.paused = false;
+      return { over: run.over };
+    });
+    await p.waitForTimeout(80);
+    if (r.done || r.over) break;
+  }
+  const seen = await p.evaluate(() => ({ ...window.__boss, off: window.__boss.off(), mech: [...window.__boss.mech], card: document.querySelector('#bossCardName').textContent + ' ' + document.querySelector('#bossCardTitle').textContent }));
+  const end = await p.evaluate(() => ({ over: GOBLIN.run.over, boss: !!GOBLIN.run.boss }));
+  const id = await p.evaluate(si => GOBLIN.STAGES[si].boss.id, si);
+  seen.mech = new Set(seen.mech);
+  console.log(`  Boss ${id}: „${seen.card}“, Phasen ${seen.ph.map(x => x + 1).join('/')}, Eisschild gebrochen: ${seen.shield ? 'ja' : '–'}, Mechaniken ${[...seen.mech].join(',')}, besiegt: ${end.over && !end.boss ? 'ja' : 'nein'}`);
+  if (!seen.rage) errs.push(`Wut-Timer Welt ${si + 1}: nicht ausgelöst`);
+  if (seen.card.trim().length < 3 || seen.ph.length < 3 || !(end.over && !end.boss)) errs.push(`Bosskampf Welt ${si + 1}: ` + JSON.stringify({ ...seen, mech: [...seen.mech], end }));
+  if (id === 'frostbart' && !seen.shield) errs.push('Frostbart: Eisschild nicht gebrochen');
+  if (id === 'ignaz' && !['wall', 'meteor', 'burn'].every(m => seen.mech.has(m))) errs.push('Ignaz: Mechaniken fehlen ' + [...seen.mech]);
 }
 // In der Goblin-Maschine: andere Fähigkeit und Rolle gesperrt, Knöpfe mit Schloss
 await p.evaluate(() => { const G = GOBLIN; G.save.loadout = ['rage', 'mech']; G.go('run', { si: 0, li: 0, seed: 7 }); });
@@ -167,14 +213,15 @@ const unused = ids.filter(id => id !== 'charm' && !used[id]);
 if (unused.length) errs.push('nie eingesetzt: ' + unused.join(', '));
 console.log('Alle Bäume voll (40 s je Paar):', JSON.stringify(used));
 // Laden und Werkstatt (Phase 6): Holztruhe kaufen und durchklicken, Karte aufwerten, Siegtruhe nach dem Boss
-await p.evaluate(() => { const S = GOBLIN.save; S.wallet.gold = 3000; S.wallet.gems = 100; S.chests.shelf = []; GOBLIN.go('menu', '#store'); });
+// (die Bosskämpfe oben haben schon Siegtruhen geöffnet und Karten gebracht → relativ zählen)
+const before = await p.evaluate(() => { const S = GOBLIN.save; S.wallet.gold = 3000; S.wallet.gems = 100; S.chests.shelf = []; GOBLIN.go('menu', '#store'); return { chests: S.stats.chests, cards: Object.values(S.cards).reduce((a, c) => a + c.n, 0) }; });
 await p.waitForTimeout(300);
 await p.click('[data-buy-chest="wood"]');
 await p.waitForSelector('#chestOpen:not([hidden])');
 for (let i = 0; i < 30 && !(await p.evaluate(() => !!document.querySelector('#coDone'))); i++) { await p.mouse.click(640, 380); await p.waitForTimeout(60); }
 await p.click('#coDone');
 const shop = await p.evaluate(() => { const S = GOBLIN.save; return { chests: S.stats.chests, cards: Object.values(S.cards).reduce((a, c) => a + c.n, 0), gold: S.wallet.gold }; });
-if (shop.chests !== 1 || shop.cards < 1) errs.push('Holztruhe: ' + JSON.stringify(shop));
+if (shop.chests !== before.chests + 1 || shop.cards <= before.cards) errs.push('Holztruhe: ' + JSON.stringify(shop));
 await p.evaluate(() => { GOBLIN.save.cards.dagger = { lv: 1, n: 2 }; GOBLIN.go('menu', '#shop'); });
 await p.waitForTimeout(200);
 await p.click('[data-card="dagger"]'); await p.click('#cardUp');

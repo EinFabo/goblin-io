@@ -1001,10 +1001,19 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 
 ### Phase 7 – Stages und Bosse
 - [ ] 8 Stages mit Deko und Musik (6.1), Sterne, Albtraum-Modus
-- [ ] Boss-Runner mit Phasen, Wut-Timer, Phasenwechsel-Regeln (6.2)
+- [x] Boss-Runner mit Phasen, Wut-Timer, Phasenwechsel-Regeln (6.2)
+  - Daten in `src/data/bosses.js` (3 Phasen je Boss: Angriffs-Rotation, Tempo, Pause, Extras), Ablauf in `src/game/boss.js` (Angriffe als Bausteine `ATK`). Stages verweisen per `boss.id` darauf.
+  - Phasenwechsel bei 66 %/33 %: Leben bleibt an der Schwelle stehen (keine Phase wird übersprungen), Hitstop, kleine Szene (Kamera zoomt auf den Boss, er lädt auf, „Phase 2“ + Satz des Bosses), 1,5 s unverwundbar, alle gegnerischen Geschosse und Bodenwarnungen weg.
+  - Wut-Timer nach 120 s Kampf: +50 % Schaden und Tempo (Bewegung, Aufladen, Pausen), Boss rot, Leiste pulsiert. HP-Leiste mit Markierungen bei 66 % und 33 %.
+  - Endlose Nacht: jedes Mal ein zufälliger Boss (lädt alle Boss-Modelle vor).
+  - Balance (`npm run sim -- --level 5`, 40 Läufe, Seeds 1 und 101; die Sim zeigt jetzt die Kampfdauer und den Schaden je Boss-Angriff): Boss-Leben ×2,8 statt ×1,6, Boss-Schaden 13 statt 18. Siege/Kampfdauer: Welt 1 73–80 %/46 s, Welt 2 68–85 %/70 s, Welt 3 58–68 %/45 s, Welt 5 85–88 %/60 s. Welt 4 40–50 %: die Läufe enden meist vor dem Boss (Wellen, Kontakt) → Phase 8.
+  - Fix Sim: Die Phasen-Szene zog Funken mit dem Spielablauf-Zufall, und der Ausweich-Helfer des Bots würfelte mit `Math.random` → gleiche Seeds gaben verschiedene Ergebnisse. Jetzt wiederholbar.
 - [ ] 8 Bosse (6.3) + Mini-Bosse
-- [ ] **Boss-Rework (Wunsch Fabi, 2026-10-12):** die heutigen 5 Bosse ersetzen, nicht nur ergänzen. Jeder Boss bekommt ein eigenes Modell statt "Meister seiner Schule" (Phase 1). Malvorn bekommt ein Modell mit Teilen aller Schulen und wechselt sichtbar die Schule. Die alte feste Angriffsrotation (Ring/Fächer/Blitze/Beschwören/Ansturm) entfällt zugunsten der Phasen aus 6.3.
-- [ ] **Bosse wie in Undertale (Wunsch Fabi, 2026-10-12):** mehrere deutlich verschiedene Phasen (siehe 6.2/6.3), und jeder Boss wird angekündigt: kurze Cutscene mit Auftritt-Animation, Name und Titel, Kamera auf den Boss, eigene Musik mit Intro. Phasenwechsel ebenfalls mit kleiner Szene.
+  - [x] **Ignaz der Funkenmeister** (Welt 1): Feuerball-Fächer + Ansturm; Phase 2 zwei drehende Feuerarme (erst langsam als Warnung); Phase 3 Meteorregen (fallende Feuerbälle mit Schatten) und brennender Arena-Rand. Lehr-Boss: Hinweis zu Beginn.
+  - [x] **Frostbart der Eisweber** (Welt 2): Eisspeer-Salven (vorgehalten), rutschige Eisflecken (Goblin schlittert); Phase 2 Eisschild: vorne prallt alles ab („Block“), er dreht sich langsam (0,6 rad/s), 3 Treffer von hinten brechen ihn (Pfeil zeigt auf den Rücken, Punkte über dem Kopf), danach 1,4 s benommen und +30 % Schaden, Schild kommt nach 12 s wieder; Phase 3 Schneesturm (Sicht nur um den Goblin) und Eissplitter-Spiralen.
+  - [ ] Morgra, Graf Knochenhand, Spiegelmeister, Tempestra, Gromm, Malvorn (mit den 8 Stages). Bis dahin nutzen Pyra, Nebelhexer und Malvorn die alten Angriffe in 3 Phasen.
+- [ ] **Boss-Rework (Wunsch Fabi, 2026-10-12):** *(Stand: Ignaz und Frostbart haben eigene Modelle – brennender Bart, Flammenkranz, Glutschultern bzw. Eisbart, Eiszacken, Eisplatten; `BOSS_LOOKS` in `src/gen/mages.js`)* die heutigen 5 Bosse ersetzen, nicht nur ergänzen. Jeder Boss bekommt ein eigenes Modell statt "Meister seiner Schule" (Phase 1). Malvorn bekommt ein Modell mit Teilen aller Schulen und wechselt sichtbar die Schule. Die alte feste Angriffsrotation (Ring/Fächer/Blitze/Beschwören/Ansturm) entfällt zugunsten der Phasen aus 6.3.
+- [ ] **Bosse wie in Undertale (Wunsch Fabi, 2026-10-12):** *(Stand: Auftritt für alle Bosse fertig – Kinobalken, Kamera fährt zum Boss, Lichtsäule und Knall, Brüllen, Namensschild mit Titel, Tippen/Leertaste überspringt; Trommelwirbel-Intro, danach eigenes Thema für Ignaz und Frostbart; Phasenwechsel-Szene. Offen: Auftritts-Animationen je Boss, Musik der übrigen.)* mehrere deutlich verschiedene Phasen (siehe 6.2/6.3), und jeder Boss wird angekündigt: kurze Cutscene mit Auftritt-Animation, Name und Titel, Kamera auf den Boss, eigene Musik mit Intro. Phasenwechsel ebenfalls mit kleiner Szene.
 - [ ] **Mehr Musik, echte Titelmusik (Wunsch Fabi, 2026-10-12):** eigenes Stück für das Hauptmenü/den Titel, dazu mehr Stücke im Lauf (pro Stage, Boss, Ergebnis).
 
 ### Phase 8 – Feinschliff und Test

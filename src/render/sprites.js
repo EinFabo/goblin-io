@@ -7,6 +7,7 @@ import { MINION_ANIMS, minionSvg } from '../gen/minions.js';
 import { FX_KINDS, fxHitSvg, fxSvg } from '../gen/fx.js';
 import { ETYPES } from '../data/enemies.js';
 import { STAGES, stageTypes } from '../data/stages.js';
+import { BOSS_IDS, bossVariant } from '../data/bosses.js';
 import { makeProc } from './proc.js';
 
 // ---------- Sprites ----------
@@ -119,7 +120,7 @@ export function tinted(entry, tint) {
 // Meister (Bosse, Großmagier) werden schärfer gerastert.
 export const MAGE_OFF = {};
 const units = new Map();
-const variantOf = key => { const [school, v] = key.split('.'); return [school, { master: v === 'm', clone: v === 'c' }]; };
+const variantOf = key => { const [school, v] = key.split('.'); return [school, { master: v === 'm', clone: v === 'c', boss: v && v !== 'm' && v !== 'c' ? v : null }]; };
 
 function loadUnit(key, anim) {
   const id = key + '|' + anim;
@@ -130,7 +131,7 @@ function loadUnit(key, anim) {
   for (const dir of Object.keys(DRAWN)) for (let i = 0; i < MAGE_ANIMS[anim]; i++) jobs.push([dir, i, mageSvg(school, dir, anim, i, opt)]);
   const pr = Promise.all(jobs.map(j => loadImg(svgUrl(j[2])))).then(imgs => {
     jobs.forEach(([dir, i, svg], j) => {
-      const e = raster(imgs[j], svg, false, opt.master ? 2 : 1.25);
+      const e = raster(imgs[j], svg, false, opt.master || opt.boss ? 2 : 1.25);
       SPR[`m.${key}.${anim}.${dir}.${i + 1}`] = e;
       const m = Object.keys(MIRROR).find(r => MIRROR[r] === dir);
       if (m) SPR[`m.${key}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
@@ -153,7 +154,9 @@ function typeNeeds(type, out = { mages: new Set(), minions: new Set() }, seen = 
 }
 function stageNeeds(si) {
   // Ratten immer dabei (Rattenflut)
-  const st = STAGES[si], out = { mages: new Set([st.boss.school + '.m']), minions: new Set(['rat']) }, seen = new Set();
+  // Endlose Nacht: jeder Boss kann kommen
+  const st = STAGES[si], ids = st.boss.id === 'random' ? BOSS_IDS : [st.boss.id];
+  const out = { mages: new Set(ids.map(bossVariant)), minions: new Set(['rat']) }, seen = new Set();
   for (const t of stageTypes(st)) typeNeeds(t, out, seen);
   return out;
 }
@@ -165,7 +168,7 @@ export function ensureStage(si) {
 // Menü: laufende Demo-Magier + je ein Bossbild für die Stage-Vorschau
 export const MENU_MAGES = ['fire', 'frost', 'storm', 'toxic', 'shadow', 'light', 'fire.m'];
 export async function loadMenuMages() {
-  await Promise.all([...MENU_MAGES.map(k => loadUnit(k, 'walk')), ...STAGES.map(st => loadUnit(st.boss.school + '.m', 'idle'))]);
+  await Promise.all([...MENU_MAGES.map(k => loadUnit(k, 'walk')), ...STAGES.filter(st => !st.endless).map(st => loadUnit(bossVariant(st.boss.id), 'idle'))]);
 }
 // Alle Stages (für Bot und Tests; im Spiel lädt eine gesperrte Stage erst beim ersten Start)
 export async function preloadAllMages() {

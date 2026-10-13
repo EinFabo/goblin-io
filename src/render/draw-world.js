@@ -201,6 +201,7 @@ function drawRun(now) {
   ctx.globalAlpha = 1;
   // Bildschirm-Ebene
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (run.storm > 0) drawStorm(t, zm, W / 2 + (P.x - camX) * zm, H / 2 + (P.y - 8 - camY) * zm);
   if (P.hp / P.maxHp < .3 || run.hurtT > 0) {
     const a = run.hurtT > 0 ? .45 : .25 + .1 * Math.sin(t * 6);
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .7);
@@ -222,6 +223,17 @@ export function drawArena(A, t) {
   ctx.fillStyle = 'rgba(10,6,20,.35)';
   ctx.beginPath(); ctx.rect(A.x - 3000, A.y - 3000, 6000, 6000); ctx.arc(A.x, A.y, A.r, 0, TAU, true); ctx.fill('evenodd');
   ctx.strokeStyle = 'rgba(170,110,255,.55)'; ctx.lineWidth = 14; ctx.beginPath(); ctx.arc(A.x, A.y, A.r, 0, TAU); ctx.stroke();
+  if (A.burn > 0) {
+    // brennender Rand (Ignaz Phase 3): Glut-Band nach innen, Flammenzungen
+    const r0 = A.r - 22 - A.burn, g = ctx.createRadialGradient(A.x, A.y, r0, A.x, A.y, A.r);
+    g.addColorStop(0, 'rgba(255,120,30,0)'); g.addColorStop(.25, 'rgba(255,120,30,.45)'); g.addColorStop(1, 'rgba(200,40,10,.7)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(A.x, A.y, A.r, 0, TAU); ctx.arc(A.x, A.y, r0, 0, TAU, true); ctx.fill();
+    for (let i = 0; i < 48; i++) {
+      const a = i * TAU / 48 + Math.sin(t + i) * .02, h = 14 + 10 * Math.sin(t * 9 + i * 1.7), rr = r0 + 6 + (i % 3) * 8, x = A.x + Math.cos(a) * rr, y = A.y + Math.sin(a) * rr;
+      ctx.fillStyle = i % 2 ? 'rgba(255,170,40,.85)' : 'rgba(255,90,20,.85)';
+      ctx.beginPath(); ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x - 4, y - h * .6, x, y - h); ctx.quadraticCurveTo(x + 4, y - h * .6, x + 6, y); ctx.closePath(); ctx.fill();
+    }
+  }
   for (let i = 0; i < 40; i++) {
     const a = i * TAU / 40 + t * .15, x = A.x + Math.cos(a) * A.r, y = A.y + Math.sin(a) * A.r;
     ctx.fillStyle = '#4a3a66'; ctx.strokeStyle = '#140c22'; ctx.lineWidth = 2.5;
@@ -243,6 +255,7 @@ export function drawGem(it, bob) {
   }
 }
 export function drawEnemy(e, t) {
+  if (e.hidden) return;
   if (e.elite || e.boss || e.miniboss) {
     const R = e.r * 1.6 + Math.sin(t * 5) * 3;
     ctx.fillStyle = e.elite ? 'rgba(255,210,60,.3)' : e.boss ? 'rgba(255,60,60,.28)' : 'rgba(200,90,255,.3)';
@@ -255,6 +268,7 @@ export function drawEnemy(e, t) {
   const fl = e.flash > 0 || (e.bomber && e.fuse > 0 && Math.floor(e.fuse * 14) % 2 === 0);
   drawSpr(e.spr || (e.pre + '.idle.down.1'), e.x, e.y, e.sc, 0, e.tint, e.clone ? .85 : 1, fl);
   if (e.traits && e.traits.includes('frontShield')) drawFrontShield(e);
+  if (e.boss && e.ice > 0) drawIceShield(e, t);
   if (e.affixes && e.affixes.length) drawAffixes(e, t);
   if (e.shield > 0) {
     ctx.fillStyle = `rgba(255,225,120,${.16 + .06 * Math.sin(t * 6)})`; ctx.strokeStyle = 'rgba(255,215,90,.9)'; ctx.lineWidth = 2.5;
@@ -403,6 +417,16 @@ function drawHaz(t, top) {
         ctx.fillStyle = rgba(h.kind, .12 + .25 * p); ctx.strokeStyle = rgba(h.kind, .95); ctx.lineWidth = 3;
         ctx.beginPath(); ctx.ellipse(h.x, h.y, h.r, ry, 0, 0, TAU); ctx.fill(); ctx.stroke();
         ctx.fillStyle = rgba(h.kind, .35); ctx.beginPath(); ctx.ellipse(h.x, h.y, h.r * p, ry * p, 0, 0, TAU); ctx.fill();
+      } else if (h.kind === 'ice') {
+        // Eisfleck: glatt und hell, glitzert
+        ctx.globalAlpha = clamp(Math.min(h.t / .4, h.act / .6), 0, 1);
+        const g = ctx.createRadialGradient(h.x - h.r * .3, h.y - ry * .3, 4, h.x, h.y, h.r);
+        g.addColorStop(0, 'rgba(240,252,255,.85)'); g.addColorStop(.6, 'rgba(170,225,255,.6)'); g.addColorStop(1, 'rgba(140,210,255,.25)');
+        ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(h.x, h.y, h.r, ry, 0, 0, TAU); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 3;
+        for (let i = 0; i < 3; i++) { const a = i * 2.1 + h.x * .01, x = h.x + Math.cos(a) * h.r * .45, y = h.y + Math.sin(a) * ry * .45; ctx.beginPath(); ctx.moveTo(x - 12, y + 4); ctx.lineTo(x + 12, y - 4); ctx.stroke(); }
+        const tw = (t * 1.5 + h.x * .003) % 1; if (tw < .2) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(h.x + h.r * .3, h.y - ry * .2, 3 + tw * 15, 0, TAU); ctx.fill(); }
       } else {
         // Giftpfütze: lila-grün mit rotem Rand = gefährlich
         ctx.globalAlpha = clamp(Math.min(h.t / .4, h.act / .2 + .3), 0, 1);
@@ -411,6 +435,7 @@ function drawHaz(t, top) {
         ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(h.x, h.y, h.r, ry, 0, 0, TAU); ctx.fill();
         ctx.strokeStyle = 'rgba(255,70,70,.75)'; ctx.lineWidth = 3; ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 20; ctx.stroke();
       }
+      if (h.src === 'meteor' && warn) { const q = h.warn / h.dur; drawSpr('f_fireball_' + ((Math.floor(t * 14) % 4) + 1), h.x + q * 120, h.y - q * 520, 2.4, Math.atan2(520, -120)); }
     } else if (h.shape === 'line') {
       ctx.lineCap = 'round';
       const seg = () => { ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(h.x2, h.y2); };
@@ -481,6 +506,39 @@ function drawFrontShield(e) {
   ctx.fillStyle = 'rgba(190,240,255,.75)'; ctx.strokeStyle = 'rgba(240,252,255,.95)'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(-3, -20 * e.sc); ctx.quadraticCurveTo(9, 0, -3, 20 * e.sc); ctx.lineTo(-9, 14 * e.sc); ctx.quadraticCurveTo(0, 0, -9, -14 * e.sc); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.restore();
+}
+// Eisschild (Frostbart): Bogen vor dem Boss, Risse je Treffer am Rücken, Punkte = Treffer bis zum Bruch
+function drawIceShield(e, t) {
+  const a = e.fa, R = 30 * e.sc, x = e.x + Math.cos(a) * R * .7, y = e.y - 14 * e.sc + Math.sin(a) * R * .45;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+  ctx.fillStyle = `rgba(190,240,255,${.55 + .1 * Math.sin(t * 4)})`; ctx.strokeStyle = 'rgba(240,252,255,.95)'; ctx.lineWidth = 3;
+  const h = 30 * e.sc;
+  ctx.beginPath(); ctx.moveTo(-4, -h); ctx.quadraticCurveTo(16, 0, -4, h); ctx.lineTo(-14, h * .75); ctx.quadraticCurveTo(0, 0, -14, -h * .75); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(60,120,170,.8)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 3 - e.ice; i++) { const yy = (i - 1) * h * .5; ctx.beginPath(); ctx.moveTo(-8, yy - 10); ctx.lineTo(0, yy); ctx.lineTo(-6, yy + 8); ctx.lineTo(2, yy + 16); ctx.stroke(); }
+  ctx.restore();
+  // Restliche Treffer über dem Kopf, Pfeil zeigt auf den Rücken
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = i < e.ice ? '#dff6ff' : 'rgba(30,50,70,.6)'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2;
+    const px = e.x + (i - 1) * 16, py = e.y - 56 * e.sc;
+    ctx.beginPath(); ctx.moveTo(px, py - 7); ctx.lineTo(px + 6, py); ctx.lineTo(px, py + 7); ctx.lineTo(px - 6, py); ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+  const bx = e.x - Math.cos(a) * (R + 18 + 5 * Math.sin(t * 6)), by = e.y - 10 * e.sc - Math.sin(a) * (R + 10) * .6;
+  ctx.save(); ctx.translate(bx, by); ctx.rotate(a); ctx.fillStyle = 'rgba(255,230,120,.9)'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-14, 0); ctx.lineTo(0, -9); ctx.lineTo(0, -4); ctx.lineTo(12, -4); ctx.lineTo(12, 4); ctx.lineTo(0, 4); ctx.lineTo(0, 9); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+// Schneesturm (Frostbart Phase 3): Sicht nur rund um den Goblin, Flocken ziehen schräg vorbei
+function drawStorm(t, zm, sx, sy) {
+  const s = run.storm, r0 = 190 * zm, r1 = 360 * zm;
+  const g = ctx.createRadialGradient(sx, sy, r0, sx, sy, r1);
+  g.addColorStop(0, 'rgba(225,238,250,0)'); g.addColorStop(1, `rgba(225,238,250,${.93 * s})`);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = `rgba(255,255,255,${.85 * s})`;
+  for (let i = 0; i < 90; i++) {
+    const sp = 120 + (i * 37) % 160, x = ((i * 173.3 + t * sp * 1.6) % (W + 40)) - 20, y = ((i * 97.7 + t * sp) % (H + 40)) - 20;
+    ctx.beginPath(); ctx.arc(x, y, 1.5 + (i % 3), 0, TAU); ctx.fill();
+  }
 }
 
 

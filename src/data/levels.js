@@ -27,7 +27,7 @@ export const LEVEL_KIND = [
 export const WORLD_LV = [{ dmg: 1, rate: 1 }, { dmg: 1.08, rate: 1.04 }, { dmg: 1.2, rate: 1.12 }, { dmg: 1.3, rate: 1.18 }, { dmg: 1.38, rate: 1.24 }];
 const damp = v => 1 + (v - 1) * .5;
 // Leben des Bosses im Boss-Level (×2500 × STAGE_HP wie bisher)
-export const BOSS_HP = 1.6;
+export const BOSS_HP = 2.8;
 
 const ph = (at, dur, rate, mix) => ({ at, dur, rate, mix });
 const ev = (at, event, o = {}) => ({ at, event, ...o });

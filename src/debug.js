@@ -12,6 +12,8 @@ import { endRun, newRun, update } from './game/run.js';
 import { P, run } from './game/state.js';
 import { dangerVec } from './game/hazards.js';
 import { spawnEnemy } from './game/enemies.js';
+import { hurt } from './game/combat.js';
+import { BOSSES } from './data/bosses.js';
 import { ETYPES } from './data/enemies.js';
 import { allLoaded } from './scenes/boot.js';
 import { CACHE, SPR, loadMinions } from './render/sprites.js';
@@ -19,7 +21,7 @@ import { M as MAP } from './ui/worldmap.js';
 
 const api = {
   STEP, STAGES, events, joy, keys, RNG, MAP,
-  newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES,
+  newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, hurt, BOSSES,
 };
 Object.defineProperties(api, {
   liveCanvases: { value: () => CACHE.filter(Boolean).length },

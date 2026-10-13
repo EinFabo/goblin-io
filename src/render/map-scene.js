@@ -1,6 +1,7 @@
 import { $, face8 } from '../core/util.js';
 import { WORLDS } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
+import { BOSSES, bossVariant } from '../data/bosses.js';
 import { stageUnlocked } from '../core/save.js';
 import { M, pathAt, tickMap } from '../ui/worldmap.js';
 import { DPR, ZOOM, ctx, cv } from './canvas.js';
@@ -54,10 +55,11 @@ export function renderMapScene(t, dt) {
   // Boss wartet über seinem Punkt
   const bn = M.nodes[4];
   if (bn) {
-    const e = SPR[`m.${st.boss.school}.m.idle.down.${(Math.floor(t * 5) % 4) + 1}`] || SPR[`m.${st.boss.school}.m.idle.left.1`];
+    const v = bossVariant(st.boss.id), tint = BOSSES[st.boss.id].tint;
+    const e = SPR[`m.${v}.idle.down.${(Math.floor(t * 5) % 4) + 1}`] || SPR[`m.${v}.idle.left.1`];
     if (e) {
       ctx.globalAlpha = open ? 1 : .35;
-      img(e, bn.x + 62, bn.y - 30 + Math.sin(t * 2) * 2, 96, st.boss.tint ? tinted(e, st.boss.tint) : e.c);
+      img(e, bn.x + 62, bn.y - 30 + Math.sin(t * 2) * 2, 96, tint ? tinted(e, tint) : e.c);
       ctx.globalAlpha = 1;
     }
   }

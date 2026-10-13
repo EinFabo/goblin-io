@@ -7,7 +7,7 @@ import { H, W, ZOOM } from '../render/canvas.js';
 import { MAGE_OFF, U } from '../render/sprites.js';
 import { STAGE_LEN } from '../data/stages.js';
 import { enemyHp } from './balance.js';
-import { bossAI, spawnBoss } from './boss.js';
+import { bossAI, bossDamageRule, spawnBoss } from './boss.js';
 import { CASTS, castAllowed, castWindup } from './casts.js';
 import { damagePlayer, hurt } from './combat.js';
 import { animFx, part, puff, ring } from './fx.js';
@@ -286,6 +286,7 @@ export function bomberBoom(e, hurtPlayer) {
 
 // Treffer-Regeln je Gegner (vor dem Abziehen der Lebenspunkte). Gibt den Schaden zurück, der durchkommt.
 export function damageRules(e, dmg, kx, ky) {
+  if (e.boss) { const r = bossDamageRule(e, dmg); if (r) return r; }
   if (e.affixes) { dmg = affixDamage(e, dmg, kx, ky); if (dmg <= 0) return { dmg: 0, blocked: true }; }
   // Gletscherwächter: Eisschild vorne blockt fast alles, was aus Blickrichtung kommt
   if (has(e, 'frontShield') && (kx || ky)) {

@@ -11,24 +11,28 @@ import { openLevelUp } from '../ui/levelup.js';
 import { hideOverlays, showScreen } from '../ui/menus.js';
 
 let offs = [];
+// Boss-Auftritt aufräumen (falls der Lauf mitten in der Szene verlassen wird)
+function endCine() { document.body.classList.remove('cine'); $('#bossCard').hidden = true; }
 
 defineScene('run', {
   enter({ si, li = 0, seed }) {
     newRun(si, seed, li);
     showScreen(null); hideOverlays();
-    $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true;
+    $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();
     $('#stageTxt').textContent = run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`;
     refreshSlots(); setupAbilButtons();
     banner(run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`, '');
-    Music.boss = false; Music.start();
+    Music.boss = false; Music.theme = null; Music.hold = false; Music.start();
     offs = [
       on('runEnd', r => go('results', r)),
-      on('bossSpawn', () => { Music.boss = true; }),
-      on('bossDown', () => { Music.boss = false; }),
+      // Boss-Auftritt: Musik schweigt für das Intro, danach das Thema des Bosses von vorn
+      on('bossIntro', b => { Music.hold = true; Music.bossIntro(b.id); }),
+      on('bossSpawn', b => { Music.hold = false; Music.boss = true; Music.theme = b.id; Music.step = 0; }),
+      on('bossDown', () => { Music.boss = false; Music.theme = null; }),
       on('audioReady', () => { if (!run.paused) Music.start(); }),
     ];
   },
-  exit() { for (const f of offs) f(); offs = []; },
+  exit() { for (const f of offs) f(); offs = []; endCine(); Music.hold = false; },
   update(step) {
     if (run.paused) return;
     // Hitstop: Spiel steht kurz still (Elite-Kill, Boss besiegt)

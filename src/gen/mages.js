@@ -422,8 +422,61 @@ export function magePoses(anim, d) {
 
 // ---------- ganzer Magier ----------
 // Ergebnis: [SVG-Teile, Position der Stabspitze]
-export function drawMage(school, d, p, { master = false, clone = false } = {}) {
-  const S = SCHOOLS[school], th = DRAWN[d] * RAD, K = kit(th);
+// ---------- Boss-Modelle (Phase 7) ----------
+// Meister-Körper der Schule mit eigenen Farben (pal), Teilen am Kopf (head, dreht mit) und Schultern.
+// Flamme als 3D-Zunge: Fuß bei (x, y, z), Spitze h höher, leicht nach hinten geweht
+function flame(K, l, x, y, z, h, w, col, core) {
+  K.poly(l, [[x - w, y, z], [x - w * .4, y - h * .55, z - 1], [x + w * .2, y - h, z - 2], [x + w * .5, y - h * .45, z - 1], [x + w, y, z]], col, ' stroke-width="1"');
+  if (core) K.poly(l, [[x - w * .45, y, z + .1], [x, y - h * .55, z - .9], [x + w * .45, y, z + .1]], core, NOSTROKE);
+}
+export const BOSS_LOOKS = {
+  // Ignaz der Funkenmeister: dunkelrote Robe, brennender Bart, Flammenkranz um den Hut, glühende Schultern
+  ignaz: {
+    pal: { robe: '#a3231a', shade: '#6e140e', trim: '#ffcf4a', hair: '#ff9a2e', boot: '#2a1a12', staff: '#3a2416' },
+    head(K, S) {
+      for (let i = 0; i < 9; i++) {
+        const a = i / 9 * Math.PI * 2, x = Math.sin(a) * 15, z = Math.cos(a) * 15;
+        flame(K, 3, x, -26, z, 7 + (i % 2) * 3, 2.6, i % 3 ? '#ff7a1a' : '#ffb347', '#ffe27a');
+      }
+      // Glut im Bart
+      if (K.c > -0.3) for (const [x, y] of [[-6, -1], [5, 3], [-1, 6]]) if (K.face(x, 10, 0)) K.add(2, 12, circ(K.x(x, 11), y, 1.2, '#ffe27a', NOSTROKE));
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(11 * s, 0);
+        const el = path(`M${f(x - 4)} ${f(-5 + b)} L${f(x - 2)} ${f(-13 + b)} L${f(x)} ${f(-7 + b)} L${f(x + 2)} ${f(-15 + b)} L${f(x + 4)} ${f(-5 + b)} Z`, '#ff8a1f', ' stroke-width="1"')
+          + ell(x, -2 + b, Math.hypot(6 * K.c, 6 * K.k), 5, '#3a2416');
+        return { d: K.dep(11 * s, 0), el };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
+  // Frostbart der Eisweber: langer Eisbart bis zum Gürtel, Eiszacken um die Haube, Eisplatten auf den Schultern
+  frostbart: {
+    pal: { robe: '#1d4b94', shade: '#143670', hood: '#2c66bd', fur: '#f4fbff', trim: '#bfe9ff', staff: '#dfe9f2' },
+    head(K, S) {
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7 - .5) * Math.PI * 1.5, x = Math.sin(a) * 14, z = Math.cos(a) * 14;
+        K.poly(3, [[x - 2.4, -27, z], [x, -36 - (i % 2) * 4, z - 1], [x + 2.4, -27, z]], i % 2 ? '#bfe9ff' : '#eafcff', ' stroke-width="1"');
+      }
+      if (K.c > -0.2) {
+        K.smooth(4, [[-9, -7, 11], [-11, 1, 10], [-7, 10, 10], [-3, 17, 11], [0, 21, 12], [3, 17, 11], [7, 10, 10], [11, 1, 10], [9, -7, 11], [0, -4, 13]], S.fur, '', 30);
+        // Eiszapfen im Bart
+        for (const x of [-5, 0, 5]) if (K.face(x, 11, 0)) K.add(4, 31, poly([[K.x(x - 1.6, 11), 8 + Math.abs(x) * -.2], [K.x(x, 12), 15 - Math.abs(x) * .6], [K.x(x + 1.6, 11), 8 + Math.abs(x) * -.2]], '#bfe9ff', ' stroke-width=".8"'));
+      }
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(11 * s, 0), w = Math.hypot(6 * K.c, 6 * K.k);
+        return { d: K.dep(11 * s, 0), el: poly([[x - w, 1 + b], [x - w * .6, -6 + b], [x, -10 + b], [x + w * .6, -6 + b], [x + w, 1 + b]], '#bfe9ff') };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
+};
+
+export function drawMage(school, d, p, { master = false, clone = false, boss = null } = {}) {
+  const BL = boss && BOSS_LOOKS[boss];
+  const S = BL ? { ...SCHOOLS[school], ...BL.pal } : SCHOOLS[school], th = DRAWN[d] * RAD, K = kit(th);
+  if (BL) master = true;
   const b = p.bob, L = p.lean, base = d === 'downleft' ? 'down' : d === 'upleft' ? 'up' : d;
   const hs = p.hs || BASE_HANDS[base === 'up' ? 'up' : base === 'left' ? 'left' : 'down'].hs;
   const hf = p.hf !== undefined && p.hf !== null ? p.hf : (base === 'left' ? null : BASE_HANDS[base].hf);
@@ -433,9 +486,10 @@ export function drawMage(school, d, p, { master = false, clone = false } = {}) {
   const fx = drawFx(S, p, ...orb);
   // Kopf mit Neigung beim Zaubern (seitlich)
   HEADS[school](K, S);
+  if (BL) BL.head(K, S);
   const head = group(K.out(), ` transform="translate(${f(L * K.k)} ${f(b)})"`);
   const body = robe(K, S, b, L, school);
-  const extra = school === 'earth' ? shoulders(K, S, b, S.stone) : master ? shoulders(K, S, b, S.trim) : [];
+  const extra = BL ? BL.shoulders(K, S, b) : school === 'earth' ? shoulders(K, S, b, S.stone) : master ? shoulders(K, S, b, S.trim) : [];
   const freeHand = hf ? hand(S, hf[0], hf[1] + b) : [];
   if (K.c < -0.3) o.push(...staff, ...fx, ...body, ...extra, head, ...freeHand, ...hand(S, hs[0], hs[1] + b));
   else if (base === 'left') o.push(...body, ...extra, head, ...staff, ...hand(S, hs[0], hs[1] + b), ...fx);

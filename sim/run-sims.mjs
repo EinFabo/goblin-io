@@ -18,7 +18,7 @@ const runs = +args.runs || 20, seed0 = args.seed !== undefined ? +args.seed : 1,
 const loadout = args.loadout ? String(args.loadout).split(',') : ['rage', 'mech'];
 const parseTalents = s => Object.fromEntries(String(s || '').split(',').filter(Boolean).map(x => { const [k, v] = x.split('='); return [k, +v]; }));
 
-const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln' };
+const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln', burn: 'Glutrand', meteor: 'Meteor', ice: 'Eis' };
 if (args.v2) { console.log('--v2 gibt es nicht mehr: die ganzen Stages aus v2 sind jetzt Welten mit 5 Leveln.'); process.exit(1); }
 const LV = args.level ? [+args.level] : [1, 2, 3, 4, 5];
 const configs = (args.stage ? [+args.stage] : [1, 2, 3, 4, 5]).flatMap(s => LV.map(l => [s, args.talents && args.talents !== 'exp' ? parseTalents(args.talents) : EXPECTED[s] || {}, l]));
@@ -43,7 +43,7 @@ const pages = await Promise.all(Array.from({ length: par }, async () => {
 const pct = (a, n) => (100 * a / n).toFixed(0).padStart(3) + ' %';
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
 console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz, Fähigkeiten ${loadout.join(' + ')}\n`);
-console.log('Level  Talente               Siege   Ziel       Ø Zeit  Fähigk.  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
+console.log('Level  Talente               Siege   Ziel       Ø Zeit  Boss    Fähigk.  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
 const t0 = Date.now();
 for (const [stage, talents, level] of configs) {
   const res = new Array(runs);
@@ -54,13 +54,15 @@ for (const [stage, talents, level] of configs) {
   const wins = res.filter(r => r.win).length;
   const lv = [1, 2, 3, 4].map(m => { const a = res.map(r => r.lvAt[m]).filter(x => x !== undefined); return a.length ? avg(a).toFixed(1) : '–'; }).join('/');
   const srcs = [...new Set(res.flatMap(r => Object.keys(r.dmg)))];
-  const d = srcs.map(k => [k, Math.round(avg(res.map(r => r.dmg[k] || 0)))]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k, v]) => SRC[k] + ' ' + v).join(', ');
+  const d = srcs.map(k => [k, Math.round(avg(res.map(r => r.dmg[k] || 0)))]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([k, v]) => (k.startsWith('boss.') ? 'Boss/' + (SRC[k.slice(5)] || k.slice(5)) : SRC[k] || k) + ' ' + v).join(', ');
   const tal = Object.entries(talents).map(([k, v]) => k + '=' + v).join(',') || '–';
   // Zielwerte gelten nur mit den erwarteten Upgrades der Welt
   const tg = JSON.stringify(talents) === JSON.stringify(EXPECTED[stage] || {}) ? LEVEL_TARGET[level - 1] : null;
   const w = 100 * wins / runs, mark = !tg ? '' : w < tg[0] ? '↑' : w > tg[1] ? '↓' : '✓';
   const goal = tg ? `${tg[0]}–${tg[1]} % ${mark}` : '';
-  console.log(`${(stage + '-' + level).padEnd(6)} ${tal.padEnd(21)} ${pct(wins, runs)}  ${goal.padEnd(10)} ${String(Math.round(avg(res.map(r => r.t)))).padStart(4)} s  ${avg(res.map(r => r.abil)).toFixed(1).padStart(5)}×  ${lv.padEnd(20)}  ${d}`);
+  // Bosskampf-Dauer der Siege (Ziel 45–75 s, PLAN 6.2)
+  const bt = res.map(r => r.bossT).filter(x => x !== null && x !== undefined), bossCol = bt.length ? `${Math.round(avg(bt))} s` : '–';
+  console.log(`${(stage + '-' + level).padEnd(6)} ${tal.padEnd(21)} ${pct(wins, runs)}  ${goal.padEnd(10)} ${String(Math.round(avg(res.map(r => r.t)))).padStart(4)} s  ${bossCol.padStart(5)}  ${avg(res.map(r => r.abil)).toFixed(1).padStart(5)}×  ${lv.padEnd(20)}  ${d}`);
 }
 console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
 await b.close();

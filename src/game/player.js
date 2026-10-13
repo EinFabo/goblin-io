@@ -41,9 +41,16 @@ export function updPlayer(dt) {
     P.dashT -= dt; P.x += P.dvx * dt; P.y += P.dvy * dt;
     P.trailT -= dt; if (P.trailT <= 0) { P.trailT = .06; P.trail.push({ x: P.x, y: P.y, spr: curPlayerSpr(), t: .25 }); }
     if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, trailCol(save.look.trail), frand(4, 7));
-  } else if (P.moving) {
-    const sp = P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? P.sprintMul : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * (P.hasteT > 0 ? 1 + P.haste : 1) * Math.min(1, len);
-    P.x += P.aimX * sp * dt; P.y += P.aimY * sp * dt;
+  } else {
+    const sp = P.moving ? P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? P.sprintMul : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * (P.hasteT > 0 ? 1 + P.haste : 1) * Math.min(1, len) : 0;
+    // Auf Eis (Frostbart) schlittert man: Tempo folgt der Eingabe nur langsam
+    const wx = P.aimX * sp, wy = P.aimY * sp;
+    if (P.iceT > 0) { const k = 1 - Math.pow(.1, dt); P.ivx += (wx - P.ivx) * k; P.ivy += (wy - P.ivy) * k; P.iceT -= dt; }
+    else { P.ivx = wx; P.ivy = wy; }
+    P.x += P.ivx * dt; P.y += P.ivy * dt;
+  }
+  if (P.dashT <= 0 && P.moving) {
+    const sp = Math.hypot(P.ivx, P.ivy);
     // Animation läuft mit der echten Geschwindigkeit; Staub und Schritt-Klick genau auf Schritt-Frames 2 und 5
     const before = Math.floor(P.step) % 6;
     P.step += sp * dt / (P.sprinting ? 22 : 16.5);

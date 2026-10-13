@@ -1,6 +1,7 @@
 import { audioInit } from './audio.js';
 import { $ } from './util.js';
 import { doDash, useAbility } from '../game/abilities.js';
+import { skipCut } from '../game/boss.js';
 import { run } from '../game/state.js';
 import { cv } from '../render/canvas.js';
 import { openPause, resume } from '../ui/pause.js';
@@ -14,6 +15,7 @@ window.addEventListener('keydown', e => {
   keys[e.code] = true;
   audioInit();
   if (!run || run.over) return;
+  if (run.cut && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); skipCut(); return; }
   if (e.code === 'Space') { e.preventDefault(); doDash(); }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();
   if (e.code === 'KeyQ') useAbility(0);
@@ -27,6 +29,7 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 cv.addEventListener('pointerdown', e => {
   audioInit();
+  if (run && run.cut) skipCut();
   if (joy.id !== null) return;
   joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY;
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}

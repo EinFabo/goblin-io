@@ -9,6 +9,7 @@ import { STAGES, STAGE_LEN } from '../data/stages.js';
 import { LEVELS, levelStage, nextLevel } from '../data/levels.js';
 import { canEquip, charmHp, initAbilities, updAbilities } from './abilities.js';
 import { doEvent, spawnTick, updEnemy } from './enemies.js';
+import { updCut } from './boss.js';
 import { part, ring } from './fx.js';
 import { updEProj, updTele } from './hazards.js';
 import { updItems } from './items.js';
@@ -29,13 +30,13 @@ export function newRun(si, seed = newSeed(), li = 0) {
   const r = {
     si, li: st.li, st, seed, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
-    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0,
+    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
     hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, shieldT: 0, shieldHp: 0, shieldMax: 1, shieldShard: 0, mechArmor: .3, mechPow: 1, mechRocket: 1.4, slowT: 0, trail: [], trailT: 0,
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
     mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
-    step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0 };
+    step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0, iceT: 0, ivx: 0, ivy: 0 };
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
   ensureDaily(save);
   // Kartenstufen für diesen Lauf (9.3)
@@ -89,6 +90,8 @@ export function hint(html) { run.hints.push(html); }
 // Ein fester Simulationsschritt (60 Hz, siehe core/loop.js)
 export function update(dt) {
   savePrev();
+  // Boss-Szene (Auftritt, Phasenwechsel): die Welt steht, nur Kamera, Boss und Effekte laufen
+  if (run.cut) { updCut(dt); updFx(dt); return; }
   run.time += dt;
   while (run.ei < run.events.length && run.time >= run.events[run.ei].t) doEvent(run.events[run.ei++]);
   updPlayer(dt);
@@ -115,13 +118,8 @@ export function update(dt) {
   updEProj(dt);
   run.enemies = run.enemies.filter(e => !e.dead);
   updItems(dt);
-  for (const f of run.fx) f.t += dt;
-  run.fx = run.fx.filter(f => f.k === 'anim' ? f.t * f.fps < f.n : f.t < f.dur);
-  for (const p of run.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .96; p.vy *= .96; }
-  run.parts = run.parts.filter(p => p.t < p.life);
-  for (const n of run.nums) n.t += dt;
-  run.nums = run.nums.filter(n => n.t < .7);
-  run.shake *= Math.exp(-10 * dt); run.hurtT -= dt; run.flashT -= dt;
+  updFx(dt);
+  if (run.storm > 0) run.storm = run.boss ? Math.min(1, run.storm + dt * .5) : Math.max(0, run.storm - dt);
   if (run.clearT > 0) { run.clearT -= dt; if (run.clearT <= 0) endRun(true); }
   if (!run.over && !run.paused && run.lvDelay <= 0 && (run.pendingChest > 0 || run.pendingLv > 0)) {
     if (run.pendingChest > 0) { run.pendingChest--; run.lvKind = 'chest'; sfx.chest(); }
@@ -131,6 +129,16 @@ export function update(dt) {
     ring(P.x, P.y, 10, 160, .45, col, 8);
     for (let i = 0; i < 18; i++) { const a = i * TAU / 18; part(P.x, P.y - 10, Math.cos(a) * 220, Math.sin(a) * 220, .45, col, 3.5); }
   }
+}
+// Effekte, Partikel, Schadenszahlen, Wackeln
+function updFx(dt) {
+  for (const f of run.fx) f.t += dt;
+  run.fx = run.fx.filter(f => f.k === 'anim' ? f.t * f.fps < f.n : f.t < f.dur);
+  for (const p of run.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .96; p.vy *= .96; }
+  run.parts = run.parts.filter(p => p.t < p.life);
+  for (const n of run.nums) n.t += dt;
+  run.nums = run.nums.filter(n => n.t < .7);
+  run.shake *= Math.exp(-10 * dt); run.hurtT -= dt; run.flashT -= dt;
 }
 
 // Positionen vor dem Schritt merken, damit der Renderer zwischen zwei Schritten interpolieren kann

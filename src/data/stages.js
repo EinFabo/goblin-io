@@ -30,7 +30,7 @@ export const STAGES = [
       ev(222, 'warn'),
       ev(240, 'boss'),
     ],
-    boss: { name: 'Ignaz der Funkenmeister', school: 'fire', kind: 'fire', tint: null, minion: 'frost_apprentice' } },
+    boss: { id: 'ignaz', name: 'Ignaz der Funkenmeister', minion: 'frost_apprentice' } },
 
   { name: 'Frostlichtung', sub: 'Frostmagier bremsen dich, Schattenmagier tauchen neben dir auf.', tint: ['#a8d8ff', .5], dark: .05, dmg: 1.15, rate: 1.08,
     waves: [
@@ -51,7 +51,7 @@ export const STAGES = [
       ev(222, 'warn'),
       ev(240, 'boss'),
     ],
-    boss: { name: 'Frostbart der Eisweber', school: 'frost', kind: 'frost', tint: null, minion: 'frost_mage' } },
+    boss: { id: 'frostbart', name: 'Frostbart der Eisweber', minion: 'frost_mage' } },
 
   { name: 'Aschesteppe', sub: 'Großmagier, Giftmagier und ganze Rudel von Funkenwichteln.', tint: ['#e89a5a', .55], dark: .08, dmg: 1.5, rate: 1.32,
     waves: [
@@ -72,7 +72,7 @@ export const STAGES = [
       ev(222, 'warn'),
       ev(240, 'boss'),
     ],
-    boss: { name: 'Pyra, Herrin der Asche', school: 'fire', kind: 'fire', tint: 'ember', minion: 'fire_apprentice' } },
+    boss: { id: 'pyra', name: 'Pyra, Herrin der Asche', minion: 'fire_apprentice' } },
 
   { name: 'Nebelmoor', sub: 'Heilmagier halten die Horde am Leben. Erwisch sie zuerst.', tint: ['#7fa597', .6], dark: .2, dmg: 1.8, rate: 1.58,
     waves: [
@@ -93,7 +93,7 @@ export const STAGES = [
       ev(222, 'warn'),
       ev(240, 'boss'),
     ],
-    boss: { name: 'Der Nebelhexer', school: 'shadow', kind: 'frost', tint: null, minion: 'shadow_apprentice' } },
+    boss: { id: 'nebelhexer', name: 'Der Nebelhexer', minion: 'shadow_apprentice' } },
 
   { name: 'Turm der Magier', sub: 'Blitzmagier und alles andere auf einmal. Der Erzmagier wartet.', tint: ['#9b7ad0', .6], dark: .26, dmg: 1.2, rate: 1.05,
     waves: [
@@ -114,7 +114,7 @@ export const STAGES = [
       ev(222, 'warn'),
       ev(240, 'boss'),
     ],
-    boss: { name: 'Erzmagier Malvorn', school: 'light', kind: 'both', tint: null, minion: 'light_apprentice', trophy: 'hat.wizard' } },
+    boss: { id: 'malvorn', name: 'Erzmagier Malvorn', minion: 'light_apprentice', trophy: 'hat.wizard' } },
 
   { name: 'Endlose Nacht', sub: 'Kein Ende, alle 4 Minuten ein Boss. Wie lange hältst du durch?', tint: ['#5a6cb0', .62], dark: .32, dmg: 1.7, rate: 1.4, endless: true,
     waves: [
@@ -135,7 +135,7 @@ export const STAGES = [
       ev(222, 'warn'),
       ev(240, 'boss'),
     ],
-    boss: { name: 'Erzmagier Malvorn', school: 'light', kind: 'both', tint: null, minion: 'fire_apprentice' } },
+    boss: { id: 'random', name: 'Ein zufälliger Boss', minion: 'fire_apprentice' } },
 ];
 
 // Alle Gegnertypen einer Stage (zum Vorladen der Sprites)
