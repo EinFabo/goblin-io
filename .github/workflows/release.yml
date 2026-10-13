@@ -1,0 +1,118 @@
+# Baut Windows-Installer (mit Auto-Update) und Android-APK und veröffentlicht beide als GitHub-Release.
+#
+# Ausgelöst durch einen Tag wie `v3.0.1`, am einfachsten so:
+#   npm version patch      # Version in package.json hochzählen, Commit + Tag
+#   git push --follow-tags
+# Der Tag muss zur `version` in package.json passen – daran erkennt die App, ob ein Update neuer ist.
+#
+# Einmalig einrichten (Repo → Settings → Secrets and variables → Actions):
+#   TAURI_SIGNING_PRIVATE_KEY           Inhalt von ~/.goblin-io/updater.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD  Inhalt von ~/.goblin-io/updater.password
+#   ANDROID_KEYSTORE                    base64 -w0 ~/.goblin-io/android.jks
+#   ANDROID_KEY_PASSWORD                Inhalt von ~/.goblin-io/android.password
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag passt zu package.json?
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "Tag ${GITHUB_REF_NAME} ≠ package.json $v"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Goblin.io ${{ github.ref_name }}
+          releaseBody: |
+            **Windows:** `Goblin.io_…_x64-setup.exe` herunterladen und starten. Installierte Versionen melden Updates selbst.
+            **Android:** `Goblin.io_…_android.apk` auf dem Handy öffnen (einmalig „Unbekannte Apps installieren“ erlauben). Die App meldet neue Versionen selbst.
+          # Kein Entwurf: der Updater sieht nur fertige Releases
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+
+  # Läuft nach Windows, weil erst dann das Release existiert, an das die APK gehängt wird
+  android:
+    needs: windows
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - run: npm ci
+
+      - name: Signaturschlüssel
+        env:
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE" | base64 -d > "$RUNNER_TEMP/android.jks"
+          {
+            echo "keyAlias=goblin"
+            echo "password=$ANDROID_KEY_PASSWORD"
+            echo "storeFile=$RUNNER_TEMP/android.jks"
+          } > src-tauri/gen/android/keystore.properties
+
+      - name: APK bauen
+        run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          npx tauri android build --apk --target aarch64 --target armv7
+
+      - name: APK ans Release hängen
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*-release.apk' | head -1)
+          [ -n "$apk" ] || { echo "keine signierte APK gefunden"; find src-tauri/gen/android/app/build/outputs; exit 1; }
+          v=$(node -p "require('./package.json').version")
+          cp "$apk" "Goblin.io_${v}_android.apk"
+          gh release upload "$GITHUB_REF_NAME" "Goblin.io_${v}_android.apk" --clobber

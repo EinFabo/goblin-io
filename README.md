@@ -10,6 +10,21 @@ Survivor-artiges Spiel. Ergebnis ist **eine einzelne HTML-Datei**, die offline i
     npm run sim -- --stage 3 --runs 50 --talents atk=4,hp=4 --seed 1
     node tools/gen/dump.mjs build/sprites --png   # alle generierten Sprites ansehen
 
+## App (Windows-exe und Android-APK)
+
+Tauri 2 in `src-tauri/`, packt `dist/app/index.html` (`npm run build:app`) ein. Releases baut GitHub Actions
+(`.github/workflows/release.yml`) aus einem Versions-Tag:
+
+    npm version patch          # 3.0.0 → 3.0.1, Commit + Tag v3.0.1
+    git push --follow-tags     # Actions baut exe + apk und hängt sie ans Release
+
+- **Auto-Update:** Windows über `tauri-plugin-updater` (`latest.json` im neuesten Release, signiert mit
+  `~/.goblin-io/updater.key`); Android prüft die GitHub-API und öffnet die neue APK (`src/app-update.js`).
+- **Schlüssel** liegen nur in `~/.goblin-io/` und als Repo-Secrets – nicht verlieren: ohne `android.jks`
+  lässt sich die APK nicht mehr über die alte installieren, ohne `updater.key` gibt es keine Windows-Updates.
+- Lokal: `npm run app` (Fenster), `npx tauri android build --apk --target aarch64`
+  (braucht `ANDROID_HOME`, `NDK_HOME` und `src-tauri/gen/android/keystore.properties`).
+
 ## Aufbau
 
 | Ordner | Inhalt |

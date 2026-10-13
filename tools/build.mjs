@@ -1,4 +1,4 @@
-// Baut dist/goblin-io.html: esbuild-Bundle + Magier-Sprites (dedupliziert) + Gras-PNG inline.
+// Baut dist/goblin-io.html (bzw. mit --app dist/app/index.html): esbuild-Bundle + Magier-Sprites (dedupliziert) + Gras-PNG inline.
 // Goblin und Magier werden zur Laufzeit generiert (src/gen/goblin.js, src/gen/mages.js).
 import { build } from 'esbuild';
 import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const A = join(ROOT, 'assets');
-const OUT = join(ROOT, 'dist', 'goblin-io.html');
 const dev = process.argv.includes('--dev');
+// --app: für die Tauri-App (src-tauri/, frontendDist dist/app)
+const OUT = process.argv.includes('--app') ? join(ROOT, 'dist', 'app', 'index.html') : join(ROOT, 'dist', 'goblin-io.html');
 
 const files = {};
 // Von den alten Magier-Sprites werden nur noch Geschosse und Einschläge gebraucht

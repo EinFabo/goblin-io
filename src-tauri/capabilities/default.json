@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop",
+  "description": "Spiel-Fenster am Desktop: Auto-Update und Neustart",
+  "platforms": ["windows", "linux", "macOS"],
+  "windows": ["main"],
+  "permissions": ["core:default", "opener:default", "updater:default", "process:allow-restart"]
+}

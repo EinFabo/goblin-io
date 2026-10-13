@@ -806,3 +806,9 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
   .lvnote p{font-size:13px;margin-bottom:4px}
   .lvnote .go{font-size:20px;padding:6px}
 }
+
+/* App-Update (app-update.js) */
+#updBar{position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:50;display:flex;align-items:center;gap:10px;
+  max-width:calc(100vw - 24px);padding:8px 8px 8px 16px;border:3px solid var(--edge);border-radius:16px;background:var(--moss-2);box-shadow:0 5px 0 var(--edge);font-weight:800}
+#updBar b{color:var(--gold)}
+#updBar[hidden]{display:none}

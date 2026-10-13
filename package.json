@@ -1,6 +1,6 @@
 {
   "name": "goblin-io",
-  "version": "3.0.0-dev",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,9 +8,14 @@
     "sim": "node sim/run-sims.mjs",
     "test": "node --test \"test/**/*.test.js\"",
     "lint": "eslint src tools sim test",
-    "smoke": "node tools/smoke.mjs"
+    "smoke": "node tools/smoke.mjs",
+    "build:app": "node tools/build.mjs --app",
+    "app": "tauri dev",
+    "app:build": "tauri build",
+    "tauri": "tauri"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.12.2",
     "esbuild": "0.28.2",
     "eslint": "9.39.1",
     "globals": "16.5.0",
