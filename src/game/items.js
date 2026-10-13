@@ -20,7 +20,7 @@ export function updItems(dt) {
       continue;
     }
     const dx = P.x - it.x, dy = P.y - 6 - it.y, d = Math.hypot(dx, dy) || 1;
-    if (!it.mag && (it.k === 'gem' || it.k === 'coin' || it.k === 'gear') && d < P.magnet) it.mag = true;
+    if (!it.mag && pullable(it) && d < P.magnet) it.mag = true;
     if (it.mag) {
       it.sp = Math.min(1300, it.sp + 1500 * dt);
       const s = Math.min(d, it.sp * dt); it.x += dx / d * s; it.y += dy / d * s;
@@ -30,6 +30,9 @@ export function updItems(dt) {
   }
   run.items = run.items.filter(i => !i.got);
 }
+// Was Magnet, Totem und Levelende anziehen: Kristalle, Münzen, Zahnräder
+export const pullable = it => it.k === 'gem' || it.k === 'coin' || it.k === 'gear';
+export function pullAll() { for (const it of run.items) if (pullable(it)) it.mag = true; }
 export let xpPulseT = 0;
 export function collect(it) {
   it.got = true;
@@ -47,7 +50,7 @@ export function collect(it) {
       for (let i = 0; i < 4; i++) part(P.x, P.y - 10, frand(-90, 90), frand(-120, -20), .3, '#c9d1d8', 2.5);
       break;
     case 'heal': P.hp = Math.min(P.maxHp, P.hp + 35); addNum(P.x, P.y - 40, '+35', '#7dff7a'); sfx.heal(); break;
-    case 'magnet': for (const i of run.items) if (i.k === 'gem' || i.k === 'coin' || i.k === 'gear') i.mag = true; sfx.heal(); ring(P.x, P.y, 10, 300, .5, 'rgba(110,220,255,.8)', 6); break;
+    case 'magnet': pullAll(); sfx.heal(); ring(P.x, P.y, 10, 300, .5, 'rgba(110,220,255,.8)', 6); break;
     case 'bomb':
       for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999);
       run.flashT = .3; run.shake = 14; sfx.boom(); sfx.ult(); break;

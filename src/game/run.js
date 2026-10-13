@@ -5,7 +5,7 @@ import { abilState, gainAbilXp, gainAccountXp, levelDone, persist, recordLevel, 
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
-import { STAGE_LEN } from '../data/stages.js';
+import { STAGES, STAGE_LEN } from '../data/stages.js';
 import { LEVELS, levelStage, nextLevel } from '../data/levels.js';
 import { canEquip, initAbilities, updAbilities } from './abilities.js';
 import { doEvent, spawnTick, updEnemy } from './enemies.js';
@@ -139,7 +139,8 @@ export function endRun(win) {
   const xp = accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
-  if (rec.first && boss && nextLevel(run.si, run.li)) unlocked.push('Welt ' + (nextLevel(run.si, run.li).si + 1));
+  const nx = rec.first && boss && nextLevel(run.si, run.li);
+  if (nx) unlocked.push(STAGES[nx.si].endless ? STAGES[nx.si].name : 'Welt ' + (nx.si + 1));
   // Fähigkeiten-XP durch Benutzen
   const abil = Object.entries(run.abXp).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;

@@ -12,7 +12,7 @@ export function renderMenuScene(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!SPR.idle_down_1) { ctx.fillStyle = '#141c0e'; ctx.fillRect(0, 0, cv.width, cv.height); return; }
-  if (!$('#menu').hidden) { renderMapScene(t, dt); avatars(SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)]); return; }
+  if (!el('#menu').hidden) { renderMapScene(t, dt); avatars(SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)]); return; }
   const z = ZOOM * DPR * 1.1, cx = Math.sin(t * .05) * 200, cy = t * 12;
   ctx.setTransform(z, 0, 0, z, cv.width / 2 - cx * z, cv.height / 2 - cy * z);
   const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
@@ -32,15 +32,20 @@ export function renderMenuScene(t) {
   ctx.fillStyle = 'rgba(10,15,6,.25)'; ctx.fillRect(0, 0, W, H);
   avatars(SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)]);
 }
+// Elemente und Zeichenflächen einmal holen; die Goblins neu malen nur, wenn ihr Bild wechselt (alle 200 ms)
+const els = {}, ctxs = {}, shown = {};
+const el = sel => els[sel] || (els[sel] = $(sel));
 function avatars(e) {
-  if (!$('#armory').hidden) paint('#armGob', e);
-  if (!$('#profile').hidden) paint('#profGob', e);
+  if (!el('#armory').hidden) paint('#armGob', e);
+  if (!el('#profile').hidden) paint('#profGob', e);
   // Avatar: nur der Kopf; in der Tab-Leiste und oben links
-  if (!$('#topbar').hidden) { paint('#avatar', e, HEAD); paint('#tabAvatar', e, HEAD); }
+  if (!el('#topbar').hidden) { paint('#avatar', e, HEAD); paint('#tabAvatar', e, HEAD); }
 }
 const HEAD = [16, 4, 112];   // Ausschnitt x, y, Seite im 144er Sprite
 function paint(sel, e, crop) {
-  const c = $(sel), g = c.getContext('2d');
+  if (shown[sel] === e) return;
+  shown[sel] = e;
+  const c = el(sel), g = ctxs[sel] || (ctxs[sel] = c.getContext('2d'));
   g.clearRect(0, 0, c.width, c.height);
   if (crop) g.drawImage(e.c, crop[0] * e.c.width / 144, crop[1] * e.c.height / 144, crop[2] * e.c.width / 144, crop[2] * e.c.height / 144, 0, 0, c.width, c.height);
   else g.drawImage(e.c, 0, 0, c.width, c.height);

@@ -1,3 +1,4 @@
+import { pullAll } from './items.js';
 import { ROLL_T } from './player.js';
 import { RNG, frand, rand, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
@@ -40,8 +41,10 @@ export const abilReady = s => !!s && s.ch >= s.need && ABILITIES[s.id].charge !=
 // Haken und Rolle würden den Mech durch die Luft werfen, Schild, Pilzring und Katapult stapeln sich
 // mit seinem Panzer und Arsenal. Solange sie läuft, sind andere Fähigkeiten, Rolle und Sprint gesperrt.
 // Alles andere ist gewollt (z. B. Zeitbombe + Großer Knall, Rauch + Haken, Ruf + Wut).
+// Umgekehrt startet die Maschine nicht mitten in Rolle oder Hakenflug, und ein laufender Schild endet,
+// wenn man einsteigt (der Panzer ersetzt ihn).
 // id: Fähigkeit oder 'dash'/'sprint'. Gibt den Grund zurück, '' = frei.
-export const lockOf = id => (P.mechT > 0 && id !== 'mech' ? 'In der Maschine' : '');
+export const lockOf = id => id === 'mech' ? (P.dashT > 0 ? 'Mitten im Sprung' : '') : P.mechT > 0 ? 'In der Maschine' : '';
 function lockedBuzz(why) {
   if (run.time - (run.lockBuzz ?? -1) < .4) return;
   run.lockBuzz = run.time; addNum(P.x, P.y - 52, why, '#c9c2b0', false); sfx.buzz();
@@ -125,6 +128,7 @@ function doRage(m) {
 // ---------- Goblin-Maschine ----------
 export function startMech(m = NOMOD) {
   if (P.mechT > 0) return false;
+  P.shieldT = 0; P.shieldHp = 0; P.shieldShard = 0;
   P.mechMax = P.mechT = 12 * m.area;
   P.mechArmor = m.a ? .15 : .3; P.mechPow = m.pow; P.mechRocket = m.b ? .7 : 1.4;
   P.gunT = 0; P.rocketT = .6; P.stepT = 0; P.inv = Math.max(P.inv, .6); P.slowT = 0;
@@ -267,7 +271,7 @@ function callGoblins(m) {
 // ---------- Totem der Gier ----------
 function raiseTotem(m) {
   if (m.b) { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .25 * m.pow); addNum(P.x, P.y - 40, '+' + Math.round(P.maxHp * .25 * m.pow), '#7dff7a'); }
-  for (const i of run.items) if (i.k === 'gem' || i.k === 'coin' || i.k === 'gear') i.mag = true;
+  pullAll();
   run.goldT = (ABILITIES.totem.dur + (m.a ? 5 : 0)) * m.area;
   ring(P.x, P.y, 10, 320, .6, 'rgba(255,215,80,.9)', 8); sfx.chest(); banner('Doppeltes Gold!', '');
 }

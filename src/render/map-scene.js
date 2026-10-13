@@ -23,6 +23,7 @@ function trace(d0, d1) {
   return !first;
 }
 
+let gobCv = null, gobCtx = null;
 export function renderMapScene(t, dt) {
   tickMap(dt);
   const si = WORLDS[M.wi], st = STAGES[si], open = stageUnlocked(si);
@@ -68,11 +69,11 @@ export function renderMapScene(t, dt) {
     else if (!g.walking) g.face = 'down';
     const e = g.walking ? SPR[`gob.walk.${g.face}.${(Math.floor(g.at * 12) % 6) + 1}`] : SPR[`gob.idle.down.${(Math.floor(t * 5) % 4) + 1}`];
     // Der Goblin hat eine eigene Ebene über den Level-Punkten (DOM), damit er vor den Siegeln steht
-    const gc = $('#mapGob'), g2 = gc.getContext('2d'), S = gc.width;
+    const gc = gobCv || (gobCv = $('#mapGob')), g2 = gobCtx || (gobCtx = gc.getContext('2d')), S = gc.width;
     gc.hidden = false;
-    gc.style.transform = `translate(${p.x - 48}px,${p.y - 106}px)`;
+    gc.style.translate = `${p.x - 48}px ${p.y - 106}px`;
     g2.clearRect(0, 0, S, S);
     g2.fillStyle = 'rgba(10,15,6,.35)'; g2.beginPath(); g2.ellipse(S / 2, S * .86, S * .2, S * .07, 0, 0, 7); g2.fill();
     if (e) { g2.save(); g2.translate(S / 2, S * .5); if (e.flip) g2.scale(-1, 1); g2.drawImage(e.c, -S * .44, -S * .44, S * .88, S * .88); g2.restore(); }
-  } else { $('#mapGob').hidden = true; ctx.fillStyle = 'rgba(40,44,48,.45)'; ctx.fillRect(0, 0, cv.width, cv.height); }
+  } else { (gobCv || (gobCv = $('#mapGob'))).hidden = true; ctx.fillStyle = 'rgba(40,44,48,.45)'; ctx.fillRect(0, 0, cv.width, cv.height); }
 }

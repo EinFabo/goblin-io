@@ -136,7 +136,8 @@ function goTo(i) {
   if (i === M.gob.sel && Math.abs(M.gob.d - n.d) < 1) { renderNote(); return; }
   M.gob.sel = i; M.gob.to = n.d; sfx.hover();
   save.map = { si: n.si, li: n.li, fresh: false }; persist();
-  markSel(); renderNote(false);
+  // Steht er schon dort (z. B. nach Tippen auf ein gesperrtes Level), kommt kein Ankommen mehr: Zettel gleich zeigen
+  markSel(); renderNote(Math.abs(M.gob.d - n.d) <= .5);
 }
 function stepNode(d) {
   let i = M.gob.sel + d;
@@ -161,7 +162,8 @@ function switchWorld(d) {
 
 // Jeden Frame aus der Menü-Szene: Goblin laufen lassen, Wegstück aufmalen
 export function tickMap(dt) {
-  if (M.w !== innerWidth || M.h !== innerHeight) { const g = M.gob, n = M.nodes[g.sel]; build(); g.d = g.to = M.nodes[g.sel] ? M.nodes[g.sel].d : 0; if (n) renderNodes(); M.open = M.reveal ? M.open : openDist(); }
+  if (M.w !== innerWidth || M.h !== innerHeight) { const g = M.gob, n = M.nodes[g.sel]; build(); g.d = g.to = M.nodes[g.sel] ? M.nodes[g.sel].d : 0; if (n) renderNodes();
+    const R = M.reveal; if (R) { R.from = M.nodes[R.sel - 1].d; R.to = M.nodes[R.sel].d; } else M.open = openDist(); }
   const R = M.reveal;
   if (R) {
     R.t += dt; M.open = R.from + (R.to - R.from) * Math.min(1, R.t / .9);

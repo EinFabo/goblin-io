@@ -1,3 +1,4 @@
+import { pullAll } from './items.js';
 import { RNG, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { DIR8, TAU, face8 } from '../core/util.js';
@@ -98,7 +99,7 @@ export function doEvent(ev) {
 function levelClear() {
   for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
   run.eproj.length = 0; run.haz.length = 0; run.spawnQ.length = 0;
-  for (const it of run.items) if (it.k === 'gem' || it.k === 'coin' || it.k === 'gear') it.mag = true;
+  pullAll();
   banner('Level geschafft!', ''); sfx.chest();
   run.clearT = 2.5;
 }

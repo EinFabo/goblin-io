@@ -99,7 +99,7 @@ await p.click('#wNext');
 await p.click('#mapNodes [data-node="1"]'); await p.waitForTimeout(300);
 if (!(await p.evaluate(() => !!document.querySelector('#lvNote .lock')))) hubFail('gesperrtes Level 2-2 zeigt keinen Hinweis');
 await p.keyboard.press('ArrowLeft');
-await p.waitForFunction(() => document.querySelector('#lvNote [data-go]'), null, { timeout: 8000 }).catch(() => {});
+await p.waitForFunction(() => !document.querySelector('#lvNote').hidden && document.querySelector('#lvNote [data-go]'), null, { timeout: 3000 }).catch(() => hubFail('Zettel fehlt nach Zurück vom gesperrten Level'));
 await p.click('#topWho');
 await p.click('#nameEdit'); await p.fill('#nameIn', 'Gr'); await p.press('#nameIn', 'Enter');
 if ((await p.evaluate(() => GOBLIN.save.profile.name)) === 'Gr') hubFail('zu kurzer Name wurde angenommen');

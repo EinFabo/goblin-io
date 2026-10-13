@@ -3,7 +3,7 @@
 // Skript der Welt abgeleitet: Hauptschule (erste Phasen), volle Mischung (letzte Phase), Nebenschule
 // (was in der vollen Mischung neu ist), Schwarm-, Elite- und Mini-Boss-Typen aus den Ereignissen.
 // Neue Welten brauchen dadurch nur ihr Stage-Skript.
-import { STAGES } from './stages.js';
+import { STAGES, STAGE_LEN } from './stages.js';
 import { STAGE_HP } from '../game/balance.js';
 
 export const LEVELS = 5;          // pro Welt, das letzte ist das Boss-Level
@@ -82,7 +82,7 @@ export function levelWaves(st, li) {
 // Spielbare Stage für Welt si, Level li (Endlos: die Stage selbst)
 export function levelStage(si, li = 0) {
   const st = STAGES[si];
-  if (st.endless) return { ...st, li: 0, len: 240, lvName: st.name };
+  if (st.endless) return { ...st, li: 0, len: STAGE_LEN, lvName: st.name };
   const K = LEVEL_KIND[li], boss = li === LEVELS - 1, W = WORLD_LV[Math.min(si, WORLD_LV.length - 1)];
   return {
     ...st, li, len: boss ? 0 : LEVEL_LEN, waves: levelWaves(st, li), dmg: W.dmg * K.dmg, rate: W.rate * K.rate, hpT: K.hpT,
