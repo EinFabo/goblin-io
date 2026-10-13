@@ -7,7 +7,8 @@ import { icon } from '../render/icons.js';
 // ---------- Skill Tree v2 (PLAN 8.4): knorriger Goblin-Baum, Halten zum Lernen ----------
 // Bild: SVG-Baum (Stamm, Äste, Wurzeln) mit grünem Saft, darüber Knöpfe für die Knoten und eine
 // Partikel-Fläche. Ein Knoten wird gelernt, indem man ihn gedrückt hält (Ring füllt sich, Ton steigt);
-// weiter halten lernt den nächsten Rang schneller. Kurz tippen wählt nur aus.
+// weiter halten lernt den nächsten Rang schneller. Ein anderer Knoten wird beim ersten Drücken nur ausgewählt
+// (Zettel zeigt, was er tut); erst Drücken und Halten auf dem ausgewählten lernt (Wunsch Fabi: nichts aus Versehen).
 
 const VW = 400, VH = 540;
 // Lage der Knoten im Bild (viewBox-Koordinaten); Stamm läuft von unten (200,540) nach oben
@@ -93,6 +94,7 @@ function render(anim = true) {
     b.classList.toggle('some', have > 0 && have < N.max);
     b.classList.toggle('full', have >= N.max);
     b.classList.toggle('sel', k === sel);
+    b.classList.toggle('canlearn', k === sel && canLearn(s, k));
     b.querySelector('.pips').innerHTML = N.max > 1 ? Array.from({ length: N.max }, (_, i) => `<i class="${i < have ? 'on' : ''}"></i>`).join('') : '';
     const sap = $(`[data-sap="${k}"]`);
     sap.classList.toggle('anim', anim); sap.style.strokeDashoffset = String(1 - have / N.max);
@@ -114,7 +116,7 @@ function renderNote() {
   if (have >= n.max) state = `<p class="ok">${n.max > 1 ? 'Voll ausgebaut' : 'Gelernt'}</p>`;
   else if (!open) state = `<p class="lock">Braucht ${ROWS[r].req} Punkte in den Reihen darunter (${pointsBelow(s.pts, r)} / ${ROWS[r].req})</p>`;
   else if (f < n.cost) state = `<p class="lock">${n.cost > 1 ? `Kostet ${n.cost} Punkte` : 'Kostet 1 Punkt'} – ${f ? `nur ${f} frei` : 'keine Punkte frei'}. Fähigkeit benutzen bringt XP.</p>`;
-  else state = `<button class="btn primary hold" data-hold>Gedrückt halten zum Lernen${n.cost > 1 ? ` (${n.cost} Punkte)` : ''}</button>`;
+  else state = `<button class="btn primary hold" data-hold>Gedrückt halten zum Lernen${n.cost > 1 ? ` (${n.cost} Punkte)` : ''}</button><p class="tip">oder den Knoten nochmal drücken und halten</p>`;
   $('#treeNote').innerHTML = `<span class="kind ${n.kind}">${KIND_TXT[n.kind]}</span><h3>${n.name}</h3>
     <p class="rank">${n.max > 1 ? `Rang ${have} / ${n.max}` : `${n.cost} Punkt${n.cost > 1 ? 'e' : ''}`}</p><p>${n.desc}</p>${state}`;
 }
@@ -208,7 +210,9 @@ function leaves(x, y) {
 const capture = (el, e) => { try { el.setPointerCapture(e.pointerId); } catch (err) { /* Zeiger schon weg: Loslassen fängt window ab */ } };
 $('#treeNodes').addEventListener('pointerdown', e => {
   const b = e.target.closest('[data-node]'); if (!b) return;
-  e.preventDefault(); capture(b, e); startHold(b.dataset.node, b);
+  e.preventDefault();
+  if (b.dataset.node !== sel) { audioInit(); endHold(false); sel = b.dataset.node; sfx.hover(); render(false); return; }
+  capture(b, e); startHold(sel, b);
 });
 $('#treeNote').addEventListener('pointerdown', e => {
   const h = e.target.closest('[data-hold]'); if (!h) return;

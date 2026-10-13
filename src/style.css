@@ -361,6 +361,10 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 .tn.some{border-color:#2f6a17}
 .tn.full{border-color:var(--gold);box-shadow:0 4px 0 var(--edge),0 0 14px rgba(244,208,63,.65)}
 .tn.sel{outline:3px solid var(--ink);outline-offset:4px}
+/* ausgewählt und lernbar: Rahmen pulst (nochmal drücken und halten) */
+.tn.sel.canlearn{animation:selPulse 1.1s ease-in-out infinite}
+@keyframes selPulse{50%{outline-color:var(--gold);outline-offset:7px}}
+#treeNote .tip{margin:6px 0 0;font-size:12px;opacity:.75}
 .tn.pop{animation:tnPop .45s cubic-bezier(.3,1.6,.5,1)}
 @keyframes tnPop{0%{transform:translate(-50%,-50%) scale(1.25);filter:brightness(2)}100%{transform:translate(-50%,-50%) scale(1)}}
 .tn.sprout{animation:tnSprout .6s cubic-bezier(.3,1.6,.5,1)}

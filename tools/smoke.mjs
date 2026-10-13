@@ -211,8 +211,15 @@ await pow.click();
 const tap = await p.evaluate(() => GOBLIN.save.abilities.rage.pts.pow || 0);
 await pow.hover(); await p.mouse.down(); await p.waitForTimeout(800); await p.mouse.up();
 const held = await p.evaluate(() => GOBLIN.save.abilities.rage.pts.pow || 0);
+// anderer Knoten: erstes Drücken und Halten wählt nur aus, erst das zweite lernt
+const cd = p.locator('#treeNodes [data-node="cd"]');
+await cd.hover(); await p.mouse.down(); await p.waitForTimeout(800); await p.mouse.up();
+const first = await p.evaluate(() => ({ n: GOBLIN.save.abilities.rage.pts.cd || 0, sel: document.querySelector('#treeNodes [data-node="cd"]').classList.contains('sel') }));
+await p.mouse.down(); await p.waitForTimeout(800); await p.mouse.up();
+const second = await p.evaluate(() => GOBLIN.save.abilities.rage.pts.cd || 0);
 await p.click('#treeClose');
 if (tap !== 0 || held !== 1) errs.push(`Skill Tree: Tippen ${tap} (soll 0), Halten ${held} (soll 1)`);
+if (first.n !== 0 || !first.sel || second !== 1) errs.push(`Skill Tree: anderer Knoten erst auswählen, dann lernen: ${JSON.stringify({ first, second })}`);
 await p.evaluate(() => { const G = GOBLIN; G.save.abilities.dash.pts = { pow: 3, a: 1 }; G.go('run', { si: 0, seed: 9 }); });
 await p.waitForTimeout(300);
 const roll = await p.evaluate(async () => { const G = GOBLIN; G.doDash(); await new Promise(r => setTimeout(r, 250)); G.doDash(); return { max: G.P.dashMax, n: G.P.dashN, xp: G.run.abXp.dash }; });
