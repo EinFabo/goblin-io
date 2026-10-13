@@ -34,6 +34,19 @@ for (let si = 0; si < stages; si++) {
   const st = await p.evaluate(() => ({ t: Math.round(GOBLIN.run.time), boss: !!GOBLIN.run.boss || GOBLIN.run.over }));
   console.log(`${endless ? 'Endlos' : `Welt ${si + 1} Boss-Level`}: bis ${st.t} s, Boss erreicht: ${st.boss ? 'ja' : 'nein'}`);
 }
+// In der Goblin-Maschine: andere Fähigkeit und Rolle gesperrt, Knöpfe mit Schloss
+await p.evaluate(() => { const G = GOBLIN; G.save.loadout = ['rage', 'mech']; G.go('run', { si: 0, li: 0, seed: 7 }); });
+const lock = await p.evaluate(async () => {
+  const G = GOBLIN, run = G.run;
+  run.abil[0].ch = run.abil[0].need; run.abil[1].ch = run.abil[1].need;
+  const mech = G.useAbility(1), rage = G.useAbility(0); G.doDash();
+  await new Promise(r => setTimeout(r, 150));
+  const cls = s => document.querySelector(s).classList.contains('locked');
+  return { mech, rage, dash: G.P.dashT > 0, q: cls('#ab0Btn'), roll: cls('#dashBtn'), sprint: cls('#sprintBtn'), e: cls('#ab1Btn') };
+});
+if (!lock.mech || lock.rage || lock.dash || !lock.q || !lock.roll || !lock.sprint || lock.e) errs.push('Maschinen-Sperre: ' + JSON.stringify(lock));
+console.log('Maschinen-Sperre:', JSON.stringify(lock));
+if (process.env.SHOT) await p.screenshot({ path: process.env.SHOT });
 // Normales Level: nach 2:30 „Level geschafft“, Ergebnis mit Hüten, Weiter → nächstes Level
 await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 0, li: 1, seed: 3 }); const run = G.run; run.paused = true;
   while (run.time < 160 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } }

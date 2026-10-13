@@ -65,6 +65,12 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .abil.ready .lbl{color:var(--ink)}
 .abil.on{box-shadow:0 2px 0 var(--edge),0 0 22px var(--c);transform:translateY(2px)}
 .abil.on img{filter:none}
+/* gesperrt (z. B. in der Goblin-Maschine): grau, Schloss in der Mitte */
+.abil.locked{box-shadow:0 4px 0 var(--edge);filter:saturate(.25)}
+.abil.locked img{filter:grayscale(1) brightness(.55);transform:none}
+.abil.locked .lbl{color:var(--muted)}
+.abil.locked::after{content:"";position:absolute;width:34%;height:34%;top:26%;left:33%;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 10V7a5 5 0 0 1 10 0v3' fill='none' stroke='%231a1408' stroke-width='5'/%3E%3Cpath d='M7 10V7a5 5 0 0 1 10 0v3' fill='none' stroke='%23d8d2bf' stroke-width='2.6'/%3E%3Crect x='3.5' y='10' width='17' height='12.5' rx='2.5' fill='%23d8d2bf' stroke='%231a1408' stroke-width='1.6'/%3E%3Ccircle cx='12' cy='15.5' r='1.8' fill='%231a1408'/%3E%3C/svg%3E") center/contain no-repeat}
 #ab0Btn{right:0;bottom:0;width:86px;height:86px;--c:#ff5a3c}
 #ab1Btn{right:98px;bottom:0;width:70px;height:70px;--c:#e0a83a}
 #dashBtn{right:0;bottom:98px;width:70px;height:70px;--c:var(--ice)}

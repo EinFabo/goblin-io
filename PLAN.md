@@ -864,7 +864,7 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
   - Profil-Tab (`src/ui/profile.js`): Name ändern (3–16 Zeichen), Konto-Level mit XP-Balken, Statistiken (Läufe, Siege, Siegquote, Kills, Spielzeit, meiste Kills und höchstes Level in einem Lauf, freie Fähigkeiten, Lieblingswaffe), Stages mit Stand und Bestzeit, Liste „Konto-Level schaltet frei“ mit dem nächsten Ziel hervorgehoben.
   - Neu im Save (ohne Versionssprung, `normalize` füllt auf): `stats.bestKills`, `stats.bestLevel`, `stats.weapons` (in wie vielen Läufen welche Waffe dabei war), `lastStage`.
   - Titel und Erfolge fehlen noch → Phase 6 (9.8).
-- [ ] Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3) – nur Waffen und Passive
+- [ ] ~~Kartensammlung, Seltenheiten, Aufwerten mit Karten + Gold (9.3) – nur Waffen und Passive~~ → **verschoben nach Phase 6, direkt nach den Truhen** (Entscheidung Fabi, 2026-10-13: ohne Truhen gibt es keine Kartenquelle). Stärke wie in 9.3 (+6 % Waffenschaden bzw. +10 % Passiv-Wirkung pro Stufe).
 - [x] Talente statt Werkstatt (9.4)
   - `src/data/talents.js`, Save v3 mit Migration: Werkstatt-Stufen ×2; „Kurze Zündschnur“ und „Goblin-Ingenieur“ entfallen (macht jetzt der Skill Tree), ihr Gold wird erstattet.
   - Abweichung: Dicke Haut +6 statt +8 Leben pro Stufe, damit migrierte Spielstände nicht stärker werden (Stage 4 mit Upgrades ist ohnehin zu leicht).
@@ -882,7 +882,9 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 - [ ] **Skill Tree befriedigender machen (Wunsch Fabi, 2026-10-12):** Animationen beim Lernen (Knoten leuchtet auf, Linie zum nächsten Knoten füllt sich, Partikel), eigene Sounds pro Rang, Level-Up der Fähigkeit mit kleiner Feier.
 - [ ] **Mehr Level und fähigkeitsspezifische Skills im Tree (Wunsch Fabi, 2026-10-12):** höhere Level-Grenze als 18 und mehr eigene Knoten je Fähigkeit statt nur Kraft/Tempo/Reichweite + 2 Extras (z. B. Rauchbombe: Malus im Rauch senken als eigener Knoten).
 - [ ] **Standard-Fähigkeiten leveln, mehrere Dashes (Wunsch Fabi, 2026-10-12):** Rolle und Sprint bekommen ebenfalls Level/Skill Tree, z. B. 2–3 Aufladungen für die Rolle (Idee aus 8.3: Lv5 zwei Aufladungen, Lv10 Krähenfüße).
-- [ ] **Fähigkeiten aufeinander abstimmen (Wunsch Fabi, 2026-10-12):** Regeln, welche Fähigkeiten zusammen gehen. Beispiel: Während der Goblin-Maschine keine anderen Fähigkeiten. Für alle Paare prüfen und im HUD zeigen (Knopf gesperrt).
+- [x] **Fähigkeiten aufeinander abstimmen (Wunsch Fabi, 2026-10-12):** Regeln, welche Fähigkeiten zusammen gehen. Beispiel: Während der Goblin-Maschine keine anderen Fähigkeiten. Für alle Paare prüfen und im HUD zeigen (Knopf gesperrt).
+  - Alle Paare geprüft: Nur die Goblin-Maschine verträgt sich nicht (Haken und Rolle würden den Mech durch die Luft werfen, Schild/Pilzring/Katapult stapeln sich mit Panzer und Arsenal). Solange sie läuft, sind die andere Fähigkeit, Rolle und Sprint gesperrt: grauer Knopf mit Schloss, beim Drücken Brummen und „In der Maschine“. Aufladen läuft weiter. Alles andere bleibt erlaubt und ist gewollt (Zeitbombe + Großer Knall, Rauch + Haken, Ruf + Wut, Schild + Pilzring …).
+  - Regel an einer Stelle: `lockOf(id)` in `src/game/abilities.js`; `npm run smoke` prüft die Sperre.
 - [x] **Bug (gemeldet von Fabi, 2026-10-12): Spiel friert beim Tod ein.** Statt Sterbe-Animation blieb das Bild stehen, „Nochmal“ blieb eingefroren, hinter dem Menü hing der alte Lauf.
   - Ursache: Die Spielschleife (`src/core/loop.js`) macht pro Bild mehrere 60-Hz-Schritte. Starb der Goblin nicht im letzten davon, wechselte die Szene zu „results“ (hat kein `update`) und der nächste Schritt warf einen Fehler. Weil `requestAnimationFrame` erst am Ende stand, war die Schleife danach für immer tot. Deshalb trat es nur manchmal auf.
   - Fix: Szene bei jedem Schritt neu prüfen; nächsten Frame zuerst anmelden, damit ein Fehler nur ein Bild kostet. Test `test/loop.test.js`, und `npm run smoke` stirbt jetzt echt und prüft Sterbe-Animation, „Nochmal“ und „Menü“.
@@ -914,6 +916,7 @@ Angeglichen: Wut schwächer (Schockwelle 40+6×Lv statt 60+9×Lv); Falle, Katapu
 
 ### Phase 6 – Truhen, Shop, Kosmetik
 - [ ] Truhen mit Drop-Tabellen, Pity und Wahrscheinlichkeits-Anzeige (9.5)
+- [ ] Kartensammlung für Waffen und Passive (9.3, aus Phase 5 hierher verschoben) – Sammlung-Tab, Aufwerten mit Karten + Gold, Karten aus Truhen
 - [ ] Öffnen-Animation
 - [ ] Shop mit Tagesangeboten (9.6)
 - [ ] Garderobe, Kosmetik im Generator und im Spiel (9.7)

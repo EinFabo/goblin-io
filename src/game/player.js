@@ -3,7 +3,7 @@ import { joy, keys, sprintHeld } from '../core/input.js';
 import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { LOW_HP, damagePlayer } from './combat.js';
-import { abilReady } from './abilities.js';
+import { abilReady, lockOf } from './abilities.js';
 import { ABILITIES, SLOT_KEYS } from '../data/abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { part } from './fx.js';
@@ -19,7 +19,7 @@ export function updPlayer(dt) {
   const len = Math.hypot(mx, my);
   P.moving = len > .1;
   if (P.moving) { P.aimX = mx / len; P.aimY = my / len; P.face = face8(mx, my, P.face); }
-  const want = (keys.ShiftLeft || keys.ShiftRight || sprintHeld) && P.moving && P.mechT <= 0;
+  const want = (keys.ShiftLeft || keys.ShiftRight || sprintHeld) && P.moving && !lockOf('sprint');
   if (want && !P.exhaust && P.stam > 0) {
     P.sprinting = true; P.stam -= 34 * dt; P.stamDelay = .7;
     if (P.stam <= 0) {

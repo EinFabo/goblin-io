@@ -2,16 +2,17 @@ import { $, clamp, fmtTime } from '../core/util.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
 import { ABILITIES } from '../data/abilities.js';
-import { abilReady } from '../game/abilities.js';
+import { abilReady, lockOf } from '../game/abilities.js';
 
 // ---------- HUD ----------
 export const hudCache = {};
 export function setTxt(id, v) { if (hudCache[id] !== v) { hudCache[id] = v; $(id).textContent = v; } }
-export function setAbil(id, p, ready, on = false) {
+export function setAbil(id, p, ready, on = false, lock = false) {
   const b = $(id), ps = clamp(p, 0, 1).toFixed(3);
   if (hudCache[id + 'p'] !== ps) { hudCache[id + 'p'] = ps; b.style.setProperty('--p', ps); }
   if (hudCache[id + 'r'] !== ready) { hudCache[id + 'r'] = ready; b.classList.toggle('ready', ready); }
   if (hudCache[id + 'o'] !== on) { hudCache[id + 'o'] = on; b.classList.toggle('on', on); }
+  if (hudCache[id + 'l'] !== lock) { hudCache[id + 'l'] = lock; b.classList.toggle('locked', lock); }
 }
 export function updHud(dt) {
   if (!run) return;
@@ -20,9 +21,9 @@ export function updHud(dt) {
   setTxt('#killTxt', String(run.kills));
   setTxt('#goldTxt', String(run.gold));
   setTxt('#timeTxt', run.st.len && !run.st.endless ? fmtTime(Math.max(0, run.st.len - run.time)) : fmtTime(run.time));
-  run.abil.forEach((s, i) => { if (s) setAbil('#ab' + i + 'Btn', abilFill(s), abilReady(s), abilActive(s.id)); });
-  setAbil('#dashBtn', 1 - Math.max(0, P.dashCd) / 2.4, P.dashCd <= 0);
-  setAbil('#sprintBtn', P.stam / P.stamMax, !P.exhaust, P.sprinting);
+  run.abil.forEach((s, i) => { if (s) setAbil('#ab' + i + 'Btn', abilFill(s), abilReady(s), abilActive(s.id), !!lockOf(s.id)); });
+  setAbil('#dashBtn', 1 - Math.max(0, P.dashCd) / 2.4, P.dashCd <= 0, false, !!lockOf('dash'));
+  setAbil('#sprintBtn', P.stam / P.stamMax, !P.exhaust, P.sprinting, !!lockOf('sprint'));
   if (run.boss) $('#bossFill').style.width = (Math.max(0, run.boss.hp / run.boss.maxHp) * 100).toFixed(1) + '%';
   if (!run.paused) {
     run.hintT -= dt;
@@ -47,7 +48,7 @@ export function setupAbilButtons() {
     const A = ABILITIES[s.id];
     b.querySelector('img').src = icon(s.id); b.querySelector('.lbl').textContent = A.short; b.setAttribute('aria-label', A.name);
     b.style.setProperty('--c', ABIL_COL[s.id] || '#e0a83a');
-    for (const k of ['p', 'r', 'o']) delete hudCache['#ab' + i + 'Btn' + k];
+    for (const k of ['p', 'r', 'o', 'l']) delete hudCache['#ab' + i + 'Btn' + k];
   });
 }
 const ABIL_COL = { rage: '#ff5a3c', mech: '#e0a83a', trap: '#c9a26a', smoke: '#b8b8c8', catapult: '#a08a6a', hook: '#8fd0ff', shroom: '#7be04a', shield: '#dfe6ea', rats: '#d9a066', call: '#6fc23a', totem: '#ffd84a', timebomb: '#8fe6ff', bigbang: '#ff9a2e', charm: '#ffd84a' };

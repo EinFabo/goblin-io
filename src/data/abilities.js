@@ -10,7 +10,7 @@ export const ABILITIES = {
     desc: 'Legt 3 Fallen um dich, jede schnappt bis zu 3-mal zu. Wer hineintritt, hängt 2 s fest, Splitter treffen die Gegner daneben.',
     extras: [{ name: 'Vierte Falle', desc: 'Du legst 4 statt 3 Fallen.' }, { name: 'Sprengfallen', desc: 'Die Splitter fliegen weiter und machen vollen Schaden.' }] },
   mech: { name: 'Goblin-Maschine', short: 'Maschine', charge: 'scrap', need: 100, unlock: { acct: 3 },
-    desc: '12 s Dampf-Mech mit MG, Raketen und Stampfer. Du nimmst 70 % weniger Schaden.',
+    desc: '12 s Dampf-Mech mit MG, Raketen und Stampfer. Du nimmst 70 % weniger Schaden. Solange er läuft, sind andere Fähigkeiten, Rolle und Sprint gesperrt.',
     extras: [{ name: 'Panzerplatten', desc: 'Im Mech nimmst du 85 % statt 70 % weniger Schaden.' }, { name: 'Doppelsalve', desc: 'Raketen kommen doppelt so oft.' }] },
   smoke: { name: 'Rauchbombe', short: 'Rauch', charge: 'cd', need: 14, dur: 3, unlock: { stage: 1 },
     desc: '3 s unsichtbar. Gegner laufen zu deinem alten Platz, manche schlagen verwirrt aufeinander ein. Im Rauch greifen deine Waffen 60 % langsamer an, jeder Punkt im Skill Tree senkt das (bis 20 %).',

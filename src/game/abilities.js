@@ -34,6 +34,18 @@ export function initAbilities() {
   run.abfx = []; run.tmpAllies = [];
 }
 export const abilReady = s => !!s && s.ch >= s.need && ABILITIES[s.id].charge !== 'once';
+
+// ---------- Was zusammen geht (Wunsch Fabi) ----------
+// Alle Paare geprüft (PLAN Phase 5): Nur die Goblin-Maschine verträgt sich nicht mit dem Rest.
+// Haken und Rolle würden den Mech durch die Luft werfen, Schild, Pilzring und Katapult stapeln sich
+// mit seinem Panzer und Arsenal. Solange sie läuft, sind andere Fähigkeiten, Rolle und Sprint gesperrt.
+// Alles andere ist gewollt (z. B. Zeitbombe + Großer Knall, Rauch + Haken, Ruf + Wut).
+// id: Fähigkeit oder 'dash'/'sprint'. Gibt den Grund zurück, '' = frei.
+export const lockOf = id => (P.mechT > 0 && id !== 'mech' ? 'In der Maschine' : '');
+function lockedBuzz(why) {
+  if (run.time - (run.lockBuzz ?? -1) < .4) return;
+  run.lockBuzz = run.time; addNum(P.x, P.y - 52, why, '#c9c2b0', false); sfx.buzz();
+}
 export const hasAbil = id => run.abil.some(s => s && s.id === id);
 
 // Kills und Schrott laden die passenden Slots
@@ -52,6 +64,7 @@ const USE = {
 export function useAbility(i) {
   const s = run && run.abil[i];
   if (!s || run.paused || run.over || !abilReady(s)) return false;
+  const why = lockOf(s.id); if (why) { lockedBuzz(why); return false; }
   if (USE[s.id](M(s.id)) === false) return false;
   s.ch = 0;
   run.abXp[s.id] = (run.abXp[s.id] || 0) + xpPerUse(s.id);   // XP durch Benutzen, gutgeschrieben am Laufende
@@ -80,6 +93,7 @@ export function updAbilities(dt) {
 // ---------- Rolle ----------
 export function doDash() {
   if (!run || run.paused || run.over || P.dashCd > 0) return;
+  const why = lockOf('dash'); if (why) { lockedBuzz(why); return; }
   P.dashT = .18; P.dashCd = 2.4; P.inv = Math.max(P.inv, .3);
   P.dvx = P.aimX * 900; P.dvy = P.aimY * 900;
   P.rollT = ROLL_T; P.perfect = false; P.trailT = 0;
