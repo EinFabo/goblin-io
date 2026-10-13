@@ -3,7 +3,7 @@ import { joy, keys, sprintHeld } from '../core/input.js';
 import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { LOW_HP, damagePlayer } from './combat.js';
-import { abilReady, lockOf } from './abilities.js';
+import { abilReady, bulwark, lockOf, shieldThorns } from './abilities.js';
 import { ABILITIES, SLOT_KEYS } from '../data/abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { part } from './fx.js';
@@ -21,15 +21,16 @@ export function updPlayer(dt) {
   if (P.moving) { P.aimX = mx / len; P.aimY = my / len; P.face = face8(mx, my, P.face); }
   const want = (keys.ShiftLeft || keys.ShiftRight || sprintHeld) && P.moving && !lockOf('sprint');
   if (want && !P.exhaust && P.stam > 0) {
-    P.sprinting = true; P.stam -= 34 * dt; P.stamDelay = .7;
+    // Unermüdlich: die erste Sekunde jedes Sprints ist gratis
+    P.sprinting = true; P.stam -= (P.tireless && P.sprintT < 1 ? 0 : P.stamDrain) * dt; P.stamDelay = .7; P.sprintT += dt;
     if (P.stam <= 0) {
-      // Puste weg: kurz langsamer, Schweißtropfen
-      P.stam = 0; P.exhaust = true; P.exSlowT = .4; sfx.puh();
+      // Puste weg: kurz langsamer, Schweißtropfen (Zweiter Atem: kein Abbremsen, Erholung sofort)
+      P.stam = 0; P.exhaust = true; P.exSlowT = P.secondWind ? 0 : .4; if (P.secondWind) P.stamDelay = 0; sfx.puh();
       for (let i = 0; i < 6; i++) part(P.x + frand(-10, 10), P.y - 34, frand(-60, 60), frand(-90, -40), .5, 'rgba(150,215,255,.9)', frand(2.5, 4));
     }
   } else {
-    P.sprinting = false; P.stamDelay -= dt;
-    if (P.stamDelay <= 0) P.stam = Math.min(P.stamMax, P.stam + 26 * dt);
+    P.sprinting = false; P.sprintT = 0; P.stamDelay -= dt;
+    if (P.stamDelay <= 0) P.stam = Math.min(P.stamMax, P.stam + P.stamRegen * dt);
     if (P.exhaust && P.stam >= P.stamMax * .35) P.exhaust = false;
   }
   const ox = P.x, oy = P.y;
@@ -39,7 +40,7 @@ export function updPlayer(dt) {
     P.trailT -= dt; if (P.trailT <= 0) { P.trailT = .06; P.trail.push({ x: P.x, y: P.y, spr: curPlayerSpr(), t: .25 }); }
     if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, 'rgba(220,210,170,.75)', frand(4, 7));
   } else if (P.moving) {
-    const sp = P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? 1.55 : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * Math.min(1, len);
+    const sp = P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? P.sprintMul : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * (P.hasteT > 0 ? 1 + P.haste : 1) * Math.min(1, len);
     P.x += P.aimX * sp * dt; P.y += P.aimY * sp * dt;
     // Animation läuft mit der echten Geschwindigkeit; Staub und Schritt-Klick genau auf Schritt-Frames 2 und 5
     const before = Math.floor(P.step) % 6;
@@ -58,13 +59,14 @@ export function updPlayer(dt) {
     if (run.boss) { const b = run.boss, bx = b.x - A.x, by = b.y - A.y, bd = Math.hypot(bx, by); if (bd > A.r - 30) { b.x = A.x + bx / bd * (A.r - 30); b.y = A.y + by / bd * (A.r - 30); } }
   }
   P.vx = (P.x - ox) / Math.max(dt, 1e-4); P.vy = (P.y - oy) / Math.max(dt, 1e-4);
-  P.inv -= dt; P.dashCd -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
+  P.inv -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
   if (P.hp < P.maxHp * LOW_HP) run.lowT += dt;
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
   if (!(P.smokeT > 0)) query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {
       const was = P.inv, before = P.hp; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg); affixOnHitPlayer(e, before - P.hp);
-      if (e.melee === 'slow' && was <= 0 && P.mechT <= 0) P.slowT = .6;
+      shieldThorns(e);
+      if (e.melee === 'slow' && was <= 0 && P.mechT <= 0 && !bulwark()) P.slowT = .6;
       return false;
     }
   });

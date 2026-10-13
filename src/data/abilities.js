@@ -5,82 +5,149 @@
 export const ABILITIES = {
   rage: { name: 'Goblin-Wut', short: 'Wut', charge: 'kills', need: 80, dur: 6,
     desc: 'Schockwelle, die Gegner wegschleudert und Geschosse löscht. Danach 6 s Raserei: +60 % Angriffstempo, schneller laufen.',
-    extras: [{ name: 'Lange Wut', desc: 'Raserei hält 3 s länger.' }, { name: 'Heilende Wut', desc: 'Die Schockwelle heilt dich um 20 % deines Lebens.' }] },
+    extras: [{ name: 'Lange Wut', desc: 'Raserei hält 3 s länger.' }, { name: 'Heilende Wut', desc: 'Die Schockwelle heilt dich um 20 % deines Lebens.' }],
+    skills: [{ name: 'Blutdurst', desc: 'Kills in der Raserei heilen dich um 1 Leben pro Rang.' }, { name: 'Weite Welle', desc: 'Schockwelle +12 % Umkreis und Wucht pro Rang.' }, { name: 'Kettenwut', desc: 'Jeder Kill in der Raserei verlängert sie um 0,1 s pro Rang (höchstens +4 s).' }],
+    master: { name: 'Berserker', desc: 'In der Raserei nimmst du 30 % weniger Schaden.' } },
   trap: { name: 'Bärenfalle', short: 'Falle', charge: 'cd', need: 7,
     desc: 'Legt 3 Fallen um dich, jede schnappt bis zu 3-mal zu. Wer hineintritt, hängt 2 s fest, Splitter treffen die Gegner daneben.',
-    extras: [{ name: 'Vierte Falle', desc: 'Du legst 4 statt 3 Fallen.' }, { name: 'Sprengfallen', desc: 'Die Splitter fliegen weiter und machen vollen Schaden.' }] },
+    extras: [{ name: 'Vierte Falle', desc: 'Du legst 4 statt 3 Fallen.' }, { name: 'Sprengfallen', desc: 'Die Splitter fliegen weiter und machen vollen Schaden.' }],
+    skills: [{ name: 'Scharfe Zähne', desc: 'Jede Falle schnappt 1-mal öfter zu pro Rang.' }, { name: 'Festbeißen', desc: 'Gefangene hängen 0,4 s länger fest pro Rang.' }, { name: 'Köder', desc: 'Fallen locken Gegner im Umkreis an (50/80/110).' }],
+    master: { name: 'Fallensteller', desc: 'Jede 3. Rolle legt eine Bärenfalle.' } },
   mech: { name: 'Goblin-Maschine', short: 'Maschine', charge: 'scrap', need: 100, unlock: { acct: 3 },
     desc: '12 s Dampf-Mech mit MG, Raketen und Stampfer. Du nimmst 70 % weniger Schaden. Solange er läuft, sind andere Fähigkeiten, Rolle und Sprint gesperrt.',
-    extras: [{ name: 'Panzerplatten', desc: 'Im Mech nimmst du 85 % statt 70 % weniger Schaden.' }, { name: 'Doppelsalve', desc: 'Raketen kommen doppelt so oft.' }] },
+    extras: [{ name: 'Panzerplatten', desc: 'Im Mech nimmst du 85 % statt 70 % weniger Schaden.' }, { name: 'Doppelsalve', desc: 'Raketen kommen doppelt so oft.' }],
+    skills: [{ name: 'Schnellfeuer', desc: 'MG feuert 12 % schneller pro Rang.' }, { name: 'Schwere Stiefel', desc: 'Stampfer +25 % Schaden und Fläche pro Rang.' }, { name: 'Schrottsammler', desc: 'Kills im Mech füllen 0,4 % Schrott pro Rang zurück.' }],
+    master: { name: 'Überladung', desc: 'Die Schlussexplosion ist doppelt so stark und größer.' } },
   smoke: { name: 'Rauchbombe', short: 'Rauch', charge: 'cd', need: 14, dur: 3, unlock: { stage: 1 },
     desc: '3 s unsichtbar. Gegner laufen zu deinem alten Platz, manche schlagen verwirrt aufeinander ein. Im Rauch greifen deine Waffen 60 % langsamer an, jeder Punkt im Skill Tree senkt das (bis 20 %).',
-    extras: [{ name: 'Dichter Rauch', desc: 'Du bleibst 2 s länger unsichtbar.' }, { name: 'Giftrauch', desc: 'Gegner rund um den Rauch nehmen jede Sekunde Schaden.' }] },
+    extras: [{ name: 'Dichter Rauch', desc: 'Du bleibst 2 s länger unsichtbar.' }, { name: 'Giftrauch', desc: 'Gegner rund um den Rauch nehmen jede Sekunde Schaden.' }],
+    skills: [{ name: 'Ruhige Hand', desc: 'Angriffs-Malus im Rauch 60 → 47 → 33 → 20 %.' }, { name: 'Verwirrung', desc: '+12 % Chance pro Rang, dass Gegner sich gegenseitig angreifen.' }, { name: 'Schattenschritt', desc: 'Nach dem Rauch 1 s pro Rang +20 % Tempo.' }],
+    master: { name: 'Hinterhalt', desc: 'Nach dem Rauch machst du 1,5 s lang doppelten Schaden.' } },
   catapult: { name: 'Goblin-Katapult', short: 'Katapult', charge: 'scrap', need: 35, unlock: { acct: 5 },
     desc: '5 Felsen schlagen in die dichteste Gegnergruppe ein.',
-    extras: [{ name: 'Mehr Munition', desc: '8 statt 5 Felsen.' }, { name: 'Brennende Felsen', desc: 'Einschläge hinterlassen brennenden Boden.' }] },
+    extras: [{ name: 'Mehr Munition', desc: '8 statt 5 Felsen.' }, { name: 'Brennende Felsen', desc: 'Einschläge hinterlassen brennenden Boden.' }],
+    skills: [{ name: 'Splitter', desc: 'Jeder Einschlag trifft 1 Gegner mehr pro Rang in der Nähe mit Splittern.' }, { name: 'Flinke Mannschaft', desc: 'Felsen fliegen 15 % schneller pro Rang.' }, { name: 'Benommen', desc: 'Einschläge betäuben 0,3 s pro Rang.' }],
+    master: { name: 'Dauerfeuer', desc: '2 s später kommt eine zweite Salve mit halbem Schaden.' } },
   hook: { name: 'Enterhaken', short: 'Haken', charge: 'cd', need: 7, unlock: { stage: 2 },
     desc: 'Zieht dich zum nächsten Gegner (oder ein Stück nach vorn) und landet mit einer Stoßwelle. Kleine Gegner dort werden zu dir gerissen.',
-    extras: [{ name: 'Langes Seil', desc: 'Der Haken fliegt viel weiter.' }, { name: 'Betäubender Aufprall', desc: 'Die Landung friert Gegner um dich 1 s ein.' }] },
+    extras: [{ name: 'Langes Seil', desc: 'Der Haken fliegt viel weiter.' }, { name: 'Betäubender Aufprall', desc: 'Die Landung friert Gegner um dich 1 s ein.' }],
+    skills: [{ name: 'Widerhaken', desc: 'Herangerissene Gegner nehmen 3 s lang +15 % Schaden pro Rang.' }, { name: 'Weiter Zug', desc: 'Zieh-Umkreis +20 % pro Rang.' }, { name: 'Abrollen', desc: 'Nach der Landung 0,3 s pro Rang unverwundbar.' }],
+    master: { name: 'Doppelhaken', desc: 'Der Haken hat 2 Aufladungen.' } },
   shroom: { name: 'Pilzring', short: 'Pilze', charge: 'cd', need: 18, dur: 5, unlock: { acct: 8 },
     desc: '5 s Heilzone: +5 % Leben pro Sekunde, Gegner darin sind verlangsamt.',
-    extras: [{ name: 'Großer Ring', desc: 'Der Pilzring wird 40 % größer.' }, { name: 'Giftsporen', desc: 'Gegner im Ring nehmen jede Sekunde Schaden.' }] },
+    extras: [{ name: 'Großer Ring', desc: 'Der Pilzring wird 40 % größer.' }, { name: 'Giftsporen', desc: 'Gegner im Ring nehmen jede Sekunde Schaden.' }],
+    skills: [{ name: 'Sporen', desc: 'Gegner im Ring nehmen +8 % Schaden pro Rang.' }, { name: 'Wurzelgriff', desc: 'Gegner im Ring sind stärker verlangsamt (50 → 60/70/80 %).' }, { name: 'Nachwuchs', desc: 'Am Ende bleibt pro Rang ein Heilpäckchen liegen.' }],
+    master: { name: 'Wandernder Ring', desc: 'Der Pilzring folgt dir.' } },
   shield: { name: 'Schrottschild', short: 'Schild', charge: 'cd', need: 16, dur: 6, unlock: { stage: 3 },
     desc: 'Schild schluckt bis zu 40 % deines Lebens, 6 s lang. Geschosse prallen zurück.',
-    extras: [{ name: 'Dicker Schild', desc: 'Schluckt 60 % statt 40 % deines Lebens.' }, { name: 'Splitterschild', desc: 'Wenn der Schild bricht oder endet, schleudert er Splitter um dich.' }] },
+    extras: [{ name: 'Dicker Schild', desc: 'Schluckt 60 % statt 40 % deines Lebens.' }, { name: 'Splitterschild', desc: 'Wenn der Schild bricht oder endet, schleudert er Splitter um dich.' }],
+    skills: [{ name: 'Spiegelblank', desc: 'Zurückgeworfene Geschosse +30 % Schaden pro Rang.' }, { name: 'Nachladen', desc: 'Endet der Schild ungebrochen, lädt er 10 % pro Rang schneller nach.' }, { name: 'Dornen', desc: 'Nahkämpfer, die den Schild treffen, nehmen 10 Schaden pro Rang.' }],
+    master: { name: 'Bollwerk', desc: 'Mit Schild wirst du nicht verlangsamt, die erste Sekunde schluckt er alles.' } },
   rats: { name: 'Rattenflut', short: 'Ratten', charge: 'kills', need: 100, unlock: { stage: 4 },
     desc: '40 Ratten rennen über den Bildschirm und knabbern alles an.',
-    extras: [{ name: 'Rattenkönig', desc: '20 Ratten mehr.' }, { name: 'Pestratten', desc: 'Gebissene Gegner sind 3 s verlangsamt.' }] },
+    extras: [{ name: 'Rattenkönig', desc: '20 Ratten mehr.' }, { name: 'Pestratten', desc: 'Gebissene Gegner sind 3 s verlangsamt.' }],
+    skills: [{ name: 'Hungrige Ratten', desc: 'Jede Ratte beißt 1-mal öfter pro Rang.' }, { name: 'Beuteratten', desc: 'Ratten schleppen Kristalle und Münzen zu dir (größerer Umkreis pro Rang).' }, { name: 'Seuche', desc: 'Gebissene nehmen 3 s lang Giftschaden (mehr pro Rang).' }],
+    master: { name: 'Rückkehr', desc: 'Die Ratten rennen noch einmal zurück.' } },
   call: { name: 'Goblin-Ruf', short: 'Ruf', charge: 'cd', need: 16, dur: 10, unlock: { acct: 12 },
     desc: '8 Goblin-Krieger kämpfen 10 s an deiner Seite.',
-    extras: [{ name: 'Mehr Krieger', desc: '4 Krieger mehr.' }, { name: 'Kriegsschrei', desc: 'Beim Rufen bekommst du 4 s Raserei wie bei der Goblin-Wut.' }] },
+    extras: [{ name: 'Mehr Krieger', desc: '4 Krieger mehr.' }, { name: 'Kriegsschrei', desc: 'Beim Rufen bekommst du 4 s Raserei wie bei der Goblin-Wut.' }],
+    skills: [{ name: 'Scharfe Speere', desc: 'Krieger +12 % Schaden pro Rang.' }, { name: 'Flinke Krieger', desc: 'Krieger laufen und schlagen 12 % schneller pro Rang.' }, { name: 'Letzter Hieb', desc: 'Krieger explodieren beim Gehen (mehr Schaden pro Rang).' }],
+    master: { name: 'Häuptling', desc: 'Ein großer Häuptling mit dreifachem Schaden kommt mit.' } },
   totem: { name: 'Totem der Gier', short: 'Totem', charge: 'cd', need: 25, dur: 10, unlock: { stage: 5 },
     desc: 'Saugt alle Kristalle und Münzen an. 10 s doppeltes Gold.',
-    extras: [{ name: 'Goldregen', desc: 'Doppeltes Gold hält 5 s länger.' }, { name: 'Heiltotem', desc: 'Das Totem heilt dich um 25 %.' }] },
+    extras: [{ name: 'Goldregen', desc: 'Doppeltes Gold hält 5 s länger.' }, { name: 'Heiltotem', desc: 'Das Totem heilt dich um 25 %.' }],
+    skills: [{ name: 'Goldader', desc: 'Solange es wirkt, lassen Kills +10 % pro Rang öfter Münzen fallen.' }, { name: 'Glücksbringer', desc: 'Solange es wirkt, +4 % kritische Treffer pro Rang.' }, { name: 'Weisheit', desc: 'Solange es wirkt, +10 % Erfahrung pro Rang.' }],
+    master: { name: 'Goldener Schutz', desc: 'Solange es wirkt, schluckt je 25 gesammeltes Gold einen Treffer.' } },
   timebomb: { name: 'Zeitbombe', short: 'Zeitbombe', charge: 'cd', need: 14, dur: 3, unlock: { stage: 6 },
     desc: 'Friert Gegner im Umkreis 3 s ein und löscht ihre Geschosse. Danach explodieren sie mit dem Schaden, den sie solange eingesteckt haben.',
-    extras: [{ name: 'Großer Zünder', desc: '30 % mehr Umkreis.' }, { name: 'Kälteschock', desc: 'Eingefrorene Gegner nehmen 50 % mehr Schaden.' }] },
+    extras: [{ name: 'Großer Zünder', desc: '30 % mehr Umkreis.' }, { name: 'Kälteschock', desc: 'Eingefrorene Gegner nehmen 50 % mehr Schaden.' }],
+    skills: [{ name: 'Langer Zünder', desc: '+0,5 s Einfrieren pro Rang.' }, { name: 'Kettenreaktion', desc: 'Explosionen +20 % größer pro Rang.' }, { name: 'Splitterregen', desc: 'Jeder Explodierende schießt 1 Eissplitter mehr pro Rang.' }],
+    master: { name: 'Zeitschleife', desc: 'Überlebende frieren noch einmal 1,5 s ein.' } },
   bigbang: { name: 'Großer Knall', short: 'Knall', charge: 'kills', need: 120, unlock: { stage: 8 },
     desc: 'Alle Gegner auf dem Bildschirm nehmen massiven Schaden.',
-    extras: [{ name: 'Nachbeben', desc: '1 s später ein zweiter Knall mit halber Kraft.' }, { name: 'Erschütterung', desc: 'Überlebende sind 1,5 s eingefroren.' }] },
+    extras: [{ name: 'Nachbeben', desc: '1 s später ein zweiter Knall mit halber Kraft.' }, { name: 'Erschütterung', desc: 'Überlebende sind 1,5 s eingefroren.' }],
+    skills: [{ name: 'Volltreffer', desc: '+15 % Schaden gegen Elite, Mini-Boss und Boss pro Rang.' }, { name: 'Beben', desc: 'Überlebende sind 1 s pro Rang verlangsamt.' }, { name: 'Kristallregen', desc: 'Getötete geben +20 % Erfahrung pro Rang.' }],
+    master: { name: 'Nachhall', desc: 'Nach dem Knall startet die Aufladung bei 30 %.' } },
   // Sicherheitsnetz aus 7.5: belegt einen Slot, wirkt von selbst
   charm: { name: 'Goblin-Amulett', short: 'Amulett', charge: 'once', need: 1, unlock: { acct: 6 },
     desc: 'Ein Mal pro Lauf: Statt zu sterben stehst du mit halbem Leben wieder auf und stößt alles weg.',
-    extras: [{ name: 'Zweite Chance', desc: 'Rettet dich zwei Mal pro Lauf.' }, { name: 'Phönix', desc: 'Du stehst mit vollem Leben wieder auf.' }] },
+    extras: [{ name: 'Zweite Chance', desc: 'Rettet dich zwei Mal pro Lauf.' }, { name: 'Phönix', desc: 'Du stehst mit vollem Leben wieder auf.' }],
+    skills: [{ name: 'Glanz', desc: '+0,5 s unverwundbar nach dem Aufstehen pro Rang.' }, { name: 'Rache', desc: 'Rettungs-Stoß +50 % Schaden und +15 % Umkreis pro Rang.' }, { name: 'Schutzgeist', desc: 'Solange das Amulett unbenutzt ist, +3 % max. Leben pro Rang.' }],
+    master: { name: 'Wiedergeburt', desc: 'Nach dem Aufstehen 5 s Raserei wie bei der Goblin-Wut.' } },
 };
 export const ABILITY_IDS = Object.keys(ABILITIES);
 
 // ---------- Level und Skill Tree (PLAN 8.4) ----------
-export const ABIL_MAX_LV = 18;
+export const ABIL_MAX_LV = 30;
 export const abilXpNeed = L => 60 + 40 * L;
 // XP pro Einsatz: ein voller Lauf bringt jeder Fähigkeit ~100 XP, egal wie oft sie lädt
 export function xpPerUse(id) {
+  if (id === 'dash') return 3;
+  if (id === 'sprint') return 1.5;   // pro Sekunde Sprinten
   const A = ABILITIES[id];
   return Math.max(2, Math.round(A.charge === 'cd' ? A.need * .42 : A.charge === 'kills' ? A.need * .25 : A.charge === 'scrap' ? A.need * .3 : 50));
 }
-// Knoten: unten pow/cd/area, Extras a (ab 3 Punkten unten) und b (ab 6)
+// Baum (PLAN 8.4): vier Reihen von unten nach oben. Eine Reihe öffnet sich, wenn in den Reihen darunter
+// genug Punkte stecken (req). Reihe 1 ist bei allen Fähigkeiten Kraft/Tempo/Reichweite, bei Rolle und Sprint eigene Wurzeln.
+// s1–s3 = eigene Skills, a/b = Extras, m = Meister.
 export const TREE = {
-  pow: { name: 'Kraft', max: 5, cost: 1, desc: '+8 % Schaden, Heilung und Schild' },
-  cd: { name: 'Tempo', max: 5, cost: 1, desc: '−5 % Abklingzeit bzw. Kill- oder Schrott-Bedarf' },
-  area: { name: 'Reichweite', max: 3, cost: 1, desc: '+8 % Fläche und Dauer' },
-  a: { max: 1, cost: 2, req: 3 },
-  b: { max: 1, cost: 2, req: 6 },
+  pow: { max: 5, cost: 1 }, cd: { max: 5, cost: 1 }, area: { max: 3, cost: 1 },
+  s1: { max: 3, cost: 1 }, a: { max: 1, cost: 2 }, s2: { max: 3, cost: 1 },
+  s3: { max: 3, cost: 1 }, b: { max: 1, cost: 2 },
+  m: { max: 1, cost: 3 },
 };
-export const basePoints = pts => (pts.pow || 0) + (pts.cd || 0) + (pts.area || 0);
-export const spentPoints = pts => basePoints(pts) + 2 * ((pts.a || 0) + (pts.b || 0));
-// Darf ein Rang in Knoten k gekauft werden? (Level-Punkte frei, Maximum, Voraussetzung)
+export const ROWS = [{ req: 0, keys: ['pow', 'cd', 'area'] }, { req: 3, keys: ['s1', 'a', 's2'] }, { req: 9, keys: ['s3', 'b'] }, { req: 15, keys: ['m'] }];
+const ROOTS = {
+  pow: { name: 'Kraft', desc: '+8 % Schaden, Heilung und Schild pro Rang' },
+  cd: { name: 'Tempo', desc: '−5 % Abklingzeit bzw. Kill- oder Schrott-Bedarf pro Rang' },
+  area: { name: 'Reichweite', desc: '+8 % Fläche und Dauer pro Rang' },
+};
+// Rolle und Sprint: immer dabei, leveln mit (XP durch Benutzen) und haben eigene Wurzeln
+export const MOVES = {
+  dash: { name: 'Rolle', short: 'Rolle', icon: 'dash', desc: 'Kurze Rolle in Laufrichtung, kurz unverwundbar. Durch ein Geschoss rollen = perfekte Rolle.',
+    roots: { pow: { name: 'Flink', desc: '−6 % Abklingzeit pro Rang' }, cd: { name: 'Weite', desc: '+8 % Strecke pro Rang' }, area: { name: 'Deckung', desc: '+0,06 s unverwundbar pro Rang' } },
+    extras: [{ name: 'Zweite Ladung', desc: 'Zwei Rollen hintereinander.' }, { name: 'Krähenfüße', desc: 'Jede Rolle streut Krähenfüße: Gegner darauf sind verlangsamt und nehmen Schaden.' }],
+    skills: [{ name: 'Perfekter Roller', desc: 'Perfekte Rolle lädt 2 Kills mehr pro Rang und ist leichter zu treffen.' }, { name: 'Staubwolke', desc: 'Gegner, durch die du rollst, fliegen weg und nehmen 10 Schaden pro Rang.' }, { name: 'Schwung', desc: 'Nach der Rolle 1,2 s +10 % Tempo pro Rang.' }],
+    master: { name: 'Dritte Ladung', desc: 'Drei Rollen hintereinander.' } },
+  sprint: { name: 'Sprint', short: 'Sprint', icon: 'boots', desc: 'Gedrückt halten: schneller laufen, kostet Ausdauer.',
+    roots: { pow: { name: 'Ausdauer', desc: '+8 % Ausdauer pro Rang' }, cd: { name: 'Erholung', desc: '+8 % schnellere Erholung pro Rang' }, area: { name: 'Tempo', desc: '+4 % Sprinttempo pro Rang' } },
+    extras: [{ name: 'Zweiter Atem', desc: 'Erschöpft wirst du nicht langsamer und erholst dich sofort.' }, { name: 'Rammbock', desc: 'Kleine Gegner, in die du sprintest, fliegen weg und nehmen Schaden.' }],
+    skills: [{ name: 'Leichtfüßig', desc: 'Sprinten kostet 8 % weniger Ausdauer pro Rang.' }, { name: 'Ausweichen', desc: 'Beim Sprinten nimmst du 6 % weniger Schaden pro Rang.' }, { name: 'Windschatten', desc: 'Beim Sprinten +15 % Sammelradius pro Rang.' }],
+    master: { name: 'Unermüdlich', desc: 'Die erste Sekunde jedes Sprints kostet keine Ausdauer.' } },
+};
+export const MOVE_IDS = Object.keys(MOVES);
+export const TREE_IDS = [...ABILITY_IDS, ...MOVE_IDS];
+export const treeDef = id => ABILITIES[id] || MOVES[id];
+// Name und Text eines Knotens
+export function nodeInfo(id, k) {
+  const D = treeDef(id), N = TREE[k];
+  const t = k === 'a' ? D.extras[0] : k === 'b' ? D.extras[1] : k === 'm' ? D.master : k[0] === 's' ? D.skills[+k[1] - 1] : (D.roots || ROOTS)[k];
+  return { ...N, ...t, kind: k === 'a' || k === 'b' ? 'extra' : k === 'm' ? 'master' : k[0] === 's' ? 'skill' : 'root' };
+}
+export const spentPoints = pts => Object.entries(pts).reduce((n, [k, v]) => n + (TREE[k] ? TREE[k].cost * v : 0), 0);
+// Punkte in den Reihen unter Reihe r
+export function pointsBelow(pts, r) { let n = 0; for (let i = 0; i < r; i++) for (const k of ROWS[i].keys) n += (pts[k] || 0) * TREE[k].cost; return n; }
+export const rowOf = k => ROWS.findIndex(R => R.keys.includes(k));
+export const rowOpen = (pts, r) => pointsBelow(pts, r) >= ROWS[r].req;
+// Darf ein Rang in Knoten k gekauft werden? (Level-Punkte frei, Maximum, Reihe offen)
 export function canLearn(st, k) {
   const N = TREE[k], have = st.pts[k] || 0;
-  return have < N.max && st.lv - 1 - spentPoints(st.pts) >= N.cost && basePoints(st.pts) >= (N.req || 0);
+  return have < N.max && st.lv - 1 - spentPoints(st.pts) >= N.cost && rowOpen(st.pts, rowOf(k));
 }
-// Wirkung des Baums für einen Lauf
+// Passt ein gespeicherter Baum zu den Regeln? (für alte Stände)
+export function treeValid(st) {
+  if (spentPoints(st.pts) > st.lv - 1) return false;
+  return ROWS.every((R, r) => R.keys.every(k => !st.pts[k]) || rowOpen(st.pts, r));
+}
+// Wirkung des Baums für einen Lauf; s1–s3 = Ränge der eigenen Skills
 export function abilMods(st) {
   const p = (st && st.pts) || {};
-  return { pow: 1 + .08 * (p.pow || 0), spd: 1 - .05 * (p.cd || 0), area: 1 + .08 * (p.area || 0), a: !!p.a, b: !!p.b, base: basePoints(p) };
+  return { pow: 1 + .08 * (p.pow || 0), spd: 1 - .05 * (p.cd || 0), area: 1 + .08 * (p.area || 0), a: !!p.a, b: !!p.b, m: !!p.m,
+    s1: p.s1 || 0, s2: p.s2 || 0, s3: p.s3 || 0, r: { pow: p.pow || 0, cd: p.cd || 0, area: p.area || 0 } };
 }
 // Rauchbombe: Angriffstempo-Malus der Waffen, solange man unsichtbar ist (Wunsch Fabi).
-// 60 % ohne Punkte, sinkt mit jedem Punkt in Kraft/Tempo/Reichweite, erst voll ausgebaut 20 %.
-const BASE_MAX = TREE.pow.max + TREE.cd.max + TREE.area.max;
-export const smokeAtkSlow = base => .6 - .4 * Math.min(base || 0, BASE_MAX) / BASE_MAX;
+// 60 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 20 %.
+export const smokeAtkSlow = calm => .6 - .4 * Math.min(calm || 0, 3) / 3;
 export const SLOT2_ACCT = 3;
 export const SLOT_KEYS = ['Q', 'E'];
 export const DEFAULT_LOADOUT = ['rage', 'trap'];

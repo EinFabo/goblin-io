@@ -80,4 +80,37 @@ export const sfx = {
   portal() { thr('portal', 120) && tone(200, 600, .3, 'sine', .02); },
   tab() { thr('tab', 60) && (noise(.12, .07, 700, 'bandpass', 0, null, 1.2, 2600), tone(380, 520, .06, 'triangle', .03)); },
   buy() { [880, 1175, 1568].forEach((f, i) => tone(f, 0, .1, 'square', .04, i * .05)); },
+  // Skill Tree (PLAN 8.4): Holz knarrt beim Öffnen, Blätter rascheln beim Sprießen,
+  // Lern-Ton steigt mit jedem gelernten Punkt (Pentatonik), voller Knoten mit Fanfare
+  treeOpen() { noise(.35, .05, 320, 'bandpass', 0, null, 6, 180); tone(150, 110, .3, 'triangle', .04); },
+  sprout() { noise(.4, .06, 2600, 'bandpass', 0, null, 1.5, 5200); [784, 988, 1175].forEach((f, i) => tone(f, f * 1.5, .12, 'sine', .035, .1 + i * .06)); },
+  learn(n, full) {
+    const P5 = [0, 2, 4, 7, 9], st = P5[n % 5] + 12 * Math.floor(n / 5) % 36, f = 330 * Math.pow(2, st / 12);
+    tone(95, 50, .16, 'sine', .14); noise(.06, .1, 900, 'bandpass', 0, null, 2);   // Holz-Klopfer
+    tone(f, 0, .16, 'triangle', .08); tone(f * 1.5, 0, .2, 'triangle', .06, .06); tone(f * 2, 0, .3, 'sine', .05, .12);
+    if (full) [1, 1.25, 1.5, 2].forEach((k, i) => tone(f * k, 0, .22, 'square', .035, .22 + i * .07));
+  },
+  master() { [523, 659, 784, 1046, 1318, 1568, 2093].forEach((f, i) => { tone(f, 0, .25, 'square', .045, i * .07); tone(f / 2, 0, .3, 'triangle', .05, i * .07); }); noise(1, .08, 4000, 'highpass', .3); },
+  abilUp() { [659, 880, 1175].forEach((f, i) => tone(f, 0, .14, 'triangle', .07, i * .07)); tone(1760, 0, .3, 'sine', .04, .22); },
 };
+
+// Aufladen beim Halten eines Knotens: Ton steigt über dur Sekunden; stop(true) = geschafft, stop(false) = abgebrochen
+export function chargeTone(n, dur) {
+  if (!AC) return { stop() {} };
+  const t = AC.currentTime, f0 = 160 * Math.pow(2, (n % 12) / 24), o = AC.createOscillator(), o2 = AC.createOscillator(), g = AC.createGain(), flt = AC.createBiquadFilter();
+  o.type = 'sawtooth'; o2.type = 'triangle'; flt.type = 'lowpass'; flt.Q.value = 6;
+  o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 3, t + dur);
+  o2.frequency.setValueAtTime(f0 * 2, t); o2.frequency.exponentialRampToValueAtTime(f0 * 6, t + dur);
+  flt.frequency.setValueAtTime(400, t); flt.frequency.exponentialRampToValueAtTime(3200, t + dur);
+  g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.05, t + .05); g.gain.linearRampToValueAtTime(.08, t + dur);
+  o.connect(flt); o2.connect(flt); flt.connect(g); g.connect(sfxBus); o.start(t); o2.start(t);
+  return {
+    stop(ok) {
+      const n2 = AC.currentTime;
+      g.gain.cancelScheduledValues(n2); g.gain.setValueAtTime(g.gain.value, n2);
+      if (!ok) { o.frequency.cancelScheduledValues(n2); o.frequency.setValueAtTime(o.frequency.value, n2); o.frequency.exponentialRampToValueAtTime(f0 * .6, n2 + .18); }
+      g.gain.exponentialRampToValueAtTime(.0005, n2 + (ok ? .05 : .2));
+      o.stop(n2 + .25); o2.stop(n2 + .25);
+    },
+  };
+}

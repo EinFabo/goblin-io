@@ -13,7 +13,7 @@ export function shoot(k, a, dmg, pierce, spd, life, extra = {}) {
 }
 export function updWeapons(dt) {
   const smoke = P.smokeT > 0 && run.abMods && run.abMods.smoke;
-  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.base) : 1);
+  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1);
   for (const w of run.weapons) {
     const L = w.lv - 1;
     switch (w.id) {

@@ -2,7 +2,7 @@ import { RNG, rnd, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { $ } from '../core/util.js';
-import { chargeAbil, shieldAbsorb, tryRevive } from './abilities.js';
+import { chargeAbil, critBonus, dealtMult, onKill, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
 import { hitDamage } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { addItem, addNum, animFx, dissolve, dropGem } from './fx.js';
@@ -14,8 +14,9 @@ import { endRun } from './run.js';
 // ---------- Schaden ----------
 export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null) {
   if (e.dead) return;
-  const crit = rnd() < P.crit;
+  const crit = rnd() < P.crit + critBonus();
   if (e.tbShock && e.freezeT > 0) dmg *= 1.5;   // Zeitbombe: Kälteschock
+  dmg *= dealtMult(e);
   const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
   const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
   e.hp -= d; e.flash = .09;
@@ -30,6 +31,7 @@ export function kill(e) {
   e.dead = true; run.kills++;
   emit('enemyKilled', e);
   if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
+  onKill(e);
   dropGem(e.x, e.y, e.xp);
   dissolve(e);
   if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);
@@ -65,7 +67,7 @@ export function bossDown(b) {
 // src: contact | proj | bomb | strike | zone (für Statistik und Sim)
 export function damagePlayer(d, src = 'contact') {
   if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
-  d = shieldAbsorb(hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1));
+  d = shieldAbsorb(hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult());
   if (d <= 0) { P.inv = .5; return; }
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);

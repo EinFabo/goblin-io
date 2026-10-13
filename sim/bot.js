@@ -43,7 +43,7 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
     if (gem) { const dx = gem.x - P.x, dy = gem.y - P.y, d = Math.hypot(dx, dy) || 1; vx += dx / d * .8; vy += dy / d * .8; }
     joy.id = 1; joy.ox = 0; joy.oy = 0; joy.x = vx * 55; joy.y = vy * 55;
 
-    if (P.dashCd <= 0 && P.hp < P.maxHp * .5) G.doDash();
+    if (P.dashN > 0 && P.hp < P.maxHp * .5) G.doDash();
     for (let k = 0; k < 2; k++) if (G.abilReady(run.abil[k]) && G.useAbility(k)) abil++;
     G.update(STEP);
     if (run.lvDelay > 0) { run.lvDelay = 0; pickCard(); }

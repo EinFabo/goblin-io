@@ -65,6 +65,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .abil.ready .lbl{color:var(--ink)}
 .abil.on{box-shadow:0 2px 0 var(--edge),0 0 22px var(--c);transform:translateY(2px)}
 .abil.on img{filter:none}
+/* bereite Ladungen (Doppelhaken, Zweite/Dritte Rolle) */
+.abil .cnt{position:absolute;top:-6px;right:-6px;min-width:20px;line-height:20px;border-radius:10px;background:var(--gold);color:#1a1408;font-weight:900;font-size:12px;text-align:center;box-shadow:0 2px 0 var(--edge)}
+.abil .cnt:empty{display:none}
 /* gesperrt (z. B. in der Goblin-Maschine): grau, Schloss in der Mitte */
 .abil.locked{box-shadow:0 4px 0 var(--edge);filter:saturate(.25)}
 .abil.locked img{filter:grayscale(1) brightness(.55);transform:none}
@@ -277,28 +280,91 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 /* Skill Tree */
 .xpb{display:inline-block;width:46px;height:6px;border-radius:3px;background:rgba(10,15,6,.8);vertical-align:middle;margin-left:5px;overflow:hidden}
 .xpb i{display:block;height:100%;background:#8fe6ff}
-.treeinfo{display:flex;align-items:center;gap:12px;margin:4px 0 14px;font-weight:700}
-.treeinfo img{width:52px;height:52px}.treeinfo span{flex:1}.treeinfo small{color:var(--muted)}
-.treeinfo .free{background:var(--hat);border-radius:8px;padding:4px 10px;white-space:nowrap}
-.tree{display:flex;flex-direction:column;align-items:center}
-.trow{display:flex;justify-content:center;gap:10px;width:100%}
-.trow.three .tnode{flex:1 1 0}
-.tline{width:4px;height:18px;background:var(--edge)}
-.tnode{display:flex;flex-direction:column;gap:3px;min-width:0;width:min(300px,100%);padding:10px;border:3px solid var(--edge);border-radius:12px;background:var(--moss-3);text-align:center;box-shadow:0 4px 0 var(--edge)}
-.tnode .t{font-family:var(--font-display);font-size:16px;letter-spacing:.02em}
-.tnode .r{font-weight:900;color:var(--gold);font-size:13px}
-.tnode .d{font-size:12.5px;line-height:1.35;color:var(--muted);font-weight:600}
-.tnode.extra{border-color:#8a4fd6}
-.tnode.some{border-color:var(--leaf)}
-.tnode.full{border-color:var(--gold);background:linear-gradient(180deg,#4a3a10,var(--moss-3))}
-.tnode.locked{opacity:.5}
-.tnode[aria-disabled]:not(.full){cursor:default}
-.tnode:not([aria-disabled]):hover{filter:brightness(1.15)}
-@media (max-width:640px){.trow.three{flex-direction:column;align-items:center}.trow.three .tnode{flex:none}}
+.treepanel{box-sizing:border-box;width:min(820px,calc(100vw - 32px));padding:14px 16px}
+.treeinfo{display:flex;align-items:center;gap:12px;margin:2px 0 10px;font-weight:700}
+.treeinfo img{width:48px;height:48px}.treeinfo span{flex:1;min-width:0}.treeinfo small{display:block;color:var(--muted);font-size:12px}
+.treeinfo .tbar{display:block;height:7px;margin:4px 0 3px;border-radius:4px;background:rgba(10,15,6,.8);overflow:hidden;max-width:260px}
+.treeinfo .tbar i{display:block;height:100%;background:#8fe6ff}
+.treeinfo .free{background:var(--moss-3);border:2px solid var(--edge);border-radius:8px;padding:4px 10px;white-space:nowrap}
+.treeinfo .free.has{background:var(--hat);animation:freePulse 1.6s ease-in-out infinite}
+@keyframes freePulse{50%{box-shadow:0 0 14px rgba(160,100,255,.8)}}
+.treewrap{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.treestage{--th:min(68vh,620px);position:relative;aspect-ratio:400/540;width:min(100%,calc(var(--th) * 400 / 540));margin:0 auto;border:3px solid var(--edge);border-radius:14px;overflow:hidden;box-shadow:0 5px 0 var(--edge);touch-action:none;user-select:none;-webkit-user-select:none}
+#treeSvg,#treeFx,#treeNodes,#treeFlash{position:absolute;inset:0;width:100%;height:100%}
+#treeFx,#treeFlash{pointer-events:none}
+#treeFlash{background:radial-gradient(circle at 50% 13%,rgba(255,230,120,.85),rgba(255,210,60,0) 60%);opacity:0}
+#treeFlash.go{animation:tFlash .9s ease-out}
+@keyframes tFlash{15%{opacity:1}}
+/* Rinde: dunkler Rand + Holz; Saft: grüner leuchtender Strich, der sich füllt */
+#treeSvg .bark-o{fill:none;stroke:#140c05;stroke-width:15;stroke-linecap:round}
+#treeSvg .bark{fill:none;stroke:#5a3a1e;stroke-width:10;stroke-linecap:round}
+#treeSvg .bark-o.trunk{stroke-width:30}#treeSvg .bark.trunk{stroke:#6b4524;stroke-width:24}
+#treeSvg .knot{fill:none;stroke:#3a2412;stroke-width:3;stroke-linecap:round}
+#treeSvg .sap{fill:none;stroke:#8be04a;stroke-width:4;stroke-linecap:round;stroke-dasharray:1 1;stroke-dashoffset:1;filter:url(#tsap)}
+#treeSvg .sap.trunk{stroke-width:7}
+#treeSvg .sap.full{stroke:#f4d03f}
+#treeSvg .sap.anim{transition:stroke-dashoffset .6s cubic-bezier(.3,.7,.3,1)}
+/* Knoten: runde Pilz-/Runensteine */
+.tn{--c:0;--sz:13.5%;position:absolute;width:var(--sz);aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;padding:0;cursor:pointer;
+  border:3px solid var(--edge);background:radial-gradient(circle at 38% 30%,#6b7a5a,#3a4630 60%,#232b1c);box-shadow:0 4px 0 var(--edge),inset 0 -4px 0 rgba(0,0,0,.3);
+  display:grid;place-items:center;touch-action:none;transition:filter .15s}
+.tn.extra{--sz:15%;background:radial-gradient(circle at 38% 30%,#8c6ac0,#4d2f7a 60%,#2a1a44)}
+.tn.master{--sz:18%;background:radial-gradient(circle at 38% 30%,#6e6450,#3e3726 60%,#211d12)}
+.tn.master.full{background:radial-gradient(circle at 38% 30%,#ffe27a,#c9962a 55%,#6b4a10)}
+.tn img,.tn .glyph{width:62%;height:62%;pointer-events:none}
+.tn .ring{position:absolute;inset:-9px;width:calc(100% + 18px);height:calc(100% + 18px);transform:rotate(-90deg);pointer-events:none;overflow:visible}
+.tn .ring circle{fill:none;stroke:#b6ff7a;stroke-width:4;stroke-linecap:round;stroke-dasharray:1 1;stroke-dashoffset:calc(1 - var(--c));filter:drop-shadow(0 0 4px #8be04a);opacity:0}
+.tn.charging .ring circle{opacity:1}
+.tn.charging{transform:translate(-50%,-50%) scale(calc(1 + var(--c) * .12));filter:brightness(calc(1 + var(--c) * .5))}
+.tn .pips{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);display:flex;gap:3px;pointer-events:none}
+.tn .pips i{width:8px;height:8px;border-radius:50%;background:#1a1408;border:2px solid var(--edge)}
+.tn .pips i.on{background:var(--leaf);box-shadow:0 0 5px var(--leaf)}
+.tn.full .pips i.on{background:var(--gold);box-shadow:0 0 5px var(--gold)}
+.tn .crown{filter:grayscale(.8) brightness(.8);position:absolute;top:-30%;left:50%;width:56%;height:34%;transform:translateX(-50%);pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 14'%3E%3Cpath d='M2 13 L1 3 L7 8 L12 1 L17 8 L23 3 L22 13 Z' fill='%23f4d03f' stroke='%231a1408' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E") center/contain no-repeat}
+.tn.full .crown{filter:drop-shadow(0 0 6px #f4d03f)}
+.tn.locked{filter:grayscale(.9) brightness(.5)}
+.tn.locked img,.tn.locked .glyph{opacity:.6}
+.tn.can{animation:tnCan 1.4s ease-in-out infinite}
+@keyframes tnCan{50%{box-shadow:0 4px 0 var(--edge),0 0 0 4px rgba(139,224,74,.55),0 0 20px rgba(139,224,74,.7)}}
+.tn.some{border-color:#2f6a17}
+.tn.full{border-color:var(--gold);box-shadow:0 4px 0 var(--edge),0 0 14px rgba(244,208,63,.65)}
+.tn.sel{outline:3px solid var(--ink);outline-offset:4px}
+.tn.pop{animation:tnPop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tnPop{0%{transform:translate(-50%,-50%) scale(1.25);filter:brightness(2)}100%{transform:translate(-50%,-50%) scale(1)}}
+.tn.sprout{animation:tnSprout .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes tnSprout{0%{transform:translate(-50%,-50%) scale(.2)}100%{transform:translate(-50%,-50%) scale(1)}}
+.tn.nope{animation:tnNope .3s}
+@keyframes tnNope{25%{transform:translate(-56%,-50%)}75%{transform:translate(-44%,-50%)}}
+.tnote{min-height:0}
+.tnote .kind{display:inline-block;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.1em;padding:2px 8px;border-radius:6px;background:rgba(46,33,16,.18)}
+.tnote .kind.extra{background:#d9c6f5}.tnote .kind.master{background:#f4e09a}.tnote .kind.skill{background:#cfe9b8}
+.tnote .rank{margin:0 0 6px;font-weight:900;color:#7a4e1e}
+.tnote .ok{font-weight:900;color:#2f6a17}
+.tnote .hold{width:100%;touch-action:none;user-select:none;-webkit-user-select:none}
+@media (max-width:640px){.treewrap{grid-template-columns:minmax(0,1fr)}.treestage{--th:60vh}.treeinfo{flex-wrap:wrap}}
+/* Handy quer: Baum links in voller Höhe, Kopf, Infos, Zettel und Zurücksetzen rechts daneben */
+@media (max-height:520px) and (orientation:landscape){
+  .treepanel{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto 1fr auto;column-gap:14px;padding:10px 12px}
+  .treewrap{display:contents}
+  .treestage{--th:calc(100vh - 44px);grid-column:1;grid-row:1/5}
+  .treepanel .phead,.treeinfo,.tnote,.treepanel .menubtns{grid-column:2}
+  .treepanel .phead h2{font-size:22px}
+  .treeinfo{margin:0 0 8px;flex-wrap:wrap}.treeinfo img{width:32px;height:32px}
+  .tnote{align-self:start;padding:12px 12px 10px}.tnote h3{font-size:19px}.tnote p{font-size:13px;margin-bottom:6px}
+  .treepanel .menubtns{margin-top:8px}
+}
+@media (prefers-reduced-motion:reduce){.tn.can,.tn.pop,.tn.sprout,.treeinfo .free.has{animation:none}}
 
 /* Pause / Ergebnis */
 .abxp{grid-column:1/-1;margin:0;display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:10px;background:var(--moss-3);font-weight:700}
 .abxp img{width:30px;height:30px}.abxp span{flex:1}.abxp b{color:var(--gold)}
+.abxp.up{position:relative;background:linear-gradient(90deg,#4d2f7a,var(--moss-3));box-shadow:0 0 0 2px var(--hat),0 0 16px rgba(160,100,255,.6);animation:abUp .6s cubic-bezier(.3,1.6,.5,1) both;animation-delay:calc(.45s + var(--i) * .12s)}
+.abxp.up em{font-style:normal;color:#fff;text-shadow:0 0 8px var(--gold)}
+.abxp.up::after{content:"";position:absolute;inset:-6px;border-radius:14px;pointer-events:none;background:radial-gradient(circle,rgba(255,240,150,.9) 0 2px,transparent 3px) 0 0/22px 18px;opacity:0;animation:abSpark 1s ease-out;animation-delay:calc(.5s + var(--i) * .12s)}
+@keyframes abUp{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes abSpark{20%{opacity:1}100%{opacity:0;transform:scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.abxp.up,.abxp.up::after{animation:none}}
 .unlock{grid-column:1/-1;margin:6px 0 0;padding:8px 10px;border-radius:10px;background:rgba(244,208,63,.15);border:2px solid var(--gold);font-weight:700;text-align:center}
 .build{display:flex;flex-direction:column;gap:8px}
 .build .slots{gap:6px}

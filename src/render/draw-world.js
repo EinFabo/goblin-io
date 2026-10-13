@@ -17,6 +17,7 @@ import { drawGround } from './tiles.js';
 import { drawAbilGround, drawAbilTop } from './draw-abilities.js';
 
 const CALL_LOOK = { sc: .62 };   // Krieger vom Goblin-Ruf: etwas größer als die Bande
+const CHIEF_LOOK = { sc: .95 };  // Häuptling (Meister des Goblin-Rufs)
 
 // ---------- Zeichnen ----------
 // alpha: Anteil zwischen letztem und nächstem Logikschritt. Spieler, Gegner und Kumpel
@@ -101,7 +102,7 @@ function drawRun(now) {
   const gang = run.weapons.find(w => w.id === 'gang');
   for (const o of list) {
     if (o === P) { if (P.mechT > 0) drawMech(); else drawPlayer(t); }
-    else if (o.ally) drawAlly(o, o.tmp ? CALL_LOOK : gang);
+    else if (o.ally) drawAlly(o, o.big ? CHIEF_LOOK : o.tmp ? CALL_LOOK : gang);
     else drawEnemy(o, t);
   }
   drawPlayerBars();

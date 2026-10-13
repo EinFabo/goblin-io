@@ -18,7 +18,7 @@ export function drawAbilGround(t) {
       ctx.strokeStyle = `rgba(150,220,255,${.4 + .4 * Math.sin(t * (6 + p * 20))})`; ctx.lineWidth = 3; ctx.setLineDash([8, 8]); ctx.lineDashOffset = t * 30;
       ctx.beginPath(); ctx.ellipse(f.x, f.y, f.r, f.r * .72, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
       ctx.fillStyle = `rgba(150,220,255,${.08 + p * .12})`; ctx.fill();
-    }
+    } else if (f.k === 'caltrop') drawCaltrops(f);
   }
   for (const tl of run.tele) if (tl.k === 'boulder') {
     ctx.strokeStyle = 'rgba(200,170,120,.8)'; ctx.lineWidth = 2.5; ctx.fillStyle = 'rgba(160,130,90,.15)';
@@ -56,6 +56,19 @@ export function drawAbilTop(t) {
   }
 }
 
+// Krähenfüße der Rolle: kleine Eisensterne, verblassen am Ende
+function drawCaltrops(f) {
+  const a = Math.min(1, (f.dur - f.t) / .4);
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = '#0a0f06'; ctx.fillStyle = '#9aa3aa'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 9; i++) {
+    const an = f.seed + i * 2.4, r = f.r * (.25 + .7 * ((i * 37 % 10) / 10)), x = f.x + Math.cos(an) * r, y = f.y + Math.sin(an) * r * .6;
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) { const b = an + k * TAU / 4; ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(b) * 5, y + Math.sin(b) * 3.5); }
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, 1.6, 0, TAU); ctx.fill();
+  }
+  ctx.restore();
+}
 function drawTrap(x, y, shut) {
   ctx.save(); ctx.translate(x, y);
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(0, 3, 18, 6, 0, 0, TAU); ctx.fill();

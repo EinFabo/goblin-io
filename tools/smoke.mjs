@@ -25,7 +25,8 @@ for (let si = 0; si < stages; si++) {
       while (run.time < until && !run.over) {
         G.P.inv = 9; G.update(1 / 60);
         if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); }
-        for (let k = 0; k < 2; k++) if (G.abilReady(run.abil[k])) G.useAbility(k);
+        // Pause nur für die Echtzeit-Schleife; Fähigkeiten greifen nicht, solange pausiert ist
+        run.paused = false; for (let k = 0; k < 2; k++) if (G.abilReady(run.abil[k])) G.useAbility(k); run.paused = true;
       }
       run.paused = false;
     }, until);
@@ -115,6 +116,56 @@ await p.waitForTimeout(800);
 if (!(await p.evaluate(() => GOBLIN.scene === 'run' && GOBLIN.run.si === 1 && GOBLIN.run.li === 0))) hubFail('„Los!“ startet nicht Level 2-1');
 if (await vis('#tabbar')) hubFail('Tab-Leiste bleibt im Lauf sichtbar');
 console.log('Hub (Tabs, Weltkarte, Name, Einstellungen, Start): geprüft');
+// Skill Tree: Tippen lernt nichts, Halten lernt einen Rang, Rolle mit zwei Ladungen im Lauf
+await p.evaluate(() => { const G = GOBLIN; G.save.abilities.rage = { lv: 6, xp: 0, pts: {} }; G.save.abilities.dash = { lv: 6, xp: 0, pts: {} }; G.go('menu', '#armory'); });
+await p.waitForTimeout(300);
+await p.click('#armShelf [data-pick="rage"]'); await p.click('#armNote [data-tree]');
+await p.waitForSelector('#tree:not([hidden])');
+const pow = p.locator('#treeNodes [data-node="pow"]');
+await pow.click();
+const tap = await p.evaluate(() => GOBLIN.save.abilities.rage.pts.pow || 0);
+await pow.hover(); await p.mouse.down(); await p.waitForTimeout(800); await p.mouse.up();
+const held = await p.evaluate(() => GOBLIN.save.abilities.rage.pts.pow || 0);
+await p.click('#treeClose');
+if (tap !== 0 || held !== 1) errs.push(`Skill Tree: Tippen ${tap} (soll 0), Halten ${held} (soll 1)`);
+await p.evaluate(() => { const G = GOBLIN; G.save.abilities.dash.pts = { pow: 3, a: 1 }; G.go('run', { si: 0, seed: 9 }); });
+await p.waitForTimeout(300);
+const roll = await p.evaluate(async () => { const G = GOBLIN; G.doDash(); await new Promise(r => setTimeout(r, 250)); G.doDash(); return { max: G.P.dashMax, n: G.P.dashN, xp: G.run.abXp.dash }; });
+if (roll.max !== 2 || roll.n !== 0 || roll.xp !== 6) errs.push('Rolle mit zwei Ladungen: ' + JSON.stringify(roll));
+console.log('Skill Tree (Tippen/Halten) und Rolle mit Ladungen:', JSON.stringify({ tap, held, roll }));
+// Alle Bäume voll ausgebaut: jede Fähigkeit 40 s lang einsetzen, dazu rollen und sprinten (mit Zeichnen)
+const full = { pow: 5, cd: 5, area: 3, s1: 3, a: 1, s2: 3, s3: 3, b: 1, m: 1 };
+const ids = ['rage', 'trap', 'mech', 'charm', 'smoke', 'catapult', 'hook', 'shroom', 'shield', 'rats', 'call', 'totem', 'timebomb', 'bigbang'];   // Maschine mit Amulett: sie sperrt die andere Fähigkeit
+const used = {};
+for (let i = 0; i < ids.length; i += 2) {
+  await p.evaluate(([a, b, full]) => {
+    const G = GOBLIN; G.save.profile.level = 50; G.save.loadout = [a, b];
+    for (const id of [a, b, 'dash', 'sprint']) G.save.abilities[id] = { lv: 30, xp: 0, pts: { ...full } };
+    for (let s = 1; s <= 8; s++) G.save.stages[s] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 1, kills: 0, fast: 0 })) };
+    G.go('run', { si: 2, li: 3, seed: 21 });
+  }, [ids[i], ids[i + 1], full]);
+  for (const until of [10, 20, 30, 40]) {
+    const u = await p.evaluate(until => {
+      const G = GOBLIN, run = G.run, out = {}; run.paused = true;
+      while (run.time < until && !run.over) {
+        G.update(1 / 60); G.keys.ShiftLeft = true; G.keys.KeyD = Math.sin(run.time) > 0; G.keys.KeyW = Math.cos(run.time * .7) > 0;
+        if (G.P.hp < G.P.maxHp * .3) G.P.hp = G.P.maxHp;
+        if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); }
+        run.paused = false;
+        for (let k = 0; k < 2; k++) { const s = run.abil[k]; if (s && s.id !== 'charm') s.ch = s.need; if (G.abilReady(s) && G.useAbility(k)) out[s.id] = (out[s.id] || 0) + 1; }
+        if (Math.floor(run.time * 60) % 50 === 0) G.doDash();
+        run.paused = true;
+        if (run.abil.some(s => s && s.id === 'charm') && Math.floor(run.time * 60) % 900 === 0) G.P.hp = 0.1;
+      }
+      G.keys.ShiftLeft = G.keys.KeyD = G.keys.KeyW = false; run.paused = false; return out;
+    }, until);
+    for (const [k, v] of Object.entries(u)) used[k] = (used[k] || 0) + v;
+    await p.waitForTimeout(80);
+  }
+}
+const unused = ids.filter(id => id !== 'charm' && !used[id]);
+if (unused.length) errs.push('nie eingesetzt: ' + unused.join(', '));
+console.log('Alle Bäume voll (40 s je Paar):', JSON.stringify(used));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

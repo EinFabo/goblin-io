@@ -1,7 +1,7 @@
 // Spielstand v2 mit Versionsnummer und Migration.
 // Kaputte oder unvollständige Stände werden repariert statt zu crashen.
 // Stages sind im Save 1-basiert ("1" = Goblinwiese), im Code 0-basiert.
-import { ABILITIES, ABIL_MAX_LV, DEFAULT_LOADOUT, TREE, abilXpNeed, spentPoints } from '../data/abilities.js';
+import { ABILITIES, ABIL_MAX_LV, DEFAULT_LOADOUT, TREE, abilXpNeed, treeDef, treeValid } from '../data/abilities.js';
 import { accountXpNeed } from '../game/balance.js';
 import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 import { WEAPONS } from '../data/weapons.js';
@@ -27,7 +27,7 @@ export function defaults() {
     map: { si: 0, li: 0, fresh: false },
     // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
     loadout: [...DEFAULT_LOADOUT],
-    // Fähigkeiten-Level und Skill Tree: { id: { lv, xp, pts: { pow, cd, area, a, b } } }
+    // Fähigkeiten-Level und Skill Tree, auch Rolle (dash) und Sprint: { id: { lv, xp, pts: { pow, cd, area, s1, a, s2, s3, b, m } } }
     abilities: {},
     settings: { mute: false, musicOff: false, shake: true, numbers: true, lefty: false },
   };
@@ -118,10 +118,11 @@ function normLoadout(v) {
 function normAbilities(v) {
   const out = {};
   for (const [id, a] of Object.entries(obj(v))) {
-    if (!ABILITIES[id]) continue;
+    if (!treeDef(id)) continue;
     const o = obj(a), pt = obj(o.pts), st = { lv: num(o.lv, 1, 1, ABIL_MAX_LV) | 0, xp: num(o.xp), pts: {} };
     for (const k of Object.keys(TREE)) { const n = num(pt[k], 0, 0, TREE[k].max) | 0; if (n) st.pts[k] = n; }
-    if (spentPoints(st.pts) > st.lv - 1) st.pts = {};   // mehr ausgegeben als möglich → zurücksetzen statt kaputt
+    // mehr ausgegeben als möglich oder Reihen-Regel verletzt (Baum v1 → v2) → zurücksetzen, Punkte bleiben frei
+    if (!treeValid(st)) st.pts = {};
     out[id] = st;
   }
   return out;

@@ -31,9 +31,9 @@
 </div>
 
 <div id="ctrl" hidden>
-  <button class="abil" id="ab0Btn" aria-label="Fähigkeit 1"><img alt=""><span class="lbl"></span><span class="key">Q</span></button>
-  <button class="abil" id="ab1Btn" aria-label="Fähigkeit 2"><img alt=""><span class="lbl"></span><span class="key">E</span></button>
-  <button class="abil" id="dashBtn" aria-label="Rolle"><img alt="" data-icon="dash"><span class="lbl">Rolle</span><span class="key">Leer</span></button>
+  <button class="abil" id="ab0Btn" aria-label="Fähigkeit 1"><img alt=""><span class="lbl"></span><span class="key">Q</span><span class="cnt"></span></button>
+  <button class="abil" id="ab1Btn" aria-label="Fähigkeit 2"><img alt=""><span class="lbl"></span><span class="key">E</span><span class="cnt"></span></button>
+  <button class="abil" id="dashBtn" aria-label="Rolle"><img alt="" data-icon="dash"><span class="lbl">Rolle</span><span class="key">Leer</span><span class="cnt"></span></button>
   <button class="abil" id="sprintBtn" aria-label="Sprint (gedrückt halten)"><img alt="" data-icon="boots"><span class="lbl">Sprint</span><span class="key">Shift</span></button>
 </div>
 
@@ -104,10 +104,18 @@
 </section>
 
 <div class="overlay" id="tree" hidden>
-  <div class="panel">
+  <div class="panel treepanel">
     <div class="phead"><h2 id="treeTitle">Skill Tree</h2><button class="iconbtn" id="treeClose" aria-label="Schließen">✕</button></div>
     <div class="treeinfo" id="treeInfo"></div>
-    <div class="tree" id="treeNodes"></div>
+    <div class="treewrap">
+      <div class="treestage">
+        <svg id="treeSvg" viewBox="0 0 400 540" aria-hidden="true"></svg>
+        <canvas id="treeFx" aria-hidden="true"></canvas>
+        <div id="treeNodes"></div>
+        <div id="treeFlash"></div>
+      </div>
+      <div class="parch tnote" id="treeNote" aria-live="polite"></div>
+    </div>
     <div class="menubtns row"><button class="btn ghost small" id="treeReset">Punkte zurücksetzen</button></div>
   </div>
 </div>

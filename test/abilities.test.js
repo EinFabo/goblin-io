@@ -48,21 +48,35 @@ test('Skill Tree: Punkte, Maximum, Voraussetzungen', async () => {
   st.pts = { pow: 3 }; assert.ok(!canLearn(st, 'a'), 'keine Punkte mehr frei');
   st.lv = 6; assert.ok(canLearn(st, 'a'));
   st.pts = { pow: 5 }; assert.ok(!canLearn(st, 'pow'), 'Maximum 5');
-  st.lv = 18; st.pts = { pow: 5, cd: 5, area: 3, a: 1, b: 1 };
-  assert.equal(spentPoints(st.pts), 17);
+  st.lv = 30; st.pts = { pow: 5, cd: 5, area: 3, s1: 3, a: 1, s2: 3 };
+  assert.ok(!canLearn({ ...st, pts: { pow: 5, cd: 3 } }, 'b'), 'Reihe 3 braucht 9 Punkte darunter');
+  assert.ok(canLearn({ ...st, pts: { pow: 5, cd: 4 } }, 'b'));
+  assert.ok(!canLearn({ ...st, pts: { pow: 5, cd: 5, area: 3, s1: 1 } }, 'm') && canLearn({ ...st, pts: { pow: 5, cd: 5, area: 3, s1: 2 } }, 'm'), 'Meister ab 15 Punkten darunter');
+  st.pts = { pow: 5, cd: 5, area: 3, s1: 3, a: 1, s2: 3, s3: 3, b: 1, m: 1 };
+  assert.equal(spentPoints(st.pts), 29, 'voll ausgebaut = Level 30');
   const m = abilMods(st);
-  assert.ok(Math.abs(m.pow - 1.4) < 1e-9 && Math.abs(m.spd - .75) < 1e-9 && Math.abs(m.area - 1.24) < 1e-9 && m.a && m.b);
+  assert.ok(Math.abs(m.pow - 1.4) < 1e-9 && Math.abs(m.spd - .75) < 1e-9 && Math.abs(m.area - 1.24) < 1e-9 && m.a && m.b && m.m && m.s1 === 3 && m.s3 === 3);
   for (const id of ids) assert.ok(xpPerUse(id) >= 2, id);
 });
 
-test('Rauchbombe: Angriffs-Malus 60 % ohne Punkte, erst voll ausgebaut 20 %', async () => {
+test('jeder Baum hat Texte für alle Knoten', async () => {
+  const { TREE, TREE_IDS, nodeInfo } = await import('../src/data/abilities.js');
+  for (const id of TREE_IDS) for (const k of Object.keys(TREE)) { const n = nodeInfo(id, k); assert.ok(n.name && n.desc && n.max && n.cost, id + '.' + k); }
+});
+
+test('alter Baum (v1) mit Extra B ab 6 Punkten wird zurückgesetzt, gültiger bleibt', () => {
+  assert.deepEqual(normalize({ abilities: { rage: { lv: 18, pts: { pow: 5, cd: 1, a: 1, b: 1 } } } }).abilities.rage.pts, {});
+  assert.deepEqual(normalize({ abilities: { rage: { lv: 18, pts: { pow: 5, cd: 2, a: 1, b: 1 } } } }).abilities.rage.pts, { pow: 5, cd: 2, a: 1, b: 1 });
+  assert.equal(normalize({ abilities: { dash: { lv: 4, pts: { pow: 3 } } } }).abilities.dash.lv, 4, 'Rolle wird gespeichert');
+});
+
+test('Rauchbombe: Angriffs-Malus 60 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 20 %', async () => {
   const { smokeAtkSlow, abilMods } = await import('../src/data/abilities.js');
   const near = (a, b) => Math.abs(a - b) < 1e-9;
-  assert.ok(near(smokeAtkSlow(abilMods({ pts: {} }).base), .6));
-  assert.ok(near(smokeAtkSlow(abilMods(undefined).base), .6), 'ohne Spielstand');
-  const half = smokeAtkSlow(abilMods({ pts: { pow: 3, cd: 3 } }).base);
-  assert.ok(half < .6 && half > .3, 'mit ein paar Punkten nur etwas besser: ' + half);
-  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 5, cd: 5, area: 3, a: 1, b: 1 } }).base), .2));
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: {} }).s1), .6));
+  assert.ok(near(smokeAtkSlow(abilMods(undefined).s1), .6), 'ohne Spielstand');
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 5, cd: 5, area: 3 } }).s1), .6), 'Wurzeln senken ihn nicht mehr');
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 3, s1: 3 } }).s1), .2));
 });
 
 test('Fähigkeiten-Stand im Spielstand wird repariert', () => {

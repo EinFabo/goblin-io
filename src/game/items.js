@@ -3,7 +3,7 @@ import { sfx, tickGemCombo } from '../core/audio.js';
 import { $, TAU } from '../core/util.js';
 import { xpCatchUp } from './balance.js';
 import { autoChest } from './levelup.js';
-import { chargeAbil } from './abilities.js';
+import { chargeAbil, xpBonus } from './abilities.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
 import { P, onScreen, pR, run, xpNeed } from './state.js';
@@ -20,7 +20,7 @@ export function updItems(dt) {
       continue;
     }
     const dx = P.x - it.x, dy = P.y - 6 - it.y, d = Math.hypot(dx, dy) || 1;
-    if (!it.mag && pullable(it) && d < P.magnet) it.mag = true;
+    if (!it.mag && pullable(it) && d < P.magnet * (P.sprinting ? P.sprintMag : 1)) it.mag = true;
     if (it.mag) {
       it.sp = Math.min(1300, it.sp + 1500 * dt);
       const s = Math.min(d, it.sp * dt); it.x += dx / d * s; it.y += dy / d * s;
@@ -59,6 +59,6 @@ export function collect(it) {
   }
 }
 export function addXp(v) {
-  P.xp += v * P.xpMult * xpCatchUp(run.time, P.lv);
+  P.xp += v * P.xpMult * xpBonus() * xpCatchUp(run.time, P.lv);
   while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); run.pendingLv++; }
 }

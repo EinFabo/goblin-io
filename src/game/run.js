@@ -7,7 +7,7 @@ import { accountXp } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
 import { STAGES, STAGE_LEN } from '../data/stages.js';
 import { LEVELS, levelStage, nextLevel } from '../data/levels.js';
-import { canEquip, initAbilities, updAbilities } from './abilities.js';
+import { canEquip, charmHp, initAbilities, updAbilities } from './abilities.js';
 import { doEvent, spawnTick, updEnemy } from './enemies.js';
 import { part, ring } from './fx.js';
 import { updEProj, updTele } from './hazards.js';
@@ -55,7 +55,7 @@ export function recalc() {
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
-  P.maxHp = 100 + 20 * pl('heart') + 6 * sh('hp');
+  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp();
   if (old) P.hp += Math.max(0, P.maxHp - old);
   P.regen = .4 * pl('herbs');
   P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd'));
@@ -63,7 +63,11 @@ export function recalc() {
   P.xpMult = 1 + .03 * sh('xp');
   P.proj = 1 + .12 * pl('oil');
   P.crit = .08 + .06 * pl('powder');
-  P.stamMax = 100 * (1 + .075 * sh('stam'));
+  // Sprint-Baum: Ausdauer, Erholung, Tempo, Leichtfüßig, Windschatten
+  const sp = run.abMods.sprint;
+  P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow);
+  P.stamRegen = 26 * (1 + .08 * sp.r.cd); P.sprintMul = 1.55 * (1 + .04 * sp.r.area);
+  P.stamDrain = 34 * (1 - .08 * sp.s1); P.sprintMag = 1 + .15 * sp.s3; P.secondWind = sp.a; P.tireless = sp.m;
 }
 export function addWeapon(id) { run.weapons.push({ id, lv: 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [] }); }
 export function hint(html) { run.hints.push(html); }
@@ -142,7 +146,7 @@ export function endRun(win) {
   const nx = rec.first && boss && nextLevel(run.si, run.li);
   if (nx) unlocked.push(STAGES[nx.si].endless ? STAGES[nx.si].name : 'Welt ' + (nx.si + 1));
   // Fähigkeiten-XP durch Benutzen
-  const abil = Object.entries(run.abXp).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
+  const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   s.bestKills = Math.max(s.bestKills, run.kills); s.bestLevel = Math.max(s.bestLevel, P.lv);
