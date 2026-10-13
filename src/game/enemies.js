@@ -20,6 +20,7 @@ export { eShot } from './casts.js';
 
 // ---------- Gegner ----------
 export const SPAWN_T = .4;
+export const NM_HP = 1.8;   // Albtraum-Modus: +80 % Leben (Gegner und Boss)
 const has = (e, t) => e.traits && e.traits.includes(t);
 
 
@@ -37,7 +38,7 @@ export function spawnEnemy(type, opt = {}) {
   if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60; x = P.x + Math.cos(a) * R; y = P.y + Math.sin(a) * R; }
   const e = {
     type, pre: typeSprite(T), x, y, r: T.r, sc: T.sc, spd: T.spd * RNG.spawn.range(.9, 1.1), dmg: T.dmg * st.dmg * (1 + run.time / 400) * lf,
-    hp: enemyHp(T.hp, run.si, run.time + (run.st.hpT || 0)) * (run.st.hpMul || 1) * lf, xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
+    hp: enemyHp(T.hp, run.si, run.time + (run.st.hpT || 0)) * (run.st.hpMul || 1) * lf * (run.nm ? NM_HP : 1), xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
     casts: (T.casts || []).map(c => ({ ...c, t: RNG.spawn.range(1.5, c.cd[1]) })),
     bomber: has(T, 'bomber'), obj: !!T.draw, clone: !!T.clone, side: RNG.spawn.next() < .5 ? 1 : -1,
     state: 'walk', face: 'down', at: RNG.spawn.next() * 5, ft: 0, fired: false, ck: null, charge: 0, chain: null, fuse: 0,
@@ -88,8 +89,11 @@ export function doEvent(ev) {
     const el = spawnEnemy(ev.type || RNG.spawn.pick(types.length ? types : ['fire_mage']), { elite: true, affixes: ev.affixes });
     banner(el.affixes.length ? 'Elite: ' + affixNames(el) + '!' : 'Elite-Magier!', '');
   } else if (ev.event === 'miniboss') {
+    // Mini-Boss (6.3): Meister der Schule mit 2 Elite-Eigenschaften und eigener Leiste oben
     const e = spawnEnemy(ev.type, { miniboss: true });
+    rollAffixes(e, 2); run.mini = e;
     banner('Mini-Boss: ' + ETYPES[ev.type].name + '!', 'danger'); sfx.warn();
+    hint(`<b>${ETYPES[ev.type].name}</b> ${affixNames(e)} – er hat die erste Truhe.`);
     return e;
   } else if (ev.event === 'swarm') { swarm(ev); banner('Ansturm!', 'danger'); }
   else if (ev.event === 'warn') { banner('Der Boss naht …', 'danger'); sfx.warn(); }

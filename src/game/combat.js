@@ -5,7 +5,8 @@ import { $ } from '../core/util.js';
 import { chargeAbil, critBonus, dealtMult, onKill, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
 import { hitDamage } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
-import { bossHurt, bossOnKill } from './boss.js';
+import { bossHurt, bossOnKill, shadeDown } from './boss.js';
+import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, puff } from './fx.js';
 import { addEvents } from './run.js';
 import { P, run } from './state.js';
@@ -41,12 +42,12 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   if (tgt.hp <= 0) kill(tgt, xpMul);
 }
 export function kill(e, xpMul = 1) {
-  if (e.link) return;   // Teile von Morgra sterben nur mit ihr (bossDown)
+  if (e.link || e.decoy) return;   // Teile von Morgra und Spiegelbilder sterben nur mit ihrem Boss (bossDown)
   e.dead = true; run.kills++;
   emit('enemyKilled', e);
   if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
   onKill(e);
-  count(run, e.boss ? 'bosses' : e.miniboss ? 'minis' : e.elite ? 'elites' : null);
+  count(run, e === run.boss ? 'bosses' : e.miniboss ? 'minis' : e.elite || e.shade ? 'elites' : null);
   // je Schule nur echte Magier (keine Diener, Klone, Portale oder Knochenhaufen)
   const T = ETYPES[e.type];
   if (T && !T.sprite && !e.clone && !e.obj) count(run, 'k.' + T.school);
@@ -67,7 +68,8 @@ export function kill(e, xpMul = 1) {
     if (r2 < .006) addItem('heal', e.x, e.y); else if (r2 < .009) addItem('magnet', e.x, e.y); else if (r2 < .0115) addItem('bomb', e.x, e.y);
   }
   bossOnKill(e);
-  if (e.boss) bossDown(e);
+  if (e === run.boss) bossDown(e);
+  else if (e.shade) shadeDown(e);
 }
 // Heilungs-Pity (7.5): wer 20 s unter 30 % Leben war, bekommt vom nächsten Elite/Mini-Boss garantiert ein Herz
 export const LOW_HP = .3, LOW_T = 20;
@@ -75,7 +77,8 @@ function healPity(e) { if (run.lowT >= LOW_T) { run.lowT = 0; addItem('heal', e.
 export function bossDown(b) {
   run.boss = null; run.arena = null; emit('bossDown', b);
   // Teile und Seelengefäße gehen mit
-  for (const e of run.enemies) if ((e.link === b || e.of === b) && !e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
+  for (const e of run.enemies) if ((e.link === b || e.of === b || e.decoyOf === b) && !e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
+  clearBossWorld();
   $('#bossBar').hidden = true;
   for (let i = 0; i < 25; i++) addItem('coin', b.x, b.y);
   for (let i = 0; i < 6; i++) setTimeout(() => { if (run && !run.over) { animFx('f_fireball_hit_', 5, b.x + frand(-60, 60), b.y + frand(-60, 60), 3.5); sfx.boom(); } }, i * 150);

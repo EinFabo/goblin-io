@@ -81,3 +81,9 @@ test('Spielstand: Karten und Truhen werden repariert', () => {
   assert.deepEqual(s.chests.shelf, [{ type: 'gold', end: 5 }]);
   assert.equal(normalize({}).chests.free.n, 1);
 });
+
+test('Albtraum: Siegtruhe eine Stufe besser', async () => {
+  const { victoryChest } = await import('../src/data/cards.js');
+  assert.deepEqual([0, 3, 6].map(si => victoryChest(si)), ['wood', 'iron', 'gold']);
+  assert.deepEqual([0, 3, 6].map(si => victoryChest(si, true)), ['iron', 'gold', 'mage']);
+});

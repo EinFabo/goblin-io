@@ -9,9 +9,30 @@ const THEMES = {
   boss: { bpm: 138, roots: [110, 116.54, 110, 103.83] },
   ignaz: { bpm: 146, roots: [146.83, 155.56, 146.83, 130.81], stab: true },
   frostbart: { bpm: 124, roots: [123.47, 110, 98, 110], bell: true },
+  morgra: { bpm: 118, roots: [98, 103.83, 92.5, 87.31], organ: true },
+  knochenhand: { bpm: 130, roots: [110, 103.83, 98, 92.5], organ: true, stab: true },
+  spiegelmeister: { bpm: 134, roots: [116.54, 123.47, 110, 103.83], bell: true },
+  tempestra: { bpm: 152, roots: [130.81, 146.83, 123.47, 110], stab: true, bell: true },
+  gromm: { bpm: 112, roots: [82.41, 87.31, 77.78, 73.42], stab: true, organ: true },
+  malvorn: { bpm: 144, roots: [110, 116.54, 103.83, 98], stab: true, organ: true, bell: true, mel: 'malvorn' },
+};
+// Titelmusik (Hauptmenü): Goblin-Marsch mit eigener Melodie, die immer mitspielt
+export const TITLE = { bpm: 108, roots: [110, 98, 110, 82.41], bell: true, mel: 'title', melAll: true };
+const MELS = {
+  title: [[0, null, 0, 3, 5, null, 3, null, 7, null, 5, 3, 0, null, null, null], [-2, null, -2, 0, 3, null, 0, null, 5, null, 3, 0, -2, null, null, null],
+    [0, null, 0, 3, 5, null, 7, null, 8, null, 7, 5, 3, null, 5, null], [7, null, 5, 3, 0, null, -2, null, 0, null, null, null, null, null, null, null]],
+  malvorn: [[12, null, 11, null, 12, null, 7, null, 8, null, 7, 5, 3, null, 2, null], [3, null, 5, null, 7, null, 3, null, 2, null, 0, -1, 0, null, null, null],
+    [12, null, 11, null, 12, null, 15, null, 14, null, 12, 11, 12, null, 7, null], [8, 7, 5, 3, 2, null, 3, null, 0, null, null, null, -1, null, null, null]],
 };
 export const Music = {
   timer: null, next: 0, step: 0, boss: false, theme: null, hold: false, world: null,   // world: Stück der Welt (data/stages.js music)
+  // Ergebnis: kurze Melodie, aufwärts beim Sieg, abwärts bei der Niederlage
+  jingle(win) {
+    if (!AC || save.settings.musicOff) return;
+    const B = musBus, seq = win ? [0, 4, 7, 12, 16] : [7, 3, 0, -5], step = win ? .11 : .2;
+    seq.forEach((n, i) => tone(440 * Math.pow(2, n / 12), 0, win && i === seq.length - 1 ? .7 : .22, win ? 'square' : 'triangle', .05, i * step, B, .004));
+    if (win) for (const n of [0, 4, 7]) tone(220 * Math.pow(2, n / 12), 0, .8, 'triangle', .04, seq.length * step - step, B, .01);
+  },
   // Boss-Auftritt (~3 s): Trommelwirbel, der anschwillt, dann ein tiefer Schlag mit Akkord
   bossIntro(id) {
     if (!AC || save.settings.musicOff) return;
@@ -44,6 +65,6 @@ export const Music = {
     // Orgel (Knochenacker, Turm): leiser Akkord je Takt
     if (T && T.organ && s === 0) for (const m of [2, 2.38, 3]) tone(r * m, 0, 1.6, 'sine', .018, d, B, .25);
     if (T && T.bell && s % 4 === 1) tone(r * [4, 6, 5, 8][(s >> 2) % 4], 0, .5, 'sine', .03, d, B, .002);
-    if (Math.floor(step / 64) % 2 === 1) { const n = MEL[bar][s]; if (n !== null) tone(440 * Math.pow(2, n / 12), 0, .16, 'square', .035, d, B, .003); }
+    if ((T && T.melAll) || Math.floor(step / 64) % 2 === 1) { const n = ((T && MELS[T.mel]) || MEL)[bar][s]; if (n !== null) tone(440 * Math.pow(2, n / 12), 0, .16, 'square', .035, d, B, .003); }
   },
 };

@@ -1,5 +1,5 @@
 import { audioInit, sfx } from '../core/audio.js';
-import { levelDone, levelInfo, levelUnlocked, persist, save, stageBest, stageUnlocked } from '../core/save.js';
+import { levelDone, levelInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
 import { $, fmtTime } from '../core/util.js';
 import { ENDLESS, LEVELS, LEVEL_KIND, WORLDS, levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
@@ -21,6 +21,8 @@ export const M = {
 };
 let start = () => {};
 const SKULL = `<svg class="skull" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7C14 7 8 13 8 22c0 5 3 8 5 10v6h22v-6c2-2 5-5 5-10 0-9-6-15-16-15z" fill="#eadcae" stroke="#0a0f06" stroke-width="3" stroke-linejoin="round"/><circle cx="17.5" cy="23" r="4.5" fill="#0a0f06"/><circle cx="30.5" cy="23" r="4.5" fill="#0a0f06"/><path d="M22 31l2-4 2 4z" fill="#0a0f06"/><path d="M19 34v4M24 34v4M29 34v4" stroke="#0a0f06" stroke-width="2.5"/></svg>`;
+// kleiner Schädel (Albtraum)
+const SKULL_SM = '<svg class="skull sm" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 7C14 7 8 13 8 22c0 5 3 8 5 10v6h22v-6c2-2 5-5 5-10 0-9-6-15-16-15z" fill="#ff8a8a" stroke="#0a0f06" stroke-width="3"/><circle cx="17" cy="23" r="4" fill="#0a0f06"/><circle cx="31" cy="23" r="4" fill="#0a0f06"/></svg>';
 export function onStart(fn) { start = fn; }
 
 const worldSi = () => WORLDS[M.wi];
@@ -94,6 +96,7 @@ function build() {
   $('#wHats').innerHTML = open ? `<i class="hat1">${hatSvg}</i><b>${hats} / ${LEVELS * 3}</b>` : '<b>Gesperrt</b>';
   $('#wPrev').disabled = M.wi === 0; $('#wNext').disabled = M.wi === WORLDS.length - 1;
   $('#menu').classList.toggle('lockedworld', !open);
+  $('#menu').classList.toggle('nightmare', nmOn(si));
 }
 function renderNodes() {
   $('#mapNodes').innerHTML = M.nodes.map((n, i) => {
@@ -103,7 +106,7 @@ function renderNodes() {
     return `<button class="mnode${boss ? ' boss' : ''}${n.endless ? ' endless' : ''}${open ? '' : ' locked'}${done ? ' done' : ''}${i === M.gob.sel ? ' sel' : ''}"
       style="left:${n.x}px;top:${n.y}px" data-node="${i}" aria-label="${n.endless ? 'Endlose Nacht' : 'Level ' + levelLabel(n.si, n.li)}${open ? '' : ', gesperrt'}">
       <span class="disc">${boss ? SKULL : `<b>${lbl}</b>`}</span>
-      ${done && !n.endless ? '<span class="flag"></span>' : ''}${!n.endless && open ? hatsHtml(hats) : ''}</button>`;
+      ${done && !n.endless ? '<span class="flag"></span>' : ''}${!n.endless && levelInfo(n.si, n.li).nm ? `<span class="nmdone" title="Im Albtraum geschafft">${SKULL_SM}</span>` : ''}${!n.endless && open ? hatsHtml(hats) : ''}</button>`;
   }).join('');
 }
 // Markierung umsetzen, ohne die Punkte neu aufzubauen (sonst spielt ihre Einblend-Animation erneut)
@@ -125,9 +128,17 @@ function renderNote(show = true) {
   const why = HAT_TXT.map((t, i) => `<li class="${i < info.hats ? 'on' : ''}">${t}</li>`).join('');
   note.innerHTML = `<div class="nh"><span class="lbl">${levelLabel(n.si, n.li)}</span><h3>${name}</h3>${hatsHtml(info.hats)}</div><p>${sub}</p>
     <ul class="why">${why}</ul>${rec ? `<p class="rec">${rec}</p>` : ''}
+    ${open && stageCleared(n.si) ? nmHtml() : ''}
     ${open ? `<button class="btn primary go" data-go>Los!</button>` : `<p class="lock">${!stageUnlocked(n.si) ? `Besiege zuerst den Boss von Welt ${M.wi}.` : `Schaffe zuerst ${levelLabel(n.si, n.li - 1)}.`}</p>`}`;
 }
 
+// Albtraum-Schalter (6.1): erst wenn der Boss der Welt besiegt ist
+const nmOn = si => !!save.map.nm && stageCleared(si);
+function nmHtml() {
+  const on = !!save.map.nm;
+  return `<button class="nmtog${on ? ' on' : ''}" data-nm aria-pressed="${on}">${SKULL_SM} Albtraum: ${on ? 'an' : 'aus'}</button>
+    ${on ? '<p class="nminfo">Gegner +80 % Leben, Elites mit 2 Eigenschaften. Dafür +50 % Gold und Konto-XP, bessere Siegtruhe, 5 Juwelen beim ersten Albtraum-Sieg.</p>' : ''}`;
+}
 // Goblin zu Punkt i schicken (nur über freie Wegstücke)
 function goTo(i) {
   const n = M.nodes[i]; if (!n) return;
@@ -135,7 +146,7 @@ function goTo(i) {
   if (M.reveal) return;
   if (i === M.gob.sel && Math.abs(M.gob.d - n.d) < 1) { renderNote(); return; }
   M.gob.sel = i; M.gob.to = n.d; sfx.hover();
-  save.map = { si: n.si, li: n.li, fresh: false }; persist();
+  save.map = { ...save.map, si: n.si, li: n.li, fresh: false }; persist();
   // Steht er schon dort (z. B. nach Tippen auf ein gesperrtes Level), kommt kein Ankommen mehr: Zettel gleich zeigen
   markSel(); renderNote(Math.abs(M.gob.d - n.d) <= .5);
 }
@@ -154,7 +165,7 @@ function switchWorld(d) {
   let sel = M.nodes.findIndex(n => nodeOpen(n) && !nodeDone(n));
   if (sel < 0) sel = stageUnlocked(worldSi()) ? LEVELS - 1 : 0;
   M.gob.sel = sel; M.gob.d = M.gob.to = M.nodes[sel].d; M.reveal = null; M.open = openDist();
-  if (stageUnlocked(worldSi())) { save.map = { si: M.nodes[sel].si, li: M.nodes[sel].li, fresh: false }; persist(); }
+  if (stageUnlocked(worldSi())) { save.map = { ...save.map, si: M.nodes[sel].si, li: M.nodes[sel].li, fresh: false }; persist(); }
   $('#mapNodes').classList.remove('pop'); void $('#mapNodes').offsetWidth; $('#mapNodes').classList.add('pop');
   clearTimeout(popT); popT = setTimeout(() => $('#mapNodes').classList.remove('pop'), 500);
   renderNodes(); renderNote();
@@ -185,7 +196,13 @@ $('#mapNodes').addEventListener('click', e => { const b = e.target.closest('[dat
 $('#lvNote').addEventListener('click', e => {
   if (!e.target.closest('[data-go]')) return;
   const n = M.nodes[M.gob.sel]; if (!n || !nodeOpen(n)) return;
-  audioInit(); sfx.pickCard(); start(n.si, n.li);
+  audioInit(); sfx.pickCard(); start(n.si, n.li, nmOn(n.si));
+});
+$('#lvNote').addEventListener('click', e => {
+  if (!e.target.closest('[data-nm]')) return;
+  save.map.nm = !save.map.nm; persist(); sfx.click();
+  $('#menu').classList.toggle('nightmare', nmOn(worldSi()));
+  renderNote();
 });
 $('#wPrev').addEventListener('click', () => switchWorld(-1));
 $('#wNext').addEventListener('click', () => switchWorld(1));

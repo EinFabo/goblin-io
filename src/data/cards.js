@@ -67,7 +67,9 @@ export const CHEST_IDS = Object.keys(CHESTS);
 // Pity (9.5): spätestens jede 10. Gold-/Magiertruhe episch, jede 40. legendär
 export const PITY_EPIC = 10, PITY_LEG = 40;
 // Siegtruhe nach jedem Boss-Level, je nach Welt (0-basiert)
-export const victoryChest = si => (si <= 1 ? 'wood' : si <= 4 ? 'iron' : 'gold');
+// Albtraum: eine Stufe besser
+const CHEST_UP = { wood: 'iron', iron: 'gold', gold: 'mage', mage: 'mage' };
+export const victoryChest = (si, nm = false) => { const t = si <= 1 ? 'wood' : si <= 4 ? 'iron' : 'gold'; return nm ? CHEST_UP[t] : t; };
 export const SHELF = 4;                       // Plätze im Truhenregal
 export const FREE_EVERY = 4 * 3600 * 1000;    // Gratis-Holztruhe alle 4 Stunden
 export const FREE_MAX = 2;                    // höchstens 2 gespeichert
@@ -75,4 +77,4 @@ export const FREE_MAX = 2;                    // höchstens 2 gespeichert
 export const skipGems = ms => Math.max(1, Math.ceil(ms / (6 * MIN)));
 
 // ---------- Juwelen (9.2) ----------
-export const GEMS = { hat: 4, acctLevel: 10, bossFirst: w => 20 + 10 * w };
+export const GEMS = { hat: 4, acctLevel: 10, bossFirst: w => 20 + 10 * w, nightmare: 5 };

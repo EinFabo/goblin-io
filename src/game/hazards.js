@@ -5,7 +5,7 @@ import { damagePlayer, hurt } from './combat.js';
 import { animFx, boltFx, explode, part, ring } from './fx.js';
 import { bulwark, perfectRoll, reflect } from './abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
-import { spinHaz } from './boss.js';
+import { portalWarp, spinHaz } from './boss.js';
 import { P, onScreen, pR, query, run } from './state.js';
 
 // Einschlag-Animation je Geschossart
@@ -65,6 +65,7 @@ export function updEProj(dt) {
       continue;
     }
     p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.warp && run.portals.length) portalWarp(p);   // Spiegelmeister: durch das Spiegeltor
     if (run.arena && Math.hypot(p.x - run.arena.x, p.y - run.arena.y) > run.arena.r + 40) p.life = 0;
     const dx = p.x - P.x, dy = p.y - (P.y - 6), rr = p.r + pR() * .85;
     if (p.fake && dx * dx + dy * dy < rr * rr) { p.life = 0; part(p.x, p.y, 0, -30, .3, 'rgba(200,160,255,.6)', 5); continue; }

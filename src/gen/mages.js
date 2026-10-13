@@ -511,6 +511,71 @@ export const BOSS_LOOKS = {
       }).sort((a, c) => a.d - c.d).map(o => o.el);
     },
   },
+  // Der Spiegelmeister: Nachtblau und Silber, Spiegelscherben schweben um den Kopf, Spiegelplatten auf den Schultern
+  spiegel: {
+    pal: { robe: '#1c1236', shade: '#120a24', trim: '#dfe3ff', hood: '#170d2e', mask: '#e8ecff', starC: '#cfe0ff', boot: '#0e0820' },
+    head(K) {
+      for (let i = 0; i < 6; i++) {
+        const a = i / 6 * Math.PI * 2 + .3, x = Math.sin(a) * 19, z = Math.cos(a) * 19, y = -22 + (i % 3 - 1) * 6, sz = 3 + (i % 2);
+        K.poly(3, [[x, y - sz * 1.6, z], [x + sz, y, z], [x, y + sz * 1.3, z], [x - sz, y, z]], i % 2 ? '#c9d2ff' : '#f2f4ff', ' stroke-width="1"');
+      }
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(11 * s, 0), w = Math.hypot(6 * K.c, 6 * K.k);
+        return { d: K.dep(11 * s, 0), el: ell(x, -2 + b, w, 5, '#c9d2ff') + path(`M${f(x - w * .4)} ${f(-4 + b)} L${f(x + w * .2)} ${f(-1 + b)}`, 'none', ' stroke="#fff" stroke-width="1.2"') };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
+  // Tempestra: Sturmblau, Blitzkrone auf dem Hut, langes weißes Haar weht nach hinten, Wolken auf den Schultern
+  tempestra: {
+    pal: { robe: '#2e2a78', shade: '#211d5a', trim: '#ffe45c', hat: '#1e1a4e', hair: '#f2f2ff', feather: '#8fe6ff', boot: '#1a1640' },
+    head(K) {
+      K.smooth(0, [[-11, -18, -4], [-14, -4, -8], [-12, 10, -10], [0, 14, -12], [12, 10, -10], [14, -4, -8], [11, -18, -4], [0, -26, -6]], '#f2f2ff', '', -60);
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5 - .4) * Math.PI * 1.6, x = Math.sin(a) * 11, z = Math.cos(a) * 11;
+        K.poly(3, [[x - 1.5, -31, z], [x + 1.5, -37, z], [x - .5, -37, z], [x + 2, -44, z], [x - 2.5, -36.5, z], [x - .5, -36.5, z], [x - 3, -31, z]], '#ffe45c', ' stroke-width="1"');
+      }
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(11 * s, 0);
+        return { d: K.dep(11 * s, 0), el: circ(x - 3, -2 + b, 4.2, '#c9cfe0') + circ(x + 2.5, -3 + b, 4.8, '#dfe4f2') + circ(x, -6 + b, 3.6, '#eef1fa') };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
+  // Golemfürst Gromm: Erdbraun, gehörnter Steinhelm, langer Bart, Felsbrocken als Schultern
+  gromm: {
+    pal: { robe: '#5a3a22', shade: '#3e2816', trim: '#d6a53a', hair: '#4a2e18', stone: '#6e6a60', stoneS: '#4e4a42', moss: '#7a8f3a', boot: '#2a1a0e' },
+    head(K) {
+      for (const s of [-1, 1]) K.poly(3, [[13 * s, -24, 0], [21 * s, -30, -2], [23 * s, -40, -4], [18 * s, -33, -2], [11 * s, -28, 0]], '#efe4c4', ' stroke-width="1.2"');
+      if (K.c > -0.2) K.smooth(4, [[-9, -7, 11], [-11, 2, 10], [-7, 11, 10], [0, 16, 12], [7, 11, 10], [11, 2, 10], [9, -7, 11], [0, -4, 13]], '#4a2e18', '', 30);
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(12 * s, 0), w = Math.hypot(7 * K.c, 7 * K.k);
+        return { d: K.dep(12 * s, 0), el: poly([[x - w, 2 + b], [x - w * .8, -5 + b], [x - w * .1, -9 + b], [x + w * .8, -6 + b], [x + w, 2 + b]], '#7a7468') + circ(x - w * .3, -4 + b, 1.6, '#7a8f3a', NOSTROKE) };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
+  // Erzmagier Malvorn: Nachtblau mit Gold, weißer Bart bis zum Gürtel, Edelsteine aller 8 Schulen am Hut,
+  // Teile anderer Schulen an den Schultern (Fels der Erde links, Knochen der Nekromantie rechts)
+  malvorn: {
+    pal: { robe: '#26306e', shade: '#1a2150', trim: '#e8c35a', hair: '#f6f6fa', staff: '#e8c35a', orb: '#ffffff', orbCore: '#fff6c8', glow: '#fff3b0', boot: '#14183a' },
+    head(K) {
+      const gems = ['#ff8a1f', '#7fd8ff', '#ffe45c', '#7be04a', '#b26bff', '#7bff6a', '#c9a36a', '#fff3b0'];
+      gems.forEach((c, i) => { const a = i / 8 * Math.PI * 2, x = Math.sin(a) * 12, z = Math.cos(a) * 12; if (K.face(x, z, -2)) K.add(3, K.dep(x, z) + 1, circ(K.x(x, z), -26.6, 1.7, c, ' stroke-width=".8"')); });
+      if (K.c > -0.3) K.smooth(4, [[-8, -6, 11], [-10, 3, 10], [-6, 14, 10], [0, 20, 12], [6, 14, 10], [10, 3, 10], [8, -6, 11], [0, -3, 13]], '#f6f6fa', '', 30);
+    },
+    shoulders(K, S, b) {
+      return [-1, 1].map(s => {
+        const x = K.x(11 * s, 0), w = Math.hypot(6 * K.c, 6 * K.k);
+        const el = s < 0 ? poly([[x - w, 1 + b], [x - w * .6, -6 + b], [x + w * .5, -7 + b], [x + w, 1 + b]], '#8a7a62')
+          : ell(x, -2 + b, w, 4.6, '#ece4cf') + path(`M${f(x - w * .4)} ${f(-5 + b)} L${f(x)} ${f(-11 + b)} L${f(x + w * .4)} ${f(-5 + b)} Z`, '#ece4cf', ' stroke-width="1"');
+        return { d: K.dep(11 * s, 0), el };
+      }).sort((a, c) => a.d - c.d).map(o => o.el);
+    },
+  },
 };
 
 export function drawMage(school, d, p, { master = false, clone = false, boss = null } = {}) {
@@ -521,7 +586,8 @@ export function drawMage(school, d, p, { master = false, clone = false, boss = n
   const hs = p.hs || BASE_HANDS[base === 'up' ? 'up' : base === 'left' ? 'left' : 'down'].hs;
   const hf = p.hf !== undefined && p.hf !== null ? p.hf : (base === 'left' ? null : BASE_HANDS[base].hf);
   // Klone (Spiegelmagier) haben keinen Schatten am Boden – daran erkennt man den echten
-  const o = [...(clone ? [] : [ell(0, 20, 17 * (master ? 1.1 : 1), 6, '#000', ' fill-opacity=".3"' + NOSTROKE)]), ...feet(K, S, p)];
+  // Bosse werfen einen kräftigeren Schatten (beim Spiegelmeister das Erkennungszeichen des Echten)
+  const o = [...(clone ? [] : [ell(0, 20, 17 * (master ? 1.1 : 1), 6, '#000', ` fill-opacity="${BL ? .5 : .3}"` + NOSTROKE)]), ...feet(K, S, p)];
   const [staff, orb] = drawStaff(S, school, p, hs[0], hs[1] + b);
   const fx = drawFx(S, p, ...orb);
   // Kopf mit Neigung beim Zaubern (seitlich)

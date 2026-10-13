@@ -12,6 +12,7 @@ defineScene('results', {
   enter(r) {
     Music.stop(); setSprintHeld(false);
     if (r.win) sfx.chest(); else sfx.death();
+    Music.jingle(r.win);
     showResults(r);
   },
   exit() { hideResults(); },

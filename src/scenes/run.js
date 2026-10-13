@@ -15,13 +15,13 @@ let offs = [];
 function endCine() { document.body.classList.remove('cine'); $('#bossCard').hidden = true; }
 
 defineScene('run', {
-  enter({ si, li = 0, seed }) {
-    newRun(si, seed, li);
+  enter({ si, li = 0, seed, nm = false }) {
+    newRun(si, seed, li, nm);
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();
-    $('#stageTxt').textContent = run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`;
+    $('#stageTxt').textContent = (run.nm ? '☠ ' : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`);
     refreshSlots(); setupAbilButtons();
-    banner(run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`, '');
+    banner((run.nm ? 'Albtraum · ' : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`), run.nm ? 'danger' : '');
     Music.boss = false; Music.theme = null; Music.hold = false; Music.world = run.st.music || null; Music.start();
     offs = [
       on('runEnd', r => go('results', r)),

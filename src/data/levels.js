@@ -27,7 +27,7 @@ export const LEVEL_KIND = [
 // boss: Boss-Level leichter (Schaden und Spawnrate ×boss; der Schaden gilt auch für den Boss selbst, so ist es eingestellt)
 // – Welten mit vielen Beschwörern/Pfützen
 export const WORLD_LV = [{ dmg: 1, rate: 1 }, { dmg: 1.08, rate: 1.04 }, { dmg: 1.16, rate: 1.09, boss: .78 }, { dmg: 1.24, rate: 1.14, boss: .85 }, { dmg: 1.31, rate: 1.19 },
-  { dmg: 1.38, rate: 1.24 }, { dmg: 1.45, rate: 1.28, boss: .85 }, { dmg: 1.52, rate: 1.32 }];
+  { dmg: 1.38, rate: 1.24 }, { dmg: 1.45, rate: 1.28, boss: .85 }, { dmg: 1.52, rate: 1.32, boss: .9 }];
 const damp = v => 1 + (v - 1) * .5;
 // Leben des Bosses im Boss-Level (×2500 × STAGE_HP wie bisher)
 export const BOSS_HP = 2.8;

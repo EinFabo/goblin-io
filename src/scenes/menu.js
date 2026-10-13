@@ -1,15 +1,21 @@
-import { Music } from '../core/music.js';
+import { on } from '../core/events.js';
+import { Music, TITLE } from '../core/music.js';
 import { defineScene } from '../core/scenes.js';
 import { $ } from '../core/util.js';
 import { setRun } from '../game/state.js';
 import { renderMenuScene } from '../render/menu-scene.js';
 import { hideOverlays, showScreen } from '../ui/menus.js';
 
+// Titelmusik läuft im Menü; ohne Tipp/Taste gibt es noch keinen Ton (dann startet sie mit audioReady)
+let off = null;
 defineScene('menu', {
   enter(screen = '#menu') {
     setRun(null, null); Music.stop();
+    Music.boss = false; Music.hold = false; Music.world = TITLE; Music.start();
+    off = on('audioReady', () => Music.start());
     $('#hud').hidden = true; $('#ctrl').hidden = true; $('#hint').hidden = true;
     hideOverlays(); showScreen(screen);
   },
+  exit() { if (off) off(); off = null; Music.stop(); },
   render(now) { renderMenuScene(now / 1000); },
 });

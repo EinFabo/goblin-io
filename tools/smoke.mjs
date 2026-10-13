@@ -58,6 +58,15 @@ async function fightBoss(si) {
         if (run.boss && run.boss.ai.spin) S.mech.add('spiral');
         if (run.enemies.some(e => e.link && !e.dead)) S.mech.add('split');
         if (run.enemies.some(e => e.type === 'ghost' && !e.dead)) S.mech.add('ghosts');
+        if (run.enemies.some(e => e.decoy && !e.dead)) S.mech.add('clones');
+        if (run.enemies.some(e => e.shade && !e.dead)) S.mech.add('shades');
+        if (run.portals.length) S.mech.add('portals');
+        if (run.pillars.length) S.mech.add('pillars');
+        if (run.wind) S.mech.add('wind');
+        const bb = run.boss;
+        if (bb && bb.armor > 0) S.mech.add('armor');
+        if (bb && bb.B.mount && !bb.mount) S.mech.add('foot');
+        if (bb && bb.school) S.mech.add('school.' + bb.school);
       }
       const b = run.boss;
       // Wut-Timer: kurz vor 120 s Kampf vorspulen, dann muss die Leiste glühen
@@ -87,9 +96,27 @@ async function fightBoss(si) {
   if (!seen.rage) errs.push(`Wut-Timer Welt ${si + 1}: nicht ausgelöst`);
   if (seen.card.trim().length < 3 || seen.ph.length < 3 || !(end.over && !end.boss)) errs.push(`Bosskampf Welt ${si + 1}: ` + JSON.stringify({ ...seen, mech: [...seen.mech], end }));
   if (id === 'frostbart' && !seen.shield) errs.push('Frostbart: Eisschild nicht gebrochen');
-  const MECH = { ignaz: ['wall', 'meteor', 'burn'], frostbart: ['ice', 'storm', 'spiral'], morgra: ['zone', 'gas', 'split', 'burn'], knochenhand: ['cage', 'vessels', 'beam'] };
+  const MECH = { ignaz: ['wall', 'meteor', 'burn'], frostbart: ['ice', 'storm', 'spiral'], morgra: ['zone', 'gas', 'split', 'burn'], knochenhand: ['cage', 'vessels', 'beam'],
+    spiegelmeister: ['clones', 'portals'], tempestra: ['strike', 'pillars', 'beam', 'wind'], gromm: ['quake', 'rock', 'armor', 'foot', 'spikes'], malvorn: ['school.fire', 'school.frost', 'shades', 'meteor'] };
   if (MECH[id] && !MECH[id].every(m => seen.mech.has(m))) errs.push(`${id}: Mechaniken fehlen (${MECH[id].filter(m => !seen.mech.has(m))}), gesehen ${[...seen.mech]}`);
 }
+// Mini-Boss (Level 4 jeder Welt, bei 1:40): 2 Elite-Eigenschaften, eigene Leiste oben
+await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 1, li: 3, seed: 4 }); const run = G.run; run.paused = true; while (run.time < 101 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } } run.paused = false; });
+await p.waitForTimeout(200);
+const mini = await p.evaluate(() => ({ aff: GOBLIN.run.mini && GOBLIN.run.mini.affixes.length, bar: !document.querySelector('#miniBar').hidden, name: document.querySelector('#miniName').textContent }));
+if (mini.aff !== 2 || !mini.bar) errs.push('Mini-Boss: ' + JSON.stringify(mini));
+console.log('Mini-Boss:', JSON.stringify(mini));
+// Albtraum: Gegner mit +80 % Leben, Elites mit 2 Eigenschaften, Ergebnis-Titel
+const nm = await p.evaluate(async () => {
+  const G = GOBLIN, hp = nm => { G.newRun(0, 9, 0, nm); G.run.paused = true; while (!G.run.enemies.length) G.update(1 / 60); return G.run.enemies[0].maxHp; };
+  const ratio = hp(true) / hp(false);
+  G.go('run', { si: 0, li: 1, seed: 3, nm: true }); const run = G.run; run.paused = true;
+  while (run.time < 160 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } }
+  run.paused = false; await new Promise(r => setTimeout(r, 400));
+  return { ratio: +ratio.toFixed(2), nm: run.nm, title: document.querySelector('#overTitle').textContent, stage: document.querySelector('#stageTxt').textContent };
+});
+if (nm.ratio !== 1.8 || !nm.nm || nm.title !== 'Albtraum überstanden!') errs.push('Albtraum: ' + JSON.stringify(nm));
+console.log('Albtraum:', JSON.stringify(nm));
 // In der Goblin-Maschine: andere Fähigkeit und Rolle gesperrt, Knöpfe mit Schloss
 await p.evaluate(() => { const G = GOBLIN; G.save.loadout = ['rage', 'mech']; G.go('run', { si: 0, li: 0, seed: 7 }); });
 const lock = await p.evaluate(async () => {

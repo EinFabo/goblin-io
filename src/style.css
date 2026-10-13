@@ -54,6 +54,9 @@ button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 /* Phasen-Markierungen bei 66 % und 33 % (6.2), Wut: pulsiert */
 .bossbar::before,.bossbar::after{content:'';position:absolute;top:0;bottom:0;width:3px;background:var(--edge);z-index:1}
 .bossbar::before{left:33%}.bossbar::after{left:66%}
+.bossbar.mini{max-width:340px;height:16px;margin-top:4px}.bossbar.mini::before,.bossbar.mini::after{display:none}
+.bossbar.mini .bossfill{background:linear-gradient(180deg,#e8b4ff,#a35ad6 60%,#6a2d9a)}.bossbar.mini span{font-size:12px;line-height:12px}
+.bossbar .m10{display:none;position:absolute;left:10%;top:0;bottom:0;width:3px;background:var(--edge);z-index:1}.bossbar.p4 .m10{display:block}
 .bossbar.rage{border-color:#ff5a3c;animation:bossRage .6s ease-in-out infinite alternate}
 .bossbar.rage .bossfill{background:linear-gradient(180deg,#ffb35c,#ff5a1f 60%,#b8320f)}
 @keyframes bossRage{to{box-shadow:0 0 14px #ff5a3c}}
@@ -72,6 +75,13 @@ body.cine #hud,body.cine #ctrl,body.cine #hint{opacity:0;transition:opacity .3s}
 #bossCard em{margin-top:8px;font-style:normal;font-size:12px;color:var(--muted);opacity:.8}
 @keyframes bossCard{0%{opacity:0;transform:translateX(-60px)}14%{opacity:1;transform:none}88%{opacity:1}100%{opacity:0}}
 @media (prefers-reduced-motion:reduce){#bossCard{animation:none}#cine i{transition:none}}
+/* Albtraum-Modus (6.1): Schalter am Level-Zettel, Schädel an Levelpunkten, Karte rot abgedunkelt */
+.nmtog{display:flex;align-items:center;gap:6px;margin:6px 0 4px;padding:6px 12px;border-radius:10px;border:2px solid var(--edge);background:#3a2a1e;color:#e8d8b0;font-family:var(--font-display);font-size:14px;cursor:pointer}
+.nmtog.on{background:#7a2326;color:#ffd6d6;box-shadow:0 0 12px rgba(229,72,77,.6)}
+.nmtog .skull.sm,.nmdone .skull.sm{width:18px;height:18px}
+.nminfo{font-size:12px;margin:0 0 6px;color:#7a2326}
+.mnode .nmdone{position:absolute;right:-6px;top:-6px;filter:drop-shadow(0 1px 0 #000)}
+#menu.nightmare::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,rgba(120,0,0,0) 40%,rgba(120,0,10,.45));z-index:0}
 
 /* ---------- Fähigkeiten-Buttons ---------- */
 #ctrl{position:fixed;right:calc(12px + env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));width:196px;height:196px;z-index:6;pointer-events:none}

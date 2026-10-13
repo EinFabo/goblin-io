@@ -72,13 +72,15 @@ function drawRun(now) {
     }
   }
   drawHaz(t, true);
-  if (run.boss && run.boss.ai.st === 'tele') {
-    const b = run.boss, a = Math.atan2(b.ai.ay, b.ai.ax);
+  for (const b of run.enemies) if (b.boss && !b.dead && b.ai.st === 'tele') {
+    const a = Math.atan2(b.ai.ay, b.ai.ax);
     ctx.save(); ctx.translate(b.x, b.y + 20); ctx.rotate(a);
     ctx.fillStyle = `rgba(255,50,40,${.18 + .15 * Math.sin(t * 30)})`; ctx.fillRect(0, -36, 430, 72);
     ctx.strokeStyle = 'rgba(255,80,60,.8)'; ctx.lineWidth = 2; ctx.strokeRect(0, -36, 430, 72);
     ctx.restore();
   }
+  if (run.portals.length) drawPortals(t);
+  if (run.cut && run.cut.sigil) drawSigil(run.cut.b, run.cut.sigil, t);
   for (const e of run.enemies) if (e.bomber && e.fuse > 0) {
     ctx.strokeStyle = `rgba(255,60,40,${.5 + .4 * Math.sin(t * 30)})`; ctx.fillStyle = 'rgba(255,60,40,.12)'; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.ellipse(e.x, e.y + 10, 80, 58, 0, 0, TAU); ctx.fill(); ctx.stroke();
@@ -101,6 +103,7 @@ function drawRun(now) {
   for (const e of run.enemies) if (onScreen(e.x, e.y, 120 * e.sc)) list.push(e);
   for (const al of run.allies) list.push(al);
   for (const al of run.tmpAllies) list.push(al);
+  for (const pl of run.pillars) list.push(pl);
   list.push(P);
   list.sort((a, b) => a.y - b.y);
   const trT = (TRAIL[save.look.trail] || TRAIL.dust).tint;
@@ -109,6 +112,7 @@ function drawRun(now) {
   for (const o of list) {
     if (o === P) { if (P.mechT > 0) drawMech(); else drawPlayer(t); }
     else if (o.ally) drawAlly(o, o.big ? CHIEF_LOOK : o.tmp ? CALL_LOOK : gang);
+    else if (!o.type) drawPillar(o, t);
     else drawEnemy(o, t);
   }
   drawPlayerBars();
@@ -203,6 +207,7 @@ function drawRun(now) {
   // Bildschirm-Ebene
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (run.storm > 0) drawStorm(t, zm, W / 2 + (P.x - camX) * zm, H / 2 + (P.y - 8 - camY) * zm);
+  if (run.wind) drawWind(t);
   if (P.hp / P.maxHp < .3 || run.hurtT > 0) {
     const a = run.hurtT > 0 ? .45 : .25 + .1 * Math.sin(t * 6);
     const g = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .7);
@@ -276,7 +281,8 @@ export function drawEnemy(e, t) {
   if (e.slowT > 0 || e.freezeT > 0) { ctx.fillStyle = 'rgba(120,210,255,.4)'; ctx.beginPath(); ctx.ellipse(e.x, e.y + 26 * e.sc, e.r * 1.4, e.r * .5, 0, 0, TAU); ctx.fill(); }
   if (e.spawnT > 0) { drawPortal(e, t); return; }
   const fl = e.flash > 0 || (e.bomber && e.fuse > 0 && Math.floor(e.fuse * 14) % 2 === 0);
-  drawSpr(e.spr || (e.pre + '.idle.down.1'), e.x, e.y, e.sc, 0, e.tint, e.clone ? .85 : 1, fl);
+  if (e.boss) drawBossBody(e, t, fl);
+  else drawSpr(e.spr || (e.pre + '.idle.down.1'), e.x, e.y, e.sc, 0, e.tint, e.clone ? .85 : 1, fl);
   if (e.traits && e.traits.includes('frontShield')) drawFrontShield(e);
   if (e.boss && e.ice > 0) drawIceShield(e, t);
   if (e.affixes && e.affixes.length) drawAffixes(e, t);
@@ -540,6 +546,90 @@ function drawFrontShield(e) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(a);
   ctx.fillStyle = 'rgba(190,240,255,.75)'; ctx.strokeStyle = 'rgba(240,252,255,.95)'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(-3, -20 * e.sc); ctx.quadraticCurveTo(9, 0, -3, 20 * e.sc); ctx.lineTo(-9, 14 * e.sc); ctx.quadraticCurveTo(0, 0, -9, -14 * e.sc); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+// ---------- Bosse (Phase 7) ----------
+// Golem-Reiter (Gromm), Aufsteigen beim Auftritt (rise), Spiegelbilder beim Auftritt (mirror), Schulfarbe (Malvorn), Rüstung
+function drawBossBody(e, t, fl) {
+  const spr = e.spr || (e.pre + '.idle.down.1'), alpha = e.shade ? .82 : 1;
+  if (e.school) {
+    const c = SCHOOL_COL[e.school], R = 40 * e.sc / 2.7;
+    ctx.save(); ctx.globalAlpha = .35 + .15 * Math.sin(t * 6); ctx.fillStyle = c;
+    ctx.beginPath(); ctx.ellipse(e.x, e.y + 22 * e.sc, R * 1.5, R * .55, 0, 0, TAU); ctx.fill(); ctx.restore();
+    if (Math.random() < .3) { const a = frand(0, TAU); part(e.x + Math.cos(a) * 50, e.y - 30 + Math.sin(a) * 40, 0, -40, .5, c, 3); }
+  }
+  if (e.mirror > 0) for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + t; drawSpr(spr, e.x + Math.cos(a) * 170 * e.mirror, e.y + Math.sin(a) * 110 * e.mirror, e.sc, 0, e.tint, .45 * e.mirror); }
+  ctx.save();
+  if (e.rise !== undefined && e.rise !== null && e.rise < 1) {
+    // aus dem Boden steigen: nur über der Bodenlinie zeichnen, Figur fährt hoch
+    const ground = e.y + 26 * e.sc;
+    ctx.beginPath(); ctx.rect(e.x - 200, ground - 400, 400, 400); ctx.clip();
+    ctx.translate(0, (1 - e.rise) * 90 * e.sc);
+    ctx.fillStyle = 'rgba(30,20,10,.45)'; ctx.beginPath(); ctx.ellipse(e.x, ground - (1 - e.rise) * 90 * e.sc, 50, 14, 0, 0, TAU); ctx.fill();
+  }
+  if (e.mount) {
+    // Gromm auf dem Golem: Golem unten, Gromm kleiner obendrauf
+    const fr = e.ai.st === 'chase' || e.ai.st === 'charge' ? `walk.${e.face}.${(Math.floor(e.at * 8) % 6) + 1}` : `idle.${e.face}.${(Math.floor(t * 5) % 4) + 1}`;
+    drawSpr('n.golem.' + fr, e.x, e.y + 4 * e.sc, e.sc * .95, 0, e.tint, alpha, fl);
+    drawSpr(spr, e.x, e.y - 30 * e.sc, e.sc * .5, 0, e.tint, alpha, fl);
+  } else drawSpr(spr, e.x, e.y, e.sc, 0, e.tint, alpha, fl);
+  ctx.restore();
+  if (e.shade && e.hp < e.maxHp) {
+    const w = 70, y = e.y - 50 * e.sc;
+    ctx.fillStyle = 'rgba(10,15,6,.85)'; ctx.fillRect(e.x - w / 2 - 2, y - 2, w + 4, 8);
+    ctx.fillStyle = '#9a6ad8'; ctx.fillRect(e.x - w / 2, y, w * Math.max(0, e.hp / e.maxHp), 4);
+  }
+  if (e.armor > 0) {
+    // Rüstungsplatten rund um den Körper, drehen mit der Blickrichtung; die nächste bekommt Risse
+    for (let i = 0; i < e.armor; i++) {
+      const a = e.fa + i * Math.PI / 2, x = e.x + Math.cos(a) * 26 * e.sc / 2.7 * 1.6, y = e.y - 8 * e.sc + Math.sin(a) * 18 * e.sc / 2.7 * 1.6;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(a);
+      ctx.fillStyle = '#7a7468'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.roundRect(-8, -20, 16, 40, 4); ctx.fill(); ctx.stroke();
+      if (i === e.armor - 1 && e.armorHp < e.armorMax) { ctx.strokeStyle = 'rgba(30,20,10,.8)'; ctx.lineWidth = 1.6; const k = 1 - e.armorHp / e.armorMax; ctx.beginPath(); ctx.moveTo(-6, -16); ctx.lineTo(2, -4 * k); ctx.lineTo(-3, 6 * k); ctx.lineTo(5, 16 * k); ctx.stroke(); }
+      ctx.restore();
+    }
+  }
+}
+// Tempestras Blitzsäulen
+function drawPillar(pl, t) {
+  ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.beginPath(); ctx.ellipse(pl.x, pl.y + 4, 22, 8, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#5a6070'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.roundRect(pl.x - 13, pl.y - 70, 26, 74, 4); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#767d8e'; ctx.fillRect(pl.x - 13, pl.y - 70, 8, 74);
+  const g = ctx.createRadialGradient(pl.x, pl.y - 78, 2, pl.x, pl.y - 78, 26); g.addColorStop(0, '#ffffff'); g.addColorStop(.3, 'rgba(255,230,90,.9)'); g.addColorStop(1, 'rgba(255,230,90,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(pl.x, pl.y - 78, 26 + 3 * Math.sin(t * 12 + pl.x), 0, TAU); ctx.fill();
+  if (Math.random() < .2) part(pl.x + frand(-8, 8), pl.y - 80, frand(-60, 60), frand(-60, 20), .2, '#fff59a', 2);
+}
+// Spiegeltore: Eingang beim Boss, Ausgang beim Goblin, gestrichelt verbunden
+function drawPortals(t) {
+  for (const pt of run.portals) {
+    const a = Math.min(1, (pt.dur - pt.t) / .3, pt.t / .3);
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.strokeStyle = 'rgba(200,160,255,.35)'; ctx.lineWidth = 2; ctx.setLineDash([6, 10]); ctx.lineDashOffset = -t * 60;
+    ctx.beginPath(); ctx.moveTo(pt.ax, pt.ay); ctx.lineTo(pt.bx, pt.by); ctx.stroke(); ctx.setLineDash([]);
+    for (const [x, y] of [[pt.ax, pt.ay], [pt.bx, pt.by]]) for (let i = 3; i >= 0; i--) {
+      ctx.fillStyle = i % 2 ? 'rgba(60,20,110,.85)' : 'rgba(178,107,255,.7)';
+      ctx.beginPath(); ctx.ellipse(x, y, 30 * (1 - i * .2), 38 * (1 - i * .2), Math.sin(t * 3 + i) * .4, 0, TAU); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+// Malvorns Runenkreis vor dem Auftritt
+function drawSigil(b, q, t) {
+  ctx.save(); ctx.globalAlpha = Math.min(1, q * 1.5);
+  ctx.strokeStyle = b.B.col; ctx.lineWidth = 4; ctx.setLineDash([14, 8]); ctx.lineDashOffset = t * 80;
+  ctx.beginPath(); ctx.ellipse(b.x, b.y + 20, 110 * q, 60 * q, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = b.B.col;
+  for (let i = 0; i < 8; i++) { const a = i * TAU / 8 - t * 2, x = b.x + Math.cos(a) * 90 * q, y = b.y + 20 + Math.sin(a) * 48 * q; ctx.fillRect(x - 3, y - 7, 6, 14); }
+  ctx.restore();
+}
+// Sturm (Tempestra Phase 3): Pfeil oben in der Mitte zeigt die Richtung; in der Warnsekunde blinkt die neue
+function drawWind(t) {
+  const w = run.wind, a = w.na === null ? w.a : w.na, x = W / 2, y = 92;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(a); ctx.globalAlpha = w.na === null ? .8 : .5 + .5 * Math.sin(t * 20);
+  ctx.fillStyle = '#eef3ff'; ctx.strokeStyle = '#1d2b14'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(26, 0); ctx.lineTo(4, -16); ctx.lineTo(4, -7); ctx.lineTo(-24, -7); ctx.lineTo(-24, 7); ctx.lineTo(4, 7); ctx.lineTo(4, 16); ctx.closePath(); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
 // Seelengefäße: grüne Fäden zum Grafen, solange er durch sie geschützt ist

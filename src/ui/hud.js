@@ -2,6 +2,7 @@ import { $, clamp, fmtTime } from '../core/util.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
 import { ABILITIES } from '../data/abilities.js';
+import { ETYPES } from '../data/enemies.js';
 import { abilCount, abilReady, dashCdOf, lockOf } from '../game/abilities.js';
 
 // ---------- HUD ----------
@@ -28,6 +29,10 @@ export function updHud(dt) {
   setCount('#dashBtn', P.dashMax > 1 ? String(P.dashN) : '');
   setAbil('#sprintBtn', P.stam / P.stamMax, !P.exhaust, P.sprinting, !!lockOf('sprint'));
   if (run.boss) $('#bossFill').style.width = (Math.max(0, run.boss.hp / run.boss.maxHp) * 100).toFixed(1) + '%';
+  // Mini-Boss: eigene Leiste, solange er lebt
+  const mini = run.mini && !run.mini.dead ? run.mini : null;
+  if (hudCache.mini !== mini) { hudCache.mini = mini; $('#miniBar').hidden = !mini; if (mini) $('#miniName').textContent = 'Mini-Boss · ' + ETYPES[mini.type].name; }
+  if (mini) $('#miniFill').style.width = (Math.max(0, mini.hp / mini.maxHp) * 100).toFixed(1) + '%';
   if (!run.paused) {
     run.hintT -= dt;
     if (run.hintT <= 0) {

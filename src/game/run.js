@@ -24,13 +24,14 @@ import { updAllies, updPProj, updWeapons } from './weapons.js';
 
 // Neuer Lauf: nur Spielzustand. Bildschirm, HUD und Musik macht die Szene "run".
 // si = Welt (Stage), li = Level in der Welt (0–4, das letzte ist das Boss-Level)
-export function newRun(si, seed = newSeed(), li = 0) {
+// nm: Albtraum-Modus (6.1), nur in Welten, deren Boss schon besiegt ist
+export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   const st = levelStage(si, li);
   seedRun(seed);
   const r = {
-    si, li: st.li, st, seed, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
+    si, li: st.li, st, seed, nm: !!nm && !st.endless, mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
-    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0,
+    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
     hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, shieldT: 0, shieldHp: 0, shieldMax: 1, shieldShard: 0, mechArmor: .3, mechPow: 1, mechRocket: 1.4, slowT: 0, trail: [], trailT: 0,
@@ -156,13 +157,15 @@ export function endRun(win) {
   run.over = true; run.paused = true;
   ensureDaily(save);   // Tagesbeginn der Aufgaben festhalten, bevor dieser Lauf irgendetwas verbucht
   const boss = !run.st.endless && run.li === LEVELS - 1;
-  const bonus = win ? 25 + run.si * 20 + (boss ? 40 + run.si * 30 : 0) : 0;
+  let bonus = win ? 25 + run.si * 20 + (boss ? 40 + run.si * 30 : 0) : 0;
+  // Albtraum (6.1): +50 % Gold und Konto-XP, Siegtruhe eine Stufe besser, erster Albtraum-Sieg je Level gibt Juwelen
+  if (win && run.nm) bonus += Math.round((run.gold + bonus) * .5);
   // Magierhüte (6.1a): geschafft, über 50 % Leben am Ende, nie unter 25 % gefallen
   const hats = win ? 1 + (P.hp / P.maxHp > .5 ? 1 : 0) + (run.minHp >= .25 ? 1 : 0) : 0;
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
-  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, kills: run.kills, endless: !!run.st.endless });
-  const xp = accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }), up = gainAccountXp(xp);
+  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, kills: run.kills, endless: !!run.st.endless, nm: run.nm });
+  const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * (run.nm ? 1.5 : 1)), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
   const nx = rec.first && boss && nextLevel(run.si, run.li);
@@ -171,14 +174,14 @@ export function endRun(win) {
   const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
   save.wallet.gold += run.gold + bonus;
   // Juwelen (9.2): neue Hüte, Konto-Level, Boss-Erstsieg
-  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0);
+  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? GEMS.nightmare : 0);
   save.wallet.gems += gems;
   // Siegtruhe nach jedem Boss-Level; ist das Regal voll, geht sie sofort auf
   // Boss-Trophäe (9.7, steht beim Boss in data/stages.js): beim ersten Sieg
   const tr = STAGES[run.si].boss.trophy, trophy = win && boss && tr && grantCosmetic(save, tr) ? tr : null;
   let chest = null;
   if (win && boss) {
-    const type = victoryChest(run.si);
+    const type = victoryChest(run.si, run.nm);
     if (addToShelf(save, type)) chest = { type, shelf: true };
     else { const res = rollChest(type, mulberry32(newSeed()), save.pity); grantChest(save, res); chest = { type, shelf: false, res }; }
   }
@@ -187,9 +190,9 @@ export function endRun(win) {
   for (const w of run.weapons) s.weapons[w.id] = (s.weapons[w.id] || 0) + 1;
   mergeRun(save, run, win);
   const next = win ? nextLevel(run.si, run.li) : null;
-  if (rec.first && next) save.map = { si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
+  if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, newHats: rec.newHats, first: rec.first, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
 }
 

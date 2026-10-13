@@ -1,4 +1,5 @@
 import { go } from '../core/scenes.js';
+import { stageCleared } from '../core/save.js';
 import { startStage } from './menus.js';
 import { $, fmtTime } from '../core/util.js';
 import { P, run } from '../game/state.js';
@@ -18,7 +19,7 @@ import { COSM } from '../data/cosmetics.js';
 let showT = 0;
 export function showResults(r) {
   const endless = run.st.endless;
-  $('#overTitle').textContent = endless ? 'Die Nacht hat dich erwischt!' : r.win ? 'Level geschafft!' : 'Besiegt!';
+  $('#overTitle').textContent = endless ? 'Die Nacht hat dich erwischt!' : r.win ? (r.nm ? 'Albtraum überstanden!' : 'Level geschafft!') : 'Besiegt!';
   $('#overHats').innerHTML = endless ? '' : `<span class="lvlbl">${levelLabel(run.si, run.li)} ${run.st.lvName}</span>${hatsHtml(r.hats, r.newHats)}`;
   const res = [['Zeit', fmtTime(run.st.len && !endless ? Math.min(run.time, run.st.len) : run.time)], ['Level', P.lv], ['Besiegt', run.kills], ['Gold', '+' + r.gold]];
   res.push(['Konto-XP', '+' + r.xp + (r.up ? ` · Level ${r.level}!` : '')]);
@@ -36,7 +37,8 @@ export function showResults(r) {
   showT = setTimeout(() => { $('#over').hidden = false; if (r.abil.some(a => a.up)) setTimeout(() => sfx.abilUp(), 450); }, r.win ? 200 : 700);
 }
 export function hideResults() { clearTimeout(showT); $('#over').hidden = true; }
-$('#againBtn').addEventListener('click', () => startStage(run.si, run.li));
-$('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li); });
+$('#againBtn').addEventListener('click', () => startStage(run.si, run.li, run.nm));
+// Albtraum bleibt an, solange das nächste Level in einer geschafften Welt liegt
+$('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li, run.nm && stageCleared(n.si)); });
 $('#menuBtn').addEventListener('click', () => go('menu'));
 $('#overStats').addEventListener('click', e => { if (e.target.closest('#vchestBtn') && run.result.chest) playChest(run.result.chest.res); });

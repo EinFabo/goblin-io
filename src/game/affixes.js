@@ -15,7 +15,8 @@ export const AFFIXES = {
   summoner: { name: 'Beschwörer' },
 };
 export const hasAffix = (e, a) => !!(e.affixes && e.affixes.includes(a));
-export const affixCount = () => (run.st.endless || run.loop > 0 ? 2 : run.si >= 2 ? 1 : 0);
+// Albtraum-Modus (6.1): Elites immer mit 2 Eigenschaften
+export const affixCount = () => (run.nm || run.st.endless || run.loop > 0 ? 2 : run.si >= 2 ? 1 : 0);
 
 export function rollAffixes(e, n) {
   if (n === undefined) n = affixCount();

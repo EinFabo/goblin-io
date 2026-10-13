@@ -18,12 +18,13 @@ import { achChanged, achNews, renderAch } from './achievements.js';
 
 // ---------- Hub (PLAN 10.1): Leiste oben, Tabs unten ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
-export async function startStage(si, li = 0) {
+// nm: Albtraum-Modus
+export async function startStage(si, li = 0, nm = false) {
   const t = setTimeout(() => { $('#loadMsg').textContent = 'Lade Magier …'; $('#loading').classList.add('solo'); $('#loading').hidden = false; }, 120);
   cleanLoadout();
   await ensureStage(si);
   clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
-  go('run', { si, li });
+  go('run', { si, li, nm });
 }
 const TABS = ['#store', '#shop', '#menu', '#armory', '#profile'];
 const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen'];
@@ -72,7 +73,7 @@ $('#tabbar').addEventListener('click', e => {
 $('#topWho').addEventListener('click', () => { if (curTab !== '#profile') { sfx.tab(); showScreen('#profile'); } });
 
 // ---------- Spielen: Weltkarte (ui/worldmap.js) ----------
-onStart((si, li) => startStage(si, li));
+onStart((si, li, nm) => startStage(si, li, nm));
 const overlayOpen = () => OVERLAYS.some(o => !$(o).hidden);
 window.addEventListener('keydown', e => {
   if (!document.body.classList.contains('hub') || e.target.closest('input')) return;

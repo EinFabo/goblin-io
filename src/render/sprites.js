@@ -95,7 +95,7 @@ export async function loadGoblin(look = goblinLook()) {
 export const TINTS = {
   gold: ['#ffc928', .42], shadow: ['#3b1466', .5], ember: ['#a3140c', .38], rage: ['#ff2a1a', .42],
   storm: ['#ffe23a', .5], toxic: ['#32c22a', .5], void: ['#1e0638', .62], holy: ['#fff7d6', .58],
-  voidp: ['#a45cff', .6], toxp: ['#5be03a', .7], white: ['#ffffff', 1], trail: ['#8fe6ff', .7],
+  voidp: ['#a45cff', .6], toxp: ['#5be03a', .7], white: ['#ffffff', 1], trail: ['#8fe6ff', .7], shade: ['#1e0a3a', .55],
 };
 // Dolch-Skins als Tönungen (data/cosmetics.js)
 for (const [k, t] of Object.entries(DAGGER_TINT)) if (t) TINTS['dagger_' + k] = t;
@@ -120,7 +120,11 @@ export function tinted(entry, tint) {
 // Meister (Bosse, Großmagier) werden schärfer gerastert.
 export const MAGE_OFF = {};
 const units = new Map();
-const variantOf = key => { const [school, v] = key.split('.'); return [school, { master: v === 'm', clone: v === 'c', boss: v && v !== 'm' && v !== 'c' ? v : null }]; };
+// Varianten: '' Schüler/Magier, 'm' Meister, 'c' Klon, sonst Boss-Modell ('ignaz'); 'spiegel-c' = Boss-Modell ohne Schatten (Spiegelbild)
+const variantOf = key => {
+  const [school, v = ''] = key.split('.'), boss = v && v !== 'm' && v !== 'c' ? v.replace(/-c$/, '') : null;
+  return [school, { master: v === 'm', clone: v === 'c' || v.endsWith('-c'), boss }];
+};
 
 function loadUnit(key, anim) {
   const id = key + '|' + anim;
@@ -154,10 +158,13 @@ function typeNeeds(type, out = { mages: new Set(), minions: new Set() }, seen = 
 }
 function stageNeeds(si) {
   // Ratten immer dabei (Rattenflut)
-  // Endlose Nacht: jeder Boss kann kommen
-  const st = STAGES[si], ids = st.boss.id === 'random' ? BOSS_IDS : [st.boss.id];
+  // Endlose Nacht: jeder Boss kann kommen; Malvorn (all) ruft frühere Bosse als Schatten
+  const st = STAGES[si], ids = st.boss.id === 'random' || BOSSES[st.boss.id].all ? BOSS_IDS : [st.boss.id];
   const out = { mages: new Set(ids.map(bossVariant)), minions: new Set(['rat']) }, seen = new Set();
-  for (const id of ids) for (const t of BOSSES[id].minions || []) typeNeeds(t, out, seen);
+  for (const id of ids) {
+    for (const v of BOSSES[id].variants || []) out.mages.add(v);
+    for (const t of BOSSES[id].minions || []) typeNeeds(t, out, seen);
+  }
   for (const t of stageTypes(st)) typeNeeds(t, out, seen);
   return out;
 }

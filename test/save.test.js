@@ -71,17 +71,17 @@ test('Talente über dem Maximum werden gekappt, unbekannte entfernt', () => {
 
 test('Statistiken und Kartenplatz: alte Stände bekommen Standardwerte, Unsinn wird verworfen', () => {
   const s = migrate({ version: 4, stages: { 1: { cleared: true }, 2: { cleared: true } }, stats: { runs: 5, weapons: { dagger: 4, nix: 9, orbit: 'x' } } });
-  assert.deepEqual(s.map, { si: 2, li: 0, fresh: false });   // erste offene Welt
+  assert.deepEqual(s.map, { si: 2, li: 0, fresh: false, nm: false });   // erste offene Welt
   assert.equal(s.stats.bestKills, 0);
   assert.deepEqual(s.stats.weapons, { dagger: 4 });
-  assert.deepEqual(migrate({ version: 4, map: { si: 0, li: 3 } }).map, { si: 0, li: 3, fresh: false });
+  assert.deepEqual(migrate({ version: 4, map: { si: 0, li: 3 } }).map, { si: 0, li: 3, fresh: false, nm: false });
 });
 
 test('Welten: geschaffte Stage aus alten Ständen = alle Level mit 1 Hut, sonst gelten gespeicherte Hüte', () => {
   const s = migrate({ version: 4, stages: { 1: { cleared: true, best: 250 }, 2: { lv: [{ hats: 3 }, { hats: 9 }, {}] } } });
   assert.deepEqual(s.stages[1].lv.map(l => l.hats), [1, 1, 1, 1, 1]);
   assert.deepEqual(s.stages[2].lv.map(l => l.hats), [3, 3, 0, 0, 0]);
-  assert.deepEqual(s.map, { si: 1, li: 2, fresh: false });
+  assert.deepEqual(s.map, { si: 1, li: 2, fresh: false, nm: false });
 });
 
 test('v3 → v4: 8 Welten, Weltfortschritt neu, über Welten freie Fähigkeiten bleiben frei', () => {
@@ -89,10 +89,16 @@ test('v3 → v4: 8 Welten, Weltfortschritt neu, über Welten freie Fähigkeiten 
   const s = migrate(v3);
   assert.equal(s.version, VERSION);
   assert.deepEqual(s.stages, {});
-  assert.deepEqual(s.map, { si: 0, li: 0, fresh: false });
+  assert.deepEqual(s.map, { si: 0, li: 0, fresh: false, nm: false });
   assert.deepEqual(s.keep.sort(), ['hook', 'smoke']);   // Welt 1 → Rauch, Welt 2 → Haken; Welt 3 nicht geschafft
   assert.equal(s.wallet.gold, 500); assert.equal(s.talents.atk, 4);
   assert.deepEqual(s.loadout, ['hook', 'rats']);
   assert.deepEqual(migrate(s).keep.sort(), ['hook', 'smoke']);   // bleibt beim erneuten Laden
   assert.deepEqual(normalize({ version: 4, keep: ['hook', 'gibtsnicht', 'hook'] }).keep, ['hook']);
+});
+
+test('Albtraum: Schalter und Albtraum-Siege bleiben im Spielstand', () => {
+  const s = normalize({ version: 4, map: { si: 1, li: 2, nm: true }, stages: { 1: { cleared: true, lv: [{ hats: 3, nm: true }, { hats: 1 }] } } });
+  assert.equal(s.map.nm, true);
+  assert.deepEqual(s.stages[1].lv.map(l => l.nm), [true, false, false, false, false]);
 });
