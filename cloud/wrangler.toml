@@ -14,7 +14,7 @@ run_worker_first = ["/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "goblin"
-database_id = "00000000-0000-0000-0000-000000000000"   # nach `wrangler d1 create goblin` eintragen
+database_id = "a4d8d64d-ffee-43cf-b1e6-c4681bd81479"
 migrations_dir = "migrations"
 
 [vars]
