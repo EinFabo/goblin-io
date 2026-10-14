@@ -1,3 +1,6 @@
+// Ende-zu-Ende-Test Cloud-Sync mit zwei „Geräten“ (getrennte Browser-Profile) gegen den lokalen Worker:
+//   cd cloud && npm run dev   (in einem zweiten Terminal), dann: node tools/cloud-e2e.mjs
+// Prüft: Anmelden + Hochladen, frisches Gerät übernimmt die Cloud, Konflikt-Auswahl, anderes Gerät übernimmt beim Start.
 import { chromium } from 'playwright';
 const URL = 'http://localhost:8787/?cloudtest=t' + Date.now();
 const b = await chromium.launch();
