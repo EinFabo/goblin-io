@@ -1079,6 +1079,7 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
   - Pause: „Ton“/„Musik“ ersetzt durch „Einstellungen“ (dasselbe Fenster, Esc schließt nur das Fenster). `npm run smoke` prüft Schalter, Regler, Knopfgröße und den Weg über die Pause.
   - Code-Review (high): 9 Funde behoben (Zahlen verdrängten bei vielen Treffern andere Texte, Regler-Knopf saß neben dem Finger, Ziehen ohne Pointer-Capture, Lautstärke 0 vs. aus, Klick-Ton beim Einschalten, Tipp-Breite bei flachen Bildschirmen).
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
+  - 2026-10-14: Sim-Balance nach dem Game-Loop-Rework für alle Welten auf die Zielwerte gebracht (Tabelle beim Game-Loop-Rework). Offen: Durchlauf von Hand, hohe Kartenstufen und volle Fähigkeitenbäume prüfen.
   - Nach den Review-Fixes (2026-10-14) Welt 3-4 mit 30 Läufen: Seeds 1/101 vorher 80/70 %, nachher 70/67 % (Ziel 75–90 %). Vermutlich weil Gegner im Portal nicht mehr getroffen werden; im Streubereich, beim Durchlauf mit ansehen.
 - [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.
 - [ ] **Accounts mit Cloud-Sync (Wunsch Fabi, 2026-10-13):** Anmelden, Spielstand in der Cloud, gleicher Stand in Browser, exe und APK. Braucht einen Server (Anbieter wählen), Konflikte zwischen Geräten lösen (z. B. neuerer/weiterer Stand gewinnt, vorher fragen). Bis dahin wurde der Browser-Stand (Opera GX, localhost:8080) am 2026-10-13 von Hand in die exe kopiert.
@@ -1093,9 +1094,23 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
     - Stand 2026-10-14: Worker + Abgleich im Spiel fertig und lokal getestet (`tools/cloud-e2e.mjs`), Domain `goblin.node-wave.org`, Google-Client-ID (Web) eingetragen. Fehlt: Netzwerk-Freigabe `api.cloudflare.com` und `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` in der Umgebung → dann `wrangler d1 create goblin`, ID in `wrangler.toml`, `npm run deploy` in `cloud/`, `LIVE = true` in `src/cloud.js`.
     - Für exe/APK zusätzlich: OAuth-Client vom Typ „Fernseher und Geräte mit begrenzter Eingabe“ → Client-ID in `GOOGLE_TV_CLIENT_ID` und `GOOGLE_CLIENT_IDS` (wrangler.toml), Secret als Umgebungsvariable `GOOGLE_TV_SECRET` → `wrangler secret put GOOGLE_TV_SECRET`.
     - **Von Fabi gebraucht:** Domain-Name; Cloudflare-API-Token (als GitHub-Secret `CLOUDFLARE_API_TOKEN` für automatisches Hochladen, oder `npx wrangler deploy` vom PC); in der Google Cloud Console eine OAuth-Client-ID (Web, Ursprünge `http://localhost:8080` und ggf. `https://goblin.<domain>`), später Desktop und Android. Client-IDs sind öffentlich und kommen in den Code.
-- [ ] **Game-Loop-Rework (Wunsch Fabi, 2026-10-12, entschieden 2026-10-14):** Der Wurfdolch wird automatisch hochgestuft (ohne Level-Up-Karte), damit die Karten für andere Waffen und Builds frei sind. Vorher mit der Sim prüfen, wie sich die Kraftkurve (7.3) ändert, und mit Fabi entscheiden.
+- [x] **Game-Loop-Rework (Wunsch Fabi, 2026-10-12, entschieden und umgesetzt 2026-10-14):** Der Wurfdolch wird automatisch hochgestuft (ohne Level-Up-Karte), damit die Karten für andere Waffen und Builds frei sind. Vorher mit der Sim prüfen, wie sich die Kraftkurve (7.3) ändert, und mit Fabi entscheiden.
   - Entscheidungen Fabi (2026-10-14): Dolch steigt **alle 4 Level** automatisch auf (Stufe 2/3/4/5 bei Level 4/8/12/16), zusätzlich zur normalen Level-Up-Karte. **Dolchsturm bleibt eine Entwicklungskarte** wie bisher (Dolch 5 + Wetzstein). Anzeige: **Banner „Wurfdolch Stufe N!“ mit Ton und ein Ring am Dolch-Slot**, der sich bis zur nächsten Stufe füllt. Balance: danach **alle Welten auf die Zielwerte** (`LEVEL_TARGET`) einstellen, zwei Seed-Sätze.
   - Reihenfolge: vor dem Komplett-Durchlauf machen, weil es die Kraftkurve ändert.
+  - Umgesetzt: `auto` in `data/weapons.js`, `autoUp()` in `game/levelup.js`, keine Dolch-Aufwertungskarten (Angebot, Truhen), Banner mit Ton `bladeUp`, Ring am Slot (`hud.js`, `.slot.auto`).
+  - **Nach der ersten Sim auf „alle 3 Level“ geändert (Entscheidung Fabi):** mit „alle 4“ kam der Dolchsturm in einem Level praktisch nie (Spieler-Level nach 2 min nur 12–14), Welt 3–8 fielen auf 15–55 % in Level 3–5. Jetzt Stufe 2/3/4/5 bei Spieler-Level 3/6/9/12.
+  - Balance danach (`WORLD_LV` in `data/levels.js`, 20 Läufe, Seeds 1/101): Welt 3 Schaden ×.76, Spawnrate ×.88, Boss-Level ×.84; Welt 4 ×.97/×1/×.84; Welt 5/6 Boss-Level ×.85; Welt 8 ×1.38/×1.25, Boss-Level ×.75.
+
+    | Welt | L3 (80–95) | L4 (75–90) | Boss (60–85) |
+    |---|---|---|---|
+    | 3 | 80/80 | 75/85 | 65/80 |
+    | 4 | 90/100 | 85/80 | 75/55 |
+    | 5 | 95/80 | 85/90 | 60/65 |
+    | 6 | 85/90 | 90/70 | 75/85 |
+    | 7 | 85/95 | 80/75 | 70/55 |
+    | 8 | 80/85 | 75/80 | 65/75 |
+
+    Welt 1–2 bleiben bewusst leicht (L3/L4 ~100 %, Boss 65/72 %).
 
 ### Phase 9 – Goblin-Klassen (Wunsch Fabi, 2026-10-12)
 - [ ] Mehrere Goblin-Typen mit eigener Startwaffe und eigenen Standard-Fähigkeiten statt Rolle/Sprint, z. B. Bogen-Goblin (Bogen als Startwaffe), Magier-Goblin (Teleport statt Rolle).
