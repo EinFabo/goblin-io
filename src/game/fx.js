@@ -1,6 +1,7 @@
 import { ECOL } from '../data/enemies.js';
 import { RNG, frand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
+import { save } from '../core/save.js';
 import { TAU } from '../core/util.js';
 import { hurt } from './combat.js';
 import { query, run } from './state.js';
@@ -16,7 +17,13 @@ export function addItem(k, x, y, v = 1) {
   if (k === 'gem') run.gemN = (run.gemN || 0) + 1;
   run.items.push({ k, x, y, v, mag: false, sp: 0, t: Math.random() * 6, vx: Math.cos(a) * s, vy: Math.sin(a) * s, z: .01, vz: RNG.loot.range(170, 260) });
 }
-export function addNum(x, y, v, c, crit) { if (run.nums.length > 90) run.nums.shift(); run.nums.push({ x: x + frand(-8, 8), y, v, c, crit, t: 0 }); }
+// dmg: Schaden an Gegnern; entsteht gar nicht, wenn Schadenszahlen in den Einstellungen aus sind
+// (frand ist Optik-Zufall, die Sim bleibt gleich)
+export function addNum(x, y, v, c, crit, dmg = false) {
+  if (dmg && !save.settings.numbers) return;
+  if (run.nums.length > 90) run.nums.shift();
+  run.nums.push({ x: x + frand(-8, 8), y, v, c, crit, t: 0 });
+}
 export function part(x, y, vx, vy, life, c, s) { if (run.parts.length > 600) return; run.parts.push({ x, y, vx, vy, t: 0, life, c, s }); }
 export function puff(x, y, sc = 1, col = null) { for (let i = 0; i < 7; i++) part(x + frand(-10, 10) * sc, y + frand(-12, 8) * sc, frand(-40, 40), frand(-60, -10), frand(.35, .6), col || (i % 2 ? 'rgba(170,140,220,.75)' : 'rgba(230,230,230,.75)'), frand(5, 9) * sc); }
 export function animFx(pre, n, x, y, sc = 1, fps = 18, rot = 0) { run.fx.push({ k: 'anim', pre, n, x, y, sc, fps, rot, t: 0 }); }

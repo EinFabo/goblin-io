@@ -36,7 +36,8 @@ export function defaults() {
     keep: [],
     // Fähigkeiten-Level und Skill Tree, auch Rolle (dash) und Sprint: { id: { lv, xp, pts: { pow, cd, area, s1, a, s2, s3, b, m } } }
     abilities: {},
-    settings: { mute: false, musicOff: false, shake: true, numbers: true, lefty: false },
+    // Einstellungen (ui/settings.js): Lautstärke 0–1, btn = Größe der Handy-Knöpfe (s/m/l), lefty = Knöpfe links
+    settings: { mute: false, musicOff: false, sfxVol: 1, musVol: 1, shake: true, numbers: true, lefty: false, btn: 'm' },
     // Karten (9.3): { id: { lv, n } }; ohne Eintrag Startstufe der Seltenheit
     cards: {},
     // Truhen (9.5): Regal [{ type, end }], Gratis-Truhen { n, t }, Pity-Zähler
@@ -100,8 +101,8 @@ export function normalize(raw) {
     keep: Array.isArray(r.keep) ? [...new Set(r.keep.filter(id => ABILITIES[id]))] : [],
     abilities: normAbilities(r.abilities),
     settings: {
-      mute: bool(se.mute, false), musicOff: bool(se.musicOff, false), shake: bool(se.shake, true),
-      numbers: bool(se.numbers, true), lefty: bool(se.lefty, false),
+      mute: bool(se.mute, false), musicOff: bool(se.musicOff, false), sfxVol: num(se.sfxVol, 1, 0, 1), musVol: num(se.musVol, 1, 0, 1),
+      shake: bool(se.shake, true), numbers: bool(se.numbers, true), lefty: bool(se.lefty, false), btn: ['s', 'm', 'l'].includes(se.btn) ? se.btn : 'm',
     },
     cards: {},
     chests: { shelf: [], free: { n: 1, t: 0 } },

@@ -188,14 +188,44 @@
 </div>
 
 <div class="overlay" id="options" hidden>
-  <div class="panel">
+  <div class="panel optpanel">
     <div class="phead"><h2>Einstellungen</h2><button class="iconbtn" data-close aria-label="Schließen">✕</button></div>
-    <div class="menubtns">
-      <button class="btn" id="muteBtn">Ton: an</button>
-      <button class="btn" id="musicBtn">Musik: an</button>
-      <button class="btn" id="shakeBtn">Wackeln: an</button>
-      <button class="btn ghost" id="howBtn">So spielst du</button>
+    <h3 class="sect">Ton</h3>
+    <div class="optrow" data-row="mute">
+      <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4Z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="on">Soundeffekte</span>
+      <button class="sw" id="muteSw" role="switch" aria-label="Soundeffekte"><i></i></button>
+      <div class="volrow"><div class="vol" id="sfxVol" role="slider" tabindex="0" aria-label="Lautstärke Soundeffekte" aria-valuemin="0" aria-valuemax="100"><i class="fill"></i><i class="knob"></i></div><b class="pct" id="sfxPct"></b></div>
     </div>
+    <div class="optrow" data-row="musicOff">
+      <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17V5l11-2v12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="3" fill="currentColor"/><circle cx="17.5" cy="15.5" r="3" fill="currentColor"/></svg>
+      <span class="on">Musik</span>
+      <button class="sw" id="musicSw" role="switch" aria-label="Musik"><i></i></button>
+      <div class="volrow"><div class="vol" id="musVol" role="slider" tabindex="0" aria-label="Lautstärke Musik" aria-valuemin="0" aria-valuemax="100"><i class="fill"></i><i class="knob"></i></div><b class="pct" id="musPct"></b></div>
+    </div>
+    <h3 class="sect">Spiel</h3>
+    <div class="optrow">
+      <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16H7Z" fill="currentColor"/><path d="M3 8v8M21 8v8M5 6v12M19 6v12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" opacity=".7"/></svg>
+      <span class="on">Bildschirmwackeln</span>
+      <button class="sw" id="shakeSw" role="switch" aria-label="Bildschirmwackeln"><i></i></button>
+    </div>
+    <div class="optrow">
+      <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><text x="12" y="17" text-anchor="middle" font-size="14" font-weight="900" font-family="Nunito,sans-serif" fill="currentColor">12</text></svg>
+      <span class="on">Schadenszahlen</span>
+      <button class="sw" id="numSw" role="switch" aria-label="Schadenszahlen"><i></i></button>
+    </div>
+    <h3 class="sect">Steuerung <small>Handy-Knöpfe</small></h3>
+    <div class="optrow">
+      <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21c-2-2-3-5-3-8V9a1.5 1.5 0 0 1 3 0v3V4.5a1.5 1.5 0 0 1 3 0V11V3.5a1.5 1.5 0 0 1 3 0V11V5a1.5 1.5 0 0 1 3 0v9c0 3-1 5-3 7Z" fill="currentColor"/></svg>
+      <span class="on">Knöpfe links</span>
+      <button class="sw" id="leftySw" role="switch" aria-label="Knöpfe links (Linkshänder)"><i></i></button>
+    </div>
+    <div class="optrow segrow">
+      <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="15" r="7" fill="currentColor"/><circle cx="6" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      <span class="on">Knopfgröße</span>
+      <div class="seg" id="btnSeg" role="radiogroup" aria-label="Knopfgröße"><button role="radio" data-bs="s">Klein</button><button role="radio" data-bs="m">Normal</button><button role="radio" data-bs="l">Groß</button></div>
+    </div>
+    <div class="menubtns row"><button class="btn ghost small" id="howBtn">So spielst du</button></div>
   </div>
 </div>
 
@@ -222,8 +252,7 @@
     <div class="build" id="buildList"></div>
     <div class="menubtns row">
       <button class="btn primary" id="resumeBtn">Weiter</button>
-      <button class="btn ghost" id="pMuteBtn">Ton: an</button>
-      <button class="btn ghost" id="pMusicBtn">Musik: an</button>
+      <button class="btn ghost" id="pOptBtn">Einstellungen</button>
       <button class="btn danger" id="quitBtn">Aufgeben</button>
     </div>
   </div>

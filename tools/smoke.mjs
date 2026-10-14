@@ -206,11 +206,26 @@ await p.click('#optBtn'); await p.click('#howBtn');
 if (!(await vis('#howto')) || (await vis('#options'))) hubFail('„So spielst du“ öffnet nicht aus den Einstellungen');
 await p.keyboard.press('Escape');
 if (await vis('#howto')) hubFail('Esc schließt „So spielst du“ nicht');
+// Einstellungen: Schalter, Knopfgröße, Lautstärke-Regler; werden gespeichert und sofort angewendet
+await p.click('#optBtn');
+await p.click('#leftySw'); await p.click('#numSw'); await p.click('#btnSeg [data-bs="l"]');
+{ const r = await p.locator('#musVol').boundingBox(); await p.mouse.click(r.x + r.width * .5, r.y + r.height / 2); }
+const opt = await p.evaluate(() => ({ s: GOBLIN.save.settings, lefty: document.body.classList.contains('lefty'), bs: getComputedStyle(document.documentElement).getPropertyValue('--bs').trim(), sw: document.querySelector('#leftySw').getAttribute('aria-checked') }));
+if (!opt.s.lefty || opt.s.numbers || opt.s.btn !== 'l' || Math.abs(opt.s.musVol - .5) > .06 || !opt.lefty || opt.bs !== '1.2' || opt.sw !== 'true') hubFail('Einstellungen greifen nicht: ' + JSON.stringify(opt));
+await p.click('#leftySw'); await p.click('#numSw'); await p.click('#btnSeg [data-bs="m"]');
+await p.keyboard.press('Escape');
+if (await vis('#options')) hubFail('Esc schließt die Einstellungen nicht');
 await p.click('#tabbar [data-tab="#menu"]');
 await p.click('#lvNote [data-go]');
 await p.waitForTimeout(800);
 if (!(await p.evaluate(() => GOBLIN.scene === 'run' && GOBLIN.run.si === 1 && GOBLIN.run.li === 0))) hubFail('„Los!“ startet nicht Level 2-1');
 if (await vis('#tabbar')) hubFail('Tab-Leiste bleibt im Lauf sichtbar');
+// Einstellungen aus der Pause: Esc schließt nur das Fenster, die Pause bleibt
+await p.click('#pauseBtn'); await p.click('#pOptBtn');
+if (!(await vis('#options'))) hubFail('Einstellungen öffnen nicht aus der Pause');
+await p.keyboard.press('Escape');
+if ((await vis('#options')) || !(await vis('#pause'))) hubFail('Esc in den Einstellungen schließt nicht nur das Fenster');
+await p.click('#resumeBtn');
 console.log('Hub (Tabs, Weltkarte, Name, Einstellungen, Start): geprüft');
 // Skill Tree: Tippen lernt nichts, Halten lernt einen Rang, Rolle mit zwei Ladungen im Lauf
 await p.evaluate(() => { const G = GOBLIN; G.save.abilities.rage = { lv: 6, xp: 0, pts: {} }; G.save.abilities.dash = { lv: 6, xp: 0, pts: {} }; G.go('menu', '#armory'); });

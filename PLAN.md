@@ -1072,7 +1072,12 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
   - [x] Icons von Goblin-Bande/-Ruf zeigen nach dem Umziehen weiter den alten Goblin
   - [x] Aufräumen: Blinzler-Teleport → `clampToArena`, Winkel per `angDiff`, `restart()` statt Eigenbau (items/store/tree), toter Zweig in `needOf`, Helfer für „Stoß im Kreis“ (~10 Kopien in abilities.js)
   - [x] Effizienz: `dropGem` zählt bei jedem Kill alle Gegenstände; `updHud` sucht jeden Frame DOM-Elemente
-- [ ] Linkshänder-Modus, Einstellungen
+- [x] Linkshänder-Modus, Einstellungen – erledigt 2026-10-14
+  - Einstellungen als Schalter-Liste (Fabi hat gewählt) in Gruppen: **Ton** (Soundeffekte und Musik je mit Holz-Schalter und Lautstärke-Regler in 5-%-Schritten; Regler ganz links schaltet aus, Ziehen schaltet wieder an), **Spiel** (Bildschirmwackeln, Schadenszahlen), **Steuerung** (Knöpfe links, Knopfgröße Klein/Normal/Groß = 85/100/120 %), dazu „So spielst du“. Code in `src/ui/settings.js`, Werte in `save.settings` (`sfxVol`, `musVol`, `btn` neu).
+  - Linkshänder (Fabi hat gewählt: nur die Knöpfe): Rolle, Sprint, Q und E gespiegelt nach links unten; die Tipps sagen dann „links unten“. Leiste oben bleibt.
+  - Schadenszahlen aus: Zahlen an Gegnern entstehen gar nicht erst; Texte („Perfekt!“, Heilung, Block) und eigener Schaden bleiben.
+  - Pause: „Ton“/„Musik“ ersetzt durch „Einstellungen“ (dasselbe Fenster, Esc schließt nur das Fenster). `npm run smoke` prüft Schalter, Regler, Knopfgröße und den Weg über die Pause.
+  - Code-Review (high): 9 Funde behoben (Zahlen verdrängten bei vielen Treffern andere Texte, Regler-Knopf saß neben dem Finger, Ziehen ohne Pointer-Capture, Lautstärke 0 vs. aus, Klick-Ton beim Einschalten, Tipp-Breite bei flachen Bildschirmen).
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
   - Nach den Review-Fixes (2026-10-14) Welt 3-4 mit 30 Läufen: Seeds 1/101 vorher 80/70 %, nachher 70/67 % (Ziel 75–90 %). Vermutlich weil Gegner im Portal nicht mehr getroffen werden; im Streubereich, beim Durchlauf mit ansehen.
 - [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.

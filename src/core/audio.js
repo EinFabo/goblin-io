@@ -4,13 +4,16 @@ import { emit } from './events.js';
 // ---------- Ton & Musik ----------
 export let AC = null, sfxBus = null, musBus = null, noiseBuf = null;
 export const lastS = {};
+// Lautstärke aus den Einstellungen; quadratisch, damit der Regler sich gleichmäßig anfühlt
+export const sfxGain = () => (save.settings.mute ? 0 : .5 * save.settings.sfxVol ** 2);
+export const musGain = () => (save.settings.musicOff ? 0 : .3 * save.settings.musVol ** 2);
 export function audioInit() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     const comp = AC.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(AC.destination);
-    sfxBus = AC.createGain(); sfxBus.gain.value = save.settings.mute ? 0 : .5; sfxBus.connect(comp);
-    musBus = AC.createGain(); musBus.gain.value = save.settings.musicOff ? 0 : .3; musBus.connect(comp);
+    sfxBus = AC.createGain(); sfxBus.gain.value = sfxGain(); sfxBus.connect(comp);
+    musBus = AC.createGain(); musBus.gain.value = musGain(); musBus.connect(comp);
     noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     emit('audioReady');

@@ -6,7 +6,6 @@ import { TALENT, TALENTS, talentCost } from '../data/talents.js';
 import { accountXpNeed } from '../game/balance.js';
 import { icon } from '../render/icons.js';
 import { ensureStage, rushing } from '../render/sprites.js';
-import { setMusic, setMute, setShake } from './settings.js';
 import { cleanLoadout, renderArmory } from './armory.js';
 import { renderProfile } from './profile.js';
 import { mapKey, onStart, renderMap } from './worldmap.js';
@@ -103,12 +102,8 @@ $('#shopList').addEventListener('click', e => {
 });
 
 // ---------- Einstellungen und Hilfe ----------
-$('#optBtn').addEventListener('click', () => { $('#options').hidden = false; });
+// Zahnrad im Hub und Knopf in der Pause öffnen dasselbe Fenster
+for (const b of ['#optBtn', '#pOptBtn']) $(b).addEventListener('click', () => { $('#options').hidden = false; });
 $('#howBtn').addEventListener('click', () => { $('#options').hidden = true; $('#howto').hidden = false; });
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { b.closest('.overlay').hidden = true; }));
 for (const o of ['#options', '#howto']) $(o).addEventListener('click', e => { if (e.target === $(o)) $(o).hidden = true; });
-$('#muteBtn').addEventListener('click', () => setMute(!save.settings.mute));
-$('#pMuteBtn').addEventListener('click', () => setMute(!save.settings.mute));
-$('#musicBtn').addEventListener('click', () => setMusic(!save.settings.musicOff));
-$('#pMusicBtn').addEventListener('click', () => setMusic(!save.settings.musicOff));
-$('#shakeBtn').addEventListener('click', () => setShake(!save.settings.shake));

@@ -4,7 +4,7 @@ import { $ } from '../core/util.js';
 import { icon } from '../render/icons.js';
 import { renderLoading } from '../render/loading-scene.js';
 import { loadAssets, loadStagesLater, preloadAllMages } from '../render/sprites.js';
-import { setMusic, setMute, setShake } from '../ui/settings.js';
+import { applySettings } from '../ui/settings.js';
 
 // Für Bot und Tests: lädt beim ersten Abfragen alle übrigen Magier (im Spiel nie, sonst ruckelt das Menü)
 let allPr = null;
@@ -30,7 +30,7 @@ defineScene('boot', {
     await loadAssets((p, txt) => { $('#loadFill').style.width = (p * 100).toFixed(0) + '%'; $('#loadMsg').textContent = txt; });
     await fonts;
     document.querySelectorAll('[data-icon]').forEach(im => { im.src = icon(im.dataset.icon); });
-    setMute(save.settings.mute); setMusic(save.settings.musicOff); setShake(save.settings.shake);
+    applySettings();
     $('#loading').hidden = true;
     go('menu');
     bgLoaded = loadStagesLater(stageUnlocked, save.map.si);

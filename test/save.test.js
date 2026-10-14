@@ -47,6 +47,14 @@ test('kaputte Werte werden repariert statt zu crashen', () => {
   assert.equal(s.profile.level, 50);
 });
 
+test('Einstellungen: Lautstärke wird begrenzt, Knopfgröße nur s/m/l, alte Stände bekommen Standardwerte', () => {
+  const s = migrate({ version: VERSION, settings: { sfxVol: 3, musVol: -1, btn: 'xl', lefty: true, numbers: false } });
+  assert.deepEqual(s.settings, { mute: false, musicOff: false, sfxVol: 1, musVol: 0, shake: true, numbers: false, lefty: true, btn: 'm' });
+  const old = migrate({ version: 3, settings: { mute: true, shake: false } });
+  assert.equal(old.settings.sfxVol, 1); assert.equal(old.settings.btn, 'm'); assert.equal(old.settings.mute, true); assert.equal(old.settings.shake, false);
+  assert.equal(migrate({ version: VERSION, settings: { musVol: .35, btn: 'l' } }).settings.musVol, .35);
+});
+
 test('normalize ist idempotent', () => {
   const once = normalize(migrate(V1));
   assert.deepEqual(normalize(once), once);

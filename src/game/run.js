@@ -50,7 +50,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   grid.clear();
   recalc(); P.hp = P.maxHp; P.stam = P.stamMax;
   addWeapon('dagger');
-  if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. Rechts unten: Rolle, Sprint und deine Fähigkeiten.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q und E Fähigkeiten');
+  if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ' unten: Rolle, Sprint und deine Fähigkeiten.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q und E Fähigkeiten');
   emit('runStart', run);
 }
 // Feste Momente aus dem Wellen-Skript in die Zeitleiste (Endlos: je Runde erneut)

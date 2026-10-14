@@ -15,6 +15,8 @@ window.addEventListener('keydown', e => {
   keys[e.code] = true;
   audioInit();
   if (!run || run.over) return;
+  // Einstellungen/Hilfe über der Pause: Esc schließt nur das obere Fenster
+  if (!$('#options').hidden || !$('#howto').hidden) { if (e.code === 'Escape') $(!$('#howto').hidden ? '#howto' : '#options').hidden = true; return; }
   if (run.cut && !run.paused && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); skipCut(); return; }
   if (e.code === 'Space') { e.preventDefault(); doDash(); }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();

@@ -34,7 +34,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   tgt.hp -= d; e.flash = .09;
   if (e.tb !== undefined && e.freezeT > 0) e.tb += d;   // Zeitbombe sammelt Schaden
   if (kb && !e.boss && !rule.blocked) { const m = e.elite ? .25 : e.traits && e.traits.includes('heavy') ? .2 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }
-  if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit);
+  if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit, true);
   else if (rule.blocked) addNum(e.x, e.y - 22 * e.sc, 'Block', '#dff6ff', false);
   sfx.hit();
   if (tgt.boss) bossHurt(tgt);

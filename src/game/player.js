@@ -85,7 +85,7 @@ export function updPlayer(dt) {
   run.abil.forEach((s, i) => {
     if (!s || P.abilReadyShown[i] || !abilReady(s)) return;
     P.abilReadyShown[i] = true;
-    hint(`<b>${ABILITIES[s.id].name} bereit!</b> ` + (isTouch() ? 'Tippe auf den Knopf rechts unten.' : `Drück ${SLOT_KEYS[i]}.`));
+    hint(`<b>${ABILITIES[s.id].name} bereit!</b> ` + (isTouch() ? `Tippe auf den Knopf ${save.settings.lefty ? 'links' : 'rechts'} unten.` : `Drück ${SLOT_KEYS[i]}.`));
   });
 }
 export const ROLL_T = .3;   // Roll-Animation (die Rolle selbst dauert .18 s)
