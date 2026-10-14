@@ -12,37 +12,25 @@ import { makeProc } from './proc.js';
 
 // ---------- Sprites ----------
 export const U = 0.85;
-export const SPR = {}, TINT = new Map();
+export const SPR = {};
 let nextIdx = 0;   // Nummer je gerastertem Bild (Schlüssel der Tönungen)
 export let GRASS_IMG = null;
 export function svgSize(s) { const p = s.match(/viewBox="([^"]+)"/)[1].split(/[\s,]+/).map(Number); return [p[2], p[3]]; }
 export function loadImg(src) { return new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; }); }
 export const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
-// ---------- Atlas ----------
-// Alle Sprite-Bilder liegen ohne durchsichtigen Rand auf wenigen großen Atlas-Seiten (2048², Tönungen 512²).
-// Das spart gut die Hälfte Speicher und der Browser muss beim Zeichnen nicht zwischen Hunderten
-// kleiner Bilder (je eine eigene GPU-Textur) wechseln.
-// Eintrag: c Seite, sx/sy/sw/sh Ausschnitt darin, fw/fh volle Rastergröße, tx/ty Lage des Ausschnitts
+// ---------- Bild-Flächen ----------
+// Jedes Sprite-Bild liegt ohne durchsichtigen Rand auf einer eigenen, genau passenden Fläche.
+// Eintrag: c Fläche, sx/sy/sw/sh Ausschnitt darin, fw/fh volle Rastergröße, tx/ty Lage des Ausschnitts
 // im vollen Bild, uw/uh Größe in SVG-Einheiten. Gezeichnet wird mit blit()/blitPart().
+// Kein gemeinsamer Atlas mehr: aus großen Atlas-Seiten (1024²/2048²) rechnet Chrome jede Zeichnung sofort
+// auf dem Haupt-Thread ab – gemessen 20–100 ms je Frame statt 1–7 ms, das Ruckeln in 3.0.1. Einzeln
+// zugeschnitten braucht sogar weniger Speicher (kein verschenkter Platz auf den Seiten).
 // Gruppen: 'gob' und 'gobtint' werden beim Umziehen des Goblins komplett verworfen.
-// Getönte Bilder entstehen auch mitten im Lauf: kleine Seiten, denn eine Seite, in die nach dem Zeichnen
-// noch geschrieben wird, muss der Browser vorher kopieren.
-// PAD: Abstand zwischen den Bildern, groß genug für Mipmaps (kleine Bilder werden bis auf ¼ verkleinert)
-const PAD = 6, pageSize = group => (group.endsWith('tint') ? 512 : 2048);
-export const PAGES = {};
+export const PAGES = {};   // Flächen je Gruppe (Speicher-Zählung, Verwerfen)
 function alloc(group, w, h) {
-  const list = PAGES[group] || (PAGES[group] = []);
-  let p = list[list.length - 1];
-  if (p && p.x + w > p.size) { p.x = 0; p.y += p.rowH + PAD; p.rowH = 0; }
-  if (!p || p.x + w > p.size || p.y + h > p.size) {
-    // ein Bild, das größer als eine Seite ist, bekommt eine eigene
-    const size = Math.max(pageSize(group), w, h), c = document.createElement('canvas'); c.width = c.height = size;
-    p = { c, g: c.getContext('2d'), size, x: 0, y: 0, rowH: 0 };
-    list.push(p);
-  }
-  const at = [p, p.x, p.y];
-  p.x += w + PAD; p.rowH = Math.max(p.rowH, h);
-  return at;
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  (PAGES[group] || (PAGES[group] = [])).push({ c });
+  return [{ c, g: c.getContext('2d') }, 0, 0];
 }
 // Arbeitsfläche zum Rastern und Zuschneiden (liest Pixel, daher willReadFrequently)
 let scr = null, sg = null;
@@ -70,7 +58,7 @@ function opaqueBox(w, h) {
   x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1);
   return [x0, y0, Math.min(w, x1 + 2) - x0, Math.min(h, y1 + 2) - y0];
 }
-// SVG-Bild rastern (größer als nötig, damit es beim Zoomen scharf bleibt), zuschneiden, in den Atlas legen
+// SVG-Bild rastern (größer als nötig, damit es beim Zoomen scharf bleibt), zuschneiden, auf eine eigene Fläche legen
 function raster(im, svg, flip = false, scale = 0, group = 'main') {
   const [w, h] = svgSize(svg);
   const k = scale || (w < 40 ? 4 : w <= 48 ? 2 : 1.5);
@@ -133,7 +121,8 @@ function loadFrames(jobs, scale) {
   })));
 }
 function nextLoad() {
-  while (waiting.length && (rush || loading < 3)) {
+  // auch beim Eilen höchstens 8: sonst landen beim Start eines Laufs Hunderte SVG-Dekodierungen in dessen ersten Sekunden
+  while (waiting.length && loading < (rush ? 8 : 3)) {
     if (resting()) { if (!restT) restT = setTimeout(() => { restT = 0; nextLoad(); }, 500); return; }
     waiting.shift()();
   }
@@ -193,11 +182,7 @@ export async function loadGoblin(look = goblinLook()) {
   for (const [anim, n] of Object.entries(ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, goblinSvg(dir, anim, i, look)]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[3]))));
   if (me !== gobToken) return;
-  // alte Goblin-Bilder freigeben (Atlas-Seiten und ihre Tönungen), sonst wächst der Speicher mit jedem Umziehen
-  for (const [k, e] of Object.entries(SPR)) {
-    if (!k.startsWith('gob.') || !e) continue;
-    for (const t of Object.keys(TINTS)) TINT.delete(e.idx + '|' + t);
-  }
+  // alte Goblin-Bilder freigeben (Flächen; die Tönungen hängen an den Einträgen), sonst wächst der Speicher mit jedem Umziehen
   PAGES.gob = []; PAGES.gobtint = [];
   jobs.forEach(([anim, dir, i, svg], j) => {
     SPR[`gob.${anim}.${dir}.${i + 1}`] = raster(imgs[j], svg, false, 0, 'gob');
@@ -214,18 +199,18 @@ export const TINTS = {
 // Dolch-Skins als Tönungen (data/cosmetics.js)
 for (const [k, t] of Object.entries(DAGGER_TINT)) if (t) TINTS['dagger_' + k] = t;
 export const daggerTint = () => (DAGGER_TINT[save.look.dagger] ? 'dagger_' + save.look.dagger : null);
-// Getönte Fassung als eigener Atlas-Eintrag (ohne flip: das Spiegeln übernimmt der Aufrufer)
+// Getönte Fassung als eigene Fläche (ohne flip: das Spiegeln übernimmt der Aufrufer)
+// Die Tönungen hängen am Eintrag (kein Schlüssel-String je Zeichnung); gespiegelte Einträge haben ihren eigenen Satz
 export function tinted(e, tint) {
-  const key = e.idx + '|' + tint;
-  let t = TINT.get(key);
+  const tc = e.tc || (e.tc = {});
+  let t = tc[tint];
   if (!t) {
     const [p, sx, sy] = alloc(e.group === 'gob' ? 'gobtint' : 'tint', e.sw, e.sh), g = p.g;
     g.drawImage(e.c, e.sx, e.sy, e.sw, e.sh, sx, sy, e.sw, e.sh);
-    // source-atop nur über dem eigenen Feld: die Nachbarn auf der Seite bleiben unberührt
     const [col, a] = TINTS[tint] || [tint, .85];
     g.save(); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = a; g.fillStyle = col; g.fillRect(sx, sy, e.sw, e.sh); g.restore();
     t = { c: p.c, sx, sy, sw: e.sw, sh: e.sh, tx: e.tx, ty: e.ty, fw: e.fw, fh: e.fh, uw: e.uw, uh: e.uh };
-    TINT.set(key, t);
+    tc[tint] = t;
   }
   return t;
 }

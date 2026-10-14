@@ -26,7 +26,7 @@ const api = {
   stress: stressTest, persist, newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, hurt, BOSSES, ATTACKS, ATK,
 };
 Object.defineProperties(api, {
-  // Speicher der Atlas-Seiten in Bytes (RGBA) und ihre Anzahl, für npm run perf
+  // Speicher der Bild-Flächen in Bytes (RGBA) und ihre Anzahl, für npm run perf
   canvasBytes: { value: () => Object.values(PAGES).flat().reduce((n, p) => n + p.c.width * p.c.height * 4, 0) },
   atlasPages: { value: () => Object.fromEntries(Object.entries(PAGES).map(([k, l]) => [k, l.length])) },
   run: { get: () => run }, allLoaded: { get: () => allLoaded() }, bgLoaded: { get: () => bgLoaded }, P: { get: () => P }, save: { get: () => save }, scene: { get: () => sceneName },

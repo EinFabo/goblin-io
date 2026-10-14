@@ -43,7 +43,11 @@ function setCount(id, n) {
 export function updHud(dt) {
   if (!run) return;
   setW('#xpFill', P.xp / P.need);
-  if (autoSlot) { const w = run.weapons.find(x => autoProgress(x) !== null), p = w ? autoProgress(w).toFixed(3) : null; if (p !== null && p !== hudCache.autoP) { hudCache.autoP = p; autoSlot.style.setProperty('--p', p); } }
+  if (autoSlot) {
+    // Ring am Dolch-Slot in 1-%-Schritten: jede Änderung lässt den Browser den Slot neu malen
+    let p = null; for (const w of run.weapons) { const a = autoProgress(w); if (a !== null) { p = a.toFixed(2); break; } }
+    if (p !== null && p !== hudCache.autoP) { hudCache.autoP = p; autoSlot.style.setProperty('--p', p); }
+  }
   setTxt('#lvTxt', 'Lv ' + P.lv);
   setTxt('#killTxt', String(run.kills));
   setTxt('#goldTxt', String(run.gold));

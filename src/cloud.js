@@ -4,6 +4,7 @@
 // nach jedem Lauf und beim Verlassen. Ist der Cloud-Stand anderswo weitergespielt worden UND hat sich
 // auch hier etwas getan, wird gefragt – nie still überschrieben.
 import { on } from './core/events.js';
+import { sceneName } from './core/scenes.js';
 import { defaults, persist, save, setSave } from './core/save.js';
 import { $ } from './core/util.js';
 
@@ -205,7 +206,9 @@ export async function deleteAccount() {
 
 // ---------- Abgleich ----------
 export async function sync() {
-  if (!st.token || busy || linking) return;
+  // nie mitten im Lauf: kostet Zeit auf dem Haupt-Thread und ein übernommener Cloud-Stand lädt die Seite neu.
+  // Nach dem Lauf (runEnd → soon) kommt der Abgleich ohnehin.
+  if (!st.token || busy || linking || sceneName === 'run') return;
   busy = true; say('Gleiche ab …');
   try {
     const c = await api('GET', '/api/save');
@@ -271,7 +274,7 @@ function ask(c) {
 function soon() {
   if (!st.token) return;
   clearTimeout(upT);
-  upT = setTimeout(() => sync(), Math.max(2000, MIN_GAP - (Date.now() - lastUp)));
+  upT = setTimeout(() => (sceneName === 'run' ? null : sync()), Math.max(2000, MIN_GAP - (Date.now() - lastUp)));
 }
 export function startCloud() {
   if (!cloudReady()) return;

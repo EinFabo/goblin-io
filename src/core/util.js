@@ -3,7 +3,8 @@ export const $ = s => document.querySelector(s);
 export const TAU = Math.PI * 2;
 export const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 // CSS-Animation neu starten (Klasse weg, Reflow, Klasse dran)
-export function restart(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+// CSS-Animation neu starten: Klasse weg und im nächsten Frame wieder dran (kein erzwungenes Layout mitten im Spiel-Schritt)
+export function restart(el, cls) { el.classList.remove(cls); requestAnimationFrame(() => el.classList.add(cls)); }
 // Winkelabstand a − b im Bereich −π…π
 export const angDiff = (a, b) => { const d = a - b; return Math.atan2(Math.sin(d), Math.cos(d)); };
 export const fmtTime = t => { t = Math.max(0, Math.floor(t)); return String((t / 60) | 0).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
