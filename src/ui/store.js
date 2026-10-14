@@ -1,7 +1,7 @@
 import { sfx } from '../core/audio.js';
 import { mulberry32, newSeed } from '../core/rng.js';
 import { persist, save } from '../core/save.js';
-import { $, fmtClock } from '../core/util.js';
+import { $, fmtClock, restart } from '../core/util.js';
 import { CARD_MAX, CHESTS, CHEST_IDS, PITY_EPIC, PITY_LEG, RARITIES, RARITY, SHELF, cardName, skipGems } from '../data/cards.js';
 import { cardState, chestLeft, chestReady, freeChests, grantCards, grantChest, rollChest, skipUnlock, startUnlock, takeFromShelf, unlocking } from '../game/chests.js';
 import { GOLD_PACKS, canPay, dailyOffers, msToMidnight, pay, shopToday } from '../game/shop.js';
@@ -107,7 +107,7 @@ function showOdds(t) {
   $('#oddsInfo').hidden = false;
 }
 
-const nope = b => { sfx.buzz(); b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope'); };
+const nope = b => { sfx.buzz(); restart(b, 'nope'); };
 $('#store').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;

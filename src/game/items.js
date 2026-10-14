@@ -1,6 +1,6 @@
 import { frand } from '../core/rng.js';
 import { sfx, tickGemCombo } from '../core/audio.js';
-import { $, TAU } from '../core/util.js';
+import { $, TAU, restart } from '../core/util.js';
 import { xpCatchUp } from './balance.js';
 import { autoChest } from './levelup.js';
 import { chargeAbil, xpBonus } from './abilities.js';
@@ -29,6 +29,7 @@ export function updItems(dt) {
     if (d < pR() + 12) collect(it);
   }
   run.items = run.items.filter(i => !i.got);
+  run.gemN = 0; for (const i of run.items) if (i.k === 'gem') run.gemN++;
 }
 // Was Magnet, Totem und Levelende anziehen: Kristalle, Münzen, Zahnräder
 export const pullable = it => it.k === 'gem' || it.k === 'coin' || it.k === 'gear';
@@ -41,7 +42,7 @@ export function collect(it) {
       addXp(it.v); sfx.gem();
       const col = GEM_COL[gemTier(it.v)][0];
       for (let i = 0; i < 5; i++) { const a = Math.random() * TAU; part(P.x + Math.cos(a) * 8, P.y - 10 + Math.sin(a) * 8, Math.cos(a) * 110, Math.sin(a) * 110 - 30, .3, col, 2.6); }
-      if (performance.now() - xpPulseT > 110) { xpPulseT = performance.now(); const b = $('#xpBar'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
+      if (performance.now() - xpPulseT > 110) { xpPulseT = performance.now(); restart($('#xpBar'), 'pulse'); }
       break;
     }
     case 'coin': run.gold += run.goldT > 0 ? 2 : 1; sfx.coin(); break;

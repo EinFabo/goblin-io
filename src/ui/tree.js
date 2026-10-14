@@ -1,6 +1,6 @@
 import { audioInit, chargeTone, sfx } from '../core/audio.js';
 import { abilState, persist } from '../core/save.js';
-import { $ } from '../core/util.js';
+import { $, restart } from '../core/util.js';
 import { ABIL_MAX_LV, ROWS, TREE, abilXpNeed, canLearn, nodeInfo, pointsBelow, rowOf, rowOpen, smokeAtkSlow, spentPoints, treeDef, xpPerUse } from '../data/abilities.js';
 import { icon } from '../render/icons.js';
 
@@ -141,7 +141,7 @@ function endHold(ok) {
   hold = null;
 }
 const nodeBtn = k => $(`#treeNodes [data-node="${k}"]`);
-function shake(b) { b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope'); }
+const shake = b => restart(b, 'nope');
 
 function learn(k) {
   const s = st(), before = ROWS.map((_, r) => rowOpen(s.pts, r));

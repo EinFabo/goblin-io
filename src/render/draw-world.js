@@ -28,7 +28,7 @@ const CHIEF_LOOK = { sc: .95 };  // Häuptling (Meister des Goblin-Rufs)
 // alpha: Anteil zwischen letztem und nächstem Logikschritt. Spieler, Gegner und Kumpel
 // werden für das Bild dazwischen gesetzt und danach zurückgesetzt.
 export function renderRun(now, alpha = 1) {
-  const moved = [P, run.cam, ...run.enemies, ...run.allies], saved = new Array(moved.length * 2);
+  const moved = [P, run.cam, ...run.enemies, ...run.allies, ...run.tmpAllies], saved = new Array(moved.length * 2);
   moved.forEach((o, i) => {
     saved[i * 2] = o.x; saved[i * 2 + 1] = o.y;
     if (o.px !== undefined) { o.x = o.px + (o.x - o.px) * alpha; o.y = o.py + (o.y - o.py) * alpha; }

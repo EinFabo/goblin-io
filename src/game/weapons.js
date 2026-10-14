@@ -1,6 +1,6 @@
 import { rnd, frand, rand, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
-import { TAU, clamp, face8 } from '../core/util.js';
+import { TAU, angDiff, clamp, face8 } from '../core/util.js';
 import { hurt } from './combat.js';
 import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
 import { P, nearest, query, randomEnemyInView, run } from './state.js';
@@ -177,7 +177,7 @@ export function updPProj(dt) {
     p.t += dt; p.life -= dt;
     if ((p.k === 'fireball' || p.k === 'rocket') && p.target && !p.target.dead) {
       const ta = Math.atan2(p.target.y - p.y, p.target.x - p.x), turn = p.k === 'rocket' ? 8 : 6;
-      let da = ta - p.a; while (da > Math.PI) da -= TAU; while (da < -Math.PI) da += TAU;
+      const da = angDiff(ta, p.a);
       const sp = Math.hypot(p.vx, p.vy);
       p.a += clamp(da, -turn * dt, turn * dt); p.vx = Math.cos(p.a) * sp; p.vy = Math.sin(p.a) * sp;
     }

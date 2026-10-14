@@ -130,6 +130,7 @@ export function update(dt) {
   updTele(dt);
   updEProj(dt);
   run.enemies = run.enemies.filter(e => !e.dead);
+  if (run.over) return;   // im Schritt gestorben (Geschoss, Gefahr): Ergebnis und Spielstand sind schon geschrieben
   updItems(dt);
   updFx(dt);
   if (run.storm > 0) run.storm = run.boss ? Math.min(1, run.storm + dt * .5) : Math.max(0, run.storm - dt);
@@ -149,7 +150,7 @@ export function update(dt) {
 }
 // Effekte, Partikel, Schadenszahlen, Wackeln
 function updFx(dt) {
-  for (const f of run.fx) f.t += dt;
+  for (const f of run.fx) { f.t += dt; if (f.k === 'later' && f.t >= f.dur) f.fn(); }
   run.fx = run.fx.filter(f => f.k === 'anim' ? f.t * f.fps < f.n : f.t < f.dur);
   for (const p of run.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .96; p.vy *= .96; }
   run.parts = run.parts.filter(p => p.t < p.life);

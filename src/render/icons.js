@@ -4,6 +4,8 @@ import { SPR, blit } from './sprites.js';
 
 // ---------- Icons ----------
 export const ICON = {};
+// Icons aus Goblin-Bildern (Bande, Ruf) nach dem Umziehen neu zeichnen
+export function dropGoblinIcons() { for (const id of ['gang', 'gang_evo', 'call', 'call_evo']) { delete ICON[id]; delete ICON[id + '#c']; } }
 export function icon(id) {
   if (ICON[id]) return ICON[id];
   const evo = id.endsWith('_evo'); const base = evo ? id.slice(0, -4) : id;

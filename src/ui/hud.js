@@ -11,6 +11,9 @@ import { on } from '../core/events.js';
 // ---------- HUD ----------
 export const hudCache = {};
 export function setTxt(id, v) { if (hudCache[id] !== v) { hudCache[id] = v; $(id).textContent = v; } }
+// Balkenbreite in %, nur bei Änderung schreiben; Elemente einmal holen
+const els = {};
+function setW(id, frac) { const w = (frac * 100).toFixed(1) + '%'; if (hudCache[id + 'w'] !== w) { hudCache[id + 'w'] = w; (els[id] || (els[id] = $(id))).style.width = w; } }
 // Kurz-Animation am Knopf neu starten (Klasse weg, Reflow, Klasse dran)
 export function flashBtn(b, cls) { b.classList.remove('tick', 'pop', 'fire'); void b.offsetWidth; b.classList.add(cls); }
 export function setAbil(id, p, ready, on = false, lock = false) {
@@ -38,7 +41,7 @@ function setCount(id, n) {
 }
 export function updHud(dt) {
   if (!run) return;
-  $('#xpFill').style.width = (P.xp / P.need * 100).toFixed(1) + '%';
+  setW('#xpFill', P.xp / P.need);
   setTxt('#lvTxt', 'Lv ' + P.lv);
   setTxt('#killTxt', String(run.kills));
   setTxt('#goldTxt', String(run.gold));
@@ -47,11 +50,11 @@ export function updHud(dt) {
   setAbil('#dashBtn', P.dashN > 0 ? 1 : 1 - Math.max(0, P.dashCd) / dashCdOf(), P.dashN > 0, false, !!lockOf('dash'));
   setCount('#dashBtn', P.dashMax > 1 ? String(P.dashN) : '');
   setAbil('#sprintBtn', P.stam / P.stamMax, !P.exhaust, P.sprinting, !!lockOf('sprint'));
-  if (run.boss) $('#bossFill').style.width = (Math.max(0, run.boss.hp / run.boss.maxHp) * 100).toFixed(1) + '%';
+  if (run.boss) setW('#bossFill', Math.max(0, run.boss.hp / run.boss.maxHp));
   // Mini-Boss: eigene Leiste, solange er lebt
   const mini = run.mini && !run.mini.dead ? run.mini : null;
   if (hudCache.mini !== mini) { hudCache.mini = mini; $('#miniBar').hidden = !mini; if (mini) $('#miniName').textContent = 'Mini-Boss · ' + ETYPES[mini.type].name; }
-  if (mini) $('#miniFill').style.width = (Math.max(0, mini.hp / mini.maxHp) * 100).toFixed(1) + '%';
+  if (mini) setW('#miniFill', Math.max(0, mini.hp / mini.maxHp));
   if (!run.paused && !run.cut) {
     run.hintT -= dt;
     if (run.hintT <= 0) {

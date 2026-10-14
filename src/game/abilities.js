@@ -23,11 +23,14 @@ import { banner } from '../ui/hud.js';
 // Baum-Werte der Fähigkeit in diesem Lauf (Kraft, Tempo, Reichweite, Extras a/b), siehe data/abilities.js
 const NOMOD = abilMods(null);
 const M = id => (run.abMods && run.abMods[id]) || NOMOD;
+// Stoß im Kreis: Schaden an allen in r, Rückstoß kb vom Mittelpunkt weg
+function blast(x, y, r, dmg, kb, col) {
+  query(x, y, r, e => { const d = Math.hypot(e.x - x, e.y - y) || 1; hurt(e, dmg, kb, (e.x - x) / d, (e.y - y) / d, col); });
+}
 function needOf(id) {
   const A = ABILITIES[id], m = M(id);
   if (A.charge === 'once') return A.need;
-  if (A.charge === 'kills') return Math.round(A.need * m.spd);
-  return A.charge === 'cd' ? A.need * m.spd : Math.round(A.need * m.spd);
+  return A.charge === 'cd' ? A.need * m.spd : Math.round(A.need * m.spd);   // Kills, Schrott: ganze Zahl
 }
 export const slotOpen = i => i === 0 || save.profile.level >= SLOT2_ACCT;
 export const canEquip = id => save.keep.includes(id) || abilityUnlocked(id, save.profile.level, stageCleared);
@@ -145,7 +148,7 @@ export function updAbilities(dt) {
     if (al.t <= 0) {
       al.done = true; puff(al.x, al.y, .6);
       // Letzter Hieb: Krieger explodieren beim Gehen
-      if (al.boom) { query(al.x, al.y, 70, e => { const d = Math.hypot(e.x - al.x, e.y - al.y) || 1; hurt(e, al.boom, 200, (e.x - al.x) / d, (e.y - al.y) / d, '#9be36a'); }); ring(al.x, al.y, 6, 70, .3, 'rgba(160,230,100,.9)', 5); }
+      if (al.boom) { blast(al.x, al.y, 70, al.boom, 200, '#9be36a'); ring(al.x, al.y, 6, 70, .3, 'rgba(160,230,100,.9)', 5); }
     }
   });
   run.tmpAllies = run.tmpAllies.filter(a => !a.done);
@@ -216,7 +219,7 @@ function doRage(m) {
   if (m.b) { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .2 * m.pow); addNum(P.x, P.y - 40, '+' + Math.round(P.maxHp * .2 * m.pow), '#7dff7a'); }
   const R = 380 * (1 + .12 * m.s2), kb = 700 * (1 + .12 * m.s2);
   run.rageExt = 0;
-  query(P.x, P.y, R, e => { const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, dmg, kb, (e.x - P.x) / d, (e.y - P.y) / d, '#ff8a5c'); });
+  blast(P.x, P.y, R, dmg, kb, '#ff8a5c');
   for (const p of run.eproj) if (Math.hypot(p.x - P.x, p.y - P.y) < R) p.life = 0;
   ring(P.x, P.y, 10, R, .55, 'rgba(255,90,50,.95)', 16); ring(P.x, P.y, 10, R * .8, .4, 'rgba(255,220,90,.9)', 8);
   run.shake = 16; sfx.ult(); banner('Goblin-Wut!', 'danger');
@@ -231,7 +234,7 @@ export function startMech(m = NOMOD) {
   P.gunT = 0; P.rocketT = .6; P.stepT = 0; P.inv = Math.max(P.inv, .6); P.slowT = 0;
   ring(P.x, P.y, 10, 160, .5, 'rgba(230,170,60,.95)', 10);
   for (let i = 0; i < 16; i++) part(P.x + frand(-30, 30), P.y + frand(-20, 20), frand(-120, 120), frand(-160, -40), .6, 'rgba(220,220,220,.8)', frand(5, 9));
-  query(P.x, P.y, 120, e => { const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, 30 * P.dmgMult, 500, (e.x - P.x) / d, (e.y - P.y) / d); });
+  blast(P.x, P.y, 120, 30 * P.dmgMult, 500);
   run.shake = 10; sfx.mechOn(); banner('Goblin-Maschine!', '');
 }
 function updMech(dt) {
@@ -240,7 +243,7 @@ function updMech(dt) {
   if (P.moving && P.stepT <= 0) {
     P.stepT = .36; P.leg ^= 1;
     const fx = P.x + (P.leg ? 15 : -15), fy = P.y + 18, boots = 1 + .25 * M('mech').s2, sr = 55 * P.area * boots;
-    query(fx, fy, sr, e => { const d = Math.hypot(e.x - fx, e.y - fy) || 1; hurt(e, 13 * P.dmgMult * boots, 160, (e.x - fx) / d, (e.y - fy) / d); });
+    blast(fx, fy, sr, 13 * P.dmgMult * boots, 160);
     ring(fx, fy, 6, sr, .3, 'rgba(210,190,150,.8)', 5);
     for (let i = 0; i < 4; i++) part(fx, fy, frand(-60, 60), frand(-40, -5), .4, 'rgba(200,185,150,.8)', 5);
     run.shake = Math.max(run.shake, 2.5); sfx.stomp();
@@ -270,7 +273,7 @@ function updMech(dt) {
   if (Math.random() < dt * 14) { const side = Math.cos(P.gunA) >= 0 ? -1 : 1; part(P.x + side * 18, P.y - 62, frand(-10, 10), frand(-70, -40), .9, 'rgba(90,90,95,.55)', frand(6, 10)); }
   if (P.mechT <= 0) {
     const over = M('mech').m, R = 200 * P.area * (over ? 1.4 : 1);   // Überladung
-    query(P.x, P.y, R, e => { const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, 90 * P.dmgMult * (over ? 2 : 1), 600, (e.x - P.x) / d, (e.y - P.y) / d, '#ffb35c'); });
+    blast(P.x, P.y, R, 90 * P.dmgMult * (over ? 2 : 1), 600, '#ffb35c');
     animFx('f_fireball_hit_', 5, P.x, P.y - 20, 6); ring(P.x, P.y, 10, R, .5, 'rgba(255,170,60,.95)', 14);
     for (let i = 0; i < 24; i++) part(P.x, P.y - 20, frand(-260, 260), frand(-300, 60), frand(.4, .9), i % 2 ? '#c9973a' : '#6d747c', frand(4, 8));
     P.inv = 1; run.shake = 16; sfx.boom(); sfx.ult(); banner('Maschine explodiert!', '');
@@ -361,7 +364,7 @@ export function shieldThorns(e) {
 // Splitterschild: beim Brechen oder Ende fliegen Splitter um dich
 function shieldShards() {
   const dmg = P.shieldShard; P.shieldShard = 0;
-  query(P.x, P.y, 160, e => { const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, dmg, 300, (e.x - P.x) / d, (e.y - P.y) / d, '#dfe6ea'); });
+  blast(P.x, P.y, 160, dmg, 300, '#dfe6ea');
   for (let i = 0; i < 14; i++) { const a = i * TAU / 14; part(P.x, P.y - 10, Math.cos(a) * 260, Math.sin(a) * 260, .4, '#c9d1d8', 4); }
   ring(P.x, P.y, 10, 160, .35, 'rgba(220,225,230,.9)', 6); sfx.stomp();
 }
@@ -449,7 +452,7 @@ export function tryRevive() {
   P.hp = P.maxHp * (m.b ? 1 : .5); P.inv = 2 + .5 * m.s1;
   if (m.m) P.rageT = Math.max(P.rageT, 5);   // Wiedergeburt
   run.abXp.charm = (run.abXp.charm || 0) + xpPerUse('charm');
-  query(P.x, P.y, R, e => { const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, 50 * P.dmgMult * (1 + .5 * m.s2), 800, (e.x - P.x) / d, (e.y - P.y) / d, '#ffd84a'); });
+  blast(P.x, P.y, R, 50 * P.dmgMult * (1 + .5 * m.s2), 800, '#ffd84a');
   for (const p of run.eproj) p.life = 0;
   ring(P.x, P.y, 10, R, .6, 'rgba(255,215,80,.95)', 14); run.shake = 14; run.slowT = .4;
   sfx.ult(); banner('Das Amulett rettet dich!', '');

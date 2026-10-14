@@ -216,6 +216,12 @@ export function updEnemy(e, dt) {
       if (Math.random() < dt * 25) { const [tx, ty] = tipPos(e), a = Math.random() * TAU; part(tx + Math.cos(a) * 22 * e.sc, ty + Math.sin(a) * 22 * e.sc, -Math.cos(a) * 70, -Math.sin(a) * 70, .28, C.col, 2.5); }
     } else {
       const f = Math.floor((e.ft - e.charge) * 14);
+      // Rauchbombe: der Zauber hat sein Ziel verloren und verpufft (samt seiner Bodenwarnung)
+      if (!e.fired && blind) {
+        e.state = 'walk'; e.cur.t = 1.5;
+        for (const h of run.haz) if (h.owner === e && h.cancel) h.done = true;
+        return;
+      }
       if (!e.fired) {
         e.fired = true; e.cur.t = rand(e.cur.cd[0], e.cur.cd[1]);
         const [tx, ty] = tipPos(e);

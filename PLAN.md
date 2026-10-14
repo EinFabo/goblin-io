@@ -1053,25 +1053,25 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
   - Nebenbei gefunden: Die Sim war mit gleichen Seeds nicht wiederholbar. Feuerwand (Lücke) und Golem-Beschwörung (Platz der Rune) würfelten mit dem Optik-Zufall `frand` → jetzt `rand`. Zwei gleiche `npm run sim`-Aufrufe geben wieder dasselbe.
   - Cloud: `tools/cloud-setup.sh` verlinkt ein vorinstalliertes Chromium, wenn der Download gesperrt ist.
   - Code-Review (max, 2026-10-13): SVGs einer ganzen Welt entstanden beim Hintergrund-Laden in einem Rutsch (Hub-Hänger bis 345 ms bei allen Welten frei) → entstehen jetzt erst im Lade-Job, danach keine langen Tasks mehr. Hintergrund-Laden ruht auch im Ergebnis (Szenen schalten es um), Icons beachten gespiegelte Bilder (Ratten schauen wieder nach rechts), Belastungstest landet nicht mehr im ?perf-Bericht.
-- [ ] **Funde aus dem Code-Review über den ganzen Code (high, Wunsch Fabi, 2026-10-14)** – nächster Punkt; 11 von 18 am 2026-10-14 behoben (Level-Up geprüft: 2 Level-Ups + Truhe gaben vorher 1 Kartenfenster, jetzt 3; Hüte merken sich jetzt die erfüllten Bedingungen des besten Laufs als `hm`)
+- [x] **Funde aus dem Code-Review über den ganzen Code (high, Wunsch Fabi, 2026-10-14)** – alle 18 am 2026-10-14 behoben (Level-Up geprüft: 2 Level-Ups + Truhe gaben vorher 1 Kartenfenster, jetzt 3; Hüte merken sich jetzt die erfüllten Bedingungen des besten Laufs als `hm`)
   - [x] Level-Up: Stehen mehrere Level-Ups/Truhen an, geht ein Kartenfenster verloren (`scenes/run.js` + `game/run.js:141` starten während der Zeitlupe schon das nächste)
   - [x] Vampirische Elites heilen auch bei Treffern ohne Schaden (Unverwundbarkeit, Rolle, Mech, Schild) – bis 240 %/s (`affixes.js`)
   - [x] Rüstkammer: Fähigkeit von Q nach leerem E hängen → beide Slots Wut (`armory.js`)
   - [x] Doppelte ID `lvNote` (Kartenzettel und Level-Up-Hinweis): Bannen/Sperren-Hinweis landet im versteckten Kartenzettel
   - [x] Hüte: Ergebnis und Karte zeigen den falschen fehlenden Hut (es wird nur gezählt, nicht welche Bedingung)
   - [x] Gegner im Portal sind laut Regel nicht angreifbar, Blitzstab/Großer Knall/Bombe/Bande treffen sie trotzdem; Dolche zielen auf sie und fliegen durch
-  - [ ] Krieger des Goblin-Rufs werden nicht zwischen den Logikschritten weitergerechnet (ruckeln auf 120/144 Hz)
+  - [x] Krieger des Goblin-Rufs werden nicht zwischen den Logikschritten weitergerechnet (ruckeln auf 120/144 Hz)
   - [x] Pause zeigt maximales Leben mit Kommastellen
-  - [ ] Zauber, die schon ausholen, zielen auch im Rauch auf den unsichtbaren Goblin
-  - [ ] Boss-Tod-Explosionen laufen per `setTimeout` (Echtzeit) und laufen in der Pause weiter
-  - [ ] Lauf endet mitten im Schritt (Geschoss) → danach eingesammeltes Gold/XP fehlt im Spielstand
+  - [x] Zauber, die schon ausholen, zielen auch im Rauch auf den unsichtbaren Goblin (jetzt: der Zauber verpufft samt Bodenwarnung)
+  - [x] Boss-Tod-Explosionen laufen per `setTimeout` (Echtzeit) und laufen in der Pause weiter (jetzt `later()` in Spielzeit, `game/fx.js`)
+  - [x] Lauf endet mitten im Schritt (Geschoss) → danach eingesammeltes Gold/XP fehlt im Spielstand
   - [x] „Perfekt!“-Rolle zählt auch an harmlosen Trugbildern des Spiegelmeisters
   - [x] Determinismus-Regel: `rnd()`/`rand()` nur für Optik in `boss-mech.js` (Animations-Start) und `abilities.js` (Ratten-Phase) → `frand`
   - [x] Veraltete Texte: Magierhut „Malvorn besiegen (Welt 5)“ (ist Welt 8), „So spielst du“: „Nach 4 Minuten kommt der Boss“
   - [x] `?perf` bricht auf alten WebViews ohne `AudioScheduledSourceNode` ab (und mit ihm die Update-Prüfung)
-  - [ ] Icons von Goblin-Bande/-Ruf zeigen nach dem Umziehen weiter den alten Goblin
-  - [ ] Aufräumen: Blinzler-Teleport → `clampToArena`, Winkel per `angDiff`, `restart()` statt Eigenbau (items/store/tree), toter Zweig in `needOf`, Helfer für „Stoß im Kreis“ (~10 Kopien in abilities.js)
-  - [ ] Effizienz: `dropGem` zählt bei jedem Kill alle Gegenstände; `updHud` sucht jeden Frame DOM-Elemente
+  - [x] Icons von Goblin-Bande/-Ruf zeigen nach dem Umziehen weiter den alten Goblin
+  - [x] Aufräumen: Blinzler-Teleport → `clampToArena`, Winkel per `angDiff`, `restart()` statt Eigenbau (items/store/tree), toter Zweig in `needOf`, Helfer für „Stoß im Kreis“ (~10 Kopien in abilities.js)
+  - [x] Effizienz: `dropGem` zählt bei jedem Kill alle Gegenstände; `updHud` sucht jeden Frame DOM-Elemente
 - [ ] Linkshänder-Modus, Einstellungen
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
 - [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.

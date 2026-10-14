@@ -7,6 +7,7 @@ import { equip, equipped, grantCosmetic, missing, owns, rollCosmetic } from '../
 import { canPay, pay } from '../game/shop.js';
 import { goblinSvg } from '../gen/goblin.js';
 import { DIRS8 } from '../gen/svg.js';
+import { dropGoblinIcons } from '../render/icons.js';
 import { goblinLook, loadGoblin, loadImg, svgUrl } from '../render/sprites.js';
 import { RARITIES, RARITY } from '../data/cards.js';
 import { cosmImg, cosmTile } from './cosmart.js';
@@ -75,5 +76,5 @@ $('#wardView').addEventListener('click', e => {
   persist(); sfx.pickCard(); renderWardrobe(); onChange();
   // Nur Haut, Hut und Outfit stecken in den Goblin-Bildern: dann im Hintergrund neu erzeugen
   // (kurz warten, falls schnell weitergeklickt wird). Dolch, Spur und Maschine wirken sofort.
-  if (['skin', 'hat', 'outfit'].includes(COSM[id].slot)) { clearTimeout(reload); reload = setTimeout(() => loadGoblin(), 400); }
+  if (['skin', 'hat', 'outfit'].includes(COSM[id].slot)) { clearTimeout(reload); reload = setTimeout(() => loadGoblin().then(dropGoblinIcons), 400); }
 });

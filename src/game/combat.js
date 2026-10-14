@@ -7,7 +7,7 @@ import { hitDamage } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
-import { addItem, addNum, animFx, dissolve, dropGem, puff } from './fx.js';
+import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js';
 import { addEvents } from './run.js';
 import { P, aoeId, run } from './state.js';
 import { banner } from '../ui/hud.js';
@@ -80,7 +80,7 @@ export function bossDown(b) {
   clearBossWorld();
   $('#bossBar').hidden = true;
   for (let i = 0; i < 25; i++) addItem('coin', b.x, b.y);
-  for (let i = 0; i < 6; i++) setTimeout(() => { if (run && !run.over) { animFx('f_fireball_hit_', 5, b.x + frand(-60, 60), b.y + frand(-60, 60), 3.5); sfx.boom(); } }, i * 150);
+  for (let i = 0; i < 6; i++) later(i * .15, () => { animFx('f_fireball_hit_', 5, b.x + frand(-60, 60), b.y + frand(-60, 60), 3.5); sfx.boom(); });
   addItem('chest', b.x, b.y, 'boss');
   run.shake = 18; run.haz.length = 0;
   banner(b.name + ' besiegt!', '');

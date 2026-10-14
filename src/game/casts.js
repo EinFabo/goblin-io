@@ -7,7 +7,7 @@ import { frand, rand, rnd } from '../core/rng.js';
 import { TAU } from '../core/util.js';
 import { addHaz, hazWarnCount } from './hazards.js';
 import { addNum, part, puff, ring } from './fx.js';
-import { P, onScreen, query, run } from './state.js';
+import { P, clampToArena, onScreen, query, run } from './state.js';
 
 export const PROJ_CAP = () => 6 + run.si * 2;      // gegnerische Geschosse gleichzeitig
 export const WARN_CAP = 4;                         // Bodenwarnungen gleichzeitig
@@ -81,7 +81,7 @@ export const CASTS = {
       puff(e.x, e.y, 1, 'rgba(170,90,255,.8)');
       const ang = rnd() * TAU, R = rand(150, 210);
       e.x = P.x + Math.cos(ang) * R; e.y = P.y + Math.sin(ang) * R;
-      if (run.arena) { const A = run.arena, ddx = e.x - A.x, ddy = e.y - A.y, dd = Math.hypot(ddx, ddy); if (dd > A.r - 40) { e.x = A.x + ddx / dd * (A.r - 40); e.y = A.y + ddy / dd * (A.r - 40); } }
+      clampToArena(e, 40);
       e.px = e.x; e.py = e.y;
       puff(e.x, e.y, 1.2, 'rgba(170,90,255,.8)'); ring(e.x, e.y, 6, 50, .3, 'rgba(180,110,255,.9)', 4);
       e.chain = 'shadebolt'; sfx.whoosh();

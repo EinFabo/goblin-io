@@ -1,6 +1,6 @@
 import { sfx } from '../core/audio.js';
 import { persist, save } from '../core/save.js';
-import { $ } from '../core/util.js';
+import { $, restart } from '../core/util.js';
 import { CARD_IDS, CARD_MAX, CARD_RARITY, RARITIES, RARITY, cardName, cardPerks, isWeapon, upgradeCost } from '../data/cards.js';
 import { PASSIVES, WEAPONS } from '../data/weapons.js';
 import { canUpgrade, cardState, upgradeCard } from '../game/chests.js';
@@ -42,7 +42,7 @@ function showCard(id) {
   $('#cardInfo').hidden = false;
 }
 function doUpgrade() {
-  if (!upgradeCard(save, cur)) { sfx.buzz(); const b = $('#cardUp'); b.classList.remove('nope'); void b.offsetWidth; b.classList.add('nope'); return; }
+  if (!upgradeCard(save, cur)) { sfx.buzz(); restart($('#cardUp'), 'nope'); return; }
   countMeta(save, 'upgrades'); persist(); sfx.anvil();
   showCard(cur);
   const big = $('#cardBig'); big.classList.add('forged');
