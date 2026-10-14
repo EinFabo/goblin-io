@@ -9,6 +9,7 @@ import { renderRun } from '../render/draw-world.js';
 import { pauseBackground } from '../render/sprites.js';
 import { banner, refreshSlots, setupAbilButtons, updHud } from '../ui/hud.js';
 import { openLevelUp } from '../ui/levelup.js';
+import '../ui/run-chest.js';   // Truhe im Lauf: hängt sich an das Ereignis autoChest
 import { hideOverlays, showScreen } from '../ui/menus.js';
 
 let offs = [];

@@ -96,3 +96,22 @@ test('Bonus-Karte: nur Gewöhnlich/Selten/Episch, ungefähr 70/25/5', async () =
   for (let i = 0; i < 20000; i++) n[CARD_RARITY[pickBonusCard(r)]]++;
   assert.ok(Math.abs(n.common / 20000 - .7) < .02 && Math.abs(n.rare / 20000 - .25) < .02 && Math.abs(n.epic / 20000 - .05) < .01, JSON.stringify(n));
 });
+
+test('Bonusfund: selten, Juwelen oder Goldader, wird gutgeschrieben', () => {
+  let n = 0, gems = 0, gold = 0;
+  for (let s = 1; s <= 2000; s++) {
+    const res = rollChest('gold', mulberry32(s), { epic: 0, leg: 0 });
+    if (!res.bonus) continue;
+    n++;
+    if (res.bonus.kind === 'gems') { gems++; assert.ok(res.bonus.n >= CHESTS.gold.bonus[1] && res.bonus.n <= CHESTS.gold.bonus[2]); }
+    else { gold++; assert.equal(res.bonus.n, res.gold, 'Goldader = das Gold noch einmal'); }
+  }
+  assert.ok(n > 120 && n < 290, 'etwa 10 % der Goldtruhen: ' + n);
+  assert.ok(gems > 0 && gold > 0);
+  // Gutschrift
+  const s = defaults(); s.wallet.gold = 0; s.wallet.gems = 0;
+  grantChest(s, { type: 'wood', gold: 100, cards: [], bonus: { kind: 'gems', n: 7 } });
+  assert.equal(s.wallet.gems, 7); assert.equal(s.wallet.gold, 100);
+  grantChest(s, { type: 'wood', gold: 100, cards: [], bonus: { kind: 'gold', n: 100 } });
+  assert.equal(s.wallet.gold, 300);
+});

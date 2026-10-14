@@ -1,4 +1,5 @@
 import { RNG } from '../core/rng.js';
+import { emit } from '../core/events.js';
 import { sfx } from '../core/audio.js';
 import { PASSIVES, WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
@@ -37,9 +38,10 @@ export function choose(offer, i, lockIdx = -1) {
   else applyChoice(offer[i]);
 }
 
-// Truhe ohne Auswahl: n Aufwertungen eigener Waffen (Entwicklung zuerst), sonst Passiv, sonst Gold
-export function autoChest(n) {
-  const names = [];
+// Truhe ohne Auswahl: n Aufwertungen eigener Waffen (Entwicklung zuerst), sonst Passiv, sonst Gold.
+// Die Öffnung zeigt die UI (ui/run-chest.js hängt sich an das Ereignis autoChest); src (elite/boss) bestimmt nur ihr Aussehen
+export function autoChest(n, src = 'elite') {
+  const picks = [];
   for (let i = 0; i < n; i++) {
     const evo = run.weapons.find(w => !w.evo && w.lv >= 5 && run.passives[WEAPONS[w.id].with]);
     const ups = run.weapons.filter(w => w.lv < 5 && !WEAPONS[w.id].auto), ps = Object.keys(run.passives).filter(id => run.passives[id] < 5);
@@ -48,11 +50,11 @@ export function autoChest(n) {
     else if (ups.length) c = { k: 'upW', id: ups[(rnd() * ups.length) | 0].id };
     else if (ps.length) c = { k: 'upP', id: ps[(rnd() * ps.length) | 0] };
     else c = { k: 'gold' };
-    names.push(c.k === 'evo' ? WEAPONS[c.id].evo : c.k === 'upW' ? WEAPONS[c.id].name + ' ' + (run.weapons.find(w => w.id === c.id).lv + 1) : c.k === 'upP' ? PASSIVES[c.id].name + ' ' + (run.passives[c.id] + 1) : '+25 Gold');
-    applyChoice(c);
+    picks.push({ ...c, name: c.k === 'evo' ? WEAPONS[c.id].evo : c.k === 'upW' ? WEAPONS[c.id].name + ' ' + (run.weapons.find(w => w.id === c.id).lv + 1) : c.k === 'upP' ? PASSIVES[c.id].name + ' ' + (run.passives[c.id] + 1) : '+25 Gold' });
+    applyChoice(c, true);
   }
   sfx.chest();
-  banner('Truhe: ' + names.join(', '), '');
+  emit('autoChest', { picks, src });
 }
 
 // Waffen mit auto (Wurfdolch): bei jedem n-ten Spieler-Level eine Stufe höher, bis Stufe 5
@@ -69,10 +71,11 @@ export function autoUp() {
   }
 }
 
-export function applyChoice(c) {
+// quiet: kein Entwicklungs-Banner (die Truhen-Öffnung zeigt die Entwicklung schon)
+export function applyChoice(c, quiet = false) {
   if (c.k === 'newW') addWeapon(c.id);
   else if (c.k === 'upW') run.weapons.find(w => w.id === c.id).lv++;
-  else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; banner(WEAPONS[c.id].evo + '!', ''); count(run, 'evo'); }
+  else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; if (!quiet) banner(WEAPONS[c.id].evo + '!', ''); count(run, 'evo'); }
   else if (c.k === 'newP' || c.k === 'upP') run.passives[c.id] = (run.passives[c.id] || 0) + 1;
   else if (c.k === 'heal') P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .4);
   else if (c.k === 'gold') run.gold += 25;

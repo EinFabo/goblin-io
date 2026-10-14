@@ -66,8 +66,8 @@ export function collect(it) {
       // nach dem Ende: Truhe wird zu Bonus-Leveln (Boss 3, Mini 2, Elite 1)
       if (run.clearT > 0) { for (let i = it.v === 'boss' ? 3 : it.v === 'elite' ? 1 : 2; i > 0; i--) bonusLevel(); sfx.chest(); }
       // Mega-Truhe: hat man zwei passende Entwicklungen, verschmelzen sie (Elite, Mini-Boss, Boss)
-      else if ((it.v === 'elite' || it.v === 'boss' || it.v === 'mini') && (mega = megaReady())) { fuseMega(mega); if (it.v === 'boss') autoChest(2); }
-      else if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1); else run.pendingChest++;
+      else if ((it.v === 'elite' || it.v === 'boss' || it.v === 'mini') && (mega = megaReady())) { fuseMega(mega); if (it.v === 'boss') autoChest(2, 'boss'); }
+      else if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1, it.v); else run.pendingChest++;
       break;
     }
   }

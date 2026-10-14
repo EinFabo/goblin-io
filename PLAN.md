@@ -1124,10 +1124,89 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
     | 8 | 80/85 | 75/80 | 65/75 |
 
     Welt 1–2 bleiben bewusst leicht (L3/L4 ~100 %, Boss 65/72 %).
+- [x] **Truhen spannender, Licht hinter die Truhe (Wunsch Fabi, 2026-10-14: „sehr wichtig, Glow hinter die Kiste statt davor“)** – erledigt 2026-10-14
+  - Ursache: Die Lichtsäule stand im HTML nach der Truhe und ohne z-index, begann mitten in der Truhe und lag mit 75 % Deckkraft über Deckel und Korpus. Jetzt feste Ebenen: Strahlenkranz, Blitz, Druckwelle < Truhe (darin Glow und Lichtsäule hinter dem Bild) < Karte < Funken < Übersicht.
+  - Recherche (was Truhen spannend macht): Vorfreude mit Wackeln, Tönen und Kamera aufbauen; die Seltenheit nicht zu früh verraten (Overwatch hat farbige Lichter entfernt, die sie zu früh zeigten); Rhythmus Pause → Aufdecken → Reaktion; Stufen-Steigerung durch Tippen (Mystery-Truhe in Clash Royale); Hitstop, leichtes Wackeln, Funken, steigende Töne. Keine Beinahe-Treffer-Tricks: Das Ergebnis steht vorher fest, die Animation zeigt es nur. Quellen: [PC Gamer](https://www.pcgamer.com/uk/behind-the-addictive-psychology-and-seductive-art-of-loot-boxes/), [Springer-Studie](https://link.springer.com/article/10.1007/s10899-019-09913-5), [Kotaku](https://kotaku.com/why-opening-loot-boxes-feels-like-christmas-according-1793446800), [RoyaleTracker](https://royaletracker.gg/guides/clash-royale-chest-simulator-guide), [Wayline Game Feel](https://www.wayline.io/learn/game-feel/1).
+  - Öffnen (`src/ui/chest-open.js`): Tippen = nächster Wackler (oder von selbst nach ~0,8 s), der Deckel hebt sich dabei kurz und das Licht scheint durch den Spalt. Das Licht startet warmweiß und steigt bei zufälligen Wacklern Stufe um Stufe (blau → lila → gold) bis zur besten Karte, mit „Aufwertung!“, Ton und Ruck; 2 + Seltenheit Wackler, manchmal einer mehr. Dunkel wird es erst bei Gold. Dann Hitstop (Truhe staucht sich), Blitz und Druckwelle hinter der Truhe, Bildschirmwackeln je Seltenheit (Einstellung „Bildschirmwackeln“ und reduzierte Bewegung werden beachtet), Vibration am Handy, Bass-Schlag.
+  - Karten fliegen verdeckt heraus, die Rückseite glüht in ihrer Seltenheit, dann drehen sie sich um (legendär langsamer, mit Trommelwirbel und Strahlenkranz hinter der Karte). ×N zählt hoch, „Neu!“ als Stempel, „Aufwerten möglich!“ mit Ding. „Alle zeigen ›“ springt zur Übersicht; die ist nach Seltenheit sortiert, die beste Karte glüht.
+  - Funken kamen bisher rechts neben der Truhe heraus (fest x = 60 %) → jetzt aus dem Spalt bzw. von der Karte.
+  - **Bonusfund** (`rollChest`, `CHESTS[t].bonus`): Holz 5 %, Eisen 8 %, Gold 10 %, Magier 12 % – halb Juwelen (je nach Truhe 5–25), halb „Goldader“ (das Gold noch einmal); eigene Überraschung nach der letzten Karte. Test in `test/chests.test.js`.
+  - Laden: fertige Truhen im Regal glühen hinter sich, eine Truhe wackelt beim Start des Öffnens; Goldtruhe zeigt „Episch spätestens in n“, Magiertruhe (hat immer eine epische) „Legendär spätestens in n“.
+  - **Truhe im Lauf** (Elite/Boss, `src/ui/run-chest.js`): kurze Öffnung mit Licht dahinter und je Gewinn einer Walze, die auf dem Gewinn stoppt (wie Vampire Survivors), ersetzt das Banner; mehrere Truhen und Mega-Verschmelzung laufen nacheinander, Tippen/Leertaste/Enter/Esc überspringt. Mini-Boss-Truhe: offene Truhe mit Glow über „Schatztruhe!“.
+  - Nebenbei: Die Sperre während Animationen (`megaFreeze`, Echtzeit) steckte in `useAbility`/`doDash` → die Sim hing von der Rechnergeschwindigkeit ab (schon bei der Mega-Verschmelzung). Jetzt prüfen nur noch die Eingaben (`uiFrozen` in `game/state.js`), die Logik nie; `autoChest` meldet nur das Ereignis `autoChest`.
+  - Geprüft: lint, 109 Tests, smoke, Sim zweimal gleich, perf wie vorher (gleicher Rechner, alter und neuer Stand), Screenshots PC und Handy.
 
 ### Phase 9 – Goblin-Klassen (Wunsch Fabi, 2026-10-12)
 - [ ] Mehrere Goblin-Typen mit eigener Startwaffe und eigenen Standard-Fähigkeiten statt Rolle/Sprint, z. B. Bogen-Goblin (Bogen als Startwaffe), Magier-Goblin (Teleport statt Rolle).
 - [ ] Eigenes Modell je Typ im Generator (Ebenen-Struktur aus 4.2), Auswahl im Hub, eigene Fortschritte/Freischaltung.
+
+### Phase 10 – Rüstkammer 2.0 (Wunsch Fabi, 2026-10-14)
+Fabi hat gewählt: 10 neue Fähigkeiten (24 gesamt), dazu Runen, Kombos und Fähigkeiten-Sterne. Kein dritter Slot. Runen brauchen die Truhen als Quelle, deshalb nach dem Truhen-Umbau aus Phase 8 (erledigt 2026-10-14).
+- [ ] **10 neue Fähigkeiten** im Format von `src/data/abilities.js` (je `extras` a/b, `skills` s1–s3, `master` m). Gegenstände (Puppe, Turm, Kessel, Magnet, Kanone, Bienenstock) als neues `src/gen/props.js`, Effekte in `src/render/draw-abilities.js`, Icons in `src/render/icons.js`.
+
+  | id | Name | Ladung | Frei ab | Kern |
+  |---|---|---|---|---|
+  | oil | Ölfass | 10 s | Konto 10 | Ölteppich in Laufrichtung (6 s): Gegner rutschen, −50 % Tempo. Feuer (Feuerball, brennende Felsen, Glutkern, Flammenturm, Kanone) entzündet ihn → Flammensee 4 s. a Großes Fass (+40 % Fläche), b Selbstzünder (zündet nach 2 s selbst); s1 Klebrig (+10 % Verlangsamung), s2 Heißes Öl (+20 % Brandschaden), s3 Ausrutscher (5 %/Rang Chance auf 1 s Hinfallen); m Ölquelle (Spur hinter dir) |
+  | burrow | Maulwurfsgang | 12 s | Konto 15 | 2 s eingegraben: unverwundbar, +40 % Tempo, Gegner verlieren dich. Auftauchen mit Erdstoß (Schaden, schleudert hoch). a Tunnelspur (Erdspitzen auf dem Weg), b Beben (Auftauchen betäubt 1 s); s1 Spitzbohrer (+15 % Stoß), s2 Lange Grabung (+0,4 s), s3 Schatzgräber (wirft 2/4/6 Kristalle aus); m Doppelstoß (auch beim Eingraben) |
+  | cannon | Goblin-Kanone | 60 Kills | Konto 18 | Schießt dich als Kugel zur dichtesten Gruppe: unterwegs unverwundbar, Treffer entlang der Bahn, großer Einschlag. a Doppelschuss (zweiter kurzer Sprung), b Feuerspur (Bahn brennt 3 s, zündet Öl); s1 Pulver (+12 % Einschlag), s2 Weite Bahn (+15 % Reichweite und Breite), s3 Abprall (Landung schleudert 1 Gegner/Rang weiter); m Kanonade (3 Mini-Goblin-Kugeln schlagen neben dir ein) |
+  | decoy | Strohgoblin | 15 s | Konto 20 | Puppe lockt 5 s alle Gegner im Umkreis an, hält Treffer aus und explodiert mit 50 % des eingesteckten Schadens. a Zwei Puppen, b Dornenpuppe (Nahkämpfer nehmen Schaden); s1 Zähes Stroh (+20 % Leben), s2 Lauter Ruf (+15 % Lockradius), s3 Sprengladung (+20 % Explosion); m Spiegelgoblin (Puppe wirft Dolche wie du, 50 % Schaden) |
+  | turret | Flammenturm | 45 % Schrott | Konto 22 | Schrott-Turm, 10 s Flammenstrahl auf den nächsten Gegner (zündet Öl). a Zweiter Turm, b Blauflamme (+50 % gegen Elite); s1 Heiße Düse (+12 %), s2 Lange Leitung (+15 % Reichweite), s3 Schrottpanzer (+2 s); m Mobiler Turm (läuft dir hinterher) |
+  | spin | Wirbelaxt | 9 s | Konto 25 | 2,5 s Drehung mit zwei Äxten: Treffer alle 0,25 s, Wegstoßen, lenkt Geschosse ab, −20 % Tempo. a Sog (zieht Gegner heran), b Klingenwind (8 Äxte am Ende); s1 Schärfe, s2 Ausdauer (+0,4 s), s3 Wirbeltempo (weniger Malus, mehr Treffer); m Tornado (bleibt 3 s stehen) |
+  | grudge | Goblin-Groll | **neu: `hurt`** (eingesteckter Schaden = 60 % max. Leben) | Konto 28 | Entlädt als Feuerring 400 % des eingesteckten Schadens und heilt 15 %. Aufholfähigkeit für schwere Läufe. a Racheblick (wer dich zuletzt traf, nimmt doppelt), b Dickes Fell (−20 % Schaden, solange voll); s1 Zorn (+40 % Faktor), s2 Brodeln (perfekte Rolle lädt 5 %), s3 Heißblut (+5 % Heilung); m Unendlicher Groll (danach 3 s unverwundbar, Ladung startet bei 30 %) |
+  | magnet | Schrottmagnet | 18 s | Konto 30 | Zieht 2 s alle Gegner im großen Umkreis zusammen (keine Bosse), dann Schrottexplosion. a Dauermagnet (+1,5 s), b Kristallmagnet (zieht auch Kristalle); s1 Starke Pole (+15 % Zug, auch Elite), s2 Schrottsplitter (+20 % Explosion), s3 Verbiegen (Gezogene nehmen 3 s +10 % Schaden); m Polwechsel (stößt danach alle weg, betäubt 1 s) |
+  | bees | Bienenstock | 70 Kills | Konto 35 | 25 Bienen jagen 8 s die nächsten Gegner, Stiche vergiften und verlangsamen. a Königin (große Biene, ×3 gegen Elite/Boss), b Honig (Pfütze heilt dich 2 %/s und klebt Gegner); s1 Spitze Stachel, s2 Großer Schwarm (+5 Bienen), s3 Wütende Bienen (+10 % Tempo); m Ewiger Stock (alle 10 s ein neuer Schwarm bis zum nächsten Einsatz) |
+  | brew | Hexenkessel | 20 s | Welt 7 | Kessel-Roulette braut einen von 5 Tränken für 8 s: Riese (größer, +40 % Schaden, Stampfen), Flink (+50 % Tempo und Angriffstempo), Feuer (spuckt Feuer), Heil (40 % Leben + Regeneration), Gold (Kills ×3 Münzen). Zufall über das Sim-`rand` (Determinismus). a Doppelbrau (2 Tränke), b Lieblingsrezept (eine Sorte doppelt so oft); s1 Starker Sud (+10 % Wirkung), s2 Lange Wirkung (+1 s), s3 Übersprudeln (Spritzschaden beim Brauen); m Meistertrank (10 %: alle 5 zugleich) |
+
+  - Neue Ladeart `hurt` in `src/game/abilities.js` (Treffer am Goblin dort abgreifen, wo das Leben sinkt), `CHARGE_TXT` und `xpPerUse` ergänzen.
+  - Rollen für den Regal-Filter: Angriff (Katapult, Knall, Wirbelaxt, Turm, Bienen, Groll), Kontrolle (Falle, Rauch, Zeitbombe, Öl, Puppe, Magnet), Bewegung (Haken, Maulwurf, Kanone), Schutz (Schild, Pilzring, Amulett), Helfer (Wut, Totem, Ratten, Ruf, Kessel, Maschine).
+- [ ] **Runen:** Sockel 1 ab Fähigkeits-Level 10, Sockel 2 ab Level 20 (3. über den Seelenbaum, Phase 12).
+  - 12 Runen, je 4 Stufen (gewöhnlich bis legendär): Feuer (Treffer brennen), Frost (verlangsamen), Gift (stapelbar), Blitz (springt über), Echo (Chance, 0,5 s später mit halber Kraft noch einmal), Eile (−Aufladung), Wucht (+Schaden), Weite (+Fläche), Blut (Kills heilen), Gier (Kills geben Münzen), Seele (Kills laden die andere Fähigkeit), Glück (+Krit).
+  - 3 gleiche → eine der nächsten Stufe (Verschmelz-Animation). Duplikate sind so nie wertlos.
+  - `fits` nach Tags der Fähigkeit (`hit`/`summon`/`buff`): Feuer passt z. B. nicht aufs Amulett.
+  - Quellen: Truhen (Holz 25 % auf 1, Eisen 1–2, Gold 2–3, Magier 4–6), Runenbeutel im Shop, Kopfgeld, Pass, Fähigkeiten-Quests.
+  - Speicher: `save.runes = { bag: { 'fire.0': 3 }, sock: { trap: ['fire.1', null] } }`.
+  - Laufzeit: Schaden aus Fähigkeiten bekommt die Quelle `ab:<id>`, gemeinsame Hooks `abHit`/`abKill` in `game/abilities.js` (am Helfer „Stoß im Kreis“), Echo über `later()` in Spielzeit (`game/fx.js`).
+  - UI: Sockel auf dem Zettel, Runen-Tasche als Overlay, Knopf „Verschmelzen“.
+- [ ] **Kombos:** 12 Paare in `src/data/combos.js` (`{ a, b, name, desc, win }`), lösen aus, wenn die zweite Fähigkeit innerhalb von 4 s nach der ersten kommt. Erstes Entdecken: Banner, Eintrag im Kombo-Buch (Rüstkammer, Unentdecktes als „?“ mit einem bekannten Icon), 10 Juwelen; Erfolg „Kombo-Meister“.
+  - Rauch + Falle = Giftfallen · Öl + Flammenturm = Inferno · Magnet + Großer Knall = Implosion (×1,5) · Magnet + Katapult = Volltreffer · Haken + Wirbelaxt = Wirbelhaken · Wut + Ruf = Kriegsrausch (Krieger in Raserei) · Zeitbombe + Öl = Eisbahn · Strohgoblin + Falle = Köderfalle · Ratten + Bienen = Plage · Pilzring + Kessel = Hexenküche · Schild + Wirbelaxt = Klingenschild · Maulwurf + Zeitbombe = Unterbeben.
+- [ ] **Fähigkeiten-Sterne:** Nach Level 30 sammelt die Fähigkeit weiter XP, je 2000 XP ein Stern (bis 5). Jeder Stern +3 % Kraft und ein sichtbar anderer Effekt-Look (Bronze → Silber → Gold → Lila → Regenbogen); 5 Sterne = Titel „Legende der <Fähigkeit>“. Speicher `abilities[id].st`.
+- [ ] **Rüstkammer-UI:** Regal mit Filter-Chips (Rollen), „Neu“-Markierung, Sortierung nach Level; Sterne auf Token und Plakette; Knöpfe „Runen“ und „Kombo-Buch“. Desktop- und Handy-Screenshots.
+- [ ] **Sim und Balance:** `sim/bot.js` mit `--tree full` (volle Bäume, erledigt den offenen Punkt aus Phase 8) und `--runes a.2,b.1`; Stärke-Tabelle wie in Phase 4 für alle 24 Fähigkeiten, neue in den Bereich der alten bringen.
+- [ ] **Spielstand v5** mit Migration (`src/core/save.js` `migrate`/`normalize`).
+
+### Phase 11 – Quests und Aufgaben-Pass (Wunsch Fabi, 2026-10-14)
+Fabi hat gewählt: Wochenaufgaben + Aufgaben-Pass, Kopfgeld-Brett, Fähigkeiten-Quests (keine Geschichten-Quests).
+- [ ] **Wochenaufgaben:** 5 je ISO-Woche aus einem Pool von ~15 (Seed `'goblin-woche-' + weekKey`), schwerer als die Tagesaufgaben. Belohnung Juwelen/Runen/Eisentruhe, alle 5 = Goldtruhe. Muster wie `DAILY_POOL` (`src/data/achievements.js`) und `src/game/progress.js`.
+- [ ] **Aufgaben-Pass (kostenlos):** Saison 28 Tage, 30 Stufen à 100 Punkte. Punkte: Tagesaufgabe 20, alle drei +30, Wochenaufgabe 60, Kopfgeld 30, Stufe einer Fähigkeiten-Quest 40. Belohnungen Gold, Juwelen, Runen, Truhen; Stufe 10/20/30 Saison-Kosmetik (4 Sets im Wechsel), Stufe 30 Titel; danach alle 150 Punkte eine Bonustruhe. Speicher `save.pass { season, pts, claimed }`.
+- [ ] **Kopfgeld-Brett:** ab Welt 2, täglich 3 Steckbriefe (Seed). Ziel (Boss einer Welt, Elite mit Eigenschaft X, Magier der Schule Y) + Bedingung (ohne Treffer am Boss, unter einer Zeit, nur mit Fähigkeit X, im Albtraum, ohne Heilung, mit Mutator aus Phase 12). Schwierigkeit 1–3 Totenköpfe, Belohnung danach. Neue Laufzähler in `run.cnt`: Treffer genommen, Heilung, Boss-Treffer, benutzte Fähigkeiten, Kills nach Schule und Eigenschaft. Optik: Pergament-Steckbrief mit Boss-Bild.
+- [ ] **Fähigkeiten-Quests:** je Fähigkeit 3 Stufen (z. B. Falle „Fange 100/500/2000 Gegner“, Wut „Kills in Raserei“, Maschine „Schaden im Mech“). Feld `quest: { key, desc, n: [...] }` in `abilities.js`, Zähler `ab.<id>.<key>`. Bronze = passende Rune, Silber = Effekt-Skin (Farbe), Gold = Titel + legendäre Rune. Anzeige auf dem Rüstkammer-Zettel.
+- [ ] **Hub:** neuer Tab „Aufgaben“ (Schriftrolle, roter Punkt) mit Täglich / Woche / Kopfgeld / Pass; die Tagesaufgaben ziehen aus dem Profil dorthin (Tab-Liste `src/ui/menus.js`).
+
+### Phase 12 – Wiederspielwert nach der Endlosen Nacht (Wunsch Fabi, 2026-10-14)
+Fabi hat gewählt: Wiedergeburt + Seelenbaum, Albtraum-Stufen 2–10, Tägliche Herausforderung.
+- [ ] **Wiedergeburt + Seelenbaum:** frei nach Sieg über den Boss von Welt 8 und einer überlebten Runde Endlose Nacht (Altar am Ende der Weltkarte).
+  - Zurückgesetzt: Welt-Fortschritt samt Albtraum. Bleibt: Karten, Talente, Fähigkeiten, Runen, Kosmetik, Gold/Juwelen, Konto-Level, Hut-Sammlung.
+  - Seelen = 10 je Welt im Zyklus + 5 je Albtraum-Stufe + Minuten in der Endlosen Nacht.
+  - Zyklus n: Gegner +20 %·n, Gold und XP +25 %·n; Banner und Ringfarbe auf der Karte, Seelenflammen-Aura am Goblin.
+  - Seelenbaum (~20 Knoten, 3 Äste): **Krieger** (Startwaffe Stufe 2, +5 % Schaden, +1 Neuwürfeln), **Sammler** (+10 % Gold, Pity −20 %, Rune in der Siegtruhe), **Mystiker** (+20 % Fähigkeits-XP, 3. Runensockel, Start mit 25 % Ladung). Krönung: 4 statt 3 Karten beim Level-Up.
+  - Speicher `save.rebirth { n, souls, spent, best }`; Sim `--rebirth n`, n = 1–3 prüfen.
+- [ ] **Albtraum-Stufen 2–10:** `save.map.nm` wird von Ja/Nein zur Stufe 0–10 (Migration true → 1). Stufe t: Leben +80 % + 25 %·(t−1), Schaden +10 %·(t−1); ab 4 eine Elite-Eigenschaft mehr, ab 7 zwei Mini-Bosse, ab 9 Wut-Timer beim Boss; Belohnung +50 % + 10 %·t, bessere Truhe bei 3/6/9, Juwelen beim ersten Sieg jeder Stufe. Auswahl auf der Karte über Totenkopf-Punkte (`src/ui/worldmap.js`, `src/game/run.js`).
+- [ ] **Tägliche Herausforderung:** Seed `'goblin-challenge-' + dayKey` bestimmt Welt/Level, 2 feste Fähigkeiten und 1–2 Mutatoren aus ~12 (Glaskanone, doppelte Elites, Riesen, Dunkelheit, schnelle Magier, doppelte Bosse …). Beliebig viele Versuche, lokale Bestzeit; erster Abschluss gibt Gold, Runen, Pass-Punkte. Später optional Bestenliste über den Worker (`cloud/`, D1-Tabelle `daily_scores`).
+
+### Phase 13 – Design-Overhaul: gleicher Stil, mehr Tiefe (Wunsch Fabi, 2026-10-14)
+Fabi hat gewählt: Vektor-Cartoon bleibt, aber mit Schattierung, Glanz, Randlicht, mehr Details und Bildern; Umfang: Figuren, Effekte, Welten, Menüs/Icons. Nach Phase 10–12, damit die neuen Inhalte gleich im neuen Stil entstehen.
+- [ ] **Stilregeln** als neuer Abschnitt 4.5: Licht von oben links, drei Töne (Grund, Schatten, Glanz) + Randlicht, Außenkontur 2,4 / Innenlinien 1,2, SVG-Verläufe in `svgDoc`/`kit()` (`src/gen/svg.js`).
+- [ ] **Referenzbild zuerst:** Goblin vorher/nachher (`node tools/gen/dump.mjs build/sprites --png`), 2–3 Varianten als Auswahl mit Vorschau an Fabi.
+- [ ] **Goblin, Gegner, Bosse** (`goblin.js`, `mages.js`, `minions.js`): Schattierung, mehr Bilder (idle 6, walk 8), Blinzeln; Silhouetten-Regel aus Abschnitt 2 einhalten.
+- [ ] **Effekte** (`fx.js`, `proc.js`, `draw-weapons2.js`): glühender Kern und Schweif, Treffer-Funken je Element, Sterbe-Auflösen.
+- [ ] **Welten** (`render/tiles.js`): eigener Boden je Welt (Erde, Stein, Schnee, Lava, Sumpf …), Deko-Objekte, Vignette und Licht. Kein gemeinsamer Atlas.
+- [ ] **Menüs und Icons** (`icons.js`, `cardart.js`): einheitliches Licht, jeder Truhentyp mit eigener Silhouette, Kartenrahmen je Seltenheit, Folienglanz ab Episch.
+- [ ] **Budget:** `npm run perf` vor/nach jedem Bereich, Bildspeicher ≤ 250 MB; Screenshots Desktop + Handy.
+
+### Phase 14 – Multiplayer: Koop zu zweit (Wunsch Fabi, 2026-10-14, bewusst ganz am Ende)
+- [ ] **Lockstep:** Die Sim ist mit gleichen Seeds deterministisch → nur Eingaben je Tick austauschen, Puffer 3–4 Ticks, Zustands-Hash alle 60 Ticks gegen Desync. Vorher Determinismus-Test mit zwei Eingabeströmen.
+- [ ] **Server:** Raum als Cloudflare Durable Object am vorhandenen Worker (`goblin.node-wave.org`), Lobby mit Code oder Einladung.
+- [ ] **Spiel:** zweite Spielerfigur (`P` wird zur Liste), gemeinsame Kamera mit Leine, Gegner zielen auf den nächsten Spieler, beide wählen Level-Up-Karten mit Zeitlimit, gestürzten Partner wiederbeleben, Gegner-Leben ×1,6. Ausführlicher Plan, wenn die Phase dran ist.
 
 ---
 
@@ -1172,7 +1251,7 @@ Prüfen mit `npm run perf` (Headless, ohne GPU) und auf echten Geräten mit `gob
 |---|---|
 | Ausrüstung (Rüstung, Ringe) wie in Survivor.io zusätzlich zu Karten? | Erst nach Phase 8, sonst zu viele Systeme auf einmal |
 | Mehrere spielbare Figuren (z. B. Kobold, Troll)? | Entschieden (Fabi, 2026-10-12): ja, als Goblin-Klassen, siehe Phase 9 |
-| Online-Bestenliste? | Braucht einen Server. Vorerst nur lokale Bestzeiten und Tageschallenge mit Seed |
+| Online-Bestenliste? | Server gibt es inzwischen (Cloudflare-Worker). Erst lokale Bestzeiten mit der Täglichen Herausforderung (Phase 12), Bestenliste danach optional |
 | Speicherort | Ein einzelnes Browser-Save ist leicht verloren (privates Fenster, Cache leeren). Export/Import als Code-Text in den Einstellungen anbieten |
 | Sprache | Deutsch bleibt Hauptsprache; Texte trotzdem in `src/data/i18n/de.js` sammeln, dann ist Englisch später leicht |
 

@@ -104,6 +104,16 @@ export const sfx = {
     if (r >= 1) tone(base * 2, 0, .25, 'sine', .04, .12);
     if (r >= 2) { noise(.5, .05, 5000, 'highpass', .1); tone(base * 2.5, 0, .35, 'triangle', .04, .2); }
   },
+  // Licht im Truhenspalt steigt eine Stufe: Glanz-Arpeggio, jede Stufe höher
+  tierUp(k) { const f = 523 * Math.pow(2, [0, 4, 7, 12][Math.min(k, 3)] / 12); [1, 1.25, 1.5, 2].forEach((m, i) => tone(f * m, 0, .18, 'triangle', .06, i * .045)); noise(.3, .05, 6000, 'highpass', .05); },
+  // Deckel fliegt auf: tiefer Schlag vor dem Jingle
+  thump() { tone(110, 38, .32, 'sine', .3); noise(.18, .16, 420, 'lowpass', 0, null, 1, 90); },
+  // Karte dreht sich um
+  flip(r = 0) { noise(.09, .08, 2400 + r * 400, 'bandpass', 0, null, 1.4, 5200); tone(700 + r * 120, 0, .05, 'triangle', .035); },
+  // Trommelwirbel vor einer legendären Karte (dur Sekunden)
+  drumroll(dur = .6) { for (let t = 0; t < dur; t += .045) noise(.05, .04 + .08 * t / dur, 900, 'bandpass', t, null, 1.5); },
+  // Aufwerten möglich / Bonusfund
+  ding() { tone(1568, 0, .3, 'sine', .07); tone(2349, 0, .4, 'sine', .04, .05); },
   legendary() { noise(1.4, .1, 300, 'lowpass', 0, null, 1, 3000); [262, 330, 392, 523, 659, 784, 1046, 1318].forEach((f, i) => { tone(f, 0, .5, 'sawtooth', .025, .4 + i * .09); tone(f * 2, 0, .4, 'sine', .03, .4 + i * .09); }); },
   // Karte aufwerten: aufsteigende Töne + Amboss
   anvil() { [392, 523, 659, 784].forEach((f, i) => tone(f, 0, .12, 'square', .045, i * .06)); tone(1800, 900, .4, 'triangle', .09, .3); tone(2700, 0, .5, 'sine', .05, .3); noise(.08, .15, 4000, 'bandpass', .3, null, 3); },

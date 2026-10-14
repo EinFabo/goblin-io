@@ -62,13 +62,14 @@ export function cardPerks(id, lv) {
 
 // ---------- Truhen (9.5) ----------
 // odds: Gewöhnlich/Selten/Episch/Legendär in %, sure: garantierte Mindest-Seltenheit,
+// bonus: [Chance, Juwelen von, bis] auf einen Bonusfund (halb Juwelen, halb „Goldader“ = Gold doppelt)
 // wait: Öffnungszeit im Truhenregal (Wunsch Fabi: je seltener, desto länger; gekaufte Truhen öffnen sofort)
 const MIN = 60 * 1000;
 export const CHESTS = {
-  wood: { name: 'Holztruhe', price: { gold: 150 }, gold: [80, 120], cards: 6, odds: [88, 12, 0, 0], sure: null, wait: 15 * MIN, color: '#9c6a3c', metal: '#6d747c' },
-  iron: { name: 'Eisentruhe', price: { gems: 60 }, gold: [300, 400], cards: 18, odds: [72, 24, 4, 0], sure: ['rare', 1], wait: 60 * MIN, color: '#6d747c', metal: '#c9d1d8' },
-  gold: { name: 'Goldtruhe', price: { gems: 160 }, gold: [900, 1200], cards: 45, odds: [62, 28, 9, 1], sure: ['rare', 2], wait: 3 * 60 * MIN, color: '#c9962a', metal: '#ffe27a', pity: true },
-  mage: { name: 'Magiertruhe', price: { gems: 420 }, gold: [2500, 3000], cards: 110, odds: [55, 30, 13, 2], sure: ['epic', 1], wait: 8 * 60 * MIN, color: '#5b2f8f', metal: '#ffd84a', pity: true },
+  wood: { name: 'Holztruhe', price: { gold: 150 }, gold: [80, 120], cards: 6, odds: [88, 12, 0, 0], sure: null, bonus: [.05, 5, 10], wait: 15 * MIN, color: '#9c6a3c', metal: '#6d747c' },
+  iron: { name: 'Eisentruhe', price: { gems: 60 }, gold: [300, 400], cards: 18, odds: [72, 24, 4, 0], sure: ['rare', 1], bonus: [.08, 8, 15], wait: 60 * MIN, color: '#6d747c', metal: '#c9d1d8' },
+  gold: { name: 'Goldtruhe', price: { gems: 160 }, gold: [900, 1200], cards: 45, odds: [62, 28, 9, 1], sure: ['rare', 2], bonus: [.1, 10, 20], wait: 3 * 60 * MIN, color: '#c9962a', metal: '#ffe27a', pity: true },
+  mage: { name: 'Magiertruhe', price: { gems: 420 }, gold: [2500, 3000], cards: 110, odds: [55, 30, 13, 2], sure: ['epic', 1], bonus: [.12, 15, 25], wait: 8 * 60 * MIN, color: '#5b2f8f', metal: '#ffd84a', pity: true },
 };
 export const CHEST_IDS = Object.keys(CHESTS);
 // Pity (9.5): spätestens jede 10. Gold-/Magiertruhe episch, jede 40. legendär

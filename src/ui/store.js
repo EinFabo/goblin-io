@@ -92,7 +92,10 @@ function renderBuy() {
       <div class="row"><button class="btn primary small" data-cosmo ${left ? (canPay(save, COSMO_CHEST.price) ? '' : 'aria-disabled="true"') : 'disabled'}>${left ? price(COSMO_CHEST.price) : 'Alles da'}</button></div></div>`;
   $('#chestBuy').innerHTML = cosmo + CHEST_IDS.map(t => {
     const C = CHESTS[t];
-    return `<div class="offer chestoffer">${chestSvg(t)}<b>${C.name}</b><small>${C.cards} Karten · ${C.gold[0]}–${C.gold[1]} Gold</small>
+    // Pity sichtbar (Gold- und Magiertruhe zählen gemeinsam). Hat die Truhe schon sicher eine epische Karte, zählt Legendär
+    const sureEpic = C.sure && RARITIES.indexOf(C.sure[0]) >= 2;
+    const pity = !C.pity ? '' : sureEpic ? `<small class="pity">Legendär spätestens in ${Math.max(1, PITY_LEG - save.pity.leg)}</small>` : `<small class="pity">Episch spätestens in ${Math.max(1, PITY_EPIC - save.pity.epic)}</small>`;
+    return `<div class="offer chestoffer">${chestSvg(t)}<b>${C.name}</b><small>${C.cards} Karten · ${C.gold[0]}–${C.gold[1]} Gold</small>${pity}
       <div class="row"><button class="iconbtn info" data-odds="${t}" aria-label="Wahrscheinlichkeiten">i</button><button class="btn primary small" data-buy-chest="${t}" ${canPay(save, C.price) ? '' : 'aria-disabled="true"'}>${price(C.price)}</button></div></div>`;
   }).join('');
 }
@@ -112,7 +115,13 @@ $('#store').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
   if (d.free !== undefined) { const f = save.chests.free; if (freeChests(save).n) { f.n--; openChest('wood'); } return; }
-  if (d.start !== undefined) { if (startUnlock(save, +d.start)) { persist(); sfx.creak(); renderShelf(); } else nope(b); return; }
+  if (d.start !== undefined) {
+    if (!startUnlock(save, +d.start)) { nope(b); return; }
+    persist(); sfx.creak(); renderShelf();
+    // die Truhe wackelt kurz, wenn ihr Schloss zu arbeiten beginnt
+    const ch = $('#chestShelf').querySelectorAll('.slot4:not(.free)')[+d.start]?.querySelector('.chest'); if (ch) restart(ch, 'shk');
+    return;
+  }
   if (d.skip !== undefined) { if (skipUnlock(save, +d.skip)) { persist(); sfx.buy(); renderShelf(); onChange(); } else nope(b); return; }
   if (d.open !== undefined) { const t = takeFromShelf(save, +d.open); if (t) openChest(t); return; }
   if (d.odds) { showOdds(d.odds); return; }

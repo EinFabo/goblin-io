@@ -2,7 +2,7 @@ import { audioInit } from './audio.js';
 import { $ } from './util.js';
 import { doDash, useAbility } from '../game/abilities.js';
 import { skipCut } from '../game/boss.js';
-import { run } from '../game/state.js';
+import { run, uiFrozen } from '../game/state.js';
 import { cv } from '../render/canvas.js';
 import { openPause, resume } from '../ui/pause.js';
 
@@ -18,10 +18,11 @@ window.addEventListener('keydown', e => {
   // Einstellungen/Hilfe über der Pause: Esc schließt nur das obere Fenster
   if (!$('#options').hidden || !$('#howto').hidden) { if (e.code === 'Escape') $(!$('#howto').hidden ? '#howto' : '#options').hidden = true; return; }
   if (run.cut && !run.paused && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); skipCut(); return; }
-  if (e.code === 'Space') { e.preventDefault(); doDash(); }
+  // Steht die Welt für eine Animation, lösen Rolle und Fähigkeiten nicht aus
+  if (e.code === 'Space') { e.preventDefault(); if (!uiFrozen()) doDash(); }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();
-  if (e.code === 'KeyQ') useAbility(0);
-  if (e.code === 'KeyE' || e.code === 'KeyF') useAbility(1);
+  if (e.code === 'KeyQ' && !uiFrozen()) useAbility(0);
+  if ((e.code === 'KeyE' || e.code === 'KeyF') && !uiFrozen()) useAbility(1);
   if (e.code === 'Escape' || e.code === 'KeyP') { if (!$('#pause').hidden) resume(); else if (!run.paused) openPause(); }
   if (!$('#levelup').hidden && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) { const b = $('#cards').children[+e.code.slice(5) - 1]; if (b) b.click(); }
   if (!$('#levelup').hidden && e.code === 'KeyR') $('#rerollBtn').click();

@@ -2,10 +2,11 @@ import { audioInit } from '../core/audio.js';
 import { setSprintHeld } from '../core/input.js';
 import { $ } from '../core/util.js';
 import { doDash, useAbility } from '../game/abilities.js';
+import { uiFrozen } from '../game/state.js';
 
 // ---------- Fähigkeiten-Knöpfe (Handy) ----------
 for (const [id, fn] of [['#dashBtn', doDash], ['#ab0Btn', () => useAbility(0)], ['#ab1Btn', () => useAbility(1)]]) {
-  $(id).addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); fn(); });
+  $(id).addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); audioInit(); if (!uiFrozen()) fn(); });
 }
 {
   const sb = $('#sprintBtn');

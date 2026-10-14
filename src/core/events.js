@@ -1,6 +1,6 @@
 // Event-Bus: Quests, Erfolge, Statistiken und Sim hängen sich hier ein,
 // ohne die Spiellogik anzufassen.
-// Ereignisse: runStart, runEnd, enemyKilled, playerHurt, levelUp, pickup, bossIntro, bossSpawn, bossPhase, bossDown
+// Ereignisse: runStart, runEnd, enemyKilled, playerHurt, levelUp, pickup, bossIntro, bossSpawn, bossPhase, bossDown, abilUse, autoChest
 const handlers = new Map();
 
 export function on(name, fn) {

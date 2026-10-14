@@ -291,7 +291,8 @@ const before = await p.evaluate(() => { const S = GOBLIN.save; S.wallet.gold = 3
 await p.waitForTimeout(300);
 await p.click('[data-buy-chest="wood"]');
 await p.waitForSelector('#chestOpen:not([hidden])');
-for (let i = 0; i < 30 && !(await p.evaluate(() => !!document.querySelector('#coDone'))); i++) { await p.mouse.click(640, 380); await p.waitForTimeout(60); }
+// Tippen: Wackler (mind. 180 ms Abstand), Karten umdrehen und weiter, ggf. Bonusfund
+for (let i = 0; i < 120 && !(await p.evaluate(() => !!document.querySelector('#coDone'))); i++) { await p.mouse.click(640, 380); await p.waitForTimeout(200); }
 await p.click('#coDone');
 const shop = await p.evaluate(() => { const S = GOBLIN.save; return { chests: S.stats.chests, cards: Object.values(S.cards).reduce((a, c) => a + c.n, 0), gold: S.wallet.gold }; });
 if (shop.chests !== before.chests + 1 || shop.cards <= before.cards) errs.push('Holztruhe: ' + JSON.stringify(shop));

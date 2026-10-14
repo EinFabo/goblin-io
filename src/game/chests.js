@@ -37,7 +37,11 @@ export function rollChest(type, r, pity = { epic: 0, leg: 0 }) {
   const cards = [...stacks].map(([id, n]) => ({ id, n, rarity: CARD_RARITY[id] }))
     .sort((a, b) => RARITIES.indexOf(a.rarity) - RARITIES.indexOf(b.rarity) || a.n - b.n);
   const best = cards.reduce((m, c) => Math.max(m, RARITIES.indexOf(c.rarity)), 0);
-  return { type, gold: Math.round(C.gold[0] + r() * (C.gold[1] - C.gold[0])), cards, best: RARITIES[best] };
+  const gold = Math.round(C.gold[0] + r() * (C.gold[1] - C.gold[0]));
+  // Bonusfund (selten, als Überraschung am Ende): Juwelen oder Goldader (das Gold noch einmal)
+  let bonus = null;
+  if (C.bonus && r() < C.bonus[0]) bonus = r() < .5 ? { kind: 'gems', n: Math.round(C.bonus[1] + r() * (C.bonus[2] - C.bonus[1])) } : { kind: 'gold', n: gold };
+  return { type, gold, cards, best: RARITIES[best], bonus };
 }
 
 // Kartenstand (ohne Eintrag: Startstufe der Seltenheit, 0 Karten)
@@ -61,6 +65,7 @@ export function grantCards(save, id, n) {
 }
 export function grantChest(save, res) {
   save.wallet.gold += res.gold;
+  if (res.bonus) save.wallet[res.bonus.kind === 'gems' ? 'gems' : 'gold'] += res.bonus.n;
   let spare = 0;
   for (const c of res.cards) { c.before = { ...cardState(save, c.id) }; spare += grantCards(save, c.id, c.n); }
   save.stats.chests = (save.stats.chests || 0) + 1;

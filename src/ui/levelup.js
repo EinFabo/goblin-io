@@ -7,6 +7,7 @@ import { SKIP_GOLD, SKIP_HEAL, ban, choose, genChoices, reroll } from '../game/l
 import { canBan } from '../game/offer.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
+import { chestSvg } from './cardart.js';
 
 // mode: null | 'ban' | 'lock' – Bannen und Sperren wählen zuerst den Modus, dann die Karte
 let curChoices = [], mode = null, lockIdx = -1;
@@ -37,7 +38,9 @@ export function cardHtml(c, i) {
 export function openLevelUp(chest) {
   run.paused = true; Music.stop(); setSprintHeld(false);
   curChoices = genChoices(); mode = null; lockIdx = -1;
-  $('#lvTitle').textContent = chest ? 'Schatztruhe!' : 'Level ' + P.lv + '!';
+  // Truhe vom Mini-Boss: offene Truhe mit Glow dahinter über dem Titel
+  $('#lvTitle').innerHTML = chest ? chestSvg('iron', 'lvchest') + 'Schatztruhe!' : 'Level ' + P.lv + '!';
+  if (chest) sfx.lidOpen(1);
   renderCards(); $('#levelup').hidden = false; sfx.cards();
 }
 export function renderCards() {
