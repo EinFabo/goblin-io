@@ -1074,6 +1074,7 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
   - [x] Effizienz: `dropGem` zählt bei jedem Kill alle Gegenstände; `updHud` sucht jeden Frame DOM-Elemente
 - [ ] Linkshänder-Modus, Einstellungen
 - [ ] Komplett-Durchlauf aller Stages, Balance-Nachjustierung
+  - Nach den Review-Fixes (2026-10-14) Welt 3-4 mit 30 Läufen: Seeds 1/101 vorher 80/70 %, nachher 70/67 % (Ziel 75–90 %). Vermutlich weil Gegner im Portal nicht mehr getroffen werden; im Streubereich, beim Durchlauf mit ansehen.
 - [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.
 - [ ] **Accounts mit Cloud-Sync (Wunsch Fabi, 2026-10-13):** Anmelden, Spielstand in der Cloud, gleicher Stand in Browser, exe und APK. Braucht einen Server (Anbieter wählen), Konflikte zwischen Geräten lösen (z. B. neuerer/weiterer Stand gewinnt, vorher fragen). Bis dahin wurde der Browser-Stand (Opera GX, localhost:8080) am 2026-10-13 von Hand in die exe kopiert.
 - [ ] **Vielleicht: Game-Loop-Rework (Wunsch Fabi, 2026-10-12):** Der Wurfdolch wird automatisch hochgestuft (ohne Level-Up-Karte), damit die Karten für andere Waffen und Builds frei sind. Vorher mit der Sim prüfen, wie sich die Kraftkurve (7.3) ändert, und mit Fabi entscheiden.
