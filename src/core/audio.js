@@ -122,6 +122,8 @@ export const sfx = {
     if (big) for (const m of [1, 1.26, 1.5, 2]) tone(f * m / 2, 0, .7, 'triangle', .035, .08);
   },
   hatMiss() { tone(220, 150, .25, 'triangle', .05); },
+  // Wurfdolch steigt von selbst auf: helles Klingen-Schwingen
+  bladeUp() { [1175, 1568, 2093].forEach((f, i) => tone(f, 0, .12, 'triangle', .06, i * .05)); tone(3136, 0, .25, 'sine', .03, .16); },
   abilUp() { [659, 880, 1175].forEach((f, i) => tone(f, 0, .14, 'triangle', .07, i * .07)); tone(1760, 0, .3, 'sine', .04, .22); },
 };
 

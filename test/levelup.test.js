@@ -91,9 +91,19 @@ test('Gewichtung: eigene Gegenstände kommen öfter als neue', () => {
   const r = mulberry32(3);
   let own = 0, fresh = 0;
   for (let k = 0; k < 5000; k++) {
-    const S = { ...newOfferState(), weapons: [{ id: 'dagger', lv: 2, evo: false }, { id: 'saw', lv: 2, evo: false }, { id: 'bolt', lv: 2, evo: false }], passives: { whet: 1, oil: 1 } };
+    const S = { ...newOfferState(), weapons: [{ id: 'fireball', lv: 2, evo: false }, { id: 'saw', lv: 2, evo: false }, { id: 'bolt', lv: 2, evo: false }], passives: { book: 1, oil: 1 } };
     for (const c of drawOffer(S, r)) if (c.why === 'rest') { if (c.k === 'upW' || c.k === 'upP') own++; else fresh++; }
   }
   // ohne Faktor wären es ~21 % (eigene Waffen 4, Passive 3 wie neue), mit ×2,5 ~40 %
   assert.ok(own / (own + fresh) > .35, `Anteil eigener ${(own / (own + fresh)).toFixed(2)}`);
+});
+
+test('Wurfdolch steigt von selbst auf: nie als Aufwertungs-Karte, Entwicklung bleibt eine Karte', () => {
+  const r = mulberry32(5);
+  for (let k = 0; k < 3000; k++) {
+    const S = { ...newOfferState(), weapons: [{ id: 'dagger', lv: 1 + (k % 4), evo: false }, { id: 'saw', lv: 2, evo: false }], passives: { magnet: 1 } };
+    for (const c of drawOffer(S, r)) assert.ok(!(c.k === 'upW' && c.id === 'dagger'), 'Dolch-Aufwertung im Angebot');
+  }
+  const S = { ...newOfferState(), weapons: [{ id: 'dagger', lv: 5, evo: false }], passives: { whet: 1 } };
+  assert.ok(drawOffer(S, r).some(c => c.k === 'evo' && c.id === 'dagger'), 'Dolchsturm fehlt');
 });

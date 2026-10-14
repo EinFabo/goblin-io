@@ -28,7 +28,7 @@ export function candidates(S) {
   const pool = [], owned = new Set(S.weapons.map(w => w.id)), pity = pityPassives(S);
   for (const w of S.weapons) {
     if (!w.evo && w.lv >= 5 && S.passives[WEAPONS[w.id].with]) pool.push({ k: 'evo', id: w.id, wgt: 0 });
-    else if (w.lv < 5 && !S.banned.has('w:' + w.id)) pool.push({ k: 'upW', id: w.id, wgt: BASE.newW * OWN_MULT });
+    else if (w.lv < 5 && !WEAPONS[w.id].auto && !S.banned.has('w:' + w.id)) pool.push({ k: 'upW', id: w.id, wgt: BASE.newW * OWN_MULT });   // auto-Waffen steigen von selbst
   }
   if (S.weapons.length < MAX_W) for (const id in WEAPONS) if (!owned.has(id) && !S.banned.has('w:' + id)) pool.push({ k: 'newW', id, wgt: BASE.newW });
   const pc = Object.keys(S.passives).length;

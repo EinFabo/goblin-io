@@ -3,6 +3,7 @@ import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
 import { ABILITIES } from '../data/abilities.js';
 import { ETYPES } from '../data/enemies.js';
+import { WEAPONS } from '../data/weapons.js';
 import { abilCount, abilReady, dashCdOf, lockOf } from '../game/abilities.js';
 import { sfx } from '../core/audio.js';
 import { part, ring } from '../game/fx.js';
@@ -42,6 +43,7 @@ function setCount(id, n) {
 export function updHud(dt) {
   if (!run) return;
   setW('#xpFill', P.xp / P.need);
+  if (autoSlot) { const w = run.weapons.find(x => autoProgress(x) !== null), p = w ? autoProgress(w).toFixed(3) : null; if (p !== null && p !== hudCache.autoP) { hudCache.autoP = p; autoSlot.style.setProperty('--p', p); } }
   setTxt('#lvTxt', 'Lv ' + P.lv);
   setTxt('#killTxt', String(run.kills));
   setTxt('#goldTxt', String(run.gold));
@@ -84,9 +86,18 @@ export function setupAbilButtons() {
   for (const id of ['#dashBtn', '#sprintBtn']) for (const k of ['p', 'r', 'n']) delete hudCache[id + k];
 }
 const ABIL_COL = { rage: '#ff5a3c', mech: '#e0a83a', trap: '#c9a26a', smoke: '#b8b8c8', catapult: '#a08a6a', hook: '#8fd0ff', shroom: '#7be04a', shield: '#dfe6ea', rats: '#d9a066', call: '#6fc23a', totem: '#ffd84a', timebomb: '#8fe6ff', bigbang: '#ff9a2e', charm: '#ffd84a' };
-export function slotHtml(ic, lv, evo) { return `<div class="slot${evo ? ' evo' : ''}"><img src="${ic}" alt=""><i>${evo ? '★' : lv}</i></div>`; }
+export function slotHtml(ic, lv, evo, auto = false) { return `<div class="slot${evo ? ' evo' : ''}${auto ? ' auto' : ''}"><img src="${ic}" alt=""><i>${evo ? '★' : lv}</i></div>`; }
+// Fortschritt bis zur nächsten Auto-Stufe (0…1) bzw. null, wenn ausgebaut (game/levelup.js autoUp)
+function autoProgress(w) {
+  const n = WEAPONS[w.id].auto;
+  if (!n || w.evo || w.lv >= 5) return null;
+  return ((P.lv % n) + Math.min(1, P.xp / P.need)) / n;
+}
+let autoSlot = null;   // Slot der Waffe, die von selbst aufsteigt (Ring füllt sich bis zur nächsten Stufe)
 export function refreshSlots() {
-  $('#wSlots').innerHTML = run.weapons.map(w => slotHtml(icon(w.evo ? w.id + '_evo' : w.id), w.lv, w.evo)).join('');
+  $('#wSlots').innerHTML = run.weapons.map(w => slotHtml(icon(w.evo ? w.id + '_evo' : w.id), w.lv, w.evo, autoProgress(w) !== null)).join('');
+  const i = run.weapons.findIndex(w => autoProgress(w) !== null);
+  autoSlot = i < 0 ? null : $('#wSlots').children[i]; hudCache.autoP = null;
   $('#pSlots').innerHTML = Object.entries(run.passives).map(([id, lv]) => slotHtml(icon(id), lv, false)).join('');
 }
 export function banner(txt, cls) { const b = $('#banner'); b.className = ''; void b.offsetWidth; b.textContent = txt; b.className = 'show ' + (cls || ''); }

@@ -856,3 +856,6 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 .seg button+button{border-left:2px solid var(--edge)}
 .seg button[aria-checked="true"]{background:var(--leaf-d);color:var(--edge)}
 @media (max-width:420px){.optrow.segrow .seg{grid-column:1 / -1;justify-self:start;margin-left:38px}}
+/* Wurfdolch steigt von selbst auf: Ring um den Slot füllt sich bis zur nächsten Stufe (--p 0…1) */
+.slot.auto{border:3px solid transparent;background:linear-gradient(#151d10,#151d10) padding-box,conic-gradient(#8fd8ff calc(var(--p,0)*1turn),rgba(255,255,255,.16) 0) border-box;box-shadow:0 0 6px rgba(143,216,255,.35)}
+#banner.auto{color:#e8f4ff}

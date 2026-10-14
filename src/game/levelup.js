@@ -4,6 +4,8 @@ import { PASSIVES, WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
 import { drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
 import { P, run } from './state.js';
+import { part, ring } from './fx.js';
+import { TAU } from '../core/util.js';
 import { count } from './progress.js';
 import { banner, refreshSlots } from '../ui/hud.js';
 
@@ -40,7 +42,7 @@ export function autoChest(n) {
   const names = [];
   for (let i = 0; i < n; i++) {
     const evo = run.weapons.find(w => !w.evo && w.lv >= 5 && run.passives[WEAPONS[w.id].with]);
-    const ups = run.weapons.filter(w => w.lv < 5), ps = Object.keys(run.passives).filter(id => run.passives[id] < 5);
+    const ups = run.weapons.filter(w => w.lv < 5 && !WEAPONS[w.id].auto), ps = Object.keys(run.passives).filter(id => run.passives[id] < 5);
     let c;
     if (evo) c = { k: 'evo', id: evo.id };
     else if (ups.length) c = { k: 'upW', id: ups[(rnd() * ups.length) | 0].id };
@@ -51,6 +53,20 @@ export function autoChest(n) {
   }
   sfx.chest();
   banner('Truhe: ' + names.join(', '), '');
+}
+
+// Waffen mit auto (Wurfdolch): bei jedem n-ten Spieler-Level eine Stufe höher, bis Stufe 5
+export function autoUp() {
+  for (const w of run.weapons) {
+    const n = WEAPONS[w.id].auto;
+    if (!n || w.evo || w.lv >= 5 || P.lv % n) continue;
+    w.lv++;
+    banner(`${WEAPONS[w.id].name} Stufe ${w.lv}!`, 'auto');
+    sfx.bladeUp();
+    ring(P.x, P.y - 8, 8, 120, .4, 'rgba(220,235,255,.95)', 6);
+    for (let i = 0; i < 14; i++) { const a = i * TAU / 14; part(P.x, P.y - 10, Math.cos(a) * 180, Math.sin(a) * 180, .4, i % 2 ? '#ffffff' : '#bfe3ff', 3); }
+    refreshSlots();
+  }
 }
 
 export function applyChoice(c) {

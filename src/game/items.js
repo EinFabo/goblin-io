@@ -2,7 +2,7 @@ import { frand } from '../core/rng.js';
 import { sfx, tickGemCombo } from '../core/audio.js';
 import { $, TAU, restart } from '../core/util.js';
 import { xpCatchUp } from './balance.js';
-import { autoChest } from './levelup.js';
+import { autoChest, autoUp } from './levelup.js';
 import { chargeAbil, xpBonus } from './abilities.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
@@ -65,7 +65,7 @@ export function collect(it) {
 }
 export function addXp(v) {
   P.xp += v * P.xpMult * xpBonus() * xpCatchUp(run.time, P.lv);
-  while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); if (run.clearT > 0) bonusLevel(); else run.pendingLv++; }
+  while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); if (run.clearT > 0) bonusLevel(); else { run.pendingLv++; autoUp(); } }
 }
 // Bonus-Level nach „Level geschafft“: „+1“ über dem Goblin, Ton steigt mit jedem weiteren
 function bonusLevel() {
