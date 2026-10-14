@@ -20,4 +20,7 @@ migrations_dir = "migrations"
 [vars]
 # Client-IDs aus der Google Cloud Console (Web, später Desktop/Android), durch Komma getrennt; öffentlich
 GOOGLE_CLIENT_IDS = "207037584180-cu0m43pkkn8uuo2lkg65ijpqc3t9bd0h.apps.googleusercontent.com"
+# Client-ID „Fernseher und Geräte mit begrenzter Eingabe“ für exe/APK (Anmeldung mit Code); das Secret dazu
+# als Worker-Secret: npx wrangler secret put GOOGLE_TV_SECRET. Die Client-ID muss auch in GOOGLE_CLIENT_IDS stehen.
+GOOGLE_TV_CLIENT_ID = ""
 ALLOWED_ORIGINS = "https://goblin.node-wave.org,http://localhost:8080,tauri://localhost,http://tauri.localhost,https://tauri.localhost"

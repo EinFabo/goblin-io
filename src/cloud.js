@@ -16,7 +16,9 @@ const HOST = 'https://goblin.node-wave.org';
 const TEST = /[?&]cloudtest\b/.test(location.search);
 const API = location.origin === HOST || location.port === '8787' ? '' : HOST;
 const KEY = 'goblinio_cloud', MIN_GAP = 30e3;
-const inApp = !!window.__TAURI__;   // exe/APK: Google-Anmeldung dort kommt später (Systembrowser)
+// exe/APK: dort geht „Sign in with Google“ nicht (kein echter Web-Ursprung) → Anmeldung mit Code auf google.com/device
+// ?cloudtest=<name>&code: diesen Weg im Browser testen
+const useCode = !!window.__TAURI__ || (TEST && /[?&]code\b/.test(location.search));
 
 // token, name, picture; base = updated des zuletzt gesehenen Cloud-Stands; localAt = savedAt beim letzten Abgleich;
 // mark = Fortschritt beim letzten Abgleich (Läufe, Konto-Level, Gold, Juwelen)
@@ -25,7 +27,7 @@ try { st = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) { st = {}; }
 const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* privat/voll */ } };
 let busy = false, lastUp = 0, upT = 0, status = '', onChange = () => {};
 export const cloud = { get user() { return st.token ? { name: st.name, picture: st.picture } : null; }, get status() { return status; }, get syncedAt() { return st.syncedAt || 0; } };
-export const cloudReady = () => TEST || (LIVE && !!GOOGLE_CLIENT_ID && !inApp);
+export const cloudReady = () => TEST || (LIVE && !!GOOGLE_CLIENT_ID);
 export function onCloudChange(fn) { onChange = fn; }
 const say = s => { status = s; onChange(); };
 
@@ -56,6 +58,7 @@ function loadGsi() {
 // Google-Knopf in el zeichnen (Profil)
 export async function renderSignIn(el) {
   if (!cloudReady()) return;
+  if (useCode) { el.innerHTML = '<button class="btn small primary">Mit Google anmelden</button>'; el.firstChild.onclick = () => codeLogin(); return; }
   if (TEST) { el.innerHTML = '<button class="btn small primary">Test-Anmeldung</button>'; el.firstChild.onclick = () => login('dev:' + (new URLSearchParams(location.search).get('cloudtest') || 'test')); return; }
   try {
     const g = await loadGsi();
@@ -69,9 +72,40 @@ async function login(idToken) {
   try {
     const r = await api('POST', '/api/login', { idToken });
     if (!r.ok) { say(r.error || 'Anmeldung fehlgeschlagen'); return; }
-    st = { token: r.token, name: r.name, picture: r.picture, base: 0, localAt: 0 }; keep();
-    await sync();
+    await signedIn(r);
   } catch (e) { say('Keine Verbindung'); }
+}
+async function signedIn(r) { st = { token: r.token, name: r.name, picture: r.picture, base: 0, localAt: 0 }; keep(); await sync(); }
+
+// Anmeldung mit Code: der Worker holt bei Google einen Code, man gibt ihn auf google.com/device ein
+// (geht auch am Handy), die App fragt alle paar Sekunden nach, bis die Anmeldung durch ist
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const openUrl = u => (window.__TAURI__ && window.__TAURI__.opener ? window.__TAURI__.opener.openUrl(u) : window.open(u, '_blank'));
+let codeRun = null;
+async function codeLogin() {
+  if (codeRun) return;
+  say('Hole Code …');
+  let s; try { s = await api('POST', '/api/device/start'); } catch (_) { say('Keine Verbindung'); return; }
+  if (!s.ok) { say(s.error || 'Geht gerade nicht'); return; }
+  const run = codeRun = { stop: false }, until = Date.now() + s.expires * 1000, pick = $('#cloudPick');
+  let wait = s.interval * 1000;
+  const close = () => { run.stop = true; codeRun = null; pick.hidden = true; pick.onclick = null; };
+  $('#cloudPanel').innerHTML = `<h2>Mit Google anmelden</h2><ol class="csteps"><li>Öffne <b>${s.url.replace(/^https?:\/\/(www\.)?/, '')}</b> – geht auch am Handy</li><li>Gib diesen Code ein:<div class="ccode">${s.code}</div></li></ol>
+    <div class="cbtns"><button class="btn primary" data-code="open">Seite öffnen</button><button class="btn" data-code="cancel">Abbrechen</button></div><small class="cwait">Wartet auf die Anmeldung …</small>`;
+  pick.hidden = false;
+  pick.onclick = e => { const b = e.target.closest('[data-code]'); if (!b) return; if (b.dataset.code === 'open') openUrl(s.url); else { close(); say(''); } };
+  say('Wartet auf die Anmeldung …');
+  while (!run.stop && Date.now() < until) {
+    await sleep(wait);
+    if (run.stop) return;
+    let r; try { r = await api('POST', '/api/device/poll', { device: s.device }); } catch (_) { continue; }   // offline: weiter warten
+    if (r.pending) { if (r.slow) wait += 5000; continue; }
+    close();
+    if (!r.ok) { say(r.error || 'Anmeldung fehlgeschlagen'); return; }
+    await signedIn(r);
+    return;
+  }
+  if (!run.stop) { close(); say('Code abgelaufen – bitte nochmal'); }
 }
 export async function logout() {
   try { await api('POST', '/api/logout'); } catch (_) { /* offline: Schlüssel trotzdem vergessen */ }

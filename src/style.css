@@ -874,3 +874,7 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 .cloudpanel{max-height:calc(100dvh - 20px);overflow:auto}
 .cpick p{margin:0}
 @media (max-height:480px){.cloudpanel h2{margin:0 0 4px;font-size:22px}.cloudpanel .note{margin:0;font-size:13px}.cpicks{margin-top:6px;gap:8px}.cpick{padding:8px 10px;gap:2px}.cpick .btn{margin-top:4px}}
+.csteps{margin:8px 0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+.ccode{font-family:var(--font-display);font-size:34px;letter-spacing:.12em;margin-top:6px;padding:6px 14px;border-radius:10px;background:rgba(10,15,6,.6);border:2px solid #8fd8ff;display:inline-block;user-select:all}
+.cbtns{display:flex;gap:10px;flex-wrap:wrap}
+.cwait{display:block;margin-top:8px;opacity:.7}
