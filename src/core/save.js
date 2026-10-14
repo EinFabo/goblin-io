@@ -144,7 +144,7 @@ export function normalize(raw) {
     const lv = Array.isArray(s.lv) ? s.lv : [];
     for (let i = 0; i < LEVELS; i++) {
       const l = obj(lv[i]);
-      o.lv.push({ hats: num(l.hats, o.cleared && !Array.isArray(s.lv) ? 1 : 0, 0, 3) | 0, kills: num(l.kills) | 0, fast: num(l.fast), nm: bool(l.nm, false) });
+      o.lv.push({ hats: num(l.hats, o.cleared && !Array.isArray(s.lv) ? 1 : 0, 0, 3) | 0, hm: num(l.hm, 0, 0, 7) | 0, kills: num(l.kills) | 0, fast: num(l.fast), nm: bool(l.nm, false) });
     }
   }
   // Kartenplatz; alte Stände: erstes offenes Level der höchsten freien Welt
@@ -259,21 +259,23 @@ export function gainAbilXp(id, n) {
 }
 
 // Level einer Welt
-const newLv = () => Array.from({ length: LEVELS }, () => ({ hats: 0, kills: 0, fast: 0, nm: false }));
+const newLv = () => Array.from({ length: LEVELS }, () => ({ hats: 0, hm: 0, kills: 0, fast: 0, nm: false }));
 function stageRec(i) {
   const s = save.stages[i + 1] || (save.stages[i + 1] = { cleared: false, stars: 0, best: 0, nightmare: false });
   if (!Array.isArray(s.lv)) s.lv = newLv();
   return s;
 }
-export const levelInfo = (si, li) => { const s = save.stages[si + 1]; return (s && s.lv && s.lv[li]) || { hats: 0, kills: 0, fast: 0, nm: false }; };
+export const levelInfo = (si, li) => { const s = save.stages[si + 1]; return (s && s.lv && s.lv[li]) || { hats: 0, hm: 0, kills: 0, fast: 0, nm: false }; };
 export const levelDone = (si, li) => levelInfo(si, li).hats > 0;
 export const levelUnlocked = (si, li) => stageUnlocked(si) && (li === 0 || levelDone(si, li - 1));
 // Ergebnis eines Levels speichern. first = erstes Mal geschafft, newHats = Hüte dazugewonnen
 // nm: im Albtraum-Modus gespielt; nmFirst = erstes Mal im Albtraum geschafft
-export function recordLevel(si, li, { win, time, hats, kills = 0, endless = false, nm = false }) {
+// hatOk: welche Hut-Bedingungen erfüllt waren; gespeichert als Bitmaske hm des besten Laufs (für die Karte)
+export function recordLevel(si, li, { win, time, hats, hatOk = null, kills = 0, endless = false, nm = false }) {
   if (endless) { recordStage(si, { win: false, time }); return { first: false, newHats: 0, nmFirst: false }; }
   const L = stageRec(si).lv[li], first = win && !L.hats, newHats = Math.max(0, hats - L.hats), nmFirst = win && nm && !L.nm;
   if (nmFirst) L.nm = true;
+  if (win && hatOk && hats >= L.hats) L.hm = hatOk.reduce((m, ok, i) => m | (ok ? 1 << i : 0), 0);
   L.hats = Math.max(L.hats, hats); L.kills = Math.max(L.kills, kills);
   if (win && li === LEVELS - 1) { L.fast = L.fast ? Math.min(L.fast, Math.floor(time)) : Math.floor(time); recordStage(si, { win, time }); }
   return { first, newHats, nmFirst };

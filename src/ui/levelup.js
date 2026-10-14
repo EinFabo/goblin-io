@@ -49,7 +49,7 @@ export function renderCards() {
   set('#lockBtn', mode === 'lock' ? 'Welche sperren?' : lockIdx >= 0 ? 'Gesperrt ✓' : `Sperren (${run.locks})`, run.locks <= 0 || mode === 'ban', mode === 'lock' || lockIdx >= 0);
   $('#skipGold').textContent = `+${SKIP_GOLD} Gold`;
   $('#skipHeal').textContent = `+${Math.round(SKIP_HEAL * 100)} % Leben`;
-  $('#lvNote').textContent = mode === 'ban' ? 'Gebannte Karten kommen in diesem Lauf nie wieder.' : mode === 'lock' ? 'Die gesperrte Karte bleibt fürs nächste Level-Up liegen.' : '';
+  $('#lvCardNote').textContent = mode === 'ban' ? 'Gebannte Karten kommen in diesem Lauf nie wieder.' : mode === 'lock' ? 'Die gesperrte Karte bleibt fürs nächste Level-Up liegen.' : '';
 }
 function close(i) {
   choose(curChoices, i, lockIdx);

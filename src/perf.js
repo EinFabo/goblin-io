@@ -19,8 +19,10 @@ export function startPerf() {
   // Zähler seit dem letzten Frame
   const ce = Document.prototype.createElement;
   Document.prototype.createElement = function (t, ...a) { if (t === 'canvas') canvases++; return ce.call(this, t, ...a); };
-  const st = AudioScheduledSourceNode.prototype.start;
-  AudioScheduledSourceNode.prototype.start = function (...a) { sounds++; return st.apply(this, a); };
+  if (window.AudioScheduledSourceNode) {   // ältere WebViews kennen die Klasse nicht
+    const st = AudioScheduledSourceNode.prototype.start;
+    AudioScheduledSourceNode.prototype.start = function (...a) { sounds++; return st.apply(this, a); };
+  }
   // Browser-Sicht: wo ging die Zeit hin (Skripte, Layout, Zeichnen)?
   const loaf = [];
   try {

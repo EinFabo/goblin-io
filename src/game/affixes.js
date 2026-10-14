@@ -55,9 +55,9 @@ export function affixDamage(e, dmg, kx, ky) {
   if (hasAffix(e, 'armored') && (kx || ky)) dmg *= .6;
   return dmg;
 }
-// Vampirisch: heilt sich um ein Vielfaches des Schadens am Goblin
+// Vampirisch: heilt sich um ein Vielfaches des Schadens am Goblin (nur wenn wirklich Schaden ankam)
 export function affixOnHitPlayer(e, dmg) {
-  if (e && !e.dead && hasAffix(e, 'vampiric')) e.hp = Math.min(e.maxHp, e.hp + Math.max(dmg * 4, e.maxHp * .04));
+  if (dmg > 0 && e && !e.dead && hasAffix(e, 'vampiric')) e.hp = Math.min(e.maxHp, e.hp + Math.max(dmg * 4, e.maxHp * .04));
 }
 export function affixOnDeath(e, spawn) {
   if (hasAffix(e, 'splitting')) {

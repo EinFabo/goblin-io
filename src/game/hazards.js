@@ -75,7 +75,7 @@ export function updEProj(dt) {
       if (p.kind === 'frost' && P.mechT <= 0 && !bulwark()) P.slowT = 1.2;
       p.life = 0;
       animFx(HIT_FX[p.kind] || 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
-    } else if (P.dashT > 0 && dx * dx + dy * dy < rr * rr * P.perfectR * P.perfectR) perfectRoll(p.x, p.y);
+    } else if (!p.fake && P.dashT > 0 && dx * dx + dy * dy < rr * rr * P.perfectR * P.perfectR) perfectRoll(p.x, p.y);   // Trugbilder zählen nicht
   }
   run.eproj = run.eproj.filter(p => p.life > 0);
 }

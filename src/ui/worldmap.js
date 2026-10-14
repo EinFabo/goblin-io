@@ -126,7 +126,9 @@ function renderNote(show = true) {
   const K = LEVEL_KIND[n.li], boss = n.li === LEVELS - 1, info = levelInfo(n.si, n.li);
   const name = boss ? st.boss.name : K.name, sub = boss ? 'Boss-Level: erst Wellen, dann der Boss.' : K.sub + (n.li === 0 ? ' ' + st.sub : '');
   const rec = boss ? (info.fast ? 'Schnellster Sieg ' + fmtTime(info.fast) : '') : info.kills ? 'Rekord: ' + info.kills + ' Kills' : '';
-  const why = HAT_TXT.map((t, i) => `<li class="${i < info.hats ? 'on' : ''}">${t}</li>`).join('');
+  // hm: erfüllte Bedingungen des besten Laufs; alte Spielstände kennen nur die Anzahl
+  const got = i => (info.hm ? (info.hm >> i) & 1 : i < info.hats);
+  const why = HAT_TXT.map((t, i) => `<li class="${got(i) ? 'on' : ''}">${t}</li>`).join('');
   note.innerHTML = `<div class="nh"><span class="lbl">${levelLabel(n.si, n.li)}</span><h3>${name}</h3>${hatsHtml(info.hats)}</div><p>${sub}</p>
     <ul class="why">${why}</ul>${rec ? `<p class="rec">${rec}</p>` : ''}
     ${open && stageCleared(n.si) ? nmHtml() : ''}

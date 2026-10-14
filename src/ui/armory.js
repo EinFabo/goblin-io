@@ -15,7 +15,9 @@ const freePts = id => { const s = st(id); return s.lv - 1 - spentPoints(s.pts); 
 // Ungültige Einträge räumen (z. B. Slot 2 noch zu, Fähigkeit nicht mehr frei)
 export function cleanLoadout() {
   save.loadout = save.loadout.map((id, i) => id && canEquip(id) && slotOpen(i) ? id : null);
-  if (!save.loadout[0]) save.loadout[0] = 'rage';
+  if (!save.loadout[0]) save.loadout[0] = save.loadout[1] !== 'rage' ? 'rage' : null;
+  if (!save.loadout[0]) [save.loadout[0], save.loadout[1]] = [save.loadout[1], null];
+  if (save.loadout[1] === save.loadout[0]) save.loadout[1] = null;   // nie dieselbe Fähigkeit an beiden Haken
 }
 
 export function renderArmory() {
@@ -64,7 +66,8 @@ function hang(i) {
   if (MOVES[sel] || !canEquip(sel) || !slotOpen(i) || L[i] === sel) return;
   if (L[other] === sel) L[other] = L[i];   // schon am anderen Haken: tauschen
   L[i] = sel;
-  if (i === 0 && !L[0]) L[0] = 'rage';
+  // Q darf nicht leer bleiben (von Q an den leeren E-Haken gehängt): dann bleibt sie an Q
+  if (!L[0]) [L[0], L[1]] = [L[1], null];
   persist(); sfx.pickCard();
   renderHooks(i); renderShelf(); renderNote();
 }

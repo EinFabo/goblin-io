@@ -84,9 +84,9 @@ function hatSequence(r) {
 }
 const markNew = h => { if (!h.querySelector('.hatnew')) h.insertAdjacentHTML('beforeend', '<em class="hatnew">NEU!</em>'); };
 function showMiss(r, hats) {
-  const miss = [0, 1, 2].filter(i => i >= r.hats);
-  for (const i of miss) hats[i].classList.add('miss');
-  if (!$('#overHats .hatwhy')) $('#overHats').insertAdjacentHTML('beforeend', `<p class="hatwhy">Es fehlt: ${miss.map(i => HAT_TXT[i]).join(' · ')}</p>`);
+  for (let i = r.hats; i < 3; i++) hats[i].classList.add('miss');
+  const why = [0, 1, 2].filter(i => (r.hatOk ? !r.hatOk[i] : i >= r.hats));   // die wirklich verpassten Bedingungen
+  if (!$('#overHats .hatwhy')) $('#overHats').insertAdjacentHTML('beforeend', `<p class="hatwhy">Es fehlt: ${why.map(i => HAT_TXT[i]).join(' · ')}</p>`);
 }
 $('#over').addEventListener('pointerdown', e => { if (seqDone && !e.target.closest('button')) seqDone(); });
 export function hideResults() { clearTimeout(showT); seqT.forEach(clearTimeout); seqT = []; seqDone = null; $('#over').hidden = true; }

@@ -35,12 +35,12 @@ export function query(x, y, r, cb) {
 }
 export function nearest(maxD = 1e9, from = P) {
   let best = null, bd = maxD * maxD;
-  for (const e of run.enemies) { if (e.dead) continue; const d = (e.x - from.x) ** 2 + (e.y - from.y) ** 2; if (d < bd) { bd = d; best = e; } }
+  for (const e of run.enemies) { if (e.dead || e.spawnT > 0) continue; const d = (e.x - from.x) ** 2 + (e.y - from.y) ** 2; if (d < bd) { bd = d; best = e; } }
   return best;
 }
 export function randomEnemyInView(margin = 0) {
   const hw = W / 2 / ZOOM - margin, hh = H / 2 / ZOOM - margin, c = [];
-  for (const e of run.enemies) if (!e.dead && Math.abs(e.x - P.x) < hw && Math.abs(e.y - P.y) < hh) c.push(e);
+  for (const e of run.enemies) if (!e.dead && !(e.spawnT > 0) && Math.abs(e.x - P.x) < hw && Math.abs(e.y - P.y) < hh) c.push(e);
   return c;
 }
 export const viewR = () => Math.hypot(W / 2 / ZOOM, H / 2 / ZOOM);

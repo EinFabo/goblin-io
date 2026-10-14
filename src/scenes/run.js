@@ -43,9 +43,12 @@ defineScene('run', {
     if (run.cut) { update(step); return; }
     // Nach einem Level-Up kurz Zeitlupe, dann die Karten
     if (run.lvDelay > 0) {
-      run.lvDelay -= step; update(step * .25);
+      // Im Schritt, in dem die Zeitlupe endet, kein update(): sonst startet es schon das nächste
+      // anstehende Level-Up (lvDelay wieder > 0) und dieses Kartenfenster ginge verloren
+      run.lvDelay -= step;
+      if (run.lvDelay > 0) update(step * .25);
       // Level zu Ende, während die Zeitlupe lief: kein Kartenfenster mehr, das Level-Up wird Bonus-Level
-      if (run.lvDelay <= 0 && !run.over) { if (run.clearT > 0) lvToBonus(); else { run.lvOpen = false; openLevelUp(run.lvKind === 'chest'); } }
+      else if (!run.over) { if (run.clearT > 0) lvToBonus(); else { run.lvOpen = false; openLevelUp(run.lvKind === 'chest'); } }
     } else if (run.slowT > 0) { run.slowT -= step; update(step * .3); }
     else update(step);
   },

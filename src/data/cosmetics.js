@@ -14,7 +14,7 @@ export const COSMETICS = [
   C('hat', 'zipfel', 'Lila Zipfelmütze', 'common', 'start'),
   C('hat', 'chef', 'Kochmütze', 'common'), C('hat', 'pot', 'Kochtopf', 'common'), C('hat', 'pirate', 'Piratenhut', 'rare'),
   C('hat', 'viking', 'Wikingerhelm', 'rare'),
-  C('hat', 'wizard', 'Magierhut', 'epic', 'Trophäe: Malvorn besiegen (Welt 5)'),
+  C('hat', 'wizard', 'Magierhut', 'epic', 'Trophäe: Malvorn besiegen (Welt 8)'),
   C('hat', 'crown', 'Krone', 'legendary', 'Erfolg: alle Level mit 3 Hüten'),
   C('outfit', 'vest', 'Lederweste', 'common', 'start'),
   C('outfit', 'rags', 'Lumpen', 'common'), C('outfit', 'suit', 'Anzug', 'rare'), C('outfit', 'overall', 'Mechaniker-Overall', 'rare'),

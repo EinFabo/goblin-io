@@ -18,7 +18,7 @@ import { ETYPES } from '../data/enemies.js';
 // ---------- Schaden ----------
 // xpMul: tötet dieser Treffer, gibt der Gegner so viel mehr Erfahrung (Kristallregen)
 export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
-  if (e.dead) return;
+  if (e.dead || e.spawnT > 0) return;   // im Portal noch nicht angreifbar
   const crit = rnd() < P.crit + critBonus();
   if (e.tbShock && e.freezeT > 0) dmg *= 1.5;   // Zeitbombe: Kälteschock
   dmg *= dealtMult(e);

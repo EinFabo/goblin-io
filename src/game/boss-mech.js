@@ -20,7 +20,7 @@ import { banner } from '../ui/hud.js';
 export function clearBossWorld() { run.portals = []; run.pillars = []; run.wind = null; }
 // Weitere Körper eines Bosses: Morgras Teile, Spiegelbilder, Malvorns Schatten (eigene Gegner mit Bild des Bosses)
 function body(b, extra) {
-  const e = { ...b, ph: 0, xp: 0, ice: 0, vessels: null, armor: 0, rise: null, ghostQ: null, flash: .3, at: rnd() * 5, ...extra };
+  const e = { ...b, ph: 0, xp: 0, ice: 0, vessels: null, armor: 0, rise: null, ghostQ: null, flash: .3, at: frand(0, 5), ...extra };   // at: nur Animation → Optik-Zufall
   e.ai = { st: 'chase', t: 1.2 + rnd(), i: 0, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0, chan: 0, spin: null };
   run.enemies.push(e);
   return e;

@@ -188,10 +188,11 @@ export function endRun(win) {
   // Albtraum (6.1): +50 % Gold und Konto-XP, Siegtruhe eine Stufe besser, erster Albtraum-Sieg je Level gibt Juwelen
   if (win && run.nm) bonus += Math.round((run.gold + bonus) * .5);
   // Magierhüte (6.1a): geschafft, über 50 % Leben am Ende, nie unter 25 % gefallen
-  const hats = win ? 1 + (P.hp / P.maxHp > .5 ? 1 : 0) + (run.minHp >= .25 ? 1 : 0) : 0;
+  // welche Hut-Bedingungen erfüllt sind (HAT_TXT): geschafft, über 50 % Leben, nie unter 25 %
+  const hatOk = [win, win && P.hp / P.maxHp > .5, win && run.minHp >= .25], hats = hatOk.filter(Boolean).length;
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
-  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, kills: run.kills, endless: !!run.st.endless, nm: run.nm });
+  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm });
   const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * (run.nm ? 1.5 : 1)), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
@@ -219,7 +220,7 @@ export function endRun(win) {
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
 }
 
