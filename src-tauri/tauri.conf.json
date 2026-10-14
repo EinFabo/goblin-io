@@ -27,6 +27,10 @@
     }
   },
   "plugins": {
+    "deep-link": {
+      "desktop": { "schemes": ["goblinio"] },
+      "mobile": [{ "scheme": ["goblinio"], "appLink": false }]
+    },
     "updater": {
       "endpoints": [
         "https://github.com/EinFabo/goblin-io/releases/latest/download/latest.json"

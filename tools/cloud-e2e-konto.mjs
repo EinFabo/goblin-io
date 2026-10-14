@@ -46,16 +46,17 @@ check(await gold(A) === 0, 'trotzdem wechseln → neues Konto startet leer');
 const C2 = await page(`?cloudtest=${T}c`); await Promise.all([C2.waitForEvent('load').catch(() => {}), signIn(C2)]); await ready(C2); await C2.waitForTimeout(800);
 check(await gold(C2) === 0, 'Cloud von Konto c hat die 450 nicht bekommen');
 
-// 3) App verbinden: „App“ zeigt Code, Browser meldet sich an und bestätigt, App ist angemeldet und übernimmt die Cloud
+// 3) App verbinden: „App“ öffnet die Anmeldeseite im Browser, dort Konto wählen, App ist angemeldet und übernimmt die Cloud.
+//    Die Anmeldeseite meldet sich selbst an, unabhängig davon, wer im Browser angemeldet ist (hier: niemand).
 const W = await page(`?cloudtest=${T}d`); await setGold(W, 777); await signIn(W); await saved(W);
 const APP = await page(`?cloudtest=${T}d&code`);
-await prof(APP); await APP.waitForSelector('#gSignIn button'); await APP.click('#gSignIn button');
-await APP.waitForSelector('.ccode'); const code = (await APP.innerText('.ccode')).trim();
-check(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code), 'App zeigt Code ' + code);
-const BR = await page(`?cloudtest=${T}d&verbinden=${code.replace('-', '')}`);
-await BR.waitForSelector('#linkSignIn button'); await BR.click('#linkSignIn button');
-await BR.waitForSelector('#linkCode'); check(await BR.inputValue('#linkCode') === code, 'Code im Browser vorausgefüllt');
-await BR.click('#linkForm button'); await BR.waitForSelector('text=Verbunden!');
+await prof(APP); await APP.waitForSelector('#gSignIn button');
+const [BR] = await Promise.all([APP.context().waitForEvent('page'), APP.click('#gSignIn button')]);
+await BR.waitForLoadState(); await ready(BR);
+check(/verbinden=[A-Z2-9]{8}/.test(BR.url()), 'App öffnet die Anmeldeseite mit Code');
+await BR.waitForSelector('#linkGo button'); await BR.click('#linkGo button');
+await BR.waitForSelector('text=Angemeldet!');
+check(!(await BR.evaluate(() => (localStorage.getItem('goblinio_cloud') || '').includes('token'))), 'Anmeldeseite meldet die Webseite selbst nicht an');
 await APP.waitForEvent('load', { timeout: 15000 }); await ready(APP);
 check(await gold(APP) === 777, 'App angemeldet und Cloud-Stand übernommen (777)');
 await prof(APP); check(/Gesichert|Gleiche/.test(await cloudText(APP)), 'App zeigt angemeldet: ' + (await cloudText(APP)).slice(0, 60));

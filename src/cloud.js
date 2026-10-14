@@ -66,6 +66,7 @@ function choose(title, text, buttons) {
   return new Promise(res => { $('#cloudPick').onclick = e => { const b = e.target.closest('[data-ch]'); if (b) { closePanel(); res(b.dataset.ch); } }; });
 }
 
+// Google-Kontoauswahl im Popup (Token-Client von Google Identity Services): eigener Knopf, fragt immer nach dem Konto
 let gsi = null;
 function loadGsi() {
   return gsi || (gsi = new Promise((res, rej) => {
@@ -74,49 +75,58 @@ function loadGsi() {
     document.head.append(s);
   }));
 }
-// Google-Knopf in el zeichnen (Profil, App verbinden)
+// Liefert eine Funktion, die (im Klick!) die Kontoauswahl öffnet und fn mit { accessToken } aufruft
+async function googlePicker(fn) {
+  if (TEST) return () => fn({ accessToken: 'dev:' + (new URLSearchParams(location.search).get('cloudtest') || 'test') });
+  const g = await loadGsi();
+  const client = g.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID, scope: 'openid email profile', prompt: 'select_account',
+    callback: r => { if (r.access_token) fn({ accessToken: r.access_token }); else say('Anmeldung abgebrochen'); },
+    error_callback: e => say(e && e.type === 'popup_closed' ? 'Anmeldung abgebrochen' : 'Google-Fenster ging nicht auf'),
+  });
+  return () => client.requestAccessToken();
+}
+const signBtn = '<button class="btn small primary gbtn"><span class="glogo" aria-hidden="true">G</span>Mit Google anmelden</button>';
+// Anmelde-Knopf in el (Profil): im Browser Kontoauswahl im Popup, in exe/APK über die Anmeldeseite im Browser
 export async function renderSignIn(el) {
   if (!cloudReady()) return;
-  if (useCode) { el.innerHTML = '<button class="btn small primary">Mit Google anmelden</button>'; el.firstChild.onclick = () => codeLogin(); return; }
-  if (TEST) { el.innerHTML = '<button class="btn small primary">Test-Anmeldung</button>'; el.firstChild.onclick = () => login('dev:' + (new URLSearchParams(location.search).get('cloudtest') || 'test')); return; }
-  try {
-    const g = await loadGsi();
-    g.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: r => login(r.credential), auto_select: false, cancel_on_tap_outside: true });
-    el.innerHTML = '';
-    g.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', locale: 'de' });
-  } catch (e) { el.textContent = 'Google ist gerade nicht erreichbar.'; }
+  el.innerHTML = signBtn;
+  if (useCode) { el.firstChild.onclick = () => codeLogin(); return; }
+  try { const open = await googlePicker(login); el.firstChild.onclick = open; } catch (e) { el.textContent = 'Google ist gerade nicht erreichbar.'; }
 }
-async function login(idToken) {
+async function login(cred) {
   say('Melde an …');
   try {
-    const r = await api('POST', '/api/login', { idToken });
+    const r = await api('POST', '/api/login', cred);
     if (!r.ok) { say(r.error || 'Anmeldung fehlgeschlagen'); return; }
     await signedIn(r);
   } catch (e) { say('Keine Verbindung'); }
 }
 async function signedIn(r) {
   st = { token: r.token, name: r.name, picture: r.picture, acct: r.acct, base: 0, localAt: 0 }; keep();
-  // „App verbinden“: nur anmelden, den Spielstand dieses Browsers erst beim nächsten normalen Start abgleichen
-  if (linking) { say(''); linkPanel(); return; }
   await sync();
 }
 
-// ---------- App verbinden (exe/APK) ----------
+// ---------- Anmeldung in exe/APK ----------
+// Die App holt einen Code und öffnet die Anmeldeseite im Browser (goblin.node-wave.org/?verbinden=CODE). Dort wählt man
+// sein Google-Konto, die Seite springt per goblinio:// zurück ins Spiel, und die App holt ihre Sitzung ab.
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const openUrl = u => (window.__TAURI__ && window.__TAURI__.opener ? window.__TAURI__.opener.openUrl(u) : window.open(u, '_blank'));
 let codeRun = null;
-// In der App: Code holen, anzeigen und nachfragen, bis er im Browser bestätigt wurde
 async function codeLogin() {
   if (codeRun) return;
-  say('Hole Code …');
+  say('Öffne die Anmeldung …');
   let s; try { s = await api('POST', '/api/link/start'); } catch (_) { say('Keine Verbindung'); return; }
   if (!s.ok) { say(s.error || 'Geht gerade nicht'); return; }
-  const run = codeRun = { stop: false }, until = Date.now() + s.expires * 1000, open = HOST + '/?verbinden=' + s.code.replace('-', '');
+  const run = codeRun = { stop: false }, until = Date.now() + s.expires * 1000;
+  const page = (TEST ? location.origin + '/?cloudtest=' + encodeURIComponent(new URLSearchParams(location.search).get('cloudtest') || 'test') + '&' : HOST + '/?') + 'verbinden=' + s.code.replace('-', '');
   const close = () => { run.stop = true; codeRun = null; closePanel(); };
-  panel(`<h2>Mit Google anmelden</h2><ol class="csteps"><li>Öffne <b>${s.url.replace(/^https?:\/\//, '')}</b> im Browser – geht auch am Handy</li><li>Melde dich dort mit Google an</li><li>Gib diesen Code ein:<div class="ccode">${s.code}</div></li></ol>
-    <div class="cbtns"><button class="btn primary" data-code="open">Im Browser öffnen</button><button class="btn" data-code="cancel">Abbrechen</button></div><small class="cwait">Wartet auf die Anmeldung …</small>`);
-  $('#cloudPick').onclick = e => { const b = e.target.closest('[data-code]'); if (!b) return; if (b.dataset.code === 'open') openUrl(open); else { close(); say(''); } };
+  panel(`<h2>Anmelden im Browser</h2><p class="note">Im Browser hat sich die Anmeldung geöffnet. Wähle dort dein Google-Konto – danach geht es von selbst hierher zurück.</p>
+    <div class="cbtns"><button class="btn primary" data-code="open">Nochmal öffnen</button><button class="btn" data-code="cancel">Abbrechen</button></div>
+    <small class="cwait">Wartet auf die Anmeldung … · Anderes Gerät? ${s.url.replace(/^https?:\/\//, '')} mit Code <b>${s.code}</b></small>`);
+  $('#cloudPick').onclick = e => { const b = e.target.closest('[data-code]'); if (!b) return; if (b.dataset.code === 'open') openUrl(page); else { close(); say(''); } };
   say('Wartet auf die Anmeldung …');
+  openUrl(page);
   while (!run.stop && Date.now() < until) {
     await sleep(s.interval * 1000);
     if (run.stop) return;
@@ -127,28 +137,33 @@ async function codeLogin() {
     await signedIn(r);
     return;
   }
-  if (!run.stop) { close(); say('Code abgelaufen – bitte nochmal'); }
+  if (!run.stop) { close(); say('Abgelaufen – bitte nochmal'); }
 }
-// Im Browser (?verbinden=CODE): anmelden, dann den Code aus der App bestätigen
-function linkPanel(msg = '') {
-  const pre = (new URLSearchParams(location.search).get('verbinden') || '').toUpperCase();
+// Anmeldeseite für die App (?verbinden=CODE): eigene Google-Anmeldung, unabhängig davon, wer hier auf der Webseite angemeldet ist
+async function linkPanel(msg = '') {
+  const pre = (new URLSearchParams(location.search).get('verbinden') || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   const back = () => { closePanel(); linking = false; history.replaceState(null, '', location.pathname); if (st.token) sync(); };
-  if (!st.token) {
-    panel(`<h2>App verbinden</h2><p class="note">Melde dich mit dem Google-Konto an, mit dem die App (PC oder Handy) spielen soll.</p><div id="linkSignIn"></div><small class="cwait">${esc(msg || status)}</small><div class="cbtns"><button class="btn" data-l="back">Schließen</button></div>`);
-    renderSignIn($('#linkSignIn'));
-  } else {
-    panel(`<h2>App verbinden</h2><p class="note">Angemeldet als <b>${esc(st.name || 'Google-Konto')}</b>. Gib den Code ein, den die App anzeigt.</p><p class="note"><small>Nur Codes aus deiner eigenen App eingeben – wer den Code hat, spielt danach mit deinem Konto.</small></p>
-      <form id="linkForm" class="cbtns"><input id="linkCode" class="ccode" maxlength="9" autocomplete="off" spellcheck="false" value="${esc(pre.length === 8 ? pre.slice(0, 4) + '-' + pre.slice(4) : pre)}" aria-label="Code"><button class="btn primary">Verbinden</button></form>
-      <small class="cwait">${esc(msg)}</small><div class="cbtns"><button class="btn" data-l="back">Schließen</button></div>`);
-    $('#linkForm').onsubmit = async e => {
-      e.preventDefault();
-      let r; try { r = await api('POST', '/api/link/confirm', { code: $('#linkCode').value }); } catch (_) { linkPanel('Keine Verbindung'); return; }
-      if (!r.ok) { linkPanel(r.error || 'Hat nicht geklappt'); return; }
-      panel('<h2>Verbunden!</h2><p class="note">Die App meldet sich jetzt selbst an. Du kannst dieses Fenster schließen.</p><div class="cbtns"><button class="btn primary" data-l="back">Weiterspielen</button></div>');
-      $('#cloudPick').onclick = e => { if (e.target.closest('[data-l]')) back(); };
-    };
-  }
+  panel(`<h2>Bei Goblin.io anmelden</h2><p class="note">Melde dich an, um in der App (PC oder Handy) mit deinem Spielstand zu spielen.</p>
+    ${pre.length === 8 ? '' : '<label class="note">Code aus der App<br><input id="linkCode" class="ccode" maxlength="9" autocomplete="off" spellcheck="false" aria-label="Code"></label>'}
+    <div class="cbtns" id="linkGo">${signBtn.replace('small ', '')}</div><small class="cwait" id="linkMsg">${esc(msg)}</small>
+    <div class="cbtns"><button class="btn ghost small" data-l="back">Abbrechen</button></div>`);
   $('#cloudPick').onclick = e => { if (e.target.closest('[data-l]')) back(); };
+  let open; try { open = await googlePicker(confirmLink); } catch (_) { $('#linkMsg').textContent = 'Google ist gerade nicht erreichbar.'; return; }
+  $('#linkGo button').onclick = open;
+  async function confirmLink(cred) {
+    $('#linkMsg').textContent = 'Melde an …';
+    const code = pre.length === 8 ? pre : ($('#linkCode') ? $('#linkCode').value : '');
+    let r; try { r = await api('POST', '/api/link/confirm', { code, ...cred }); } catch (_) { linkPanel('Keine Verbindung'); return; }
+    if (!r.ok) { linkPanel(r.error || 'Hat nicht geklappt'); return; }
+    panel('<h2>Angemeldet!</h2><p class="note">Zurück zum Spiel – die App ist jetzt angemeldet. Diese Seite kannst du schließen.</p><div class="cbtns"><button class="btn primary" data-l="app">Zurück zum Spiel</button></div>');
+    $('#cloudPick').onclick = e => { if (e.target.closest('[data-l]')) toApp(); };
+    toApp();
+  }
+}
+// goblinio:// holt die App nach vorn (Tauri deep-link); auf Android über einen intent-Link
+function toApp() {
+  if (TEST) return;
+  location.href = /Android/i.test(navigator.userAgent) ? 'intent://angemeldet#Intent;scheme=goblinio;package=com.einfabo.goblinio;end' : 'goblinio://angemeldet';
 }
 
 // ---------- Abmelden, zurücksetzen, Konto löschen ----------

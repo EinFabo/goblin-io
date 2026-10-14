@@ -1,10 +1,10 @@
 // Cloud-Sync für Goblin.io: Spiel ausliefern (Assets) und /api für Anmeldung und Spielstand.
 // Anmeldung: Das Spiel schickt ein Google-ID-Token, der Worker prüft die Signatur gegen Googles Schlüssel
 // und gibt einen eigenen Sitzungsschlüssel zurück (gespeichert wird nur dessen SHA-256).
-//   POST /api/login  { idToken }            → { token, name, picture, acct }   (acct: feste Konto-Kennung, nicht die Google-ID)
+//   POST /api/login  { idToken | accessToken } → { token, name, picture, acct }   (acct: feste Konto-Kennung, nicht die Google-ID)
 //   POST /api/logout                        → {}
 //   POST /api/link/start                    → { link, code, url, interval, expires }   (exe/APK: Code im Browser bestätigen)
-//   POST /api/link/confirm { code }         (angemeldet) verbindet die App mit diesem Konto
+//   POST /api/link/confirm { code, accessToken } (oder angemeldet) verbindet die App mit diesem Konto
 //   POST /api/link/poll { link }            → { pending } | { token, name, picture, acct }
 //   DELETE /api/account                     Konto löschen: Spielstand und alle Sitzungen
 //   GET  /api/save                          → { data, level, runs, updated, acct } | { data: null, acct }
@@ -13,6 +13,7 @@
 const SESSION_DAYS = 90, MAX_SAVE = 2 * 1024 * 1024;
 const GOOGLE_CERTS = 'https://www.googleapis.com/oauth2/v3/certs';
 const GOOGLE_OAUTH = 'https://oauth2.googleapis.com';
+const GOOGLE_USERINFO = 'https://openidconnect.googleapis.com/v1/userinfo';
 
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
@@ -72,13 +73,25 @@ async function route(req, env, path) {
 }
 
 async function login(req, env) {
-  const { idToken } = await req.json().catch(() => ({}));
-  if (typeof idToken !== 'string') throw new HttpError(400, 'idToken fehlt');
-  let who;
+  return json(await newSession(env, await whoFrom(await req.json().catch(() => ({})), env)));
+}
+// Wer meldet sich an? idToken (Sign in with Google) oder accessToken (eigener Knopf, Google-Kontoauswahl im Popup)
+async function whoFrom({ idToken, accessToken }, env) {
   // Nur lokal (npm run dev): Test-Anmeldung ohne Google
-  if (env.DEV === '1' && idToken.startsWith('dev:')) who = { sub: 'dev-' + idToken.slice(4), name: idToken.slice(4), picture: '' };
-  else who = await verifyGoogle(idToken, env);
-  return json(await newSession(env, who));
+  const dev = typeof idToken === 'string' ? idToken : accessToken;
+  if (env.DEV === '1' && typeof dev === 'string' && dev.startsWith('dev:')) return { sub: 'dev-' + dev.slice(4), name: dev.slice(4), picture: '' };
+  if (typeof accessToken === 'string') return verifyAccess(accessToken, env);
+  if (typeof idToken === 'string') return verifyGoogle(idToken, env);
+  throw new HttpError(400, 'Token fehlt');
+}
+// Access-Token: bei Google nachfragen, für welche Client-ID es ausgestellt ist (sonst könnte jede fremde App ihre Tokens schicken)
+export async function verifyAccess(tok, env) {
+  const info = await (await fetch(GOOGLE_OAUTH + '/tokeninfo?access_token=' + encodeURIComponent(tok))).json().catch(() => ({}));
+  const auds = (env.GOOGLE_CLIENT_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!info.sub || !auds.includes(info.aud)) throw new HttpError(401, 'Anmeldung ungültig');
+  const u = await (await fetch(GOOGLE_USERINFO, { headers: { Authorization: 'Bearer ' + tok } })).json().catch(() => ({}));
+  if (u.sub !== info.sub) throw new HttpError(401, 'Anmeldung ungültig');
+  return { sub: u.sub, name: u.name || u.email || '', picture: u.picture || '' };
 }
 async function newSession(env, who) {
   const token = b64url(crypto.getRandomValues(new Uint8Array(32)));
@@ -105,9 +118,12 @@ async function linkStart(env) {
   ]);
   return json({ link, code: code.slice(0, 4) + '-' + code.slice(4), url: 'https://goblin.node-wave.org/verbinden', interval: 3, expires: LINK_MIN * 60 });
 }
+// Bestätigen mit eigener Google-Anmeldung (accessToken, unabhängig davon, wer auf der Webseite angemeldet ist)
+// oder mit einer Sitzung der Webseite
 async function linkConfirm(req, env) {
-  const s = await session(req, env);
-  const { code } = await req.json().catch(() => ({}));
+  const body = await req.json().catch(() => ({}));
+  const s = body.accessToken || body.idToken ? await whoFrom(body, env) : await session(req, env);
+  const { code } = body;
   const r = await env.DB.prepare('UPDATE links SET sub = ?, name = ?, picture = ? WHERE code = ? AND sub IS NULL AND expires >= ?')
     .bind(s.sub, s.name || '', s.picture || '', normCode(code), Date.now()).run();
   if (!r.meta || !r.meta.changes) throw new HttpError(404, 'Code falsch oder abgelaufen');

@@ -27,6 +27,15 @@ async function call(method, path, body, token) {
   }), env);
   return { status: r.status, ...(await r.json().catch(() => ({}))) };
 }
+// Google nachgebaut: Access-Token „gut:<sub>“ gehört zu unserer Client-ID, „fremd:<sub>“ zu einer anderen App
+globalThis.fetch = async (url, opt = {}) => {
+  url = String(url);
+  const tok = url.includes('tokeninfo') ? decodeURIComponent(url.split('access_token=')[1]) : (opt.headers.Authorization || '').slice(7);
+  const [kind, sub] = tok.split(':');
+  if (url.includes('tokeninfo')) return Response.json(sub ? { sub, aud: kind === 'gut' ? 'web-id' : 'andere-app' } : { error: 'invalid_token' }, { status: sub ? 200 : 400 });
+  return Response.json({ sub, name: 'Google ' + sub, picture: '' });
+};
+env.GOOGLE_CLIENT_IDS = 'web-id';
 const login = name => call('POST', '/api/login', { idToken: 'dev:' + name });
 
 test('App verbinden: Code im Browser bestätigen, App holt die Sitzung einmal ab', async () => {
@@ -59,4 +68,14 @@ test('Konto löschen: Spielstand und alle Sitzungen weg', async () => {
 test('/verbinden leitet ins Spiel', async () => {
   const r = await worker.fetch(new Request('https://goblin.node-wave.org/verbinden'), env);
   assert.equal(r.status, 302); assert.equal(r.headers.get('Location'), 'https://goblin.node-wave.org/?verbinden');
+});
+test('App verbinden mit eigener Google-Anmeldung (Access-Token), fremde Tokens abgelehnt', async () => {
+  const s = await call('POST', '/api/link/start');
+  assert.equal((await call('POST', '/api/link/confirm', { code: s.code, accessToken: 'fremd:7' })).status, 401);
+  assert.equal((await call('POST', '/api/link/confirm', { code: s.code, accessToken: 'kaputt' })).status, 401);
+  assert.equal((await call('POST', '/api/link/confirm', { code: s.code, accessToken: 'gut:7' })).status, 200);
+  const app = await call('POST', '/api/link/poll', { link: s.link });
+  assert.equal(app.name, 'Google 7');
+  const web = await call('POST', '/api/login', { accessToken: 'gut:7' });
+  assert.equal(web.acct, app.acct, 'gleiches Konto im Browser und in der App');
 });

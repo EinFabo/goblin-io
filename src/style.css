@@ -884,3 +884,5 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 #linkForm{align-items:center;margin:6px 0}
 #linkCode{width:7.2em;margin:0;color:inherit;text-transform:uppercase;text-align:center}
 #linkSignIn{margin:10px 0}
+.gbtn{display:inline-flex;align-items:center;gap:8px}
+.gbtn .glogo{display:inline-grid;place-items:center;width:1.3em;height:1.3em;border-radius:50%;background:#fff;color:#4285f4;font:700 .85em/1 Arial,sans-serif}
