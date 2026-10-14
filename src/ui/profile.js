@@ -10,7 +10,7 @@ import { WEAPONS } from '../data/weapons.js';
 import { canEquip } from '../game/abilities.js';
 import { accountXpNeed } from '../game/balance.js';
 import { icon } from '../render/icons.js';
-import { cloud, cloudReady, logout, onCloudChange, renderSignIn, saveNow } from '../cloud.js';
+import { cloud, cloudReady, deleteAccount, logout, onCloudChange, renderSignIn, resetSave, saveNow } from '../cloud.js';
 
 // ---------- Profil (PLAN 9.1): Name, Konto-Level, Statistiken, Bestzeiten, Freischaltungen ----------
 const fmtN = n => Math.floor(n).toLocaleString('de-DE');
@@ -45,21 +45,24 @@ export function renderProfile() {
   if (psub === 'ach') { subRender.ach(); return; }
   renderProfMain();
 }
-// Cloud-Sync: angemeldet → Name, Stand, Sichern/Abmelden; sonst der Google-Knopf
+// Cloud-Sync: angemeldet → Name, Stand, Sichern/Abmelden; sonst der Google-Knopf. Darunter Zurücksetzen/Konto löschen.
 function renderCloud() {
   const el = $('#profCloud');
   el.hidden = !cloudReady();
   if (el.hidden) return;
   const u = cloud.user, ago = cloud.syncedAt ? new Date(cloud.syncedAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  const more = `<div class="cmore"><button class="linkbtn" id="cloudReset">Spielstand zurücksetzen</button>${u ? '<button class="linkbtn" id="cloudDel">Konto löschen</button>' : ''}</div>`;
   if (!u) {
-    el.innerHTML = '<div class="ctext"><b>Spielstand in der Cloud</b><small>Mit Google anmelden und auf jedem Gerät weiterspielen.</small></div><div class="cbtn" id="gSignIn"></div>' + (cloud.status ? `<small class="cstat">${esc(cloud.status)}</small>` : '');
+    el.innerHTML = '<div class="ctext"><b>Spielstand in der Cloud</b><small>Mit Google anmelden und auf jedem Gerät weiterspielen.</small></div><div id="gSignIn"></div>' + (cloud.status ? `<small class="cstat">${esc(cloud.status)}</small>` : '') + more;
     renderSignIn($('#gSignIn'));
-    return;
+  } else {
+    el.innerHTML = `${u.picture ? `<img class="cav" src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="ctext"><b>${esc(u.name || 'Angemeldet')}</b><small>${esc(cloud.status || (ago ? 'Gesichert ' + ago : ''))}</small></div>
+      <button class="btn small" id="cloudNow">Jetzt sichern</button><button class="btn small ghost" id="cloudOut">Abmelden</button>${more}`;
+    $('#cloudNow').onclick = () => saveNow();
+    $('#cloudOut').onclick = () => logout();
+    $('#cloudDel').onclick = () => deleteAccount();
   }
-  el.innerHTML = `${u.picture ? `<img class="cav" src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="ctext"><b>${esc(u.name || 'Angemeldet')}</b><small>${esc(cloud.status || (ago ? 'Gesichert ' + ago : ''))}</small></div>
-    <button class="btn small" id="cloudNow">Jetzt sichern</button><button class="btn small ghost" id="cloudOut">Abmelden</button>`;
-  $('#cloudNow').onclick = () => saveNow();
-  $('#cloudOut').onclick = () => logout();
+  $('#cloudReset').onclick = () => resetSave();
 }
 onCloudChange(() => { if (!$('#profile').hidden && psub === 'prof') renderCloud(); });
 function renderProfMain() {

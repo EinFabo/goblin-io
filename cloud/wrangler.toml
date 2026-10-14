@@ -9,7 +9,7 @@ routes = [{ pattern = "goblin.node-wave.org", custom_domain = true }]
 
 [assets]
 directory = "./public"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/verbinden"]
 
 [[d1_databases]]
 binding = "DB"
@@ -18,9 +18,7 @@ database_id = "a4d8d64d-ffee-43cf-b1e6-c4681bd81479"
 migrations_dir = "migrations"
 
 [vars]
-# Client-IDs aus der Google Cloud Console (Web, später Desktop/Android), durch Komma getrennt; öffentlich
+# Client-IDs aus der Google Cloud Console (Web), durch Komma getrennt; öffentlich.
+# exe/APK melden sich über den Browser an (goblin.node-wave.org/verbinden), brauchen also keine eigene Client-ID.
 GOOGLE_CLIENT_IDS = "207037584180-cu0m43pkkn8uuo2lkg65ijpqc3t9bd0h.apps.googleusercontent.com"
-# Client-ID „Fernseher und Geräte mit begrenzter Eingabe“ für exe/APK (Anmeldung mit Code); das Secret dazu
-# als Worker-Secret: npx wrangler secret put GOOGLE_TV_SECRET. Die Client-ID muss auch in GOOGLE_CLIENT_IDS stehen.
-GOOGLE_TV_CLIENT_ID = ""
 ALLOWED_ORIGINS = "https://goblin.node-wave.org,http://localhost:8080,tauri://localhost,http://tauri.localhost,https://tauri.localhost"

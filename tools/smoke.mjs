@@ -8,7 +8,8 @@ const html = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist', 'goblin
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1280, height: 760 } });
 const errs = [];
-p.on('pageerror', e => errs.push(e.message));
+// Fehler aus Googles Anmelde-Knopf (iframe von accounts.google.com) sind nicht unsere
+p.on('pageerror', e => { if (!/accounts\.google\.com/.test(e.stack || '')) errs.push(e.message); });
 await p.goto('file://' + html);
 await p.waitForFunction(() => window.GOBLIN && window.GOBLIN.scene === 'menu');
 await p.evaluate(() => GOBLIN.allLoaded);

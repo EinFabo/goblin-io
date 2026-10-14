@@ -1,11 +1,13 @@
 // Cloud-Sync für Goblin.io: Spiel ausliefern (Assets) und /api für Anmeldung und Spielstand.
 // Anmeldung: Das Spiel schickt ein Google-ID-Token, der Worker prüft die Signatur gegen Googles Schlüssel
 // und gibt einen eigenen Sitzungsschlüssel zurück (gespeichert wird nur dessen SHA-256).
-//   POST /api/login  { idToken }            → { token, name, picture }
+//   POST /api/login  { idToken }            → { token, name, picture, acct }   (acct: feste Konto-Kennung, nicht die Google-ID)
 //   POST /api/logout                        → {}
-//   POST /api/device/start                  → { device, code, url, interval, expires }   (exe/APK: Code auf google.com/device eingeben)
-//   POST /api/device/poll { device }        → { pending } | { token, name, picture }  (Client-Secret bleibt hier: GOOGLE_TV_SECRET)
-//   GET  /api/save                          → { data, level, runs, updated } | { data: null }
+//   POST /api/link/start                    → { link, code, url, interval, expires }   (exe/APK: Code im Browser bestätigen)
+//   POST /api/link/confirm { code }         (angemeldet) verbindet die App mit diesem Konto
+//   POST /api/link/poll { link }            → { pending } | { token, name, picture, acct }
+//   DELETE /api/account                     Konto löschen: Spielstand und alle Sitzungen
+//   GET  /api/save                          → { data, level, runs, updated, acct } | { data: null, acct }
 //   PUT  /api/save   { data, level, runs, base, force }
 //        base = updated des zuletzt gesehenen Cloud-Stands; ist der Cloud-Stand neuer und force fehlt → 409 mit dem Cloud-Stand
 const SESSION_DAYS = 90, MAX_SAVE = 2 * 1024 * 1024;
@@ -18,6 +20,8 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), { status
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
+    // kurze Adresse zum Abtippen (App verbinden)
+    if (url.pathname === '/verbinden') return Response.redirect(url.origin + '/?verbinden', 302);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
     const cors = corsHeaders(env, req.headers.get('Origin'));
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -34,13 +38,23 @@ export default {
 function corsHeaders(env, origin) {
   const ok = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
   if (!origin || !ok.includes(origin)) return {};
-  return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'GET, PUT, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '86400', Vary: 'Origin' };
+  return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '86400', Vary: 'Origin' };
 }
 
 async function route(req, env, path) {
   if (path === '/api/login' && req.method === 'POST') return login(req, env);
-  if (path === '/api/device/start' && req.method === 'POST') return deviceStart(env);
-  if (path === '/api/device/poll' && req.method === 'POST') return devicePoll(req, env);
+  if (path === '/api/link/start' && req.method === 'POST') return linkStart(env);
+  if (path === '/api/link/confirm' && req.method === 'POST') return linkConfirm(req, env);
+  if (path === '/api/link/poll' && req.method === 'POST') return linkPoll(req, env);
+  if (path === '/api/account' && req.method === 'DELETE') {
+    const s = await session(req, env);
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM saves WHERE sub = ?').bind(s.sub),
+      env.DB.prepare('DELETE FROM sessions WHERE sub = ?').bind(s.sub),
+      env.DB.prepare('DELETE FROM links WHERE sub = ?').bind(s.sub),
+    ]);
+    return json({});
+  }
   if (path === '/api/logout' && req.method === 'POST') {
     const tok = bearer(req);
     if (tok) await env.DB.prepare('DELETE FROM sessions WHERE hash = ?').bind(await sha256(tok)).run();
@@ -50,7 +64,7 @@ async function route(req, env, path) {
     const s = await session(req, env);
     if (req.method === 'GET') {
       const row = await env.DB.prepare('SELECT data, level, runs, updated FROM saves WHERE sub = ?').bind(s.sub).first();
-      return json(row || { data: null });
+      return json({ ...(row || { data: null }), acct: await acctId(s.sub) });
     }
     if (req.method === 'PUT') return putSave(req, env, s);
   }
@@ -73,42 +87,41 @@ async function newSession(env, who) {
     env.DB.prepare('DELETE FROM sessions WHERE expires < ?').bind(now),
     env.DB.prepare('INSERT INTO sessions (hash, sub, name, picture, expires) VALUES (?, ?, ?, ?, ?)').bind(await sha256(token), who.sub, who.name || '', who.picture || '', now + SESSION_DAYS * 864e5),
   ]);
-  return { token, name: who.name || '', picture: who.picture || '' };
+  return { token, name: who.name || '', picture: who.picture || '', acct: await acctId(who.sub) };
 }
 
-// ---------- Anmeldung mit Code (Google „Geräte“-Ablauf, Client-Typ „Fernseher und Geräte mit begrenzter Eingabe“) ----------
-// Lokal (DEV): Code „TEST-CODE“, die dritte Abfrage meldet an
-const devPolls = new Map();
-async function deviceStart(env) {
-  if (env.DEV === '1' && !env.GOOGLE_TV_CLIENT_ID) {
-    const device = 'dev-' + b64url(crypto.getRandomValues(new Uint8Array(6))); devPolls.set(device, 0);
-    return json({ device, code: 'TEST-CODE', url: 'https://www.google.com/device', interval: 1, expires: 600 });
-  }
-  if (!env.GOOGLE_TV_CLIENT_ID) throw new HttpError(503, 'Anmeldung mit Code ist noch nicht eingerichtet');
-  const r = await fetch(GOOGLE_OAUTH + '/device/code', { method: 'POST', body: new URLSearchParams({ client_id: env.GOOGLE_TV_CLIENT_ID, scope: 'openid email profile' }) });
-  const j = await r.json();
-  if (!r.ok) throw new HttpError(502, 'Google: ' + (j.error || r.status));
-  return json({ device: j.device_code, code: j.user_code, url: j.verification_url, interval: j.interval || 5, expires: j.expires_in });
+// ---------- App verbinden (exe/APK) ----------
+// Dort geht „Sign in with Google“ nicht (kein echter Web-Ursprung). Die App holt einen Code, man meldet sich auf
+// goblin.node-wave.org/verbinden im Browser an (auch am Handy) und gibt ihn ein; die App fragt nach, bis es geklappt hat.
+const LINK_MIN = 10, CODE_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const normCode = c => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+async function linkStart(env) {
+  const link = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  const code = Array.from(crypto.getRandomValues(new Uint8Array(8)), b => CODE_ABC[b % CODE_ABC.length]).join('');
+  const now = Date.now();
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM links WHERE expires < ?').bind(now),
+    env.DB.prepare('INSERT INTO links (code, hash, expires) VALUES (?, ?, ?)').bind(code, await sha256(link), now + LINK_MIN * 60e3),
+  ]);
+  return json({ link, code: code.slice(0, 4) + '-' + code.slice(4), url: 'https://goblin.node-wave.org/verbinden', interval: 3, expires: LINK_MIN * 60 });
 }
-async function devicePoll(req, env) {
-  const { device } = await req.json().catch(() => ({}));
-  if (typeof device !== 'string') throw new HttpError(400, 'device fehlt');
-  if (env.DEV === '1' && devPolls.has(device)) {
-    const n = devPolls.get(device) + 1; devPolls.set(device, n);
-    if (n < 3) return json({ pending: true });
-    devPolls.delete(device);
-    return json(await newSession(env, { sub: 'dev-device', name: 'Test (Code)', picture: '' }));
-  }
-  const r = await fetch(GOOGLE_OAUTH + '/token', {
-    method: 'POST',
-    body: new URLSearchParams({ client_id: env.GOOGLE_TV_CLIENT_ID, client_secret: env.GOOGLE_TV_SECRET || '', device_code: device, grant_type: 'urn:ietf:params:oauth:grant-type:device_code' }),
-  });
-  const j = await r.json();
-  if (j.error === 'authorization_pending' || j.error === 'slow_down') return json({ pending: true, slow: j.error === 'slow_down' });
-  if (j.error === 'access_denied') throw new HttpError(403, 'Anmeldung abgelehnt');
-  if (j.error === 'expired_token') throw new HttpError(410, 'Code abgelaufen');
-  if (!j.id_token) throw new HttpError(502, 'Google: ' + (j.error || 'kein Token'));
-  return json(await newSession(env, await verifyGoogle(j.id_token, env)));
+async function linkConfirm(req, env) {
+  const s = await session(req, env);
+  const { code } = await req.json().catch(() => ({}));
+  const r = await env.DB.prepare('UPDATE links SET sub = ?, name = ?, picture = ? WHERE code = ? AND sub IS NULL AND expires >= ?')
+    .bind(s.sub, s.name || '', s.picture || '', normCode(code), Date.now()).run();
+  if (!r.meta || !r.meta.changes) throw new HttpError(404, 'Code falsch oder abgelaufen');
+  return json({});
+}
+async function linkPoll(req, env) {
+  const { link } = await req.json().catch(() => ({}));
+  if (typeof link !== 'string') throw new HttpError(400, 'link fehlt');
+  const hash = await sha256(link);
+  const row = await env.DB.prepare('SELECT code, sub, name, picture, expires FROM links WHERE hash = ?').bind(hash).first();
+  if (!row || row.expires < Date.now()) throw new HttpError(410, 'Code abgelaufen');
+  if (!row.sub) return json({ pending: true });
+  await env.DB.prepare('DELETE FROM links WHERE hash = ?').bind(hash).run();
+  return json(await newSession(env, { sub: row.sub, name: row.name, picture: row.picture }));
 }
 
 async function putSave(req, env, s) {
@@ -129,7 +142,7 @@ const bearer = req => { const h = req.headers.get('Authorization') || ''; return
 async function session(req, env) {
   const tok = bearer(req);
   if (!tok) throw new HttpError(401, 'Nicht angemeldet');
-  const s = await env.DB.prepare('SELECT sub, expires FROM sessions WHERE hash = ?').bind(await sha256(tok)).first();
+  const s = await env.DB.prepare('SELECT sub, name, picture, expires FROM sessions WHERE hash = ?').bind(await sha256(tok)).first();
   if (!s || s.expires < Date.now()) throw new HttpError(401, 'Sitzung abgelaufen');
   return s;
 }
@@ -165,4 +178,6 @@ export async function verifyGoogle(idToken, env, now = Date.now()) {
 // ---------- Helfer ----------
 function b64url(bytes) { let s = ''; for (const b of bytes) s += String.fromCharCode(b); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
 function unb64url(s) { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+// Konto-Kennung fürs Spiel (an wen der lokale Spielstand gebunden ist), ohne die Google-ID herauszugeben
+const acctId = async sub => (await sha256('goblin-acct:' + sub)).slice(0, 16);
 async function sha256(s) { return b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))); }
