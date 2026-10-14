@@ -4,7 +4,7 @@ import { sfx } from '../core/audio.js';
 import { save } from '../core/save.js';
 import { TAU } from '../core/util.js';
 import { hurt } from './combat.js';
-import { query, run } from './state.js';
+import { P, query, run } from './state.js';
 
 // ---------- Gegenstände & Effekte ----------
 export function dropGem(x, y, v) {
@@ -36,9 +36,13 @@ export function boltFx(x0, y0, x1, y1, w = 3, col = null) {
   pts.push([x1, y1]);
   run.fx.push({ k: 'bolt', pts, dur: .22, t: 0, w, col });
 }
+// kind: fire | frost | shade | rock (Bild der Explosion); Glutkern: +Flächenschaden
+const BOOM = { fire: ['f_fireball_hit_', '#ffb35c'], shade: ['p.shade_hit.', '#c9a8ff'], rock: ['p.rock_hit.', '#d8c4a0'] };
 export function explode(x, y, rad, dmg, kind = 'fire') {
-  query(x, y, rad, e => { const d = Math.hypot(e.x - x, e.y - y) || 1; hurt(e, dmg, 160, (e.x - x) / d, (e.y - y) / d, kind === 'fire' ? '#ffb35c' : null); });
-  animFx(kind === 'fire' ? 'f_fireball_hit_' : 'e_frostbolt_hit_', 5, x, y, rad / 18);
+  const [pre, col] = BOOM[kind] || ['e_frostbolt_hit_', null];
+  dmg *= P.aoeMult || 1;
+  query(x, y, rad, e => { const d = Math.hypot(e.x - x, e.y - y) || 1; hurt(e, dmg, 160, (e.x - x) / d, (e.y - y) / d, col); });
+  animFx(pre, 5, x, y, rad / 18);
   sfx.boom();
 }
 

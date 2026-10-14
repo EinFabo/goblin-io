@@ -16,6 +16,7 @@ import { PROC } from './proc.js';
 import { drawGround } from './tiles.js';
 import { drawAbilGround, drawAbilTop } from './draw-abilities.js';
 import { daggerTint } from './sprites.js';
+import { drawProj2, drawWfxGround, drawWfxTop } from './draw-weapons2.js';
 import { MECH_PAINT, TRAIL } from '../data/cosmetics.js';
 
 // Gegner-Geschosse: Schein und Bild je Art (Bilder aus gen/fx.js)
@@ -50,11 +51,13 @@ function drawRun(now) {
   for (const zn of run.zones) {
     const a = Math.min(1, zn.t / .4) * .55, g = ctx.createRadialGradient(zn.x, zn.y, zn.r * .2, zn.x, zn.y, zn.r);
     if (zn.k === 'poison') { g.addColorStop(0, `rgba(150,240,70,${a})`); g.addColorStop(.8, `rgba(90,190,40,${a * .8})`); g.addColorStop(1, 'rgba(90,190,40,0)'); }
+    else if (zn.k === 'acid') { g.addColorStop(0, `rgba(225,255,90,${a})`); g.addColorStop(.8, `rgba(160,210,30,${a * .8})`); g.addColorStop(1, 'rgba(160,210,30,0)'); }
     else { g.addColorStop(0, `rgba(255,190,60,${a})`); g.addColorStop(.7, `rgba(220,80,20,${a * .7})`); g.addColorStop(1, 'rgba(200,60,20,0)'); }
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(zn.x, zn.y, zn.r, zn.r * .75, 0, 0, TAU); ctx.fill();
   }
   drawHaz(t, false);
   drawAbilGround(t);
+  drawWfxGround(t);
   const pw = run.weapons.find(w => w.id === 'poison' && w.evo);
   if (pw) {
     const R = 125 * P.area, g = ctx.createRadialGradient(P.x, P.y, R * .3, P.x, P.y, R);
@@ -126,6 +129,7 @@ function drawRun(now) {
   }
   // Geschosse
   for (const p of run.pproj) {
+    if (drawProj2(p)) continue;
     if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a, daggerTint());
     else if (p.k === 'spear') drawSpr('e_frostbolt_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.25, p.a);
     else if (p.k === 'fireball') drawSpr('f_fireball_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.3, p.a);
@@ -143,7 +147,7 @@ function drawRun(now) {
   for (const tl of run.tele) {
     if (tl.k === 'flask') {
       const p = tl.t / tl.dur, x = tl.sx + (tl.x - tl.sx) * p, y = tl.sy + (tl.y - tl.sy) * p - Math.sin(p * Math.PI) * 90;
-      drawImgC(iconCanvas('poison'), x, y, 28, p * 9);
+      drawImgC(iconCanvas(tl.zk === 'acid' ? 'glob' : 'poison'), x, y, 28, p * 9);
     } else if (tl.k === 'meteor') { drawFallingMeteor(tl.x, tl.y, tl.t / tl.dur, t);
     } else if (tl.k === 'barrel' || tl.k === 'mini') {
       const p = Math.min(1, tl.t / tl.dur), x = tl.sx + (tl.x - tl.sx) * p, y = tl.sy + (tl.y - tl.sy) * p - Math.sin(p * Math.PI) * (tl.k === 'mini' ? 50 : 80);
@@ -153,6 +157,7 @@ function drawRun(now) {
       } else { ctx.fillStyle = '#2b2f36'; ctx.beginPath(); ctx.arc(x, y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffb02e'; ctx.beginPath(); ctx.arc(x + 4, y - 6, 2.5, 0, TAU); ctx.fill(); }
     }
   }
+  drawWfxTop(t);
   for (const p of run.eproj) {
     if (!onScreen(p.x, p.y, 60)) continue;
     if (p.lob) {

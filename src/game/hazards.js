@@ -26,7 +26,7 @@ export function updTele(dt) {
         if (t.shards) { let n = t.shards; query(t.x, t.y, t.rad * 1.8, e => { if (n <= 0) return false; if ((e.x - t.x) ** 2 + (e.y - t.y) ** 2 < t.rad * t.rad) return; n--; const d = Math.hypot(e.x - t.x, e.y - t.y) || 1; hurt(e, t.dmg * .3, 150, (e.x - t.x) / d, (e.y - t.y) / d, '#c9b9a0'); part(e.x, e.y - 10, frand(-60, 60), frand(-80, -20), .4, '#8a7a66', 4); }); } if (t.burn) run.zones.push({ k: 'burn', x: t.x, y: t.y, r: t.rad * .65, t: 2.6, dur: 2.6, tick: 0, dmg: t.dmg * .12 }); for (let i = 0; i < 10; i++) part(t.x, t.y, frand(-120, 120), frand(-140, -20), .5, i % 2 ? '#8a7a66' : '#5d5246', 5); }
     } else if (t.k === 'flask') {
       t.t += dt;
-      if (t.t >= t.dur) { run.zones.push({ k: 'poison', x: t.x, y: t.y, r: t.rad, t: t.zdur, dur: t.zdur, tick: 0, dmg: t.dmg }); t.done = true; for (let i = 0; i < 8; i++) part(t.x, t.y, frand(-80, 80), frand(-90, -20), .5, 'rgba(140,230,80,.9)', 5); }
+      if (t.t >= t.dur) { run.zones.push({ k: t.zk || 'poison', x: t.x, y: t.y, r: t.rad, t: t.zdur, dur: t.zdur, tick: 0, dmg: t.dmg }); t.done = true; for (let i = 0; i < 8; i++) part(t.x, t.y, frand(-80, 80), frand(-90, -20), .5, t.zk === 'acid' ? 'rgba(200,255,90,.9)' : 'rgba(140,230,80,.9)', 5); }
     } else if (t.k === 'barrel' || t.k === 'mini') {
       t.t += dt;
       if (t.t >= t.dur) {
@@ -39,10 +39,12 @@ export function updTele(dt) {
     }
   }
   run.tele = run.tele.filter(t => !t.done);
+  // Lachen und Brand: Sanduhr verlängert (P.dur), Glutkern verstärkt (P.aoeMult); Säure bremst stark
+  const zd = dt / (P.dur || 1), zm = P.aoeMult || 1;
   for (const z of run.zones) {
-    z.t -= dt; z.tick -= dt;
-    if (z.tick <= 0) { z.tick = .35; query(z.x, z.y, z.r, e => hurt(e, z.dmg, 0, 0, 0, z.k === 'poison' ? '#9cf06a' : '#ffb35c')); }
-    if (Math.random() < dt * 8) part(z.x + frand(-z.r, z.r) * .7, z.y + frand(-z.r, z.r) * .5, 0, -25, .6, z.k === 'poison' ? 'rgba(170,255,110,.7)' : 'rgba(255,170,60,.8)', 4);
+    z.t -= zd; z.tick -= dt;
+    if (z.tick <= 0) { z.tick = .35; query(z.x, z.y, z.r, e => { hurt(e, z.dmg * zm, 0, 0, 0, z.k === 'burn' ? '#ffb35c' : z.k === 'acid' ? '#d6ff5a' : '#9cf06a'); if (z.k === 'acid' && !e.boss) e.slowT = Math.max(e.slowT || 0, .6); }); }
+    if (Math.random() < dt * 8) part(z.x + frand(-z.r, z.r) * .7, z.y + frand(-z.r, z.r) * .5, 0, -25, .6, z.k === 'poison' ? 'rgba(170,255,110,.7)' : z.k === 'acid' ? 'rgba(215,255,90,.75)' : 'rgba(255,170,60,.8)', 4);
   }
   run.zones = run.zones.filter(z => z.t > 0);
   updHaz(dt);

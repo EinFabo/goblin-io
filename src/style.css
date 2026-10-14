@@ -886,3 +886,31 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 #linkSignIn{margin:10px 0}
 .gbtn{display:inline-flex;align-items:center;gap:8px}
 .gbtn .glogo{display:inline-grid;place-items:center;width:1.3em;height:1.3em;border-radius:50%;background:#fff;color:#4285f4;font:700 .85em/1 Arial,sans-serif}
+/* Mega-Entwicklung (ui/mega-fx.js) */
+.slot.mega{border-color:#c9a8ff;box-shadow:0 0 8px rgba(201,168,255,.85),0 0 2px #fff inset;animation:megaSlot 1.6s ease-in-out infinite}
+@keyframes megaSlot{50%{box-shadow:0 0 14px rgba(201,168,255,1),0 0 2px #fff inset}}
+#banner.mega{color:#e6d6ff;text-shadow:0 0 12px rgba(180,130,255,.9),0 3px 0 #1a0b33}
+#megaFx{position:fixed;inset:0;z-index:60;pointer-events:none;display:none}
+#megaFx.show{display:block}
+#megaFx .mfx-bg{position:absolute;inset:0;background:radial-gradient(circle at 50% 45%,rgba(40,15,70,.55),rgba(5,0,12,.92));animation:mfxBg 2.8s ease-in-out forwards}
+@keyframes mfxBg{0%{opacity:0}12%{opacity:1}85%{opacity:1}100%{opacity:0}}
+#megaFx .mfx-rays{position:absolute;left:50%;top:42%;width:160vmax;height:160vmax;margin:-80vmax 0 0 -80vmax;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--mc) 35%,transparent) 0 6deg,transparent 6deg 18deg);opacity:0;animation:mfxRays 2.8s linear forwards}
+@keyframes mfxRays{0%,38%{opacity:0;transform:rotate(0) scale(.3)}45%{opacity:1}85%{opacity:.7;transform:rotate(60deg) scale(1)}100%{opacity:0;transform:rotate(70deg) scale(1)}}
+#megaFx .mfx-a,#megaFx .mfx-b{position:absolute;top:42%;left:50%;width:min(22vmin,140px);margin:calc(min(22vmin,140px)/-2) 0 0 calc(min(22vmin,140px)/-2);filter:drop-shadow(0 0 12px var(--mc));opacity:0}
+#megaFx .mfx-a{animation:mfxA 2.8s cubic-bezier(.5,0,.6,1) forwards}
+#megaFx .mfx-b{animation:mfxB 2.8s cubic-bezier(.5,0,.6,1) forwards}
+@keyframes mfxA{0%{opacity:0;transform:translateX(-60vw) rotate(-90deg)}10%{opacity:1}30%{transform:translateX(-22vmin) rotate(0)}40%{transform:translateX(0) rotate(360deg) scale(.7)}41%,100%{opacity:0}}
+@keyframes mfxB{0%{opacity:0;transform:translateX(60vw) rotate(90deg)}10%{opacity:1}30%{transform:translateX(22vmin) rotate(0)}40%{transform:translateX(0) rotate(-360deg) scale(.7)}41%,100%{opacity:0}}
+#megaFx .mfx-flash{position:absolute;inset:0;background:radial-gradient(circle at 50% 42%,#fff,var(--mc) 30%,transparent 70%);opacity:0;animation:mfxFlash 2.8s ease-out forwards}
+@keyframes mfxFlash{0%,38%{opacity:0}41%{opacity:1}60%{opacity:0}100%{opacity:0}}
+#megaFx .mfx-mega{position:absolute;top:42%;left:50%;width:min(30vmin,200px);height:min(30vmin,200px);margin:calc(min(30vmin,200px)/-2) 0 0 calc(min(30vmin,200px)/-2);opacity:0;animation:mfxMega 2.8s cubic-bezier(.2,1.4,.4,1) forwards}
+#megaFx .mfx-mega img{position:absolute;width:72%;filter:drop-shadow(0 0 16px var(--mc))}
+#megaFx .mfx-mega img:first-child{left:0;top:0}
+#megaFx .mfx-mega img:last-child{right:0;bottom:0}
+@keyframes mfxMega{0%,40%{opacity:0;transform:scale(.2) rotate(-30deg)}55%{opacity:1;transform:scale(1.15) rotate(0)}65%{transform:scale(1)}88%{opacity:1}100%{opacity:0;transform:scale(1.1)}}
+#megaFx .mfx-text{position:absolute;left:16px;right:16px;top:calc(42% + min(17vmin,115px));text-align:center;opacity:0;animation:mfxText 2.8s ease-out forwards}
+#megaFx .mfx-text small{display:block;font-family:var(--font-display);letter-spacing:.2em;color:var(--mc);font-size:clamp(13px,2.4vw,18px)}
+#megaFx .mfx-text b{display:block;font-family:var(--font-display);font-size:clamp(30px,7vw,58px);color:#fff;text-shadow:0 0 18px var(--mc),0 4px 0 #1a0b33}
+#megaFx .mfx-text span{display:block;max-width:520px;margin:4px auto 0;font-size:clamp(14px,2.6vw,18px);color:#efe6ff}
+@keyframes mfxText{0%,50%{opacity:0;transform:translateY(16px)}60%{opacity:1;transform:none}88%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){#megaFx .mfx-rays{display:none}}

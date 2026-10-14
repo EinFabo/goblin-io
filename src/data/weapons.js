@@ -31,6 +31,37 @@ export const WEAPONS = {
   gang: { name: 'Goblin-Bande', evo: 'Goblin-Horde', with: 'heart',
     info: ['Ein Goblin-Kumpel kämpft an deiner Seite.', '+1 Kumpel', '+50 % Schaden', '+1 Kumpel', '+1 Kumpel, schneller'],
     evoInfo: 'Sieben wilde Goblins stürmen los und stechen alles nieder.' },
+  // ---------- zweite Waffen-Reihe (Wunsch Fabi 2026-10-14: doppelt so viele Karten) ----------
+  hammer: { name: 'Donnerhammer', evo: 'Erdbeben', with: 'helmet',
+    info: ['Schlägt auf den Boden: eine Druckwelle um dich stößt Gegner weg.', '+30 % Schaden', 'Größere Druckwelle', '+30 % Schaden, schlägt öfter', 'Zweite Welle hinterher'],
+    evoInfo: 'Der Boden bebt: drei Wellen nacheinander, Getroffene taumeln kurz.' },
+  shuriken: { name: 'Wurfsterne', evo: 'Sternenhagel', with: 'horn',
+    info: ['Wirft Sterne in vier Richtungen, die sich mit dir drehen.', '+1 Stern', '+30 % Schaden', '+2 Sterne, durchbohren', '+2 Sterne, schneller'],
+    evoInfo: 'Eine Spirale aus sechzehn Sternen, die alles durchschneidet.' },
+  crossbow: { name: 'Armbrust', evo: 'Ballista', with: 'skull',
+    info: ['Schießt einen schweren Bolzen auf den stärksten Gegner in der Nähe.', '+40 % Schaden', 'Durchbohrt zwei Gegner', '+1 Bolzen', '+50 % Schaden, schneller'],
+    evoInfo: 'Riesige Bolzen durchschlagen alles und schleudern Gegner zurück.' },
+  shadow: { name: 'Schattenkugel', evo: 'Schwarzes Loch', with: 'cloak',
+    info: ['Eine Kugel aus Schatten treibt zum Gegner und zerplatzt.', '+30 % Schaden', '+1 Kugel', 'Größerer Knall', '+1 Kugel, +30 % Schaden'],
+    evoInfo: 'Ein schwarzes Loch saugt Gegner an und zerquetscht sie.' },
+  rock: { name: 'Steinschleuder', evo: 'Steinlawine', with: 'crystal',
+    info: ['Ein Stein springt von Gegner zu Gegner.', '+1 Sprung', '+30 % Schaden', '+1 Stein', '+2 Sprünge, +20 % Schaden'],
+    evoInfo: 'Felsbrocken prasseln herab und zerbrechen in springende Splitter.' },
+  lance: { name: 'Lichtlanze', evo: 'Sonnenstrahl', with: 'hourglass',
+    info: ['Ein Lichtstrahl schießt in Laufrichtung durch alle Gegner.', '+30 % Schaden', 'Breiterer Strahl', '+1 Strahl nach hinten', '+40 % Schaden, schneller'],
+    evoInfo: 'Ein Sonnenstrahl kreist um dich und verbrennt alles, was er berührt.' },
+  soul: { name: 'Seelenlicht', evo: 'Seelensturm', with: 'fang',
+    info: ['Irrlichter suchen sich Gegner und heilen dich ein wenig.', '+1 Irrlicht', '+30 % Schaden', '+1 Irrlicht, heilt mehr', '+2 Irrlichter'],
+    evoInfo: 'Ein Sturm aus Seelen jagt über den Bildschirm und heilt dich bei jedem Treffer.' },
+  glob: { name: 'Säurespucke', evo: 'Säureregen', with: 'ember',
+    info: ['Spuckt Säure, die Gegner stark verlangsamt und verätzt.', 'Größere Lache', '+1 Spucke', '+30 % Schaden, Lache hält länger', '+1 Spucke'],
+    evoInfo: 'Säure regnet überall herab und frisst sich durch die Horden.' },
+  spark: { name: 'Funkenring', evo: 'Plasmagewitter', with: 'clover',
+    info: ['Funken springen aus dir heraus und suchen Gegner.', '+2 Funken', '+30 % Schaden', '+2 Funken', '+3 Funken, öfter'],
+    evoInfo: 'Plasmakugeln umkreisen dich und entladen sich in Funkenregen.' },
+  mine: { name: 'Goblin-Minen', evo: 'Minenfeld', with: 'bag',
+    info: ['Legt Minen, die hochgehen, wenn ein Gegner drauftritt.', '+30 % Schaden', '+1 Mine', 'Größere Explosion', '+1 Mine, legt schneller'],
+    evoInfo: 'Ein ganzes Minenfeld, jede Explosion schleudert Splitter umher.' },
 };
 export const PASSIVES = {
   whet: { name: 'Wetzstein', info: '+12 % Schaden' },
@@ -43,4 +74,32 @@ export const PASSIVES = {
   magnet: { name: 'Magnetstein', info: '+35 % Sammelradius' },
   oil: { name: 'Ölkanne', info: '+12 % Geschosstempo und Flugdauer' },
   powder: { name: 'Schwarzpulver', info: '+6 % kritische Treffer' },
+  helmet: { name: 'Eisenhelm', info: 'Jeder Treffer macht 1 Schaden weniger' },
+  horn: { name: 'Kriegshorn', info: '+7 % Angriffstempo' },
+  skull: { name: 'Knochenschädel', info: '+12 % Schaden gegen Elite und Bosse' },
+  cloak: { name: 'Schattenmantel', info: '+4 % Chance, einem Treffer auszuweichen' },
+  crystal: { name: 'Splitterkristall', info: 'Geschosse durchbohren öfter (+1 je 2 Stufen)' },
+  hourglass: { name: 'Sanduhr', info: '+10 % Wirkdauer (Lachen, Brand, Verlangsamung)' },
+  fang: { name: 'Vampirzahn', info: '+0,4 % Lebensraub' },
+  ember: { name: 'Glutkern', info: '+10 % Flächenschaden (Explosionen, Lachen, Wellen)' },
+  clover: { name: 'Glücksklee', info: '+8 % Erfahrung' },
+  bag: { name: 'Goblinbeutel', info: '+15 % Gold' },
 };
+
+// ---------- Mega-Entwicklungen (Wunsch Fabi 2026-10-14) ----------
+// Hat man beide Entwicklungen eines Paars, bringt die nächste Truhe von Elite, Mini-Boss oder Boss die Mega:
+// beide Waffen verschmelzen (je +30 % Schaden) und ein eigener großer Angriff kommt dazu.
+export const MEGAS = {
+  apocalypse: { name: 'Klingenapokalypse', of: ['dagger', 'shuriken'], col: '#dfe9ff', info: 'Ein Sturm aus 24 Riesenklingen fegt in alle Richtungen.' },
+  tornado: { name: 'Stahltornado', of: ['orbit', 'hammer'], col: '#ffd27a', info: 'Ein Wirbel aus Stahl reißt alles um dich zu Boden.' },
+  comet: { name: 'Frostfeuer-Komet', of: ['fireball', 'spear'], col: '#9fe6ff', info: 'Ein Komet aus Eis und Feuer schlägt ein und friert alles ringsum ein.' },
+  worldstorm: { name: 'Weltengewitter', of: ['bolt', 'spark'], col: '#fff38a', info: 'Acht Blitze zugleich, die durch die ganze Horde springen.' },
+  plague: { name: 'Pestflut', of: ['poison', 'glob'], col: '#b6ff5a', info: 'Ein Ring aus Säure und Gift breitet sich um dich aus.' },
+  avalanche: { name: 'Knochenlawine', of: ['boomer', 'rock'], col: '#e8dcc0', info: 'Riesige Knochen und Felsbrocken rollen über das Feld.' },
+  armageddon: { name: 'Goblin-Armageddon', of: ['barrel', 'mine'], col: '#ff9a3a', info: 'Ein Bombenteppich quer über den Bildschirm.' },
+  warmachine: { name: 'Kriegsmaschine', of: ['saw', 'crossbow'], col: '#c9d3dc', info: 'Riesige Sägebolzen durchschlagen alles und prallen zurück.' },
+  ghosthorde: { name: 'Geisterhorde', of: ['gang', 'soul'], col: '#a8ffe0', info: 'Deine Goblins werden zu Geistern und schleudern heilende Seelen.' },
+  eclipse: { name: 'Sonnenfinsternis', of: ['shadow', 'lance'], col: '#c9a8ff', info: 'Der Himmel wird dunkel: vier Lichtstrahlen kreisen um ein schwarzes Loch.' },
+};
+// Zu welcher Mega gehört eine Waffe?
+export const megaOf = id => Object.keys(MEGAS).find(m => MEGAS[m].of.includes(id));

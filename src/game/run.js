@@ -21,6 +21,8 @@ import { grantCosmetic } from './cosmetics.js';
 import { ensureDaily, mergeRun } from './progress.js';
 import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
+import { updWfx } from './weapons2.js';
+import { updMegas } from './mega.js';
 
 // Neuer Lauf: nur Spielzustand. Bildschirm, HUD und Musik macht die Szene "run".
 // si = Welt (Stage), li = Level in der Welt (0–4, das letzte ist das Boss-Level)
@@ -29,7 +31,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   const st = levelStage(si, li);
   seedRun(seed);
   const r = {
-    si, li: st.li, st, seed, nm: !!nm && !st.endless, mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
+    si, li: st.li, st, seed, nm: !!nm && !st.endless, mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
@@ -74,16 +76,28 @@ export function recalc() {
   P.xpMult = 1 + .03 * sh('xp');
   P.proj = 1 + .12 * pl('oil');
   P.crit = .08 + .06 * pl('powder');
+  // zweite Reihe (2026-10-14)
+  P.flatArmor = pl('helmet');
+  P.atkSpd = 1 + .07 * pl('horn');
+  P.bigMult = 1 + .12 * pl('skull');
+  P.dodge = Math.min(.3, .04 * pl('cloak'));
+  P.pierceAdd = Math.floor(pl('crystal') / 2);
+  P.dur = 1 + .1 * pl('hourglass');
+  P.leech = .004 * pl('fang');
+  P.aoeMult = 1 + .1 * pl('ember');
+  P.xpMult *= 1 + .08 * pl('clover');
+  P.goldMult = 1 + .15 * pl('bag');
   // Sprint-Baum: Ausdauer, Erholung, Tempo, Leichtfüßig, Windschatten
   const sp = run.abMods.sprint;
   P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow);
   P.stamRegen = 26 * (1 + .08 * sp.r.cd); P.sprintMul = 1.55 * (1 + .04 * sp.r.area);
   P.stamDrain = 34 * (1 - .08 * sp.s1); P.sprintMag = 1 + .15 * sp.s3; P.secondWind = sp.a; P.tireless = sp.m;
 }
-// Kartenstufe 5: startet auf Waffenstufe 2; Stufe 10: greift 15 % schneller an
+// Kartenstufe 5: startet auf Waffenstufe 2; Stufe 10: greift 15 % schneller an.
+// Der Start auf Stufe 2 nur mit eigener Karte: legendäre Karten beginnen sonst schon auf Kartenstufe 5
 export function addWeapon(id) {
-  const c = run.cards[id] || 1;
-  run.weapons.push({ id, lv: c >= CARD_START_LV2 ? 2 : 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [], card: weaponCardMul(c), fast: c >= CARD_FAST ? 1.15 : 1 });
+  const c = run.cards[id] || 1, owned = !!save.cards[id];
+  run.weapons.push({ id, lv: owned && c >= CARD_START_LV2 ? 2 : 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [], card: weaponCardMul(c), fast: c >= CARD_FAST ? 1.15 : 1 });
 }
 export function hint(html) { run.hints.push(html); }
 // Level-Up, dessen Zeitlupe läuft (Karten noch nicht offen), wird zum Bonus-Level, wenn das Level endet.
@@ -127,6 +141,8 @@ export function update(dt) {
   updWeapons(dt);
   updAllies(dt);
   updPProj(dt);
+  updWfx(dt);
+  updMegas(dt);
   updTele(dt);
   updEProj(dt);
   run.enemies = run.enemies.filter(e => !e.dead);

@@ -23,6 +23,7 @@ Tauri 2 in `src-tauri/`, packt `dist/app/index.html` (`npm run build:app`) ein. 
   `~/.goblin-io/updater.key`); Android prüft die GitHub-API und öffnet die neue APK (`src/app-update.js`).
 - **Schlüssel** liegen nur in `~/.goblin-io/` und als Repo-Secrets – nicht verlieren: ohne `android.jks`
   lässt sich die APK nicht mehr über die alte installieren, ohne `updater.key` gibt es keine Windows-Updates.
+- Icons: `node tools/app-icon.mjs assets/app/icon.svg assets/app/icon.png`, dann `npx tauri icon assets/app/icon.png`; fürs Android-Projekt (adaptives Icon) zusätzlich `node tools/app-icon-android.mjs`.
 - Lokal: `npm run app` (Fenster), `npx tauri android build --apk --target aarch64`
   (braucht `ANDROID_HOME`, `NDK_HOME` und `src-tauri/gen/android/keystore.properties`).
 

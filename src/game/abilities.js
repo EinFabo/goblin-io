@@ -105,7 +105,7 @@ const USE = {
 };
 export function useAbility(i) {
   const s = run && run.abil[i];
-  if (!s || run.paused || run.over || run.cut || !abilReady(s)) return false;
+  if (!s || run.paused || run.over || run.cut || run.megaFreeze > performance.now() || !abilReady(s)) return false;
   const why = lockOf(s.id); if (why) { lockedBuzz(why); return false; }
   if (USE[s.id](M(s.id)) === false) return false;
   if (s.stock > 0) s.stock--; else s.ch = 0;
@@ -184,7 +184,7 @@ function updMoves(dt) {
 }
 
 export function doDash() {
-  if (!run || run.paused || run.over || run.cut || P.dashN <= 0 || P.dashT > 0) return;
+  if (!run || run.paused || run.over || run.cut || run.megaFreeze > performance.now() || P.dashN <= 0 || P.dashT > 0) return;
   const why = lockOf('dash'); if (why) { lockedBuzz(why); return; }
   const d = M('dash'), sp = 900 * (1 + .08 * d.r.cd);
   P.dashN--; if (P.dashCd <= 0) P.dashCd = dashCdOf();

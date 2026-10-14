@@ -37,6 +37,8 @@ defineScene('run', {
   exit() { for (const f of offs) f(); offs = []; endCine(); Music.hold = false; },
   update(step) {
     if (run.paused) return;
+    // Mega-Entwicklung: die Welt steht, solange die Verschmelz-Animation läuft (ui/mega-fx.js)
+    if (run.megaFreeze > performance.now()) return;
     // Hitstop: Spiel steht kurz still (Elite-Kill, Boss besiegt)
     if (run.hitstop > 0) { run.hitstop -= step; return; }
     // Boss-Szene läuft in Echtzeit; ein offenes Level-Up und Zeitlupe warten, bis sie vorbei ist

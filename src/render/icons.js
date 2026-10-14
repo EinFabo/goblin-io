@@ -86,6 +86,98 @@ export function icon(id) {
         g.fillStyle = '#e5484d'; g.font = '900 12px Nunito, sans-serif'; g.textAlign = 'center'; g.fillText('☠', 0, 12);
         g.fillStyle = '#ffd84a'; for (const [x, y] of [[10, -20], [16, -14], [4, -24]]) { g.beginPath(); g.arc(x, y, 2.2, 0, TAU); g.fill(); }
         break;
+      // ---------- zweite Reihe (2026-10-14) ----------
+      case 'hammer':
+        g.save(); g.rotate(-.6); g.beginPath(); g.roundRect(-3, -6, 6, 34, 2); st('#8a5a32'); g.beginPath(); g.roundRect(-16, -22, 32, 18, 4); st('#8d969c'); g.restore();
+        g.strokeStyle = '#ffe45c'; g.lineWidth = 3; for (const [x, y] of [[-24, 18], [-14, 26], [20, 16]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + 6, y - 6); g.stroke(); }
+        if (evo) { g.beginPath(); g.ellipse(0, 22, 28, 6, 0, 0, TAU); g.strokeStyle = '#c9a35a'; g.lineWidth = 3; g.stroke(); }
+        break;
+      case 'shuriken':
+        for (const [x, y, r] of evo ? [[-10, -8, 14], [12, 10, 12], [10, -14, 9]] : [[0, 0, 22]]) {
+          g.save(); g.translate(x, y); g.rotate(.4); g.beginPath(); for (let i = 0; i < 8; i++) { const rr = i % 2 ? r * .32 : r, a = i * TAU / 8; g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); st('#c9d3dc'); g.beginPath(); g.arc(0, 0, r * .18, 0, TAU); g.fillStyle = '#1b2228'; g.fill(); g.restore();
+        }
+        break;
+      case 'crossbow':
+        g.save(); g.rotate(-.5);
+        g.beginPath(); g.roundRect(-4, -22, 8, 44, 3); st('#7a5230');
+        g.beginPath(); g.moveTo(-24, -6); g.quadraticCurveTo(0, -24, 24, -6); g.lineWidth = 6; g.strokeStyle = '#0a0f06'; g.stroke(); g.lineWidth = 3.5; g.strokeStyle = '#a77a48'; g.stroke();
+        g.beginPath(); g.moveTo(-23, -6); g.lineTo(23, -6); g.strokeStyle = '#e8e2d0'; g.lineWidth = 1.5; g.stroke();
+        g.beginPath(); g.moveTo(0, -30); g.lineTo(-5, -20); g.lineTo(5, -20); g.closePath(); st('#c9d3dc', '#0a0f06', 2);
+        if (evo) { g.beginPath(); g.roundRect(-9, 8, 18, 10, 3); st('#59616a'); }
+        g.restore(); break;
+      case 'shadow':
+        if (evo) { g.beginPath(); g.arc(0, 0, 26, 0, TAU); g.fillStyle = 'rgba(120,70,220,.45)'; g.fill(); g.strokeStyle = '#c9a8ff'; g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, 20, .3, 2.6); g.stroke(); g.beginPath(); g.arc(0, 0, 14, 3.4, 5.6); g.stroke(); }
+        spr('p.shade.2', 0, 0, evo ? 34 : 46); break;
+      case 'rock':
+        g.beginPath(); g.moveTo(-14, 22); g.lineTo(-6, -6); g.lineTo(6, -6); g.lineTo(14, 22); g.lineWidth = 5; g.strokeStyle = '#0a0f06'; g.stroke(); g.lineWidth = 3; g.strokeStyle = '#8a5a32'; g.stroke();
+        g.beginPath(); g.moveTo(-6, -6); g.quadraticCurveTo(0, 6, 6, -6); g.strokeStyle = '#d8c4a0'; g.lineWidth = 2; g.stroke();
+        spr('p.rock.1', 0, -16, evo ? 40 : 30); if (evo) { spr('p.rock.2', -18, -24, 20); spr('p.rock.3', 18, -22, 18); }
+        break;
+      case 'lance':
+        g.save(); g.rotate(-Math.PI / 4); const lg = g.createLinearGradient(0, -8, 0, 8); lg.addColorStop(0, 'rgba(255,230,120,0)'); lg.addColorStop(.5, '#fffbe0'); lg.addColorStop(1, 'rgba(255,230,120,0)');
+        g.fillStyle = lg; g.fillRect(-30, -8, 60, 16); g.restore();
+        if (evo) { g.beginPath(); g.arc(0, 0, 13, 0, TAU); st('#ffd84a', '#c98a1a', 2.5); for (let i = 0; i < 8; i++) { const a = i * TAU / 8; g.beginPath(); g.moveTo(Math.cos(a) * 17, Math.sin(a) * 17); g.lineTo(Math.cos(a) * 26, Math.sin(a) * 26); g.strokeStyle = '#ffd84a'; g.lineWidth = 3; g.stroke(); } }
+        else spr('p.lance.2', 0, 0, 40, -Math.PI / 4);
+        break;
+      case 'soul': spr('p.soul.1', -6, 4, evo ? 30 : 40); if (evo) { spr('p.soul.2', 12, -10, 26); spr('p.soul.3', -14, -14, 22); } break;
+      case 'glob':
+        if (evo) for (const [x, y] of [[-16, -18], [0, -24], [16, -16]]) { g.beginPath(); g.ellipse(x, y, 3.5, 6, 0, 0, TAU); g.fillStyle = '#d6ff5a'; g.fill(); }
+        g.beginPath(); g.ellipse(0, 12, 24, 10, 0, 0, TAU); g.fillStyle = 'rgba(200,250,80,.55)'; g.fill();
+        spr('p.glob.1', 0, -2, 38); break;
+      case 'spark':
+        g.beginPath(); g.arc(0, 0, 20, 0, TAU); g.strokeStyle = 'rgba(200,170,255,.6)'; g.lineWidth = 2; g.setLineDash([3, 4]); g.stroke(); g.setLineDash([]);
+        for (let i = 0; i < (evo ? 3 : 5); i++) { const a = i * TAU / (evo ? 3 : 5); spr('p.spark.' + (i % 4 + 1), Math.cos(a) * 20, Math.sin(a) * 20, evo ? 28 : 18); }
+        if (evo) spr('p.spark.1', 0, 0, 20);
+        break;
+      case 'mine':
+        for (const [x, y, k] of evo ? [[-12, 6, .8], [12, 10, .8], [0, -10, .8]] : [[0, 4, 1.2]]) {
+          g.beginPath(); g.ellipse(x, y, 17 * k, 11 * k, 0, 0, TAU); st('#3b4148'); g.beginPath(); g.arc(x, y - 4 * k, 3.5 * k, 0, TAU); g.fillStyle = '#ff4a3a'; g.fill();
+        }
+        break;
+      case 'helmet':
+        g.beginPath(); g.arc(0, 4, 22, Math.PI, 0); g.lineTo(22, 12); g.lineTo(-22, 12); g.closePath(); st('#8d969c');
+        g.beginPath(); g.rect(-3, -18, 6, 30); g.fillStyle = '#6d747c'; g.fill();
+        g.beginPath(); g.moveTo(-24, 12); g.lineTo(24, 12); g.strokeStyle = '#0a0f06'; g.lineWidth = 3; g.stroke();
+        break;
+      case 'horn':
+        g.beginPath(); g.moveTo(-24, 14); g.quadraticCurveTo(-8, 18, 14, -6); g.lineTo(22, -16); g.lineTo(26, -4); g.quadraticCurveTo(4, 26, -24, 22); g.closePath(); st('#e8dcc0');
+        g.strokeStyle = '#8a5a32'; g.lineWidth = 3; for (const x of [-12, -2, 8]) { g.beginPath(); g.moveTo(x, 10 - x * .6); g.lineTo(x + 4, 20 - x * .6); g.stroke(); }
+        break;
+      case 'skull':
+        g.beginPath(); g.arc(0, -4, 18, Math.PI * .9, Math.PI * .1); g.lineTo(10, 16); g.lineTo(-10, 16); g.closePath(); st('#efe8d6');
+        g.fillStyle = '#0a0f06'; g.beginPath(); g.arc(-7, -4, 5, 0, TAU); g.arc(7, -4, 5, 0, TAU); g.fill();
+        g.beginPath(); g.moveTo(0, 3); g.lineTo(-3, 9); g.lineTo(3, 9); g.closePath(); g.fill();
+        break;
+      case 'cloak':
+        g.beginPath(); g.moveTo(0, -24); g.quadraticCurveTo(-26, 0, -20, 24); g.lineTo(20, 24); g.quadraticCurveTo(26, 0, 0, -24); st('#3b2a5a');
+        g.beginPath(); g.moveTo(0, -24); g.quadraticCurveTo(-6, 0, -4, 24); g.strokeStyle = '#6b4fa0'; g.lineWidth = 2.5; g.stroke();
+        break;
+      case 'crystal':
+        g.beginPath(); g.moveTo(0, -26); g.lineTo(12, -6); g.lineTo(6, 24); g.lineTo(-6, 24); g.lineTo(-12, -6); g.closePath(); st('#8fe6ff');
+        g.beginPath(); g.moveTo(0, -26); g.lineTo(0, 24); g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = 2; g.stroke();
+        break;
+      case 'hourglass':
+        g.beginPath(); g.moveTo(-14, -22); g.lineTo(14, -22); g.lineTo(2, 0); g.lineTo(14, 22); g.lineTo(-14, 22); g.lineTo(-2, 0); g.closePath(); st('rgba(220,240,255,.85)');
+        g.beginPath(); g.moveTo(-8, 22); g.lineTo(0, 10); g.lineTo(8, 22); g.closePath(); g.fillStyle = '#e8c36a'; g.fill();
+        g.fillStyle = '#8a5a32'; g.fillRect(-18, -26, 36, 5); g.fillRect(-18, 21, 36, 5);
+        break;
+      case 'fang':
+        g.beginPath(); g.moveTo(-14, -20); g.quadraticCurveTo(-12, 10, 0, 26); g.quadraticCurveTo(12, 10, 14, -20); g.closePath(); st('#f4efe2');
+        g.beginPath(); g.arc(0, 16, 4, 0, TAU); g.fillStyle = '#e5484d'; g.fill();
+        break;
+      case 'ember':
+        g.beginPath(); g.arc(0, 4, 16, 0, TAU); const eg = g.createRadialGradient(0, 4, 2, 0, 4, 16); eg.addColorStop(0, '#fff3b0'); eg.addColorStop(.5, '#ff9a1f'); eg.addColorStop(1, '#a8320e'); g.fillStyle = eg; g.fill(); g.strokeStyle = '#0a0f06'; g.lineWidth = 2.5; g.stroke();
+        g.fillStyle = '#ffb02e'; for (const [x, y] of [[-10, -18], [6, -22], [14, -12]]) { g.beginPath(); g.arc(x, y, 3, 0, TAU); g.fill(); }
+        break;
+      case 'clover':
+        for (let i = 0; i < 4; i++) { const a = i * TAU / 4 + TAU / 8; g.beginPath(); g.arc(Math.cos(a) * 10, Math.sin(a) * 10 - 4, 10, 0, TAU); st('#5fbf3a'); }
+        g.beginPath(); g.moveTo(0, 4); g.quadraticCurveTo(4, 16, 10, 24); g.strokeStyle = '#3b6b1d'; g.lineWidth = 3; g.stroke();
+        break;
+      case 'bag':
+        g.beginPath(); g.moveTo(-8, -14); g.quadraticCurveTo(-26, 4, -16, 22); g.lineTo(16, 22); g.quadraticCurveTo(26, 4, 8, -14); g.closePath(); st('#a77a48');
+        g.beginPath(); g.ellipse(0, -16, 10, 5, 0, 0, TAU); st('#7a5230');
+        g.fillStyle = '#ffd84a'; g.font = '900 16px Nunito, sans-serif'; g.textAlign = 'center'; g.fillText('$', 0, 12);
+        break;
       case 'gem': img(PROC.gem[0], 0, 0, 52); break;
       case 'gear': img(PROC.gear, 0, 0, 50); break;
       case 'rage':

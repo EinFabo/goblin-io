@@ -10,8 +10,7 @@ export const RARITY = {
   epic: { name: 'Episch', color: '#b77cff', start: 3 },
   legendary: { name: 'Legendär', color: '#ffc93c', start: 5 },
 };
-// Seltenheit je Gegenstand. Legendäre gibt es noch keine (kommen später als eigene Waffen);
-// bis dahin wird ein legendärer Wurf in einer Truhe zu einer epischen Karte.
+// Seltenheit je Gegenstand. Legendär sind Schattenkugel und Lichtlanze (zweite Reihe, 2026-10-14).
 export const CARD_RARITY = {
   dagger: 'common', spear: 'common', poison: 'common', boomer: 'common',
   orbit: 'rare', fireball: 'rare', bolt: 'rare', barrel: 'rare',
@@ -19,6 +18,14 @@ export const CARD_RARITY = {
   whet: 'common', armor: 'common', heart: 'common', herbs: 'common', boots: 'common', magnet: 'common',
   book: 'rare', amulet: 'rare', oil: 'rare',
   powder: 'epic',
+  // zweite Reihe
+  shuriken: 'common', crossbow: 'common', rock: 'common',
+  hammer: 'rare', glob: 'rare', spark: 'rare',
+  soul: 'epic', mine: 'epic',
+  shadow: 'legendary', lance: 'legendary',
+  helmet: 'common', crystal: 'common', ember: 'common', clover: 'common', bag: 'common',
+  horn: 'rare', skull: 'rare', hourglass: 'rare',
+  cloak: 'epic', fang: 'epic',
 };
 export const CARD_IDS = [...Object.keys(WEAPONS), ...Object.keys(PASSIVES)];
 export const isWeapon = id => !!WEAPONS[id];

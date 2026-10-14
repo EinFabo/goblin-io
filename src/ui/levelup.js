@@ -2,7 +2,7 @@ import { sfx } from '../core/audio.js';
 import { setSprintHeld } from '../core/input.js';
 import { Music } from '../core/music.js';
 import { $ } from '../core/util.js';
-import { PASSIVES, WEAPONS } from '../data/weapons.js';
+import { MEGAS, PASSIVES, WEAPONS, megaOf } from '../data/weapons.js';
 import { SKIP_GOLD, SKIP_HEAL, ban, choose, genChoices, reroll } from '../game/levelup.js';
 import { canBan } from '../game/offer.js';
 import { P, run } from '../game/state.js';
@@ -21,6 +21,7 @@ export function cardHtml(c, i) {
     hint = 'Entwicklung mit ' + PASSIVES[D.with].name;
   } else if (c.k === 'evo') {
     const D = WEAPONS[c.id]; ic = icon(c.id + '_evo'); t = D.evo; d = D.evoInfo; cls += ' evo'; tag = '<span class="tagx">Entwicklung</span>';
+    const m = megaOf(c.id), other = m && MEGAS[m].of.find(k => k !== c.id); if (other) hint = `Mit ${WEAPONS[other].evo}: Mega ${MEGAS[m].name}`;
   } else if (c.k === 'newP' || c.k === 'upP') {
     const D = PASSIVES[c.id], lv = run.passives[c.id] || 0;
     ic = icon(c.id); t = D.name; d = D.info; pips = pipHtml(lv, lv + 1);

@@ -22,6 +22,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   const crit = rnd() < P.crit + critBonus();
   if (e.tbShock && e.freezeT > 0) dmg *= 1.5;   // Zeitbombe: Kälteschock
   dmg *= dealtMult(e);
+  if (P.bigMult > 1 && (e.elite || e.boss || e.miniboss || e.link)) dmg *= P.bigMult;   // Knochenschädel
   const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
   const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
   // Teile von Morgra teilen sich das Leben des Bosses. Ein Treffer-Ereignis (Explosion, Zone, Geschoss = ein query),
@@ -31,7 +32,9 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
     if (tgt.aoeId === aoeId) return;
     tgt.aoeId = aoeId;
   }
+  const hpBefore = tgt.hp;
   tgt.hp -= d; e.flash = .09;
+  if (P.leech && d > 0 && P.hp > 0) leech(Math.min(d, Math.max(0, hpBefore)));
   if (e.tb !== undefined && e.freezeT > 0) e.tb += d;   // Zeitbombe sammelt Schaden
   if (kb && !e.boss && !rule.blocked) { const m = e.elite ? .25 : e.traits && e.traits.includes('heavy') ? .2 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }
   if (d > 0) addNum(e.x, e.y - 22 * e.sc, d, crit ? '#ffd84a' : col || '#ffffff', crit, true);
@@ -39,6 +42,13 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   sfx.hit();
   if (tgt.boss) bossHurt(tgt);
   if (tgt.hp <= 0) kill(tgt, xpMul);
+}
+// Vampirzahn: Lebensraub ohne Overkill, höchstens 3 % des Lebens pro Sekunde (Flächen-Treffer zählen sonst vielfach)
+function leech(d) {
+  const sec = Math.floor(run.time);
+  if (run.leechSec !== sec) { run.leechSec = sec; run.leechGot = 0; }
+  const h = Math.min(d * P.leech, P.maxHp * .03 - run.leechGot);
+  if (h > 0) { run.leechGot += h; P.hp = Math.min(P.maxHp, P.hp + h); }
 }
 export function kill(e, xpMul = 1) {
   if (e.link || e.decoy) return;   // Teile von Morgra und Spiegelbilder sterben nur mit ihrem Boss (bossDown)
@@ -90,7 +100,11 @@ export function bossDown(b) {
 // src: contact | proj | bomb | strike | zone (für Statistik und Sim)
 export function damagePlayer(d, src = 'contact') {
   if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
-  d = shieldAbsorb(hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult());
+  // Schattenmantel: ausweichen
+  if (P.dodge && rnd() < P.dodge) { P.inv = .3; addNum(P.x, P.y - 40, 'Ausgewichen', '#d9c8ff', false); return; }
+  d = hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult();
+  if (P.flatArmor) d = Math.max(d * .4, d - P.flatArmor);   // Eisenhelm, nie unter 40 %
+  d = shieldAbsorb(d);
   if (d <= 0) { P.inv = .5; return; }
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);

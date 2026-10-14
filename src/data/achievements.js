@@ -24,6 +24,7 @@ export const ACHIEVEMENTS = [
   { id: 'rolls', name: 'Purzelbaum', desc: 'Rolle {n}×', v: c('rolls'), goals: [300, 3000, 15000] },
   { id: 'abil', name: 'Trickkiste', desc: 'Setze Fähigkeiten {n}× ein', v: c('abil'), goals: [50, 500, 2500] },
   { id: 'evo', name: 'Weiterentwickelt', desc: 'Entwickle {n}× eine Waffe weiter', v: c('evo'), goals: [1, 15, 75], title: 'Alchemist' },
+  { id: 'mega', name: 'Verschmolzen', desc: 'Erschaffe {n}× eine Mega-Entwicklung', v: c('mega'), goals: [1, 5, 25], title: 'Megamagier' },
   { id: 'chests', name: 'Schatzsucher', desc: 'Öffne {n} Truhen', v: s => s.stats.chests, goals: [5, 30, 120], title: 'Schatzsucher' },
   { id: 'upgrades', name: 'Schmied', desc: 'Werte {n}× eine Karte auf', v: c('upgrades'), goals: [5, 30, 100], title: 'Goblin-Schmied' },
   { id: 'hats', name: 'Hutsammler', desc: 'Sammle {n} Magierhüte', v: hatsTotal, goals: [15, 60, 120], cosm: 'hat.crown', title: 'Hutkönig' },

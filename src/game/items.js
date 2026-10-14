@@ -3,6 +3,7 @@ import { sfx, tickGemCombo } from '../core/audio.js';
 import { $, TAU, restart } from '../core/util.js';
 import { xpCatchUp } from './balance.js';
 import { autoChest, autoUp } from './levelup.js';
+import { fuseMega, megaReady } from './mega.js';
 import { chargeAbil, xpBonus } from './abilities.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
@@ -45,7 +46,11 @@ export function collect(it) {
       if (performance.now() - xpPulseT > 110) { xpPulseT = performance.now(); restart($('#xpBar'), 'pulse'); }
       break;
     }
-    case 'coin': run.gold += run.goldT > 0 ? 2 : 1; sfx.coin(); break;
+    case 'coin': {
+      // Goblinbeutel: Bruchteile sammeln sich zu ganzen Münzen
+      run.goldFrac = (run.goldFrac || 0) + (run.goldT > 0 ? 2 : 1) * (P.goldMult || 1);
+      const g = Math.floor(run.goldFrac); run.gold += g; run.goldFrac -= g; sfx.coin(); break;
+    }
     case 'gear':
       chargeAbil('scrap', 7); sfx.gear();
       for (let i = 0; i < 4; i++) part(P.x, P.y - 10, frand(-90, 90), frand(-120, -20), .3, '#c9d1d8', 2.5);
@@ -56,11 +61,15 @@ export function collect(it) {
       aoeScope(() => { for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999); });
       run.flashT = .3; run.shake = 14; sfx.boom(); sfx.ult(); break;
     // Truhen mit festem Inhalt (7.5): Mini-Boss = Wahl aus 3, Elite = 1 Aufwertung, Boss = 3 Aufwertungen
-    case 'chest':
+    case 'chest': {
+      let mega;
       // nach dem Ende: Truhe wird zu Bonus-Leveln (Boss 3, Mini 2, Elite 1)
       if (run.clearT > 0) { for (let i = it.v === 'boss' ? 3 : it.v === 'elite' ? 1 : 2; i > 0; i--) bonusLevel(); sfx.chest(); }
+      // Mega-Truhe: hat man zwei passende Entwicklungen, verschmelzen sie (Elite, Mini-Boss, Boss)
+      else if ((it.v === 'elite' || it.v === 'boss' || it.v === 'mini') && (mega = megaReady())) { fuseMega(mega); if (it.v === 'boss') autoChest(2); }
       else if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1); else run.pendingChest++;
       break;
+    }
   }
 }
 export function addXp(v) {

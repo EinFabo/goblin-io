@@ -6,14 +6,20 @@ import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
 import { P, nearest, query, randomEnemyInView, run } from './state.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { smokeAtkSlow } from '../data/abilities.js';
+import { onProjHit, stepWeapon2 } from './weapons2.js';
 
 // ---------- Waffen ----------
-export function shoot(k, a, dmg, pierce, spd, life, extra = {}) {
-  run.pproj.push(Object.assign({ k, x: P.x, y: P.y - 8, a, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, dmg: dmg * shotMul, pierce, life, hit: new Set(), r: 13, t: 0 }, extra));
+// Zielsuchende Geschosse: Wendigkeit in rad/s
+const HOMING = { fireball: 6, rocket: 8, shade: 3, soul: 7, spark: 9 };
+export function shoot(k, a, dmg, pierce, spd, life, extra = {}) { shootRaw(k, a, dmg * shotMul, pierce, spd, life, extra); }
+// ohne den Schadensfaktor der gerade schießenden Waffe (dmg schon fertig); Splitterkristall: mehr Durchbohren
+export function shootRaw(k, a, dmg, pierce, spd, life, extra = {}) {
+  if (pierce < 99) pierce += P.pierceAdd || 0;
+  run.pproj.push(Object.assign({ k, x: P.x, y: P.y - 8, a, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, dmg, pierce, life, hit: new Set(), r: 13, t: 0 }, extra));
 }
 export function updWeapons(dt) {
   const smoke = P.smokeT > 0 && run.abMods && run.abMods.smoke;
-  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1);
+  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1) * (P.atkSpd || 1);   // Kriegshorn
   // Kartenstufe (9.3): mehr Grundschaden je Waffe (dm statt P.dmgMult), auf Stufe 10 schneller
   for (const w of run.weapons) stepWeapon(w, rate * (w.fast || 1), P.dmgMult * (w.card || 1), dt);
 }
@@ -146,6 +152,7 @@ function stepWeapon(w, rate, dm, dt) {
       w.dmg = (w.evo ? 22 : [8, 8, 12, 12, 14][L]) * dm; w.spd = w.evo ? 270 : L >= 4 ? 240 : 205; w.sc = w.evo ? .66 : .55;
       break;
     }
+    default: stepWeapon2(w, L, dm, dt, rate);
   }
 }
 export function updAllies(dt) {
@@ -175,8 +182,10 @@ export function updPProj(dt) {
   const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
   for (const p of run.pproj) {
     p.t += dt; p.life -= dt;
-    if ((p.k === 'fireball' || p.k === 'rocket') && p.target && !p.target.dead) {
-      const ta = Math.atan2(p.target.y - p.y, p.target.x - p.x), turn = p.k === 'rocket' ? 8 : 6;
+    // Irrlichter und Funken suchen sich ein neues Ziel, wenn ihres stirbt
+    if ((p.k === 'soul' || p.k === 'spark') && (!p.target || p.target.dead) && p.t >= (p.rt || .15)) { p.rt = p.t + .2; p.target = nearest(420, p); }
+    if (HOMING[p.k] && p.target && !p.target.dead) {
+      const ta = Math.atan2(p.target.y - p.y, p.target.x - p.x), turn = HOMING[p.k];
       const da = angDiff(ta, p.a);
       const sp = Math.hypot(p.vx, p.vy);
       p.a += clamp(da, -turn * dt, turn * dt); p.vx = Math.cos(p.a) * sp; p.vy = Math.sin(p.a) * sp;
@@ -192,6 +201,12 @@ export function updPProj(dt) {
       query(p.x, p.y, p.r, e => { if ((p.hm.get(e) || 0) > run.time) return; p.hm.set(e, run.time + .3); hurt(e, p.dmg, 60, p.vx / 400, p.vy / 400); for (let i = 0; i < 2; i++) part(p.x, p.y, frand(-120, 120), frand(-120, 120), .2, '#ffe9a0', 2); });
       continue;
     }
+    if (p.k === 'shade') {
+      let boom = p.life <= 0;
+      query(p.x, p.y, 16, e => { if (e.spawnT > 0) return; boom = true; return false; });
+      if (boom) { explode(p.x, p.y, p.rad, p.dmg, 'shade'); p.life = -1; }
+      continue;
+    }
     if (p.k === 'fireball' || p.k === 'rocket') {
       let boom = p.life <= 0;
       query(p.x, p.y, 12, () => { boom = true; return false; });
@@ -204,7 +219,7 @@ export function updPProj(dt) {
       if (p.hit.has(e)) return;
       p.hit.add(e);
       if (p.k === 'spear') { hurt(e, p.dmg, 90, Math.cos(p.a), Math.sin(p.a), '#9fe6ff'); e.slowT = 2.2; animFx('e_frostbolt_hit_', 5, e.x, e.y, .9, 22); }
-      else hurt(e, p.dmg, p.k === 'bullet' ? 25 : 70, Math.cos(p.a), Math.sin(p.a));
+      else { hurt(e, p.dmg, p.kb ?? (p.k === 'bullet' ? 25 : 70), Math.cos(p.a), Math.sin(p.a)); onProjHit(p, e); }
       p.pierce--;
       if (p.pierce < 0) { p.life = -1; return false; }
     });
