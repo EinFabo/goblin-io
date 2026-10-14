@@ -9,8 +9,8 @@ import { $ } from './core/util.js';
 
 // Client-ID der Webanwendung aus der Google Cloud Console (öffentlich)
 export const GOOGLE_CLIENT_ID = '207037584180-cu0m43pkkn8uuo2lkg65ijpqc3t9bd0h.apps.googleusercontent.com';
-// Erst nach dem ersten Deploy des Workers (cloud/, goblin.node-wave.org) einschalten
-const LIVE = false;
+// Worker (cloud/, goblin.node-wave.org) ist live
+const LIVE = true;
 const HOST = 'https://goblin.node-wave.org';
 // ?cloudtest: lokal gegen `npm run dev` in cloud/ (Port 8787) mit Test-Anmeldung ohne Google
 const TEST = /[?&]cloudtest\b/.test(location.search);
