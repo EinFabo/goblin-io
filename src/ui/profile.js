@@ -10,6 +10,7 @@ import { WEAPONS } from '../data/weapons.js';
 import { canEquip } from '../game/abilities.js';
 import { accountXpNeed } from '../game/balance.js';
 import { icon } from '../render/icons.js';
+import { cloud, cloudReady, logout, onCloudChange, renderSignIn, saveNow } from '../cloud.js';
 
 // ---------- Profil (PLAN 9.1): Name, Konto-Level, Statistiken, Bestzeiten, Freischaltungen ----------
 const fmtN = n => Math.floor(n).toLocaleString('de-DE');
@@ -44,7 +45,25 @@ export function renderProfile() {
   if (psub === 'ach') { subRender.ach(); return; }
   renderProfMain();
 }
+// Cloud-Sync: angemeldet → Name, Stand, Sichern/Abmelden; sonst der Google-Knopf
+function renderCloud() {
+  const el = $('#profCloud');
+  el.hidden = !cloudReady();
+  if (el.hidden) return;
+  const u = cloud.user, ago = cloud.syncedAt ? new Date(cloud.syncedAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  if (!u) {
+    el.innerHTML = '<div class="ctext"><b>Spielstand in der Cloud</b><small>Mit Google anmelden und auf jedem Gerät weiterspielen.</small></div><div class="cbtn" id="gSignIn"></div>' + (cloud.status ? `<small class="cstat">${esc(cloud.status)}</small>` : '');
+    renderSignIn($('#gSignIn'));
+    return;
+  }
+  el.innerHTML = `${u.picture ? `<img class="cav" src="${esc(u.picture)}" alt="" referrerpolicy="no-referrer">` : ''}<div class="ctext"><b>${esc(u.name || 'Angemeldet')}</b><small>${esc(cloud.status || (ago ? 'Gesichert ' + ago : ''))}</small></div>
+    <button class="btn small" id="cloudNow">Jetzt sichern</button><button class="btn small ghost" id="cloudOut">Abmelden</button>`;
+  $('#cloudNow').onclick = () => saveNow();
+  $('#cloudOut').onclick = () => logout();
+}
+onCloudChange(() => { if (!$('#profile').hidden && psub === 'prof') renderCloud(); });
 function renderProfMain() {
+  renderCloud();
   const p = save.profile, s = save.stats, need = accountXpNeed(p.level), max = p.level >= 50;
   $('#profName').innerHTML = editing
     ? `<form id="nameForm"><input id="nameIn" maxlength="16" value="" aria-label="Name" autocomplete="off" spellcheck="false"><button class="btn primary small">OK</button></form><small class="nerr" id="nameErr"></small>`

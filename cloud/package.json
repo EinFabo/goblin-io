@@ -1,0 +1,13 @@
+{
+  "name": "goblin-cloud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --var DEV:1",
+    "test": "node --test test/*.test.js",
+    "deploy": "node ../tools/build.mjs && mkdir -p public && cp ../dist/goblin-io.html public/index.html && wrangler d1 migrations apply goblin --remote && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.151.0"
+  }
+}

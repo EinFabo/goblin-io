@@ -3,7 +3,7 @@ import * as events from './core/events.js';
 import { joy, keys } from './core/input.js';
 import { STEP, loopStats } from './core/loop.js';
 import { RNG } from './core/rng.js';
-import { save, setSave } from './core/save.js';
+import { persist, save, setSave } from './core/save.js';
 import { go, sceneName } from './core/scenes.js';
 import { STAGES } from './data/stages.js';
 import { abilReady, doDash, useAbility } from './game/abilities.js';
@@ -23,7 +23,7 @@ import { stressTest } from './stress.js';
 
 const api = {
   STEP, loopStats, STAGES, events, joy, keys, RNG, MAP,
-  stress: stressTest, newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, hurt, BOSSES, ATTACKS, ATK,
+  stress: stressTest, persist, newRun, update, endRun, genChoices, applyChoice, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, hurt, BOSSES, ATTACKS, ATK,
 };
 Object.defineProperties(api, {
   // Speicher der Atlas-Seiten in Bytes (RGBA) und ihre Anzahl, für npm run perf

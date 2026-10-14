@@ -38,6 +38,8 @@ export function defaults() {
     abilities: {},
     // Einstellungen (ui/settings.js): Lautstärke 0–1, btn = Größe der Handy-Knöpfe (s/m/l), lefty = Knöpfe links
     settings: { mute: false, musicOff: false, sfxVol: 1, musVol: 1, shake: true, numbers: true, lefty: false, btn: 'm' },
+    // Zeitpunkt der letzten Änderung (persist); der Cloud-Abgleich erkennt daran, ob sich lokal etwas getan hat
+    savedAt: 0,
     // Karten (9.3): { id: { lv, n } }; ohne Eintrag Startstufe der Seltenheit
     cards: {},
     // Truhen (9.5): Regal [{ type, end }], Gratis-Truhen { n, t }, Pity-Zähler
@@ -98,6 +100,7 @@ export function normalize(raw) {
     },
     map: { si: 0, li: 0, fresh: false, nm: false },
     loadout: normLoadout(r.loadout),
+    savedAt: num(r.savedAt),
     keep: Array.isArray(r.keep) ? [...new Set(r.keep.filter(id => ABILITIES[id]))] : [],
     abilities: normAbilities(r.abilities),
     settings: {
@@ -221,7 +224,7 @@ function readJson(key) {
 
 export function loadSave() {
   const v2 = readJson(SAVE_KEY);
-  if (v2 && typeof v2 === 'object') { save = migrate(v2); persist(); }
+  if (v2 && typeof v2 === 'object') { save = migrate(v2); lastJson = content(save); persist(); }
   else {
     if (v2 === undefined) { try { localStorage.setItem(SAVE_KEY + '_broken', localStorage.getItem(SAVE_KEY)); } catch (e) {} }
     const v1 = readJson(SAVE_KEY_V1);
@@ -231,7 +234,14 @@ export function loadSave() {
   return save;
 }
 export function setSave(s) { save = normalize(s); persist(); }
-export function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+// savedAt nur bei echter Änderung des Inhalts (Cloud-Abgleich: „hier hat sich etwas getan“)
+let lastJson = '';
+const content = s => JSON.stringify({ ...s, savedAt: 0 });
+export function persist() {
+  const j = content(save);
+  if (j !== lastJson) { lastJson = j; save.savedAt = Date.now(); }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+}
 
 // Abfragen mit 0-basiertem Stage-Index
 export const stageInfo = i => save.stages[i + 1] || null;

@@ -18,6 +18,7 @@ import './scenes/results.js';
 import './debug.js';
 import { startPerf } from './perf.js';
 import { startUpdateCheck } from './app-update.js';
+import { startCloud } from './cloud.js';
 
 loadSave();
 resize();
@@ -25,3 +26,4 @@ go('boot');
 startLoop();
 if (/[?&]perf\b/.test(location.search)) startPerf();
 startUpdateCheck();
+startCloud();

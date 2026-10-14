@@ -859,3 +859,18 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 /* Wurfdolch steigt von selbst auf: Ring um den Slot füllt sich bis zur nächsten Stufe (--p 0…1) */
 .slot.auto{border:3px solid transparent;background:linear-gradient(#151d10,#151d10) padding-box,conic-gradient(#8fd8ff calc(var(--p,0)*1turn),rgba(255,255,255,.16) 0) border-box;box-shadow:0 0 6px rgba(143,216,255,.35)}
 #banner.auto{color:#e8f4ff}
+/* Cloud-Sync im Profil und Auswahl bei zwei Spielständen (src/cloud.js) */
+.pcloud{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px;padding:10px 12px;border-radius:12px;background:rgba(10,15,6,.45);border:2px solid var(--edge)}
+.pcloud .ctext{display:flex;flex-direction:column;flex:1;min-width:160px}
+.pcloud .ctext small,.pcloud .cstat{opacity:.75;font-size:12px}
+.pcloud .cav{width:34px;height:34px;border-radius:50%}
+.cloudpanel{max-width:560px}
+.cpicks{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px}
+.cpick{flex:1;min-width:200px;padding:12px;border-radius:12px;background:rgba(10,15,6,.5);border:2px solid var(--edge);display:flex;flex-direction:column;gap:4px}
+.cpick.cloud{border-color:#8fd8ff}
+.cpick h3{margin:0}
+.cpick small{opacity:.7}
+.cpick .btn{margin-top:8px}
+.cloudpanel{max-height:calc(100dvh - 20px);overflow:auto}
+.cpick p{margin:0}
+@media (max-height:480px){.cloudpanel h2{margin:0 0 4px;font-size:22px}.cloudpanel .note{margin:0;font-size:13px}.cpicks{margin-top:6px;gap:8px}.cpick{padding:8px 10px;gap:2px}.cpick .btn{margin-top:4px}}

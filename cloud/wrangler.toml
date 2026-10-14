@@ -1,0 +1,23 @@
+# Cloud-Sync für Goblin.io (PLAN.md, Phase 8): ein Worker auf goblin.node-wave.org liefert das Spiel aus
+# und bietet unter /api Anmeldung (Google-ID-Token), Laden und Speichern. Spielstände liegen in D1.
+#   npm run dev      lokal mit Test-Anmeldung (Token "dev:<name>")
+#   npm run deploy   baut das Spiel, wendet Migrationen an und lädt hoch (CLOUDFLARE_API_TOKEN nötig)
+name = "goblin"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+routes = [{ pattern = "goblin.node-wave.org", custom_domain = true }]
+
+[assets]
+directory = "./public"
+run_worker_first = ["/api/*"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "goblin"
+database_id = "00000000-0000-0000-0000-000000000000"   # nach `wrangler d1 create goblin` eintragen
+migrations_dir = "migrations"
+
+[vars]
+# Client-IDs aus der Google Cloud Console (Web, später Desktop/Android), durch Komma getrennt; öffentlich
+GOOGLE_CLIENT_IDS = ""
+ALLOWED_ORIGINS = "https://goblin.node-wave.org,http://localhost:8080,tauri://localhost,http://tauri.localhost,https://tauri.localhost"
