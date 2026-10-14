@@ -1082,7 +1082,9 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
   - Nach den Review-Fixes (2026-10-14) Welt 3-4 mit 30 Läufen: Seeds 1/101 vorher 80/70 %, nachher 70/67 % (Ziel 75–90 %). Vermutlich weil Gegner im Portal nicht mehr getroffen werden; im Streubereich, beim Durchlauf mit ansehen.
 - [ ] **Exe verbessern (Wunsch Fabi, 2026-10-13):** Windows-App aufwerten; was genau, mit Fabi klären.
 - [ ] **Accounts mit Cloud-Sync (Wunsch Fabi, 2026-10-13):** Anmelden, Spielstand in der Cloud, gleicher Stand in Browser, exe und APK. Braucht einen Server (Anbieter wählen), Konflikte zwischen Geräten lösen (z. B. neuerer/weiterer Stand gewinnt, vorher fragen). Bis dahin wurde der Browser-Stand (Opera GX, localhost:8080) am 2026-10-13 von Hand in die exe kopiert.
-- [ ] **Vielleicht: Game-Loop-Rework (Wunsch Fabi, 2026-10-12):** Der Wurfdolch wird automatisch hochgestuft (ohne Level-Up-Karte), damit die Karten für andere Waffen und Builds frei sind. Vorher mit der Sim prüfen, wie sich die Kraftkurve (7.3) ändert, und mit Fabi entscheiden.
+- [ ] **Game-Loop-Rework (Wunsch Fabi, 2026-10-12, entschieden 2026-10-14):** Der Wurfdolch wird automatisch hochgestuft (ohne Level-Up-Karte), damit die Karten für andere Waffen und Builds frei sind. Vorher mit der Sim prüfen, wie sich die Kraftkurve (7.3) ändert, und mit Fabi entscheiden.
+  - Entscheidungen Fabi (2026-10-14): Dolch steigt **alle 4 Level** automatisch auf (Stufe 2/3/4/5 bei Level 4/8/12/16), zusätzlich zur normalen Level-Up-Karte. **Dolchsturm bleibt eine Entwicklungskarte** wie bisher (Dolch 5 + Wetzstein). Anzeige: **Banner „Wurfdolch Stufe N!“ mit Ton und ein Ring am Dolch-Slot**, der sich bis zur nächsten Stufe füllt. Balance: danach **alle Welten auf die Zielwerte** (`LEVEL_TARGET`) einstellen, zwei Seed-Sätze.
+  - Reihenfolge: vor dem Komplett-Durchlauf machen, weil es die Kraftkurve ändert.
 
 ### Phase 9 – Goblin-Klassen (Wunsch Fabi, 2026-10-12)
 - [ ] Mehrere Goblin-Typen mit eigener Startwaffe und eigenen Standard-Fähigkeiten statt Rolle/Sprint, z. B. Bogen-Goblin (Bogen als Startwaffe), Magier-Goblin (Teleport statt Rolle).
