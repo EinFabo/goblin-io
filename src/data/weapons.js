@@ -1,7 +1,7 @@
 // ---------- Waffen & Passive ----------
 export const WEAPONS = {
   // auto: steigt alle n Spieler-Level von selbst eine Stufe auf (keine Aufwertungs-Karte, Game-Loop-Rework 2026-10-14)
-  dagger: { name: 'Wurfdolch', evo: 'Dolchsturm', with: 'whet', auto: 4,
+  dagger: { name: 'Wurfdolch', evo: 'Dolchsturm', with: 'whet', auto: 3,
     info: ['Wirft Dolche auf den nächsten Gegner.', '+1 Dolch', '+40 % Schaden', '+1 Dolch, durchbohrt einen Gegner', '+1 Dolch, wirft schneller'],
     evoInfo: 'Ein Dolchkranz fliegt in alle Richtungen und durchbohrt alles.' },
   orbit: { name: 'Klingenkreis', evo: 'Klingensturm', with: 'amulet',
