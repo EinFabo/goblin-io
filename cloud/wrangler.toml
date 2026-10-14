@@ -19,5 +19,5 @@ migrations_dir = "migrations"
 
 [vars]
 # Client-IDs aus der Google Cloud Console (Web, später Desktop/Android), durch Komma getrennt; öffentlich
-GOOGLE_CLIENT_IDS = ""
+GOOGLE_CLIENT_IDS = "207037584180-cu0m43pkkn8uuo2lkg65ijpqc3t9bd0h.apps.googleusercontent.com"
 ALLOWED_ORIGINS = "https://goblin.node-wave.org,http://localhost:8080,tauri://localhost,http://tauri.localhost,https://tauri.localhost"

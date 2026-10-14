@@ -7,8 +7,10 @@ import { on } from './core/events.js';
 import { persist, save, setSave } from './core/save.js';
 import { $ } from './core/util.js';
 
-// Client-ID der Webanwendung aus der Google Cloud Console (öffentlich). Leer = Cloud-Sync noch aus.
-export const GOOGLE_CLIENT_ID = '';
+// Client-ID der Webanwendung aus der Google Cloud Console (öffentlich)
+export const GOOGLE_CLIENT_ID = '207037584180-cu0m43pkkn8uuo2lkg65ijpqc3t9bd0h.apps.googleusercontent.com';
+// Erst nach dem ersten Deploy des Workers (cloud/, goblin.node-wave.org) einschalten
+const LIVE = false;
 const HOST = 'https://goblin.node-wave.org';
 // ?cloudtest: lokal gegen `npm run dev` in cloud/ (Port 8787) mit Test-Anmeldung ohne Google
 const TEST = /[?&]cloudtest\b/.test(location.search);
@@ -23,7 +25,7 @@ try { st = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (_) { st = {}; }
 const keep = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (_) { /* privat/voll */ } };
 let busy = false, lastUp = 0, upT = 0, status = '', onChange = () => {};
 export const cloud = { get user() { return st.token ? { name: st.name, picture: st.picture } : null; }, get status() { return status; }, get syncedAt() { return st.syncedAt || 0; } };
-export const cloudReady = () => TEST || (!!GOOGLE_CLIENT_ID && !inApp);
+export const cloudReady = () => TEST || (LIVE && !!GOOGLE_CLIENT_ID && !inApp);
 export function onCloudChange(fn) { onChange = fn; }
 const say = s => { status = s; onChange(); };
 
