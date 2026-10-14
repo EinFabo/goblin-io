@@ -16,7 +16,7 @@ const env = { GOOGLE_CLIENT_IDS: 'web-id, desk-id' };
 const ok = { iss: 'https://accounts.google.com', aud: 'desk-id', sub: '123', name: 'Fabi', exp: Math.floor(Date.now() / 1000) + 600 };
 
 test('gültiges Token wird angenommen', async () => {
-  assert.deepEqual(await verifyGoogle(await token(ok), env), { sub: '123', name: 'Fabi', picture: '' });
+  assert.deepEqual(await verifyGoogle(await token(ok), env), { sub: '123', name: 'Fabi', picture: '', nonce: undefined });
 });
 test('falsche Client-ID, abgelaufen, falscher Aussteller, verfälscht, kaputt → 401', async () => {
   const bad = [

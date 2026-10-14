@@ -28,8 +28,16 @@ async function call(method, path, body, token) {
   return { status: r.status, ...(await r.json().catch(() => ({}))) };
 }
 // Google nachgebaut: Access-Token „gut:<sub>“ gehört zu unserer Client-ID, „fremd:<sub>“ zu einer anderen App
+const b64u = b => Buffer.from(b).toString('base64url');
+const { publicKey, privateKey } = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+const jwk = { ...(await crypto.subtle.exportKey('jwk', publicKey)), kid: 'k9', alg: 'RS256' };
+async function idToken(claims) {
+  const head = b64u(JSON.stringify({ alg: 'RS256', kid: 'k9' })), body = b64u(JSON.stringify({ iss: 'https://accounts.google.com', aud: 'web-id', exp: Date.now() / 1000 + 600, ...claims }));
+  return head + '.' + body + '.' + b64u(new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', privateKey, new TextEncoder().encode(head + '.' + body))));
+}
 globalThis.fetch = async (url, opt = {}) => {
   url = String(url);
+  if (url.includes('/certs')) return Response.json({ keys: [jwk] });
   const tok = url.includes('tokeninfo') ? decodeURIComponent(url.split('access_token=')[1]) : (opt.headers.Authorization || '').slice(7);
   const [kind, sub] = tok.split(':');
   if (url.includes('tokeninfo')) return Response.json(sub ? { sub, aud: kind === 'gut' ? 'web-id' : 'andere-app' } : { error: 'invalid_token' }, { status: sub ? 200 : 400 });
@@ -78,4 +86,36 @@ test('App verbinden mit eigener Google-Anmeldung (Access-Token), fremde Tokens a
   assert.equal(app.name, 'Google 7');
   const web = await call('POST', '/api/login', { accessToken: 'gut:7' });
   assert.equal(web.acct, app.acct, 'gleiches Konto im Browser und in der App');
+});
+test('Nur das zuletzt geöffnete Gerät darf speichern', async () => {
+  const pc = await login('zwei'), handy = await login('zwei');
+  assert.equal((await call('PUT', '/api/save', { data: '{"a":1}', base: 0 }, pc.token)).status, 200, 'noch kein aktives Gerät: frei');
+  await call('POST', '/api/claim', { name: 'PC-App' }, pc.token);
+  await call('POST', '/api/claim', { name: 'Handy-App' }, handy.token);
+  const pcSave = await call('PUT', '/api/save', { data: '{"a":2}', base: Date.now() + 1e6 }, pc.token);
+  assert.equal(pcSave.status, 423); assert.equal(pcSave.activeName, 'Handy-App');
+  assert.deepEqual(await call('GET', '/api/active', null, pc.token), { status: 200, active: false, activeName: 'Handy-App' });
+  const g = await call('GET', '/api/save', null, handy.token);
+  assert.equal(g.active, true); assert.equal(g.data, '{"a":1}');
+  assert.equal((await call('PUT', '/api/save', { data: '{"a":3}', base: g.updated }, handy.token)).status, 200);
+  await call('POST', '/api/claim', { name: 'PC-App' }, pc.token);   // „Hier weiterspielen“
+  assert.equal((await call('PUT', '/api/save', { data: '{"a":4}', base: g.updated }, handy.token)).status, 423);
+});
+test('Anmeldeseite: direkt zu Google, Rückweg mit ID-Token bindet die App', async () => {
+  const s = await call('POST', '/api/link/start');
+  const go = await worker.fetch(new Request('https://goblin.node-wave.org/anmelden?code=' + s.code), env);
+  assert.equal(go.status, 302);
+  const g = new URL(go.headers.get('Location'));
+  assert.equal(g.host, 'accounts.google.com');
+  assert.equal(g.searchParams.get('client_id'), 'web-id'); assert.equal(g.searchParams.get('prompt'), 'select_account');
+  assert.equal(g.searchParams.get('redirect_uri'), 'https://goblin.node-wave.org/api/auth/callback');
+  const nonce = g.searchParams.get('nonce'), state = g.searchParams.get('state');
+  const back = (tok, st = state) => worker.fetch(new Request('https://goblin.node-wave.org/api/auth/callback', { method: 'POST', body: new URLSearchParams({ id_token: tok, state: st }) }), env);
+  assert.equal((await back(await idToken({ sub: '55', name: 'Fabi', nonce: 'falsch' }))).status, 400, 'falsche nonce');
+  const ok = await back(await idToken({ sub: '55', name: 'Fabi', nonce }));
+  assert.equal(ok.status, 200); assert.match(await ok.text(), /goblinio:\/\/angemeldet/);
+  const app = await call('POST', '/api/link/poll', { link: s.link });
+  assert.equal(app.name, 'Fabi');
+  assert.equal((await back(await idToken({ sub: '55', nonce }))).status, 400, 'nur einmal');
+  assert.equal((await worker.fetch(new Request('https://goblin.node-wave.org/anmelden?code=XXXXXXXX'), env)).status, 400);
 });

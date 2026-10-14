@@ -7,6 +7,9 @@
 //   POST /api/link/confirm { code, accessToken } (oder angemeldet) verbindet die App mit diesem Konto
 //   POST /api/link/poll { link }            → { pending } | { token, name, picture, acct }
 //   DELETE /api/account                     Konto löschen: Spielstand und alle Sitzungen
+//   POST /api/claim { name }                dieses Gerät wird das aktive (nur das aktive darf speichern, sonst 423)
+//   GET  /api/active                        → { active, activeName }
+//   GET  /anmelden?code=…                   exe/APK: direkt zu Googles Kontoauswahl, zurück über /api/auth/callback
 //   GET  /api/save                          → { data, level, runs, updated, acct } | { data: null, acct }
 //   PUT  /api/save   { data, level, runs, base, force }
 //        base = updated des zuletzt gesehenen Cloud-Stands; ist der Cloud-Stand neuer und force fehlt → 409 mit dem Cloud-Stand
@@ -23,6 +26,13 @@ export default {
     const url = new URL(req.url);
     // kurze Adresse zum Abtippen (App verbinden)
     if (url.pathname === '/verbinden') return Response.redirect(url.origin + '/?verbinden', 302);
+    // Anmeldeseite für exe/APK: nur Googles Kontoauswahl, kein Spiel im Hintergrund
+    if (url.pathname === '/anmelden' || url.pathname === '/api/auth/callback') {
+      try { return await (url.pathname === '/anmelden' ? authStart(url, env) : authCallback(req, env)); } catch (e) {
+        if (!(e instanceof HttpError)) console.error(e);
+        return authPage('Hat nicht geklappt', e instanceof HttpError ? e.message : 'Serverfehler', false);
+      }
+    }
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
     const cors = corsHeaders(env, req.headers.get('Origin'));
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
@@ -53,6 +63,7 @@ async function route(req, env, path) {
       env.DB.prepare('DELETE FROM saves WHERE sub = ?').bind(s.sub),
       env.DB.prepare('DELETE FROM sessions WHERE sub = ?').bind(s.sub),
       env.DB.prepare('DELETE FROM links WHERE sub = ?').bind(s.sub),
+      env.DB.prepare('DELETE FROM active WHERE sub = ?').bind(s.sub),
     ]);
     return json({});
   }
@@ -61,11 +72,18 @@ async function route(req, env, path) {
     if (tok) await env.DB.prepare('DELETE FROM sessions WHERE hash = ?').bind(await sha256(tok)).run();
     return json({});
   }
+  if (path === '/api/claim' && req.method === 'POST') {
+    const s = await session(req, env), { name } = await req.json().catch(() => ({}));
+    await env.DB.prepare('INSERT INTO active (sub, hash, name, at) VALUES (?, ?, ?, ?) ON CONFLICT(sub) DO UPDATE SET hash = excluded.hash, name = excluded.name, at = excluded.at')
+      .bind(s.sub, s.hash, String(name || 'Gerät').slice(0, 40), Date.now()).run();
+    return json({});
+  }
+  if (path === '/api/active' && req.method === 'GET') return json(await activeOf(env, await session(req, env)));
   if (path === '/api/save') {
     const s = await session(req, env);
     if (req.method === 'GET') {
       const row = await env.DB.prepare('SELECT data, level, runs, updated FROM saves WHERE sub = ?').bind(s.sub).first();
-      return json({ ...(row || { data: null }), acct: await acctId(s.sub) });
+      return json({ ...(row || { data: null }), acct: await acctId(s.sub), ...(await activeOf(env, s)) });
     }
     if (req.method === 'PUT') return putSave(req, env, s);
   }
@@ -146,6 +164,9 @@ async function putSave(req, env, s) {
   let p; try { p = JSON.parse(body); } catch (_) { throw new HttpError(400, 'Kein JSON'); }
   if (typeof p.data !== 'string') throw new HttpError(400, 'data fehlt');
   try { JSON.parse(p.data); } catch (_) { throw new HttpError(400, 'data ist kein Spielstand'); }
+  // Nur das aktive Gerät darf speichern (sonst entstehen zwei Stände)
+  const a = await activeOf(env, s);
+  if (!a.active) return json({ elsewhere: true, ...a }, 423);
   const cur = await env.DB.prepare('SELECT data, level, runs, updated FROM saves WHERE sub = ?').bind(s.sub).first();
   if (cur && !p.force && cur.updated > (+p.base || 0)) return json({ conflict: true, ...cur }, 409);
   const updated = Math.max(Date.now(), cur ? cur.updated + 1 : 0);
@@ -154,13 +175,58 @@ async function putSave(req, env, s) {
   return json({ updated });
 }
 
+// Ist diese Sitzung das aktive Gerät des Kontos? Ohne Eintrag (noch nie beansprucht) darf jedes speichern.
+async function activeOf(env, s) {
+  const a = await env.DB.prepare('SELECT hash, name FROM active WHERE sub = ?').bind(s.sub).first();
+  return { active: !a || a.hash === s.hash, activeName: a ? a.name : '' };
+}
+
+// ---------- Anmeldeseite für exe/APK (/anmelden?code=…) ----------
+// Leitet direkt zu Googles Kontoauswahl (OpenID Connect, ID-Token per form_post an /api/auth/callback).
+// Dafür muss https://goblin.node-wave.org/api/auth/callback als Weiterleitungs-URI der Web-Client-ID eingetragen sein.
+async function authStart(url, env) {
+  const code = normCode(url.searchParams.get('code'));
+  const nonce = b64url(crypto.getRandomValues(new Uint8Array(16)));
+  const r = await env.DB.prepare('UPDATE links SET nonce = ? WHERE code = ? AND sub IS NULL AND expires >= ?').bind(nonce, code, Date.now()).run();
+  if (!r.meta || !r.meta.changes) throw new HttpError(404, 'Der Anmelde-Link ist abgelaufen. Bitte in der App nochmal auf „Mit Google anmelden“ tippen.');
+  const q = new URLSearchParams({
+    client_id: (env.GOOGLE_CLIENT_IDS || '').split(',')[0].trim(), redirect_uri: url.origin + '/api/auth/callback',
+    response_type: 'id_token', response_mode: 'form_post', scope: 'openid email profile', prompt: 'select_account', nonce, state: code,
+  });
+  return Response.redirect('https://accounts.google.com/o/oauth2/v2/auth?' + q, 302);
+}
+async function authCallback(req, env) {
+  if (req.method !== 'POST') throw new HttpError(405, 'Falscher Aufruf');
+  const f = await req.formData();
+  if (f.get('error')) throw new HttpError(400, f.get('error') === 'access_denied' ? 'Anmeldung abgebrochen.' : 'Google: ' + f.get('error'));
+  const code = normCode(f.get('state')), idToken = f.get('id_token');
+  if (typeof idToken !== 'string') throw new HttpError(400, 'Google hat kein Token geschickt.');
+  const row = await env.DB.prepare('SELECT nonce FROM links WHERE code = ? AND sub IS NULL AND expires >= ?').bind(code, Date.now()).first();
+  if (!row || !row.nonce) throw new HttpError(404, 'Der Anmelde-Link ist abgelaufen. Bitte in der App nochmal versuchen.');
+  const who = await verifyGoogle(idToken, env);
+  if (who.nonce !== row.nonce) throw new HttpError(401, 'Anmeldung ungültig.');
+  await env.DB.prepare('UPDATE links SET sub = ?, name = ?, picture = ?, nonce = NULL WHERE code = ? AND sub IS NULL').bind(who.sub, who.name, who.picture, code).run();
+  return authPage('Angemeldet!', 'Angemeldet als ' + who.name + '. Zurück zum Spiel …', true);
+}
+const escHtml = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+// Schlichte Seite (kein Spiel): Ergebnis der Anmeldung, bei Erfolg Sprung zurück in die App
+function authPage(title, text, ok) {
+  const back = `var a=/Android/i.test(navigator.userAgent)?'intent://angemeldet#Intent;scheme=goblinio;package=com.einfabo.goblinio;end':'goblinio://angemeldet';`;
+  const html = `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Goblin.io – ${escHtml(title)}</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#141c0e;color:#f4f1e0;font:16px/1.4 system-ui,sans-serif}main{max-width:420px;padding:28px;margin:16px;border-radius:18px;background:#22301a;border:3px solid #0b1007;text-align:center}h1{margin:0 0 8px;font-size:26px}p{opacity:.85}a{display:inline-block;margin-top:12px;padding:12px 22px;border-radius:12px;background:#6cc644;color:#0b1007;font-weight:700;text-decoration:none}</style></head>
+<body><main><h1>${escHtml(title)}</h1><p>${escHtml(text)}</p>${ok ? '<a id="b" href="goblinio://angemeldet">Zurück zum Spiel</a><p><small>Diese Seite kannst du schließen.</small></p>' : ''}</main>
+${ok ? `<script>${back}document.getElementById('b').href=a;location.href=a;</script>` : ''}</body></html>`;
+  return new Response(html, { status: ok ? 200 : 400, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+
 const bearer = req => { const h = req.headers.get('Authorization') || ''; return h.startsWith('Bearer ') ? h.slice(7) : null; };
 async function session(req, env) {
   const tok = bearer(req);
   if (!tok) throw new HttpError(401, 'Nicht angemeldet');
-  const s = await env.DB.prepare('SELECT sub, name, picture, expires FROM sessions WHERE hash = ?').bind(await sha256(tok)).first();
+  const hash = await sha256(tok);
+  const s = await env.DB.prepare('SELECT sub, name, picture, expires FROM sessions WHERE hash = ?').bind(hash).first();
   if (!s || s.expires < Date.now()) throw new HttpError(401, 'Sitzung abgelaufen');
-  return s;
+  return { ...s, hash };
 }
 
 // ---------- Google-ID-Token prüfen (RS256 gegen Googles öffentliche Schlüssel) ----------
@@ -188,7 +254,7 @@ export async function verifyGoogle(idToken, env, now = Date.now()) {
   if (!auds.includes(p.aud)) throw new HttpError(401, 'Falsche Client-ID');
   if (p.iss !== 'accounts.google.com' && p.iss !== 'https://accounts.google.com') throw new HttpError(401, 'Falscher Aussteller');
   if (!(p.exp * 1000 > now - 60e3)) throw new HttpError(401, 'Token abgelaufen');
-  return { sub: p.sub, name: p.name || p.email || '', picture: p.picture || '' };
+  return { sub: p.sub, name: p.name || p.email || '', picture: p.picture || '', nonce: p.nonce };
 }
 
 // ---------- Helfer ----------

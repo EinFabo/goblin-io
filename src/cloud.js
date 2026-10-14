@@ -105,6 +105,7 @@ async function login(cred) {
 }
 async function signedIn(r) {
   st = { token: r.token, name: r.name, picture: r.picture, acct: r.acct, base: 0, localAt: 0 }; keep();
+  await takeDevice();
   await sync();
 }
 
@@ -113,6 +114,8 @@ async function signedIn(r) {
 // sein Google-Konto, die Seite springt per goblinio:// zurück ins Spiel, und die App holt ihre Sitzung ab.
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const openUrl = u => (window.__TAURI__ && window.__TAURI__.opener ? window.__TAURI__.opener.openUrl(u) : window.open(u, '_blank'));
+// Spielfenster der PC-App (minimize/unminimize/setFocus); im Browser und am Handy ohne Wirkung
+const appWindow = fn => { try { const w = window.__TAURI__ && window.__TAURI__.window; if (w && !/Android/i.test(navigator.userAgent)) w.getCurrentWindow()[fn]().catch(() => {}); } catch (_) { /* egal */ } };
 let codeRun = null;
 async function codeLogin() {
   if (codeRun) return;
@@ -120,20 +123,22 @@ async function codeLogin() {
   let s; try { s = await api('POST', '/api/link/start'); } catch (_) { say('Keine Verbindung'); return; }
   if (!s.ok) { say(s.error || 'Geht gerade nicht'); return; }
   const run = codeRun = { stop: false }, until = Date.now() + s.expires * 1000;
-  const page = (TEST ? location.origin + '/?cloudtest=' + encodeURIComponent(new URLSearchParams(location.search).get('cloudtest') || 'test') + '&' : HOST + '/?') + 'verbinden=' + s.code.replace('-', '');
+  // echte Anmeldung: /anmelden leitet direkt zu Googles Kontoauswahl (kein Spiel im Hintergrund); im Test die Seite im Spiel
+  const page = TEST ? location.origin + '/?cloudtest=' + encodeURIComponent(new URLSearchParams(location.search).get('cloudtest') || 'test') + '&verbinden=' + s.code.replace('-', '')
+    : HOST + '/anmelden?code=' + s.code.replace('-', '');
   const close = () => { run.stop = true; codeRun = null; closePanel(); };
   panel(`<h2>Anmelden im Browser</h2><p class="note">Im Browser hat sich die Anmeldung geöffnet. Wähle dort dein Google-Konto – danach geht es von selbst hierher zurück.</p>
     <div class="cbtns"><button class="btn primary" data-code="open">Nochmal öffnen</button><button class="btn" data-code="cancel">Abbrechen</button></div>
     <small class="cwait">Wartet auf die Anmeldung … · Anderes Gerät? ${s.url.replace(/^https?:\/\//, '')} mit Code <b>${s.code}</b></small>`);
   $('#cloudPick').onclick = e => { const b = e.target.closest('[data-code]'); if (!b) return; if (b.dataset.code === 'open') openUrl(page); else { close(); say(''); } };
   say('Wartet auf die Anmeldung …');
-  openUrl(page);
+  openUrl(page); appWindow('minimize');   // am PC: Spiel aus dem Weg, damit der Browser vorn ist
   while (!run.stop && Date.now() < until) {
     await sleep(s.interval * 1000);
     if (run.stop) return;
     let r; try { r = await api('POST', '/api/link/poll', { link: s.link }); } catch (_) { continue; }   // offline: weiter warten
     if (r.pending) continue;
-    close();
+    close(); appWindow('unminimize'); appWindow('setFocus');
     if (!r.ok) { say(r.error || 'Anmeldung fehlgeschlagen'); return; }
     await signedIn(r);
     return;
@@ -181,7 +186,7 @@ export async function logout() {
   if ((await choose('Abmelden?', 'Dein Spielstand bleibt in der Cloud. Auf diesem Gerät beginnt danach ein neues Spiel – melde dich wieder an, um weiterzuspielen.',
     [['ok', 'Abmelden', 'primary'], ['no', 'Abbrechen']])) !== 'ok') return;
   await sync();
-  if (!$('#cloudPick').hidden) return;   // Konflikt-Auswahl ist offen
+  if (!$('#cloudPick').hidden && !kicked) return;   // Konflikt-Auswahl ist offen
   if (unsaved() && (await choose('Nicht alles gesichert', 'Der neueste Fortschritt ist noch nicht in der Cloud (keine Verbindung?). Wenn du dich jetzt abmeldest, ist er weg.',
     [['no', 'Angemeldet bleiben', 'primary'], ['ok', 'Trotzdem abmelden']])) !== 'ok') return;
   await signOut(); freshStart();
@@ -208,12 +213,13 @@ export async function deleteAccount() {
 export async function sync() {
   // nie mitten im Lauf: kostet Zeit auf dem Haupt-Thread und ein übernommener Cloud-Stand lädt die Seite neu.
   // Nach dem Lauf (runEnd → soon) kommt der Abgleich ohnehin.
-  if (!st.token || busy || linking || sceneName === 'run') return;
+  if (!st.token || busy || linking || kicked || sceneName === 'run') return;
   busy = true; say('Gleiche ab …');
   try {
     const c = await api('GET', '/api/save');
     if (!c.ok) { if (st.token) say(c.error || 'Abgleich fehlgeschlagen'); return; }
     if (c.acct && c.acct !== st.acct) { st.acct = c.acct; keep(); }
+    if (c.active === false) { elsewhere(c.activeName); return; }
     // Der Stand hier gehört einem anderen Konto: nie hochladen, sondern den Stand dieses Kontos holen (oder neu anfangen)
     const o = owner();
     if (o && st.acct && o.acct !== st.acct) { await switchAccount(c, o); return; }
@@ -241,6 +247,7 @@ async function switchAccount(c, o) {
 async function upload(force = false) {
   const r = await api('PUT', '/api/save', { data: JSON.stringify(save), level: save.profile.level, runs: save.stats.runs, base: st.base || 0, force });
   if (r.status === 409) { ask(r); return; }
+  if (r.status === 423) { elsewhere(r.activeName); return; }
   if (!r.ok) { say(r.error || 'Sichern fehlgeschlagen'); return; }
   st.base = r.updated; st.localAt = save.savedAt || 0; st.mark = mark(save); lastUp = Date.now(); done();
 }
@@ -270,6 +277,35 @@ function ask(c) {
   say('Wartet auf deine Wahl');
 }
 
+// ---------- Nur ein Gerät gleichzeitig (wie Clash Royale) ----------
+// Wer das Spiel öffnet oder sich anmeldet, wird das aktive Gerät. Die anderen dürfen nicht mehr speichern und zeigen
+// „Du spielst gerade auf …“, bis man dort „Hier weiterspielen“ wählt – dann kommt der neueste Stand aus der Cloud.
+let kicked = false;
+const devName = () => (window.__TAURI__ ? (/Android/i.test(navigator.userAgent) ? 'Handy-App' : 'PC-App') : (/Android|iPhone|iPad/i.test(navigator.userAgent) ? 'Browser am Handy' : 'Browser am PC'));
+async function takeDevice() { try { await api('POST', '/api/claim', { name: devName() }); kicked = false; } catch (_) { /* offline: der Server sperrt dann auch nichts */ } }
+function elsewhere(name) {
+  if (kicked) return;
+  kicked = true; say('Auf einem anderen Gerät aktiv');
+  const lost = unsaved() ? ' Was du hier seit dem letzten Sichern gespielt hast, wird nicht übernommen.' : '';
+  panel(`<h2>Du spielst woanders</h2><p class="note">Dein Konto ist gerade auf <b>${esc(name || 'einem anderen Gerät')}</b> aktiv. Damit nie zwei Spielstände entstehen, spielt immer nur ein Gerät.${lost}</p>
+    <div class="cbtns"><button class="btn primary" data-dev="here">Hier weiterspielen</button></div>`);
+  $('#cloudPick').onclick = async e => {
+    if (!e.target.closest('[data-dev]')) return;
+    e.target.closest('[data-dev]').disabled = true;
+    await takeDevice();
+    if (kicked) { e.target.closest('[data-dev]').disabled = false; say('Keine Verbindung'); return; }
+    closePanel();
+    // neuesten Stand holen: das andere Gerät hat weitergespielt
+    let c; try { c = await api('GET', '/api/save'); } catch (_) { say('Keine Verbindung'); return; }
+    if (c.ok && c.data && c.updated !== st.base) adopt(c); else sync();
+  };
+}
+// Ist dieses Gerät noch aktiv? (beim Zurückkommen und alle 45 s im Menü, nie im Lauf)
+async function checkActive() {
+  if (!st.token || kicked || linking || sceneName === 'run' || document.hidden) return;
+  try { const a = await api('GET', '/api/active'); if (a.ok && a.active === false) elsewhere(a.activeName); } catch (_) { /* offline */ }
+}
+
 // Nach dem Lauf (gebündelt) und beim Verlassen sichern
 function soon() {
   if (!st.token) return;
@@ -279,8 +315,11 @@ function soon() {
 export function startCloud() {
   if (!cloudReady()) return;
   if (linkMode) linkPanel();
-  else if (st.token) sync();
+  else if (st.token) takeDevice().then(sync);   // Spiel geöffnet: dieses Gerät ist jetzt das aktive
   on('runEnd', soon);   // soon() prüft selbst, ob angemeldet
-  document.addEventListener('visibilitychange', () => { if (document.hidden && (save.savedAt || 0) > (st.localAt || 0)) sync(); });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if ((save.savedAt || 0) > (st.localAt || 0)) sync(); } else checkActive();
+  });
+  setInterval(checkActive, 45e3);
 }
 export const saveNow = () => { persist(); return sync(); };
