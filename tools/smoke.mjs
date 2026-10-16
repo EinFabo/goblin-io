@@ -209,6 +209,11 @@ await p.keyboard.press('Escape');
 if (await vis('#howto')) hubFail('Esc schließt „So spielst du“ nicht');
 // Einstellungen: Schalter, Knopfgröße, Lautstärke-Regler; werden gespeichert und sofort angewendet
 await p.click('#optBtn');
+// PC (Maus): Handy-Knöpfe-Einstellungen versteckt, Vollbild-Schalter da. Ein echtes Tippen holt die Handy-Steuerung zurück
+const pcm = await p.evaluate(() => ({ pc: document.body.classList.contains('pc'), lefty: !!document.querySelector('#leftySw').offsetParent, full: !!document.querySelector('#fullSw').offsetParent }));
+if (!pcm.pc || pcm.lefty || !pcm.full) hubFail('PC-Modus: ' + JSON.stringify(pcm));
+await p.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch' })));
+if (await p.evaluate(() => document.body.classList.contains('pc'))) hubFail('Tippen schaltet den PC-Modus nicht ab');
 await p.click('#leftySw'); await p.click('#numSw'); await p.click('#btnSeg [data-bs="l"]');
 { const r = await p.locator('#musVol').boundingBox(); await p.mouse.click(r.x + r.width * .5, r.y + r.height / 2); }
 const opt = await p.evaluate(() => ({ s: GOBLIN.save.settings, lefty: document.body.classList.contains('lefty'), bs: getComputedStyle(document.documentElement).getPropertyValue('--bs').trim(), sw: document.querySelector('#leftySw').getAttribute('aria-checked') }));

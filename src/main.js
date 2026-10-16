@@ -19,6 +19,7 @@ import './debug.js';
 import { startPerf } from './perf.js';
 import { startUpdateCheck } from './app-update.js';
 import { startCloud } from './cloud.js';
+import { startPlatform } from './ui/platform.js';
 
 loadSave();
 resize();
@@ -27,3 +28,4 @@ startLoop();
 if (/[?&]perf\b/.test(location.search)) startPerf();
 startUpdateCheck();
 startCloud();
+startPlatform();

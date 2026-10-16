@@ -231,13 +231,18 @@
       <span class="on">Schadenszahlen</span>
       <button class="sw" id="numSw" role="switch" aria-label="Schadenszahlen"><i></i></button>
     </div>
-    <h3 class="sect">Steuerung <small>Handy-Knöpfe</small></h3>
-    <div class="optrow">
+    <div class="optrow pconly">
+      <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="on">Vollbild <small>F11</small></span>
+      <button class="sw" id="fullSw" role="switch" aria-label="Vollbild"><i></i></button>
+    </div>
+    <h3 class="sect touchonly">Steuerung <small>Handy-Knöpfe</small></h3>
+    <div class="optrow touchonly">
       <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21c-2-2-3-5-3-8V9a1.5 1.5 0 0 1 3 0v3V4.5a1.5 1.5 0 0 1 3 0V11V3.5a1.5 1.5 0 0 1 3 0V11V5a1.5 1.5 0 0 1 3 0v9c0 3-1 5-3 7Z" fill="currentColor"/></svg>
       <span class="on">Knöpfe links</span>
       <button class="sw" id="leftySw" role="switch" aria-label="Knöpfe links (Linkshänder)"><i></i></button>
     </div>
-    <div class="optrow segrow">
+    <div class="optrow segrow touchonly">
       <svg class="oi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="15" cy="15" r="7" fill="currentColor"/><circle cx="6" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
       <span class="on">Knopfgröße</span>
       <div class="seg" id="btnSeg" role="radiogroup" aria-label="Knopfgröße"><button role="radio" data-bs="s">Klein</button><button role="radio" data-bs="m">Normal</button><button role="radio" data-bs="l">Groß</button></div>

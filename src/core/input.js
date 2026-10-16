@@ -37,11 +37,15 @@ cv.addEventListener('pointerdown', e => {
   audioInit();
   if (run && run.cut) skipCut();
   if (joy.id !== null) return;
+  if (e.pointerType === 'mouse' && document.body.classList.contains('pc')) return;   // am PC kein Maus-Joystick (WASD)
   joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY;
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}
 });
 cv.addEventListener('pointermove', e => { if (e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; } });
 export const joyEnd = e => { if (e.pointerId === joy.id) joy.id = null; };
 cv.addEventListener('pointerup', joyEnd); cv.addEventListener('pointercancel', joyEnd);
-window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; joy.id = null; setSprintHeld(false); if (run && !run.paused && !run.over) openPause(); });
+// Fenster verliert den Fokus (Browser-Tab, exe minimiert oder anderes Fenster): Tasten loslassen, Lauf pausieren.
+// Die exe meldet das zusätzlich über Tauri (ui/platform.js), weil WebView2 blur nicht immer schickt.
+export function lostFocus() { for (const k in keys) keys[k] = false; joy.id = null; setSprintHeld(false); if (run && !run.paused && !run.over) openPause(); }
+window.addEventListener('blur', lostFocus);
 document.addEventListener('visibilitychange', () => { if (document.hidden && run && !run.paused && !run.over) openPause(); });

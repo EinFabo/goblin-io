@@ -38,7 +38,8 @@ export function defaults() {
     // Fähigkeiten-Level und Skill Tree, auch Rolle (dash) und Sprint: { id: { lv, xp, pts: { pow, cd, area, s1, a, s2, s3, b, m } } }
     abilities: {},
     // Einstellungen (ui/settings.js): Lautstärke 0–1, btn = Größe der Handy-Knöpfe (s/m/l), lefty = Knöpfe links
-    settings: { mute: false, musicOff: false, sfxVol: 1, musVol: 1, shake: true, numbers: true, lefty: false, btn: 'm' },
+    // full: Vollbild (exe merkt es sich über den Neustart)
+    settings: { mute: false, musicOff: false, sfxVol: 1, musVol: 1, shake: true, numbers: true, lefty: false, btn: 'm', full: false },
     // Zeitpunkt der letzten Änderung (persist); der Cloud-Abgleich erkennt daran, ob sich lokal etwas getan hat
     savedAt: 0,
     // Karten (9.3): { id: { lv, n } }; ohne Eintrag Startstufe der Seltenheit
@@ -108,7 +109,7 @@ export function normalize(raw) {
     abilities: normAbilities(r.abilities),
     settings: {
       mute: bool(se.mute, false), musicOff: bool(se.musicOff, false), sfxVol: num(se.sfxVol, 1, 0, 1), musVol: num(se.musVol, 1, 0, 1),
-      shake: bool(se.shake, true), numbers: bool(se.numbers, true), lefty: bool(se.lefty, false), btn: ['s', 'm', 'l'].includes(se.btn) ? se.btn : 'm',
+      shake: bool(se.shake, true), numbers: bool(se.numbers, true), lefty: bool(se.lefty, false), btn: ['s', 'm', 'l'].includes(se.btn) ? se.btn : 'm', full: bool(se.full, false),
     },
     cards: {},
     chests: { shelf: [], free: { n: 1, t: 0 } },

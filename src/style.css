@@ -132,6 +132,15 @@ body.cine #hud,body.cine #ctrl,body.cine #hint{opacity:0;transition:opacity .3s}
 @media (max-height:520px){:root{--bsx:calc(var(--bs,1) * .8)}}
 /* Linkshänder (Einstellungen): Knöpfe gespiegelt nach links unten */
 body.lefty #ctrl{right:auto;left:calc(12px + env(safe-area-inset-left,0px));transform-origin:bottom left}
+/* PC (Maus/Tastatur, ui/platform.js): statt Handy-Knöpfen eine kleine Leiste unten in der Mitte, nur zur Anzeige der Ladung */
+body.pc #ctrl{left:50%;right:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:auto;height:auto;transform:translateX(-50%);display:flex;gap:12px;align-items:flex-end}
+body.pc #ctrl .abil{position:relative;inset:auto;width:58px;height:58px;pointer-events:none}
+body.pc #ctrl .abil .lbl{font-size:8px}
+body.pc #ctrl .abil .key{top:auto;bottom:-6px;left:50%;transform:translateX(-50%);color:var(--ink)}
+body.pc #dashBtn{order:-2}body.pc #sprintBtn{order:-1}
+body.pc .touchonly{display:none}
+body.nofull .pconly{display:none}
+body.pc #hint{bottom:calc(86px + env(safe-area-inset-bottom,0px));max-width:min(560px,calc(100% - 40px))}
 body.lefty #ab0Btn{right:auto;left:0}
 body.lefty #ab1Btn{right:auto;left:98px}
 body.lefty #dashBtn{right:auto;left:0}
