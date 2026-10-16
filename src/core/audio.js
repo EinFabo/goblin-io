@@ -19,16 +19,19 @@ export function audioInit() {
     emit('audioReady');
   } catch (e) { AC = null; }
 }
-export function thr(k, ms) { const n = performance.now(); if (lastS[k] && n - lastS[k] < ms) return false; lastS[k] = n; return true; }
+// Stumm für Abläufe ohne Ton (Vorschau im Entwicklungs-Baum)
+let hush = 0;
+export function hushed(fn) { hush++; try { return fn(); } finally { hush--; } }
+export function thr(k, ms) { if (hush) return false; const n = performance.now(); if (lastS[k] && n - lastS[k] < ms) return false; lastS[k] = n; return true; }
 export function tone(f0, f1, dur, type = 'square', vol = .1, delay = 0, bus = null, attack = .004) {
-  if (!AC) return;
+  if (!AC || hush) return;
   const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
   o.connect(g); g.connect(bus || sfxBus); o.start(t); o.stop(t + dur + .03);
 }
 export function noise(dur, vol, freq, type = 'lowpass', delay = 0, bus = null, q = 1, f1 = 0) {
-  if (!AC) return;
+  if (!AC || hush) return;
   const t = AC.currentTime + delay, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
   s.buffer = noiseBuf; f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q; if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur);

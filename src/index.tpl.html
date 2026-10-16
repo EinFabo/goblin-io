@@ -141,7 +141,7 @@
     <div class="phead"><h2>Werkstatt</h2>
       <div class="subtabs" role="tablist"><button class="sub" data-sub="cards" role="tab">Karten</button><button class="sub" data-sub="talents" role="tab">Talente</button></div></div>
     <div id="cardsView">
-      <p class="note">Karten aus Truhen und dem Laden werten Waffen und Passive dauerhaft auf. Tippe eine Karte an.</p>
+      <div class="notebar"><p class="note">Karten aus Truhen und dem Laden werten Waffen und Passive dauerhaft auf. Tippe eine Karte an.</p><button class="btn ghost small" id="wsEvoBtn">Entwicklungen</button></div>
       <div class="cardgrid" id="cardGrid"></div>
     </div>
     <div id="talentsView" hidden>
@@ -240,6 +240,7 @@
       <button class="btn ghost small" id="rerollBtn">Neu würfeln (2)</button>
       <button class="btn ghost small" id="banBtn">Bannen (1)</button>
       <button class="btn ghost small" id="lockBtn">Sperren (1)</button>
+      <button class="btn ghost small" id="lvEvoBtn">Entwicklungen</button>
     </div>
     <div class="lvtools skip"><span>Überspringen:</span>
       <button class="btn ghost small" id="skipGold">+15 Gold</button>
@@ -255,8 +256,19 @@
     <div class="build" id="buildList"></div>
     <div class="menubtns row">
       <button class="btn primary" id="resumeBtn">Weiter</button>
+      <button class="btn ghost" id="pEvoBtn">Entwicklungen</button>
       <button class="btn ghost" id="pOptBtn">Einstellungen</button>
       <button class="btn danger" id="quitBtn">Aufgeben</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="evoTree" hidden>
+  <div class="panel evopanel">
+    <div class="phead"><h2>Entwicklungen</h2><button class="iconbtn" id="evoClose" aria-label="Schließen">✕</button></div>
+    <div class="evobody">
+      <div class="evoprev"><canvas id="evoCv" aria-label="Vorschau"></canvas><div class="evocap" id="evoCap"></div></div>
+      <div class="evolist" id="evoList"></div>
     </div>
   </div>
 </div>

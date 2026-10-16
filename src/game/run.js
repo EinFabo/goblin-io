@@ -165,7 +165,7 @@ export function update(dt) {
   }
 }
 // Effekte, Partikel, Schadenszahlen, Wackeln
-function updFx(dt) {
+export function updFx(dt) {
   for (const f of run.fx) { f.t += dt; if (f.k === 'later' && f.t >= f.dur) f.fn(); }
   run.fx = run.fx.filter(f => f.k === 'anim' ? f.t * f.fps < f.n : f.t < f.dur);
   for (const p of run.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .96; p.vy *= .96; }
@@ -176,7 +176,7 @@ function updFx(dt) {
 }
 
 // Positionen vor dem Schritt merken, damit der Renderer zwischen zwei Schritten interpolieren kann
-function savePrev() {
+export function savePrev() {
   P.px = P.x; P.py = P.y;
   run.cam.px = run.cam.x; run.cam.py = run.cam.y;
   for (const e of run.enemies) { e.px = e.x; e.py = e.y; }

@@ -4,6 +4,7 @@ import { doDash, useAbility } from '../game/abilities.js';
 import { skipCut } from '../game/boss.js';
 import { run, uiFrozen } from '../game/state.js';
 import { cv } from '../render/canvas.js';
+import { closeTree } from '../ui/evotree.js';
 import { openPause, resume } from '../ui/pause.js';
 
 // ---------- Eingabe ----------
@@ -16,6 +17,8 @@ window.addEventListener('keydown', e => {
   audioInit();
   if (!run || run.over) return;
   // Einstellungen/Hilfe über der Pause: Esc schließt nur das obere Fenster
+  // Entwicklungs-Baum über Level-Up/Pause: Esc schließt nur ihn, sonst keine Tasten
+  if (!$('#evoTree').hidden) { if (e.code === 'Escape') closeTree(); return; }
   if (!$('#options').hidden || !$('#howto').hidden) { if (e.code === 'Escape') $(!$('#howto').hidden ? '#howto' : '#options').hidden = true; return; }
   if (run.cut && !run.paused && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); skipCut(); return; }
   // Steht die Welt für eine Animation, lösen Rolle und Fähigkeiten nicht aus

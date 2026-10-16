@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mulberry32 } from '../src/core/rng.js';
 import { WEAPONS } from '../src/data/weapons.js';
-import { PITY_MAX, candidates, canBan, drawOffer, itemKey, newOfferState, pityPassives, replaceCard, settleOffer } from '../src/game/offer.js';
+import { MAX_P, PITY_MAX, candidates, canBan, drawOffer, itemKey, newOfferState, pityPassives, replaceCard, settleOffer, swapCards } from '../src/game/offer.js';
 
 // Wendet eine Karte auf den Testzustand an (wie applyChoice, nur ohne Lauf)
 function apply(S, c) {
@@ -10,11 +10,12 @@ function apply(S, c) {
   else if (c.k === 'upW') S.weapons.find(w => w.id === c.id).lv++;
   else if (c.k === 'evo') S.weapons.find(w => w.id === c.id).evo = true;
   else if (c.k === 'newP' || c.k === 'upP') S.passives[c.id] = (S.passives[c.id] || 0) + 1;
+  else if (c.k === 'swap') { const lv = S.passives[c.from]; delete S.passives[c.from]; S.passives[c.id] = lv; }
 }
 
 // Prüft eine Auswahl gegen die Regeln aus PLAN 7.2. Gibt den Grund zurück, falls eine Regel verletzt ist.
 function check(S, offer, n) {
-  const keys = offer.map(itemKey), pool = candidates(S), slotsFor = why => offer.filter(c => c.why === 'lock' || c.why === 'evo' || why.includes(c.why)).length < n;
+  const keys = offer.map(itemKey), pool = candidates(S), slotsFor = why => offer.filter(c => c.why === 'lock' || c.why === 'evo' || c.why === 'swap' || why.includes(c.why)).length < n;
   if (new Set(keys).size !== keys.length) return 'doppelt';
   if (offer.length !== n) return 'Anzahl';
   for (const c of offer) if (S.banned.has(itemKey(c))) return 'gebannt: ' + itemKey(c);
@@ -106,4 +107,55 @@ test('Wurfdolch steigt von selbst auf: nie als Aufwertungs-Karte, Entwicklung bl
   }
   const S = { ...newOfferState(), weapons: [{ id: 'dagger', lv: 5, evo: false }], passives: { whet: 1 } };
   assert.ok(drawOffer(S, r).some(c => c.k === 'evo' && c.id === 'dagger'), 'Dolchsturm fehlt');
+});
+
+// Umschmieden (Wunsch Fabi 2026-10-16): volle Passiv-Plätze verbauen keine Entwicklung mehr
+test('Umschmieden: volle Passiv-Plätze ohne passendes Passiv → Tauschkarte, Stufe bleibt', () => {
+  const wrong = ['armor', 'boots', 'herbs', 'magnet', 'powder', 'oil'];   // passen zu keiner der Waffen unten
+  const S = { ...newOfferState(), weapons: [{ id: 'dagger', lv: 5, evo: false }, { id: 'hammer', lv: 2, evo: false }], passives: Object.fromEntries(wrong.map((p, i) => [p, i < 2 ? 1 : 3])) };
+  assert.equal(Object.keys(S.passives).length, MAX_P);
+  const sw = swapCards(S);
+  // Hammer erst Stufe 2: nur der Dolch (Stufe 5, braucht Wetzstein) bekommt eine Karte; weg fällt ein Passiv mit Stufe 1
+  assert.deepEqual(sw.map(c => [c.id, c.ready]), [['whet', true]]);
+  assert.equal(S.passives[sw[0].from], 1);
+  // Bei Stufe 5 ist sie garantiert im Angebot
+  const r = mulberry32(7);
+  for (let i = 0; i < 50; i++) assert.ok(drawOffer(S, r).some(c => c.k === 'swap' && c.id === 'whet' && c.from), 'Tauschkarte fehlt');
+  // Danach: Entwicklung möglich, Stufe übernommen
+  const c = drawOffer(S, r).find(x => x.k === 'swap'), lv = S.passives[c.from];
+  apply(S, c);
+  assert.equal(S.passives.whet, lv); assert.equal(S.passives[c.from], undefined);
+  assert.ok(drawOffer(S, r).some(x => x.k === 'evo' && x.id === 'dagger'));
+  assert.deepEqual(swapCards(S), []);
+});
+
+test('Umschmieden: nur wenn die Plätze voll sind, nie ein noch gebrauchtes Passiv, Bannen wirkt', () => {
+  const S = { ...newOfferState(), weapons: [{ id: 'dagger', lv: 4, evo: false }, { id: 'orbit', lv: 3, evo: false }], passives: { armor: 2, boots: 2, herbs: 2, magnet: 2, powder: 2 } };
+  assert.deepEqual(swapCards(S), [], 'Platz frei: lieber das Passiv neu nehmen');
+  S.passives.book = 1;
+  const sw = swapCards(S);
+  assert.deepEqual(sw.map(c => c.id).sort(), ['amulet', 'whet']);
+  assert.equal(new Set(sw.map(c => c.from)).size, 2, 'jede Karte tauscht ein anderes Passiv');
+  // Wetzstein selbst wird gebraucht, darf also nie wegfallen
+  S.passives = { whet: 1, armor: 2, boots: 2, herbs: 2, magnet: 2, powder: 2 };
+  S.weapons[0].lv = 5;
+  for (const c of swapCards(S)) assert.notEqual(c.from, 'whet');
+  S.banned.add('s:amulet');
+  assert.deepEqual(swapCards(S), []);
+  assert.ok(canBan({ k: 'swap', id: 'amulet' }));
+});
+
+test('Umschmieden: gesperrte Tauschkarte kommt mit demselben Passiv wieder', () => {
+  const S = { ...newOfferState(), weapons: [{ id: 'dagger', lv: 5, evo: false }], passives: { armor: 1, boots: 1, herbs: 3, magnet: 3, powder: 3, oil: 3 } };
+  const r = mulberry32(3);
+  const offer = drawOffer(S, r), i = offer.findIndex(c => c.k === 'swap'), from = offer[i].from;
+  const other = offer.findIndex(c => c.k === 'upP' && c.id === from);
+  settleOffer(S, offer, other >= 0 ? other : (i + 1) % offer.length, i);
+  if (other >= 0) S.passives[from]++;   // das gezeigte Passiv wird stärker: wäre sonst nicht mehr das schwächste
+  const again = drawOffer(S, r);
+  assert.equal(again[0].why, 'lock'); assert.equal(again[0].k, 'swap'); assert.equal(again[0].from, from);
+  // Ist das Passiv nicht mehr entbehrlich (eigene Waffe braucht es), verfällt die Sperre
+  settleOffer(S, again, 1, 0);
+  S.weapons.push({ id: Object.keys(WEAPONS).find(k => WEAPONS[k].with === from), lv: 1, evo: false });
+  assert.ok(!drawOffer(S, r).some(c => c.why === 'lock'));
 });

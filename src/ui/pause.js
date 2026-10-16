@@ -4,6 +4,7 @@ import { $ } from '../core/util.js';
 import { endRun } from '../game/run.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
+import { openTree } from './evotree.js';
 import { slotHtml } from './hud.js';
 
 // ---------- Pause ----------
@@ -23,4 +24,5 @@ export function openPause() {
 export function resume() { $('#pause').hidden = true; if (run && $('#levelup').hidden) { run.paused = false; Music.start(); } }
 $('#pauseBtn').addEventListener('click', () => openPause());
 $('#resumeBtn').addEventListener('click', resume);
+$('#pEvoBtn').addEventListener('click', () => openTree(null, true));
 $('#quitBtn').addEventListener('click', () => { $('#pause').hidden = true; endRun(false); });

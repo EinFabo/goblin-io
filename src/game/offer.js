@@ -11,7 +11,7 @@ const BASE = { newW: 4, newP: 3 };
 const NEW_W = BASE.newW * 10 / Object.keys(WEAPONS).length, NEW_P = BASE.newP * 10 / Object.keys(PASSIVES).length;
 
 // Bannen und Sperren gelten für den Gegenstand, nicht für die Kartenart
-export const itemKey = c => c.k === 'evo' ? 'e:' + c.id : c.k === 'newW' || c.k === 'upW' ? 'w:' + c.id : c.k === 'newP' || c.k === 'upP' ? 'p:' + c.id : c.k;
+export const itemKey = c => c.k === 'evo' ? 'e:' + c.id : c.k === 'swap' ? 's:' + c.id : c.k === 'newW' || c.k === 'upW' ? 'w:' + c.id : c.k === 'newP' || c.k === 'upP' ? 'p:' + c.id : c.k;
 export const canBan = c => c.k !== 'evo' && c.k !== 'heal' && c.k !== 'gold';
 
 export function newOfferState() { return { banned: new Set(), rej: {}, pity: {}, lock: null }; }
@@ -23,6 +23,27 @@ export function pityPassives(S) {
   for (const w of S.weapons) {
     const p = WEAPONS[w.id].with;
     if (w.lv >= 3 && !w.evo && !S.passives[p] && !S.banned.has('p:' + p) && !out.includes(p)) out.push(p);
+  }
+  return out;
+}
+
+// Umschmieden (Wunsch Fabi 2026-10-16): Sind die Passiv-Plätze voll und fehlt einer eigenen Waffe (ab Stufe 3) ihr Passiv,
+// wird ein Passiv, das keine eigene Waffe mehr braucht, zum fehlenden; die Stufe bleibt. So ist keine Entwicklung verbaut.
+// Weg fällt jeweils das schwächste entbehrliche Passiv. ready: die Waffe ist schon auf Stufe 5
+// Passive, die keine eigene (noch nicht entwickelte) Waffe braucht, schwächstes zuerst
+export function sparePassives(S) {
+  const need = new Set(S.weapons.filter(w => !w.evo).map(w => WEAPONS[w.id].with));
+  return Object.keys(S.passives).filter(p => !need.has(p)).sort((a, b) => S.passives[a] - S.passives[b]);
+}
+export function swapCards(S) {
+  if (Object.keys(S.passives).length < MAX_P) return [];
+  const spare = sparePassives(S);
+  const out = [];
+  for (const w of S.weapons) {
+    const p = WEAPONS[w.id].with;
+    if (w.evo || w.lv < 3 || S.passives[p] || S.banned.has('s:' + p) || S.banned.has('p:' + p) || out.some(c => c.id === p)) continue;
+    const from = spare[out.length]; if (!from) break;
+    out.push({ k: 'swap', id: p, from, wgt: BASE.newP * OWN_MULT, ready: w.lv >= 5 });
   }
   return out;
 }
@@ -41,8 +62,12 @@ export function candidates(S) {
     if (lv > 0 && lv < 5) pool.push({ k: 'upP', id, wgt: BASE.newP * OWN_MULT });
     else if (lv === 0 && pc < MAX_P) pool.push({ k: 'newP', id, wgt: (pity.includes(id) ? BASE.newP * (1 + PITY_STEP * (S.pity[id] || 0)) : NEW_P) });
   }
+  pool.push(...swapCards(S));
   return pool;
 }
+
+// Karte fürs Angebot: nur Art, Gegenstand (beim Umschmieden auch, was wegfällt) und Grund
+const card = (c, why) => (c.from ? { k: c.k, id: c.id, from: c.from, why } : { k: c.k, id: c.id, why });
 
 // avoid: Schlüssel, die nach Möglichkeit nicht kommen sollen (z. B. beim Neu-Würfeln die alten Karten)
 export function drawOffer(S, rnd, { n = 3, avoid = [] } = {}) {
@@ -50,7 +75,7 @@ export function drawOffer(S, rnd, { n = 3, avoid = [] } = {}) {
   const soft = new Set(avoid);
   for (const k in S.rej) if (S.rej[k] >= 2) soft.add(k);
   const free = c => !used.has(itemKey(c));
-  const take = (c, why) => { if (c && out.length < n && free(c)) { out.push({ k: c.k, id: c.id, why }); used.add(itemKey(c)); } return c; };
+  const take = (c, why) => { if (c && out.length < n && free(c)) { out.push(card(c, why)); used.add(itemKey(c)); } return c; };
   const weighted = list => {
     let tot = 0; for (const c of list) tot += c.wgt || 1;
     let r = rnd() * tot;
@@ -66,9 +91,16 @@ export function drawOffer(S, rnd, { n = 3, avoid = [] } = {}) {
   const has = k => out.some(c => c.k === k);
 
   // 0. Gesperrte Karte vom letzten Mal
-  if (S.lock) take(pool.find(c => c.k === S.lock.k && c.id === S.lock.id), 'lock');
+  //    (Tauschkarte: mit dem Passiv, das sie zeigte – ist das nicht mehr entbehrlich, verfällt die Sperre)
+  if (S.lock) {
+    let c = pool.find(x => x.k === S.lock.k && x.id === S.lock.id);
+    if (c && c.k === 'swap') c = sparePassives(S).includes(S.lock.from) ? { ...c, from: S.lock.from } : null;
+    take(c, 'lock');
+  }
   // 1. Entwicklungen
   for (const c of pool) if (c.k === 'evo') take(c, 'evo');
+  // 1b. Umschmieden, sobald eine Waffe Stufe 5 hat und ihr Passiv fehlt (einmal je Angebot; zweimal abgelehnt → nur noch gewichtet)
+  take(pool.find(c => c.k === 'swap' && c.ready && !(S.rej[itemKey(c)] >= 2)), 'swap');
   // 2. Startphase: bis 3 Waffen immer eine neue Waffe
   if (S.weapons.length < 3 && !has('newW')) take(choose(pool.filter(c => c.k === 'newW')), 'start');
   // 3. Fokus: eine Aufwertung einer eigenen Waffe
@@ -95,7 +127,7 @@ export function replaceCard(S, offer, i, rnd) {
   let tot = 0; for (const c of list) tot += c.wgt;
   let r = rnd() * tot, c = list[list.length - 1];
   for (const x of list) { r -= x.wgt; if (r <= 0) { c = x; break; } }
-  offer[i] = { k: c.k, id: c.id, why: 'rest' };
+  offer[i] = card(c, 'rest');
   return offer;
 }
 
@@ -107,6 +139,6 @@ export function settleOffer(S, offer, picked, lockIdx = -1) {
   for (const k of shown) if (k !== pk) rej[k] = (S.rej[k] || 0) + 1;
   S.rej = rej;   // nicht gezeigte oder gewählte Karten fangen wieder bei 0 an
   for (const p of pityPassives(S)) S.pity[p] = shown.has('p:' + p) ? 0 : (S.pity[p] || 0) + 1;
-  S.lock = lockIdx >= 0 && lockIdx !== picked ? { k: offer[lockIdx].k, id: offer[lockIdx].id } : null;
+  S.lock = lockIdx >= 0 && lockIdx !== picked ? card(offer[lockIdx]) : null;
   if (S.lock) delete S.rej[itemKey(offer[lockIdx])];
 }

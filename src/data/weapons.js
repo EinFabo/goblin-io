@@ -103,3 +103,5 @@ export const MEGAS = {
 };
 // Zu welcher Mega gehört eine Waffe?
 export const megaOf = id => Object.keys(MEGAS).find(m => MEGAS[m].of.includes(id));
+// Welche Waffe entwickelt sich mit diesem Passiv?
+export const weaponOf = pid => Object.keys(WEAPONS).find(k => WEAPONS[k].with === pid);

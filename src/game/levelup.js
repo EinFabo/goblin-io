@@ -71,12 +71,23 @@ export function autoUp() {
   }
 }
 
+// Umschmieden: from wird an seinem Platz zu to, die Stufe bleibt. run.passives in place ändern
+// (das Angebot hält dasselbe Objekt), Reihenfolge der Plätze bleibt
+function swapPassive(from, to, quiet) {
+  const ent = Object.entries(run.passives);
+  for (const [k] of ent) delete run.passives[k];
+  for (const [k, lv] of ent) run.passives[k === from ? to : k] = lv;
+  if (!quiet) banner(`${PASSIVES[from].name} → ${PASSIVES[to].name}`, '');
+  count(run, 'swap');
+}
+
 // quiet: kein Entwicklungs-Banner (die Truhen-Öffnung zeigt die Entwicklung schon)
 export function applyChoice(c, quiet = false) {
   if (c.k === 'newW') addWeapon(c.id);
   else if (c.k === 'upW') run.weapons.find(w => w.id === c.id).lv++;
   else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; if (!quiet) banner(WEAPONS[c.id].evo + '!', ''); count(run, 'evo'); }
   else if (c.k === 'newP' || c.k === 'upP') run.passives[c.id] = (run.passives[c.id] || 0) + 1;
+  else if (c.k === 'swap') swapPassive(c.from, c.id, quiet);
   else if (c.k === 'heal') P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .4);
   else if (c.k === 'gold') run.gold += 25;
   recalc(); refreshSlots();

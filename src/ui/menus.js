@@ -15,6 +15,7 @@ import { renderWardrobe, wardrobeChanged } from './wardrobe.js';
 import { profileHooks } from './profile.js';
 import { achChanged, achNews, renderAch } from './achievements.js';
 import { shownWallet } from './rewardfx.js';
+import { closeTree } from './evotree.js';
 
 // ---------- Hub (PLAN 10.1): Leiste oben, Tabs unten ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
@@ -27,7 +28,7 @@ export async function startStage(si, li = 0, nm = false) {
   go('run', { si, li, nm });
 }
 const TABS = ['#store', '#shop', '#menu', '#armory', '#profile'];
-const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen'];
+const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#evoTree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen'];
 let curTab = null;
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
 export function showScreen(id) {
@@ -79,7 +80,10 @@ onStart((si, li, nm) => startStage(si, li, nm));
 const overlayOpen = () => OVERLAYS.some(o => !$(o).hidden);
 window.addEventListener('keydown', e => {
   if (!document.body.classList.contains('hub') || e.target.closest('input')) return;
-  if (e.code === 'Escape') { for (const o of ['#howto', '#options', '#cardInfo', '#oddsInfo']) if (!$(o).hidden) { $(o).hidden = true; return; } }
+  if (e.code === 'Escape') {
+    if (!$('#evoTree').hidden) { closeTree(); return; }
+    for (const o of ['#howto', '#options', '#cardInfo', '#oddsInfo']) if (!$(o).hidden) { $(o).hidden = true; return; }
+  }
   if (curTab === '#menu' && !overlayOpen()) mapKey(e);
 });
 

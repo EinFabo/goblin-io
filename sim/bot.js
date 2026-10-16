@@ -13,10 +13,10 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
   let bossT0 = null, bossT = null;
   const off2 = G.events.on('bossSpawn', () => { bossT0 = run.time; }), off3 = G.events.on('bossDown', () => { if (bossT0 !== null) bossT = run.time - bossT0; });
   const lvAt = {};
-  const pr = { evo: 0, upW: 1, newW: 2, upP: 3, newP: 4, heal: 5, gold: 6 };
+  const pr = { evo: 0, swap: 0, upW: 1, newW: 2, upP: 3, newP: 4, heal: 5, gold: 6 };
   const pickCard = () => {
     const c = G.genChoices(), ord = c.map((x, i) => i).sort((a, b) => pr[c[a].k] - pr[c[b].k]);
-    if (run.weapons.length >= 3) { const u = ord.find(i => c[i].k === 'upW' || c[i].k === 'evo'); if (u !== undefined) return G.choose(c, u); }
+    if (run.weapons.length >= 3) { const u = ord.find(i => c[i].k === 'upW' || c[i].k === 'evo' || c[i].k === 'swap'); if (u !== undefined) return G.choose(c, u); }
     G.choose(c, ord[0]);
   };
   let abil = 0;

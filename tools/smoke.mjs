@@ -316,6 +316,35 @@ await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 0, seed: 6 }); G.ru
 const prog = await p.evaluate(() => ({ hat: GOBLIN.save.look.hat, ach: GOBLIN.save.ach.kills, rolls: GOBLIN.save.stats.c.rolls || 0, levels: GOBLIN.save.stats.c.levels || 0 }));
 if (prog.hat !== 'viking' || prog.ach !== 1 || !prog.rolls || !prog.levels) errs.push('Garderobe/Erfolge/Zähler: ' + JSON.stringify(prog));
 console.log('Garderobe, Erfolge, Zähler:', JSON.stringify(prog));
+// Entwicklungs-Baum (Wunsch Fabi 2026-10-16): Vorschau aus Werkstatt und Level-Up; ein Lauf mit offener Vorschau
+// geht genauso aus wie ohne (eigener Zufall, kein Ton, keine Ereignisse)
+const evo = {};
+await p.evaluate(() => GOBLIN.go('menu', '#shop'));
+await p.waitForTimeout(200);
+await p.click('#wsEvoBtn'); await p.waitForTimeout(400);
+await p.click('[data-n="m:comet"]'); await p.waitForTimeout(900);
+evo.hub = await p.evaluate(() => ({ open: !document.querySelector('#evoTree').hidden, groups: document.querySelectorAll('#evoList .evogrp').length, cap: document.querySelector('#evoCap .nm').textContent }));
+await p.keyboard.press('Escape');
+const trace = async peek => p.evaluate(async peek => {
+  const G = GOBLIN; G.go('run', { si: 1, li: 2, seed: 77 });
+  const run = G.run; run.paused = true;
+  // nicht unverwundbar: Kontakttreffer, Dornen und Ausweichen fragen das Raster ab und müssen gleich ausgehen
+  const steps = n => { for (let i = 0; i < n && !run.over; i++) { G.P.hp = G.P.maxHp; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } } };
+  steps(1800);
+  if (peek) {
+    document.querySelector('#pEvoBtn').click();
+    await new Promise(r => setTimeout(r, 700));   // ein paar echte Vorschau-Bilder
+    document.querySelector('[data-n="m:plague"]').click();
+    await new Promise(r => setTimeout(r, 700));
+    document.querySelector('#evoClose').click();
+  }
+  steps(1800);
+  return [JSON.stringify(run.cnt), run.kills, Math.round(G.P.hp * 100), run.enemies.length, Math.round(run.enemies.reduce((s, e) => s + e.x + e.y, 0)), G.P.lv, run.weapons.map(w => w.id + w.lv).join()].join('|');
+}, peek);
+evo.same = (await trace(false)) === (await trace(true));
+await p.evaluate(() => { GOBLIN.run.paused = true; GOBLIN.go('menu'); });
+if (!evo.hub.open || evo.hub.groups !== 10 || !evo.same) errs.push('Entwicklungs-Baum: ' + JSON.stringify(evo));
+console.log('Entwicklungs-Baum mit Vorschau:', JSON.stringify(evo));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

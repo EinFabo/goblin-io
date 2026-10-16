@@ -2,8 +2,15 @@ import { $, clamp } from '../core/util.js';
 import { SPR, U, blit, tinted } from './sprites.js';
 
 // ---------- Canvas ----------
-export const cv = $('#cv'), ctx = cv.getContext('2d');
+export let cv = $('#cv'), ctx = cv.getContext('2d');
 export let W = 0, H = 0, DPR = 1, ZOOM = 1;
+// Alles Zeichnen (und die Bildschirmmaße der Logik) kurz auf eine andere Fläche umlenken, z. B. die Vorschau
+// im Entwicklungs-Baum (ui/evotree.js). ES-Module binden live: alle Importe sehen die neue Fläche.
+export function withCanvas(c, w, h, dpr, zoom, fn) {
+  const prev = [cv, ctx, W, H, DPR, ZOOM];
+  cv = c; ctx = c.getContext('2d'); W = w; H = h; DPR = dpr; ZOOM = zoom;
+  try { return fn(); } finally { [cv, ctx, W, H, DPR, ZOOM] = prev; }
+}
 export function resize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
   W = window.innerWidth; H = window.innerHeight;
