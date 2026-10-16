@@ -31,6 +31,7 @@ const tempo = b => (phase(b).spd || 1) * (b.rage ? 1.5 : 1);
 
 // Ein Boss als Gegner-Objekt (auch für Malvorns Schatten)
 export function makeBoss(id, { x = P.x, y = P.y - 300 } = {}) {
+  // Endlose Nacht: jeder weitere Boss ist stärker (Runde = besiegte Bosse; ein Boss springt nicht mitten im Kampf)
   const st = run.st, B = BOSSES[id], lf = 1 + run.loop * 1.5;
   const b = {
     type: 'boss', boss: true, id, B, pre: 'm.' + bossVariant(id), name: B.name, x, y, r: 38, sc: 2.7, spd: 52 * (B.spd || 1), dmg: 13 * st.dmg * lf,

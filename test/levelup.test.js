@@ -159,3 +159,25 @@ test('Umschmieden: gesperrte Tauschkarte kommt mit demselben Passiv wieder', () 
   S.weapons.push({ id: Object.keys(WEAPONS).find(k => WEAPONS[k].with === from), lv: 1, evo: false });
   assert.ok(!drawOffer(S, r).some(c => c.why === 'lock'));
 });
+
+test('Alles ausgebaut: Dauerboni und ein Eintopf statt Eintopf und Gold', () => {
+  const ws = ['dagger', 'orbit', 'fireball', 'spear', 'bolt', 'poison'], ps = ['whet', 'amulet', 'book', 'armor', 'boots', 'herbs'];
+  const S = { ...newOfferState(), weapons: ws.map(id => ({ id, lv: 5, evo: true })), passives: Object.fromEntries(ps.map(p => [p, 5])) };
+  const r = mulberry32(11), seen = new Set();
+  for (let i = 0; i < 30; i++) {
+    const o = drawOffer(S, r);
+    assert.deepEqual(o.map(c => c.k), ['boon', 'boon', 'heal']);
+    o.forEach(c => c.k === 'boon' && seen.add(c.id));
+  }
+  assert.deepEqual([...seen].sort(), ['dmg', 'hp', 'spd']);
+  assert.ok(!canBan({ k: 'boon', id: 'dmg' }));
+  // gesperrter Dauerbonus kommt wieder
+  const o = drawOffer(S, r); settleOffer(S, o, 2, 0);
+  const again = drawOffer(S, r); assert.equal(again[0].why, 'lock'); assert.equal(again[0].id, o[0].id);
+  // Bann der letzten echten Karte: Ersatz ist ein Dauerbonus, der noch nicht liegt
+  S.passives.herbs = 4; S.lock = null;
+  const o2 = drawOffer(S, r), i = o2.findIndex(c => c.k === 'upP');
+  S.banned.add(itemKey(o2[i]));   // wie ban() in game/levelup.js
+  const rep = replaceCard(S, o2.slice(), i, r);
+  assert.equal(rep[i].k, 'boon'); assert.equal(new Set(rep.map(itemKey)).size, 3);
+});

@@ -6,12 +6,12 @@
 // Zufall nur für die Optik (Math.random), nie das Sim-rand.
 import { sfx } from '../core/audio.js';
 import { on } from '../core/events.js';
-import { WEAPONS } from '../data/weapons.js';
+import { WEAPONS, BOONS } from '../data/weapons.js';
 import { run } from '../game/state.js';
 import { icon } from '../render/icons.js';
 import { chestSvg } from './cardart.js';
 
-const ICON = c => c.k === 'evo' ? icon(c.id + '_evo') : c.k === 'gold' ? icon('gold') : icon(c.id);
+const ICON = c => c.k === 'evo' ? icon(c.id + '_evo') : c.k === 'gold' ? icon('gold') : c.k === 'boon' ? icon(BOONS[c.id].icon) : icon(c.id);
 const durOf = picks => 700 + picks.length * 420 + 650;
 let timers = [], watch = 0, el = null;
 const showing = () => !!el && el.classList.contains('show');

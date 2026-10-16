@@ -16,6 +16,7 @@ import { hurt } from './game/combat.js';
 import { ATTACKS, BOSSES } from './data/bosses.js';
 import { ATK } from './game/boss.js';
 import { ETYPES } from './data/enemies.js';
+import { WEAPONS } from './data/weapons.js';
 import { allLoaded, bgLoaded } from './scenes/boot.js';
 import { PAGES, SPR, loadMinions } from './render/sprites.js';
 import { M as MAP } from './ui/worldmap.js';
@@ -23,7 +24,7 @@ import { stressTest } from './stress.js';
 
 const api = {
   STEP, loopStats, STAGES, events, joy, keys, RNG, MAP,
-  stress: stressTest, persist, newRun, update, endRun, genChoices, applyChoice, autoChest, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, hurt, BOSSES, ATTACKS, ATK,
+  stress: stressTest, persist, newRun, update, endRun, genChoices, applyChoice, autoChest, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, WEAPONS, hurt, BOSSES, ATTACKS, ATK,
 };
 Object.defineProperties(api, {
   // Speicher der Bild-Flächen in Bytes (RGBA) und ihre Anzahl, für npm run perf

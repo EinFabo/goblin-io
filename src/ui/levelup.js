@@ -2,7 +2,7 @@ import { sfx } from '../core/audio.js';
 import { setSprintHeld } from '../core/input.js';
 import { Music } from '../core/music.js';
 import { $ } from '../core/util.js';
-import { MEGAS, PASSIVES, WEAPONS, megaOf, weaponOf } from '../data/weapons.js';
+import { BOONS, MEGAS, PASSIVES, WEAPONS, megaOf, weaponOf } from '../data/weapons.js';
 import { SKIP_GOLD, SKIP_HEAL, ban, choose, genChoices, reroll } from '../game/levelup.js';
 import { MAX_P, MAX_W, canBan } from '../game/offer.js';
 import { P, run } from '../game/state.js';
@@ -47,6 +47,11 @@ export function cardHtml(c, i) {
     ic = icon(c.id); t = D.name; d = `Statt ${PASSIVES[c.from].name}, Stufe ${lv} bleibt. ${D.info}`; pips = pipHtml(lv, 0); cls += ' swap';
     tag = '<span class="tagx">Umschmieden</span>'; from = `<img class="from" src="${icon(c.from)}" alt="">`;
     if (wid) { hint = 'Macht ' + WEAPONS[wid].evo + ' möglich'; hintCls = 'good'; }
+  } else if (c.k === 'boon') {
+    // Dauerbonus: alles ausgebaut, stapelt ohne Grenze
+    const D = BOONS[c.id], n = run.boons[c.id] || 0;
+    ic = icon(D.icon); t = D.name; d = D.info; cls += ' boon'; tag = '<span class="tagx">Dauerbonus</span>';
+    hint = n ? `Bisher +${Math.round(((1 + D.v) ** n - 1) * 100)} %` : 'Stapelt ohne Grenze';
   } else if (c.k === 'heal') { ic = icon('heal'); t = 'Goblin-Eintopf'; d = 'Heilt 40 % deines Lebens.'; }
   else { ic = icon('gold'); t = 'Goldbeutel'; d = '+25 Gold'; }
   if (WHY[c.why]) tag += `<span class="tagx why">${WHY[c.why]}</span>`;
@@ -70,7 +75,8 @@ export function renderCards() {
   cards.innerHTML = curChoices.map(cardHtml).join('');
   cards.className = 'cards n' + curChoices.length + (mode ? ' mode-' + mode : '');
   const set = (id, txt, dis, on = false) => { const b = $(id); b.textContent = txt; b.disabled = dis; b.classList.toggle('on', on); };
-  set('#rerollBtn', `Neu würfeln (${run.rerolls})`, run.rerolls <= 0 || !!mode);
+  // nur Füllkarten (alles ausgebaut): Würfeln brächte nichts Neues
+  set('#rerollBtn', `Neu würfeln (${run.rerolls})`, run.rerolls <= 0 || !!mode || curChoices.every(c => c.why === 'fill'));
   set('#banBtn', mode === 'ban' ? 'Welche bannen?' : `Bannen (${run.bans})`, run.bans <= 0 || mode === 'lock', mode === 'ban');
   set('#lockBtn', mode === 'lock' ? 'Welche sperren?' : lockIdx >= 0 ? 'Gesperrt ✓' : `Sperren (${run.locks})`, run.locks <= 0 || mode === 'ban', mode === 'lock' || lockIdx >= 0);
   $('#skipGold').textContent = `+${SKIP_GOLD} Gold`;

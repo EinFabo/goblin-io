@@ -316,6 +316,18 @@ await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 0, seed: 6 }); G.ru
 const prog = await p.evaluate(() => ({ hat: GOBLIN.save.look.hat, ach: GOBLIN.save.ach.kills, rolls: GOBLIN.save.stats.c.rolls || 0, levels: GOBLIN.save.stats.c.levels || 0 }));
 if (prog.hat !== 'viking' || prog.ach !== 1 || !prog.rolls || !prog.levels) errs.push('Garderobe/Erfolge/Zähler: ' + JSON.stringify(prog));
 console.log('Garderobe, Erfolge, Zähler:', JSON.stringify(prog));
+// Alle Entwicklungen gleichzeitig gegen einen Boss (2026-10-16: Plasmagewitter schrieb e.ph = Bossphase → Absturz)
+const allEvo = await p.evaluate(() => {
+  const G = GOBLIN; G.go('run', { si: 0, li: 4, seed: 21 }); const run = G.run; run.paused = true;
+  let seen = 0; const off = G.events.on('bossSpawn', () => seen++);   // Boss kann vor Ende der Schleife schon fallen
+  run.weapons.length = 0;
+  for (const id of Object.keys(G.WEAPONS)) { G.applyChoice({ k: 'newW', id }); const w = run.weapons[run.weapons.length - 1]; w.lv = 5; w.evo = true; }
+  while (run.time < 95 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } }
+  off(); const b = run.boss; return { boss: seen > 0, ph: b ? b.ph : null };
+});
+if (!allEvo.boss || (allEvo.ph !== null && !Number.isInteger(allEvo.ph))) errs.push('Alle Entwicklungen gegen Boss: ' + JSON.stringify(allEvo));
+console.log('Alle Entwicklungen gegen Boss:', JSON.stringify(allEvo));
+await p.evaluate(() => { GOBLIN.run.paused = true; GOBLIN.go('menu'); });
 // Entwicklungs-Baum (Wunsch Fabi 2026-10-16): Vorschau aus Werkstatt und Level-Up; ein Lauf mit offener Vorschau
 // geht genauso aus wie ohne (eigener Zufall, kein Ton, keine Ereignisse)
 const evo = {};

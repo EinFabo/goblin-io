@@ -154,7 +154,8 @@ export function stepWeapon2(w, L, dm, dt, rate) {
         for (let i = 0; i < 3; i++) {
           const a = w.a + i * TAU / 3, bx = P.x + Math.cos(a) * 120 * P.area, by = P.y - 8 + Math.sin(a) * 120 * P.area;
           w.blades.push([bx, by, a]);
-          query(bx, by, 22 * P.area, e => { if ((e.ph || 0) > run.time) return; e.ph = run.time + .4; hurt(e, 20 * dm, 60, 0, 0, '#c7a7ff'); });
+          // Trefferpause im eigenen Feld (e.ph ist beim Boss die Phase: das überschrieb sie, Absturz im Bosskampf)
+          query(bx, by, 22 * P.area, e => { if ((e.plasT || 0) > run.time) return; e.plasT = run.time + .4; hurt(e, 20 * dm, 60, 0, 0, '#c7a7ff'); });
           if (fire) { const c = randomEnemyInView(20); for (let j = 0; j < 4; j++) shoot('spark', rnd() * TAU, 14, 0, 320 * P.proj, 1.2, { x: bx, y: by, target: c.length ? pick(c) : null, sc: 1 }); }
         }
         if (fire) sfx.zap();

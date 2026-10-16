@@ -4,6 +4,8 @@
 // npm run sim -- --stage 3 --level 5   → nur ein Level (5 = Boss-Level)
 // npm run sim -- --loadout rage,trap  → andere Fähigkeiten (Standard rage,mech wie v2)
 // npm run sim -- --stage 3 --runs 50 --talents atk=4,hp=4 [--seed 1] [--hz 60] [--par 3] [--html datei]
+// npm run sim -- --endless [--time 1800] [--god]  → Endlose Nacht: Überlebenszeit und je Minute Kills, Gegner, Ø Leben
+//                                                   (--god: Bot stirbt nicht, zeigt, ob die Gegner noch sterben)
 import os from 'node:os';
 import { chromium } from 'playwright';
 import { resolve, dirname, join } from 'node:path';
@@ -20,6 +22,8 @@ const parseTalents = s => Object.fromEntries(String(s || '').split(',').filter(B
 
 const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln', burn: 'Glutrand', meteor: 'Meteor', ice: 'Eis' };
 if (args.v2) { console.log('--v2 gibt es nicht mehr: die ganzen Stages aus v2 sind jetzt Welten mit 5 Leveln.'); process.exit(1); }
+if (args.endless) { args.stage = 9; args.level = 1; if (!args.talents) args.talents = 'atk=20,hp=20,spd=10,mag=6,stam=4'; }
+const maxTime = +args.time || (args.endless ? 1800 : 330);
 const LV = args.level ? [+args.level] : [1, 2, 3, 4, 5];
 const configs = (args.stage ? [+args.stage] : [1, 2, 3, 4, 5, 6, 7, 8]).flatMap(s => LV.map(l => [s, args.talents && args.talents !== 'exp' ? parseTalents(args.talents) : EXPECTED[s] || {}, l]));
 
@@ -45,12 +49,27 @@ const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
 console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz, Fähigkeiten ${loadout.join(' + ')}\n`);
 console.log('Level  Talente               Siege   Ziel       Ø Zeit  Boss    Fähigk.  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
 const t0 = Date.now();
+let lastRes = [];
+// Endlose Nacht: wie lange hält der Bot durch, und stirbt noch etwas? (Wunsch Fabi 2026-10-16: Klumpen ab 14–20 min)
+function endlessReport(res) {
+  const ts = res.map(r => r.t).sort((a, b) => a - b), q = f => ts[Math.min(ts.length - 1, Math.floor(f * ts.length))];
+  console.log(`\nÜberlebt: Median ${(q(.5) / 60).toFixed(1)} min, 25 % ${(q(.25) / 60).toFixed(1)}, 75 % ${(q(.75) / 60).toFixed(1)}, max ${(ts[ts.length - 1] / 60).toFixed(1)} min`);
+  for (const r of res.filter(x => x.t >= 1200)) console.log(`  ${(r.t / 60).toFixed(1)} min: ${r.weapons} · Lv ${r.lv} · Schaden genommen ${Math.round(Object.values(r.dmg).reduce((x, y) => x + y, 0))}`);
+  console.log('Minute  noch dabei  Kills/min  Gegner  Ø Leben  Spieler-Lv  Runde  Boss');
+  const M = Math.max(...res.map(r => r.mins.length));
+  for (let m = 0; m < M; m++) {
+    const a = res.map(r => r.mins[m]).filter(Boolean);
+    if (!a.length) break;
+    console.log(`${String(m + 1).padStart(6)}  ${String(a.length).padStart(10)}  ${String(Math.round(avg(a.map(x => x.k)))).padStart(9)}  ${String(Math.round(avg(a.map(x => x.n)))).padStart(6)}  ${String(Math.round(avg(a.map(x => x.hp)))).padStart(7)}  ${avg(a.map(x => x.lv)).toFixed(0).padStart(10)}  ${avg(a.map(x => x.loop)).toFixed(1).padStart(5)}  ${pct(a.filter(x => x.boss).length, a.length)}`);
+  }
+}
 for (const [stage, talents, level] of configs) {
   const res = new Array(runs);
   let next = 0;
   await Promise.all(pages.map(async p => {
-    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout }); }
+    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout, maxTime, god: !!args.god }); }
   }));
+  lastRes = res;
   const wins = res.filter(r => r.win).length;
   const lv = [1, 2, 3, 4].map(m => { const a = res.map(r => r.lvAt[m]).filter(x => x !== undefined); return a.length ? avg(a).toFixed(1) : '–'; }).join('/');
   const srcs = [...new Set(res.flatMap(r => Object.keys(r.dmg)))];
@@ -64,5 +83,6 @@ for (const [stage, talents, level] of configs) {
   const bt = res.map(r => r.bossT).filter(x => x !== null && x !== undefined), bossCol = bt.length ? `${Math.round(avg(bt))} s` : '–';
   console.log(`${(stage + '-' + level).padEnd(6)} ${tal.padEnd(21)} ${pct(wins, runs)}  ${goal.padEnd(10)} ${String(Math.round(avg(res.map(r => r.t)))).padStart(4)} s  ${bossCol.padStart(5)}  ${avg(res.map(r => r.abil)).toFixed(1).padStart(5)}×  ${lv.padEnd(20)}  ${d}`);
 }
+if (args.endless) endlessReport(lastRes);
 console.log(`\n${((Date.now() - t0) / 1000).toFixed(1)} s`);
 await b.close();

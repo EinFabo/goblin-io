@@ -15,6 +15,7 @@ import { updEProj, updTele } from './hazards.js';
 import { pullable, updItems } from './items.js';
 import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
+import { BOONS } from '../data/weapons.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
@@ -32,7 +33,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   seedRun(seed);
   const r = {
     si, li: st.li, st, seed, nm: !!nm && !st.endless, mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
-    weapons: [], passives: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
+    weapons: [], passives: {}, boons: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
@@ -63,12 +64,13 @@ export function addEvents(loop) {
 export function recalc() {
   // Passive: Stufen im Lauf × Kartenstufe (+10 % Wirkung je Stufe)
   const pl = id => (run.passives[id] || 0) * passiveCardMul(run.cards[id] || 1), sh = talent;
-  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk'));
+  const bn = id => (1 + BOONS[id].v) ** (run.boons[id] || 0);   // Dauerboni, wenn alles ausgebaut ist (multiplikativ)
+  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg');
   P.cdMult = Math.pow(.92, pl('book'));
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
-  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp();
+  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp');
   if (old) P.hp += Math.max(0, P.maxHp - old);
   P.regen = .4 * pl('herbs');
   P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd'));
@@ -78,7 +80,7 @@ export function recalc() {
   P.crit = .08 + .06 * pl('powder');
   // zweite Reihe (2026-10-14)
   P.flatArmor = pl('helmet');
-  P.atkSpd = 1 + .07 * pl('horn');
+  P.atkSpd = (1 + .07 * pl('horn')) * bn('spd');
   P.bigMult = 1 + .12 * pl('skull');
   P.dodge = Math.min(.3, .04 * pl('cloak'));
   P.pierceAdd = Math.floor(pl('crystal') / 2);

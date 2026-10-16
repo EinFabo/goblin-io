@@ -3,7 +3,7 @@ import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { $ } from '../core/util.js';
 import { chargeAbil, critBonus, dealtMult, onKill, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
-import { hitDamage } from './balance.js';
+import { hitDamage, endlessCap } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
@@ -102,7 +102,7 @@ export function damagePlayer(d, src = 'contact') {
   if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
   // Schattenmantel: ausweichen
   if (P.dodge && rnd() < P.dodge) { P.inv = .3; addNum(P.x, P.y - 40, 'Ausgewichen', '#d9c8ff', false); return; }
-  d = hitDamage(d, P.maxHp, src) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult();
+  d = hitDamage(d, P.maxHp, src, run.st.endless ? endlessCap(run.time) : 1) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult();
   if (P.flatArmor) d = Math.max(d * .4, d - P.flatArmor);   // Eisenhelm, nie unter 40 %
   d = shieldAbsorb(d);
   if (d <= 0) { P.inv = .5; return; }

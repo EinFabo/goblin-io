@@ -1,7 +1,7 @@
 import { RNG } from '../core/rng.js';
 import { emit } from '../core/events.js';
 import { sfx } from '../core/audio.js';
-import { PASSIVES, WEAPONS } from '../data/weapons.js';
+import { BOONS, PASSIVES, WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
 import { drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
 import { P, run } from './state.js';
@@ -49,8 +49,8 @@ export function autoChest(n, src = 'elite') {
     if (evo) c = { k: 'evo', id: evo.id };
     else if (ups.length) c = { k: 'upW', id: ups[(rnd() * ups.length) | 0].id };
     else if (ps.length) c = { k: 'upP', id: ps[(rnd() * ps.length) | 0] };
-    else c = { k: 'gold' };
-    picks.push({ ...c, name: c.k === 'evo' ? WEAPONS[c.id].evo : c.k === 'upW' ? WEAPONS[c.id].name + ' ' + (run.weapons.find(w => w.id === c.id).lv + 1) : c.k === 'upP' ? PASSIVES[c.id].name + ' ' + (run.passives[c.id] + 1) : '+25 Gold' });
+    else { const b = Object.keys(BOONS); c = { k: 'boon', id: b[(rnd() * b.length) | 0] }; }   // alles ausgebaut: Dauerbonus
+    picks.push({ ...c, name: c.k === 'evo' ? WEAPONS[c.id].evo : c.k === 'upW' ? WEAPONS[c.id].name + ' ' + (run.weapons.find(w => w.id === c.id).lv + 1) : c.k === 'upP' ? PASSIVES[c.id].name + ' ' + (run.passives[c.id] + 1) : BOONS[c.id].name });
     applyChoice(c, true);
   }
   sfx.chest();
@@ -88,6 +88,7 @@ export function applyChoice(c, quiet = false) {
   else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; if (!quiet) banner(WEAPONS[c.id].evo + '!', ''); count(run, 'evo'); }
   else if (c.k === 'newP' || c.k === 'upP') run.passives[c.id] = (run.passives[c.id] || 0) + 1;
   else if (c.k === 'swap') swapPassive(c.from, c.id, quiet);
+  else if (c.k === 'boon') { run.boons[c.id] = (run.boons[c.id] || 0) + 1; count(run, 'boon'); }
   else if (c.k === 'heal') P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .4);
   else if (c.k === 'gold') run.gold += 25;
   recalc(); refreshSlots();

@@ -103,5 +103,13 @@ export const MEGAS = {
 };
 // Zu welcher Mega gehört eine Waffe?
 export const megaOf = id => Object.keys(MEGAS).find(m => MEGAS[m].of.includes(id));
+// Dauerboni (Wunsch Fabi 2026-10-16): füllen das Level-Up, wenn nichts mehr auszubauen ist, und stapeln ohne Grenze –
+// damit wird der Goblin in der Endlosen Nacht nach dem fertigen Build weiter stärker. v = Wirkung je Karte, multiplikativ
+// (zehnmal Wutzahn = ×1,06¹⁰ ≈ +79 %), damit sie mit dem Gegner-Leben Schritt halten
+export const BOONS = {
+  dmg: { name: 'Wutzahn', info: '+6 % Schaden', icon: 'whet', v: .06 },
+  spd: { name: 'Flinke Finger', info: '+5 % Angriffstempo', icon: 'horn', v: .05 },
+  hp: { name: 'Dicker Bauch', info: '+8 % Leben, heilt so viel', icon: 'heart', v: .08 },
+};
 // Welche Waffe entwickelt sich mit diesem Passiv?
 export const weaponOf = pid => Object.keys(WEAPONS).find(k => WEAPONS[k].with === pid);

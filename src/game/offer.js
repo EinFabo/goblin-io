@@ -1,7 +1,7 @@
 // ---------- Level-Up-Angebot (Regeln aus PLAN 7.2) ----------
 // Rein: kennt weder DOM noch Lauf. S = { weapons, passives, banned, rej, pity, lock }
 // rnd() liefert Zahlen in [0, 1). Jede Karte bekommt ein "why", warum sie im Angebot ist.
-import { PASSIVES, WEAPONS } from '../data/weapons.js';
+import { BOONS, PASSIVES, WEAPONS } from '../data/weapons.js';
 
 export const MAX_W = 6, MAX_P = 6;
 export const PITY_STEP = .5, PITY_MAX = 4, OWN_MULT = 2.5;
@@ -11,8 +11,8 @@ const BASE = { newW: 4, newP: 3 };
 const NEW_W = BASE.newW * 10 / Object.keys(WEAPONS).length, NEW_P = BASE.newP * 10 / Object.keys(PASSIVES).length;
 
 // Bannen und Sperren gelten für den Gegenstand, nicht für die Kartenart
-export const itemKey = c => c.k === 'evo' ? 'e:' + c.id : c.k === 'swap' ? 's:' + c.id : c.k === 'newW' || c.k === 'upW' ? 'w:' + c.id : c.k === 'newP' || c.k === 'upP' ? 'p:' + c.id : c.k;
-export const canBan = c => c.k !== 'evo' && c.k !== 'heal' && c.k !== 'gold';
+export const itemKey = c => c.k === 'evo' ? 'e:' + c.id : c.k === 'swap' ? 's:' + c.id : c.k === 'boon' ? 'b:' + c.id : c.k === 'newW' || c.k === 'upW' ? 'w:' + c.id : c.k === 'newP' || c.k === 'upP' ? 'p:' + c.id : c.k;
+export const canBan = c => c.k !== 'evo' && c.k !== 'heal' && c.k !== 'gold' && c.k !== 'boon';
 
 export function newOfferState() { return { banned: new Set(), rej: {}, pity: {}, lock: null }; }
 
@@ -66,6 +66,8 @@ export function candidates(S) {
   return pool;
 }
 
+// Dauerboni in zufälliger Reihenfolge (Füllkarten, wenn alles ausgebaut ist)
+const shuffledBoons = rnd => Object.keys(BOONS).map(id => ({ k: 'boon', id, r: rnd() })).sort((a, b) => a.r - b.r);
 // Karte fürs Angebot: nur Art, Gegenstand (beim Umschmieden auch, was wegfällt) und Grund
 const card = (c, why) => (c.from ? { k: c.k, id: c.id, from: c.from, why } : { k: c.k, id: c.id, why });
 
@@ -93,7 +95,7 @@ export function drawOffer(S, rnd, { n = 3, avoid = [] } = {}) {
   // 0. Gesperrte Karte vom letzten Mal
   //    (Tauschkarte: mit dem Passiv, das sie zeigte – ist das nicht mehr entbehrlich, verfällt die Sperre)
   if (S.lock) {
-    let c = pool.find(x => x.k === S.lock.k && x.id === S.lock.id);
+    let c = S.lock.k === 'boon' ? { k: 'boon', id: S.lock.id } : pool.find(x => x.k === S.lock.k && x.id === S.lock.id);
     if (c && c.k === 'swap') c = sparePassives(S).includes(S.lock.from) ? { ...c, from: S.lock.from } : null;
     take(c, 'lock');
   }
@@ -111,7 +113,9 @@ export function drawOffer(S, rnd, { n = 3, avoid = [] } = {}) {
   for (const p of due) take(pool.find(c => c.k === 'newP' && c.id === p), 'pity');
   // 5. Rest gewichtet (eigene Gegenstände ×2,5)
   while (out.length < n) { if (!take(choose(pool.filter(c => c.k !== 'evo')), 'rest')) break; }
-  // Auffüllen, falls alles ausgebaut ist
+  // Auffüllen, falls alles ausgebaut ist: erst Dauerboni (in zufälliger Reihenfolge), dann Eintopf und Gold
+  //    (ein Platz bleibt für den Eintopf; nur dann würfeln: jede Zufallszahl mehr verschiebt alle späteren Angebote)
+  if (out.length < n - 1) for (const c of shuffledBoons(rnd)) if (out.length < n - 1) take(c, 'fill');
   if (out.length < n) take({ k: 'heal' }, 'fill');
   if (out.length < n) take({ k: 'gold' }, 'fill');
   return out;
@@ -123,7 +127,11 @@ export function replaceCard(S, offer, i, rnd) {
   const pool = candidates(S).filter(c => c.k !== 'evo' && !keep.includes(itemKey(c)));
   const fresh = pool.filter(c => !(S.rej[itemKey(c)] >= 2));
   const list = fresh.length ? fresh : pool;
-  if (!list.length) { offer[i] = { k: keep.includes('heal') ? 'gold' : 'heal', why: 'fill' }; return offer; }
+  if (!list.length) {
+    // nichts mehr auszubauen: ein Dauerbonus, der noch nicht liegt, sonst Eintopf bzw. Gold
+    const b = shuffledBoons(rnd).find(c => !keep.includes(itemKey(c)));
+    offer[i] = b ? card(b, 'fill') : { k: keep.includes('heal') ? 'gold' : 'heal', why: 'fill' }; return offer;
+  }
   let tot = 0; for (const c of list) tot += c.wgt;
   let r = rnd() * tot, c = list[list.length - 1];
   for (const x of list) { r -= x.wgt; if (r <= 0) { c = x; break; } }

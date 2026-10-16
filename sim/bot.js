@@ -1,7 +1,8 @@
 // Balance-Bot. Läuft komplett im Browser (wird per page.evaluate übergeben),
 // darf also nichts von außen benutzen außer window.GOBLIN.
 // step: Länge eines Logikschritts in s (Standard wie im Spiel: 1/60)
-export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20 }) {
+// god: Leben jeden Schritt auffüllen (misst in der Endlosen Nacht, ob noch etwas stirbt, statt wann der Bot fällt)
+export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20, god = false }) {
   const G = window.GOBLIN, joy = G.joy, STEP = step || G.STEP;
   G.save.talents = { ...talents }; G.save.loadout = [...loadout]; G.save.profile.level = acct;
   for (let k = 1; k <= 8; k++) G.save.stages[k] = { cleared: true, stars: 0, best: 0, nightmare: false };   // alles freigeschaltet
@@ -13,7 +14,9 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
   let bossT0 = null, bossT = null;
   const off2 = G.events.on('bossSpawn', () => { bossT0 = run.time; }), off3 = G.events.on('bossDown', () => { if (bossT0 !== null) bossT = run.time - bossT0; });
   const lvAt = {};
-  const pr = { evo: 0, swap: 0, upW: 1, newW: 2, upP: 3, newP: 4, heal: 5, gold: 6 };
+  // Endlose Nacht: je Minute Kills, lebende Gegner, deren Ø Leben, Spieler-Level, Runde
+  const mins = []; let k0 = 0;
+  const pr = { evo: 0, swap: 0, upW: 1, newW: 2, upP: 3, newP: 4, boon: 4.5, heal: 5, gold: 6 };
   const pickCard = () => {
     const c = G.genChoices(), ord = c.map((x, i) => i).sort((a, b) => pr[c[a].k] - pr[c[b].k]);
     if (run.weapons.length >= 3) { const u = ord.find(i => c[i].k === 'upW' || c[i].k === 'evo' || c[i].k === 'swap'); if (u !== undefined) return G.choose(c, u); }
@@ -61,15 +64,21 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
 
     if (P.dashN > 0 && P.hp < P.maxHp * .5) G.doDash();
     for (let k = 0; k < 2; k++) if (G.abilReady(run.abil[k]) && G.useAbility(k)) abil++;
+    if (god) P.hp = P.maxHp;
     G.update(STEP);
     if (run.lvDelay > 0) { run.lvDelay = 0; pickCard(); }
     const m = Math.floor(run.time / 60);
-    if (m >= 1 && !(m in lvAt)) lvAt[m] = P.lv;
+    if (m >= 1 && !(m in lvAt)) {
+      lvAt[m] = P.lv;
+      const al = run.enemies.filter(e => !e.dead && !e.boss);
+      mins.push({ k: run.kills - k0, n: al.length, hp: al.length ? al.reduce((s, e) => s + e.hp, 0) / al.length : 0, lv: P.lv, loop: run.loop, boss: !!run.boss });
+      k0 = run.kills;
+    }
   }
   joy.id = null; off(); off2(); off3();
   const win = !!(run.over && P.hp > 0);
   return {
-    win, t: Math.round(run.time), bossT, bonus: run.bonusLv, lv: P.lv, kills: run.kills, gold: run.gold, abil, lvAt, dmg,
+    win, t: Math.round(run.time), mins, bossT, bonus: run.bonusLv, lv: P.lv, kills: run.kills, gold: run.gold, abil, lvAt, dmg,
     weapons: run.weapons.map(w => w.id + w.lv + (w.evo ? '*' : '')).join(','),
   };
 }
