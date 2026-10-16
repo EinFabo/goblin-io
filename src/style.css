@@ -1126,3 +1126,12 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
   .en{width:36px;height:36px}.en.m{width:46px;height:46px}
   .evocap>img{width:44px;height:44px}.evocap p{font-size:13px}
 }
+
+/* Weitermachen nach dem Tod (ui/continue.js) */
+.contov{background:rgba(40,0,6,.7)}
+.contpanel{text-align:center;width:min(440px,calc(100vw - 32px));animation:abUp .35s ease-out both}
+.contpanel h2{margin:4px 0 6px;font-family:var(--font-display);font-weight:400;font-size:30px}
+.contpanel p{margin:0 0 12px;font-weight:700}
+.contpanel small{display:block;margin-top:10px;color:var(--muted);font-weight:700;line-height:1.4}
+.contskull{font-size:46px;line-height:1;filter:drop-shadow(0 3px 0 #000)}
+.contpanel .btn[aria-disabled="true"]{opacity:.55}

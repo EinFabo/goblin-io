@@ -336,6 +336,19 @@ for (const [a, b] of [[['fire.3', 'bolt.3'], ['echo.3', 'poison.3']], [['frost.3
   if (!rr.uses || !rr.kills || rr.runes === '{}') errs.push('Lauf mit Runen: ' + JSON.stringify(rr));
 }
 console.log('Runen (Runenkiste, Tasche, Läufe mit allen Runenarten): geprüft');
+// Weitermachen für Juwelen: im Bosskampf sterben → Fenster, Weitermachen startet den Boss neu, zu wenig Juwelen → Aufgeben
+await p.evaluate(() => { const G = GOBLIN; G.save.wallet.gems = 15; G.save.loadout = ['rage', null]; G.go('run', { si: 0, li: 4, seed: 3 }); });
+await p.evaluate(() => { const G = GOBLIN, run = G.run; run.paused = true; while (run.time < 96 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } } run.paused = false; });
+await p.waitForTimeout(4500);
+const dieNow = () => p.evaluate(() => { const G = GOBLIN; G.P.inv = 0; G.P.dashT = 0; G.P.hp = 1; G.damagePlayer(500, 'contact'); return !document.querySelector('#cont').hidden; });
+const c1 = await dieNow(); await p.click('#contYes'); await p.waitForTimeout(300);
+const c2 = await p.evaluate(() => ({ gems: GOBLIN.save.wallet.gems, cont: GOBLIN.run.cont, full: GOBLIN.P.hp === GOBLIN.P.maxHp, boss: GOBLIN.run.boss && GOBLIN.run.boss.hp === GOBLIN.run.boss.maxHp, paused: GOBLIN.run.paused }));
+await p.waitForTimeout(4500);
+const c3 = await dieNow(); await p.click('#contYes'); const c4 = await p.evaluate(() => !document.querySelector('#cont').hidden);
+await p.click('#contNo'); await p.waitForTimeout(800);
+const c5 = await p.evaluate(() => ({ over: GOBLIN.run.over, cont: GOBLIN.run.result.cont, hats: GOBLIN.run.result.hats }));
+if (!c1 || c2.gems !== 5 || c2.cont !== 1 || !c2.full || !c2.boss || c2.paused || !c3 || !c4 || !c5.over || c5.cont !== 1) errs.push('Weitermachen: ' + JSON.stringify({ c1, c2, c3, c4, c5 }));
+console.log('Weitermachen (Boss von vorn, Juwelen, Aufgeben): geprüft');
 await p.evaluate(() => { GOBLIN.save.cards.dagger = { lv: 1, n: 2 }; GOBLIN.go('menu', '#shop'); });
 await p.waitForTimeout(200);
 await p.click('[data-card="dagger"]'); await p.click('#cardUp');

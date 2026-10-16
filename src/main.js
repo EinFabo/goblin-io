@@ -11,6 +11,7 @@ import './ui/pause.js';
 import './ui/levelup.js';
 import './ui/armory.js';
 import './ui/results.js';
+import './ui/continue.js';
 import './scenes/boot.js';
 import './scenes/menu.js';
 import './scenes/run.js';

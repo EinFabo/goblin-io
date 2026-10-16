@@ -22,7 +22,7 @@ export { bossOnKill, portalWarp, shadeDown, spinHaz } from './boss-mech.js';
 
 // ---------- Boss-Runner (PLAN 6.2) ----------
 // Phasen aus data/bosses.js: Rotation der Angriffe aus boss-atk.js, Phasenwechsel bei 66 % und 33 % Leben
-// (bzw. B.at), kleine Szene, 1,5 s unverwundbar, Geschosse weg; Wut-Timer nach 120 s Kampf.
+// (bzw. B.at), kleine Szene, 1,5 s unverwundbar, Geschosse weg; Wut-Timer nach 180 s Kampf.
 // Auftritt und Phasenwechsel laufen als Szene (run.cut): die Welt steht, die Kamera zeigt den Boss.
 // Weitere Körper (Morgras Teile, Spiegelbilder, Malvorns Schatten) laufen mit derselben KI, aber ohne Phasen.
 
@@ -54,6 +54,16 @@ export function spawnBoss() {
   const b = makeBoss(id);
   run.enemies.push(b); run.boss = b;
   startCut('intro', b);
+}
+
+// Weitermachen im Boss-Level (Wunsch Fabi 2026-10-16, wie in Undertale): der Kampf beginnt von vorn.
+// Boss und seine weiteren Körper verschwinden ohne Beute, Wetter und Bodeneffekte gehen mit, dann ein frischer Auftritt.
+export function restartBoss() {
+  const b = run.boss; if (!b) return;
+  for (const e of run.enemies) if (!e.dead && (e === b || e.link === b || e.decoyOf === b || e.of === b)) { e.dead = true; puff(e.x, e.y, e.sc); }
+  run.boss = null; run.storm = 0; run.tele.length = 0; run.zones.length = 0;
+  $('#bossBar').hidden = true;
+  spawnBoss();
 }
 
 // ---------- Szenen: Auftritt und Phasenwechsel ----------

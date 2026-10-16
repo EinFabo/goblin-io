@@ -9,7 +9,7 @@ import { STAGES, STAGE_LEN } from '../data/stages.js';
 import { LEVELS, levelStage, nextLevel } from '../data/levels.js';
 import { canEquip, charmHp, initAbilities, updAbilities } from './abilities.js';
 import { doEvent, spawnTick, updEnemy } from './enemies.js';
-import { updCut } from './boss.js';
+import { restartBoss, updCut } from './boss.js';
 import { part, ring } from './fx.js';
 import { updEProj, updTele } from './hazards.js';
 import { pullable, updItems } from './items.js';
@@ -208,10 +208,12 @@ export function endRun(win) {
   if (win && run.nm) bonus += Math.round((run.gold + bonus) * .5);
   // Magierhüte (6.1a): geschafft, über 50 % Leben am Ende, nie unter 25 % gefallen
   // welche Hut-Bedingungen erfüllt sind (HAT_TXT): geschafft, über 50 % Leben, nie unter 25 %
-  const hatOk = [win, win && P.hp / P.maxHp > .5, win && run.minHp >= .25], hats = hatOk.filter(Boolean).length;
+  // Mit Weitermachen geschafft (run.cont): nur der erste Hut zählt, die Bestzeit auch nicht
+  const cont = run.cont > 0;
+  const hatOk = [win, win && !cont && P.hp / P.maxHp > .5, win && !cont && run.minHp >= .25], hats = hatOk.filter(Boolean).length;
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
-  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm });
+  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm, noBest: cont });
   const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * (run.nm ? 1.5 : 1)), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
@@ -239,8 +241,39 @@ export function endRun(win) {
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, cont: run.cont || 0, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil };
   emit('runEnd', run.result);
+}
+
+// ---------- Weitermachen für Juwelen (Wunsch Fabi 2026-10-16, wie in Undertale) ----------
+// Beim Tod: 10, 20, 40 Juwelen, höchstens 3× pro Lauf, nicht in der Endlosen Nacht. Im Bosskampf beginnt der Kampf
+// von vorn, sonst geht es an Ort und Stelle weiter. Die UI (ui/continue.js) meldet sich mit setContinueHook an;
+// ohne sie (Sim) oder mit run.noCont endet der Lauf wie bisher.
+export const CONTINUE_GEMS = [10, 20, 40];
+let contHook = null;
+export function setContinueHook(fn) { contHook = fn; }
+export const continueCost = () => CONTINUE_GEMS[run.cont || 0];
+export function offerContinue() {
+  if (!contHook || run.noCont || run.st.endless || (run.cont || 0) >= CONTINUE_GEMS.length) return false;
+  run.paused = true; P.hp = 0;
+  contHook(continueCost());
+  return true;
+}
+export function doContinue() {
+  const cost = continueCost();
+  if (!cost || save.wallet.gems < cost) return false;
+  save.wallet.gems -= cost; persist();
+  run.cont = (run.cont || 0) + 1;
+  P.hp = P.maxHp; P.inv = 3; run.eproj.length = 0; run.haz.length = 0;
+  if (run.boss && !run.boss.dead) restartBoss();
+  else {
+    // an Ort und Stelle: Gegner in der Nähe werden weggestoßen, damit man Luft hat
+    query(P.x, P.y, 320, e => { if (e.boss || e.obj) return; const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; e.kx += (e.x - P.x) / d * 900; e.ky += (e.y - P.y) / d * 900; });
+    ring(P.x, P.y, 10, 320, .5, 'rgba(255,230,120,.95)', 12);
+  }
+  for (let i = 0; i < 24; i++) { const a = i * TAU / 24; part(P.x, P.y - 10, Math.cos(a) * 260, Math.sin(a) * 260, .5, i % 2 ? '#ffd84a' : '#c99cff', 4); }
+  run.paused = false;
+  return true;
 }
 
 // Kamera zieht weich nach und schaut in Laufrichtung voraus, beim Sprinten weiter und 4 % herausgezoomt

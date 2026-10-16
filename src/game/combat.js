@@ -11,7 +11,7 @@ import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js
 import { addEvents } from './run.js';
 import { P, abSrc, aoeId, run } from './state.js';
 import { banner } from '../ui/hud.js';
-import { endRun, startClear } from './run.js';
+import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
 import { ETYPES } from '../data/enemies.js';
 
@@ -116,5 +116,5 @@ export function damagePlayer(d, src = 'contact', by = null) {
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
   emit('playerHurt', { amount: d, src: run.boss ? 'boss.' + src : src });   // im Bosskampf mit Vorsilbe (Sim: Schaden je Boss-Angriff)
-  if (P.hp <= 0 && !tryRevive()) { P.hp = 0; endRun(false); }
+  if (P.hp <= 0 && !tryRevive()) { P.hp = 0; if (!offerContinue()) endRun(false); }
 }

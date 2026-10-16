@@ -28,7 +28,7 @@ export async function startStage(si, li = 0, nm = false) {
   go('run', { si, li, nm });
 }
 const TABS = ['#store', '#shop', '#menu', '#armory', '#profile'];
-const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#evoTree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen'];
+const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#evoTree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen', '#runeBag', '#cont'];
 let curTab = null;
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
 export function showScreen(id) {

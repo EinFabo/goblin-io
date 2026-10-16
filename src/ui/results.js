@@ -86,7 +86,9 @@ const markNew = h => { if (!h.querySelector('.hatnew')) h.insertAdjacentHTML('be
 function showMiss(r, hats) {
   for (let i = r.hats; i < 3; i++) hats[i].classList.add('miss');
   const why = [0, 1, 2].filter(i => (r.hatOk ? !r.hatOk[i] : i >= r.hats));   // die wirklich verpassten Bedingungen
-  if (!$('#overHats .hatwhy')) $('#overHats').insertAdjacentHTML('beforeend', `<p class="hatwhy">Es fehlt: ${why.map(i => HAT_TXT[i]).join(' · ')}</p>`);
+  // mit Weitermachen geschafft: nur der erste Hut zählt (Wunsch Fabi 2026-10-16)
+  const txt = r.win && r.cont ? `Mit Weitermachen geschafft (${r.cont}×): nur der erste Hut zählt, keine Bestzeit` : `Es fehlt: ${why.map(i => HAT_TXT[i]).join(' · ')}`;
+  if (!$('#overHats .hatwhy')) $('#overHats').insertAdjacentHTML('beforeend', `<p class="hatwhy">${txt}</p>`);
 }
 $('#over').addEventListener('pointerdown', e => { if (seqDone && !e.target.closest('button')) seqDone(); });
 export function hideResults() { clearTimeout(showT); seqT.forEach(clearTimeout); seqT = []; seqDone = null; $('#over').hidden = true; }

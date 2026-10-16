@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaults, migrate, migrateV1, migrateV2, normalize, VERSION } from '../src/core/save.js';
+import { defaults, migrate, migrateV1, migrateV2, normalize, recordLevel, save, setSave, VERSION } from '../src/core/save.js';
 import { oldShopCost } from '../src/data/talents.js';
 
 const V1 = { gold: 812, unlocked: 3, cleared: { 0: true, 1: true }, best: { 0: 251, 1: 244, 2: 130 }, shop: { atk: 4, hp: 3, reroll: 1 }, mute: true, musicOff: false };
@@ -109,4 +109,14 @@ test('Albtraum: Schalter und Albtraum-Siege bleiben im Spielstand', () => {
   const s = normalize({ version: 4, map: { si: 1, li: 2, nm: true }, stages: { 1: { cleared: true, lv: [{ hats: 3, nm: true }, { hats: 1 }] } } });
   assert.equal(s.map.nm, true);
   assert.deepEqual(s.stages[1].lv.map(l => l.nm), [true, false, false, false, false]);
+});
+
+test('Weitermachen: Boss-Level geschafft, aber ohne Bestzeit (noBest)', () => {
+  setSave(defaults());
+  recordLevel(0, 4, { win: true, time: 200, hats: 1, hatOk: [true, false, false], noBest: true });
+  assert.equal(save.stages[1].lv[4].fast, 0); assert.equal(save.stages[1].cleared, true);
+  recordLevel(0, 4, { win: true, time: 180, hats: 3, hatOk: [true, true, true] });
+  assert.equal(save.stages[1].lv[4].fast, 180);
+  recordLevel(0, 4, { win: true, time: 100, hats: 1, hatOk: [true, false, false], noBest: true });
+  assert.equal(save.stages[1].lv[4].fast, 180);
 });

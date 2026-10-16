@@ -11,6 +11,7 @@ export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout
   for (let k = 1; k <= 8; k++) G.save.stages[k] = { cleared: true, stars: 0, best: 0, nightmare: false };   // alles freigeschaltet
   G.newRun(si, seed, li);
   const run = G.run, P = G.P;
+  run.noCont = true;   // kein Weitermachen für Juwelen: die Sim misst den ersten Versuch
   const dmg = {};
   const off = G.events.on('playerHurt', h => { dmg[h.src] = (dmg[h.src] || 0) + h.amount; });
   // Bosskampf: Dauer vom Ende des Auftritts bis zum Sieg

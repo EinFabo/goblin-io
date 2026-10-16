@@ -287,13 +287,14 @@ export const levelUnlocked = (si, li) => stageUnlocked(si) && (li === 0 || level
 // Ergebnis eines Levels speichern. first = erstes Mal geschafft, newHats = Hüte dazugewonnen
 // nm: im Albtraum-Modus gespielt; nmFirst = erstes Mal im Albtraum geschafft
 // hatOk: welche Hut-Bedingungen erfüllt waren; gespeichert als Bitmaske hm des besten Laufs (für die Karte)
-export function recordLevel(si, li, { win, time, hats, hatOk = null, kills = 0, endless = false, nm = false }) {
+// noBest: mit Weitermachen geschafft → Bestzeit zählt nicht (Wunsch Fabi 2026-10-16)
+export function recordLevel(si, li, { win, time, hats, hatOk = null, kills = 0, endless = false, nm = false, noBest = false }) {
   if (endless) { recordStage(si, { win: false, time }); return { first: false, newHats: 0, nmFirst: false }; }
   const L = stageRec(si).lv[li], first = win && !L.hats, newHats = Math.max(0, hats - L.hats), nmFirst = win && nm && !L.nm;
   if (nmFirst) L.nm = true;
   if (win && hatOk && hats >= L.hats) L.hm = hatOk.reduce((m, ok, i) => m | (ok ? 1 << i : 0), 0);
   L.hats = Math.max(L.hats, hats); L.kills = Math.max(L.kills, kills);
-  if (win && li === LEVELS - 1) { L.fast = L.fast ? Math.min(L.fast, Math.floor(time)) : Math.floor(time); recordStage(si, { win, time }); }
+  if (win && li === LEVELS - 1) { if (!noBest) L.fast = L.fast ? Math.min(L.fast, Math.floor(time)) : Math.floor(time); recordStage(si, { win, time }); }
   return { first, newHats, nmFirst };
 }
 export function recordStage(i, { win, time }) {
