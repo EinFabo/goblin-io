@@ -159,6 +159,7 @@ async function dieForReal() {
     await p.evaluate(() => {
       const G = GOBLIN;
       if (G.run.paused && !G.run.over) { const c = document.querySelector('#levelup .card'); if (c) c.click(); }
+      if (!document.querySelector('#cont').hidden) document.querySelector('#contNo').click();   // Weitermachen-Fenster: aufgeben
       G.P.hp = Math.min(G.P.hp, 1);
       if (G.run.enemies.length < 10) G.spawnEnemy('fire_mage', { x: G.P.x + 40, y: G.P.y });
     });
@@ -349,6 +350,20 @@ await p.click('#contNo'); await p.waitForTimeout(800);
 const c5 = await p.evaluate(() => ({ over: GOBLIN.run.over, cont: GOBLIN.run.result.cont, hats: GOBLIN.run.result.hats }));
 if (!c1 || c2.gems !== 5 || c2.cont !== 1 || !c2.full || !c2.boss || c2.paused || !c3 || !c4 || !c5.over || c5.cont !== 1) errs.push('Weitermachen: ' + JSON.stringify({ c1, c2, c3, c4, c5 }));
 console.log('Weitermachen (Boss von vorn, Juwelen, Aufgeben): geprüft');
+// Kombos: alle 12 Paare kurz nacheinander einsetzen, jede wird entdeckt (Phase 10)
+const combos = await p.evaluate(() => {
+  const G = GOBLIN, S = G.save, got = [];
+  for (const [k, C] of Object.entries(G.COMBOS)) {
+    S.profile.level = 50; S.loadout = [C.a, C.b]; G.newRun(2, 7, 1); const run = G.run;
+    while (run.time < 2) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } }
+    run.abil[0].ch = run.abil[0].need; G.useAbility(0); for (let i = 0; i < 30; i++) { G.P.inv = 9; G.update(1 / 60); }
+    run.abil[1].ch = run.abil[1].need; G.useAbility(1); for (let i = 0; i < 90; i++) { G.P.inv = 9; G.update(1 / 60); }
+    if (S.combos.includes(k)) got.push(k);
+  }
+  return got.length;
+});
+if (combos !== 12) errs.push(`Kombos: nur ${combos} von 12 ausgelöst`);
+console.log('Kombos (alle 12 Paare): geprüft');
 await p.evaluate(() => { GOBLIN.save.cards.dagger = { lv: 1, n: 2 }; GOBLIN.go('menu', '#shop'); });
 await p.waitForTimeout(200);
 await p.click('[data-card="dagger"]'); await p.click('#cardUp');

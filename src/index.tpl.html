@@ -112,12 +112,21 @@
       <div class="hooks" id="armHooks"></div>
       <canvas id="armGob" width="220" height="220" aria-hidden="true"></canvas>
     </div>
+    <div class="chips" id="armChips"></div>
     <div class="bench">
       <div class="shelf" id="armShelf" role="listbox" aria-label="Fähigkeiten"></div>
       <div class="parch" id="armNote" aria-live="polite"></div>
     </div>
   </div>
 </section>
+
+<div class="overlay" id="comboBook" hidden>
+  <div class="panel combopanel">
+    <div class="phead"><h2>Kombo-Buch <small id="comboCount"></small></h2><button class="iconbtn" id="comboClose" aria-label="Schließen">✕</button></div>
+    <p class="combohint" id="comboHint"></p>
+    <div class="combolist" id="comboList"></div>
+  </div>
+</div>
 
 <div class="overlay" id="runeBag" hidden>
   <div class="panel runepanel">

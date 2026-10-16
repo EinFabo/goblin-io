@@ -1,7 +1,7 @@
 // Spielstand v2 mit Versionsnummer und Migration.
 // Kaputte oder unvollständige Stände werden repariert statt zu crashen.
 // Stages sind im Save 1-basiert ("1" = Goblinwiese), im Code 0-basiert.
-import { ABILITIES, ABIL_MAX_LV, DEFAULT_LOADOUT, TREE, abilXpNeed, treeDef, treeValid } from '../data/abilities.js';
+import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, DEFAULT_LOADOUT, STAR_MAX, STAR_XP, TREE, abilXpNeed, abilityUnlocked, treeDef, treeValid } from '../data/abilities.js';
 import { accountXpNeed } from '../game/balance.js';
 import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 import { WEAPONS } from '../data/weapons.js';
@@ -10,10 +10,11 @@ import { COSM, DEFAULT_LOOK_KEYS, SLOTS, START_COSM } from '../data/cosmetics.js
 import { ACH } from '../data/achievements.js';
 import { LEVELS } from '../data/levels.js';
 import { normRunes } from '../game/runes.js';
+import { COMBOS } from '../data/combos.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
-export const VERSION = 4;
+export const VERSION = 5;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -57,6 +58,10 @@ export function defaults() {
     daily: { day: '', base: {}, claimed: [false, false, false], bonus: false },
     // Runen (Phase 10): Tasche { 'fire.0': 3 }, Sockel je Fähigkeit [Sockel 1, Sockel 2] (game/runes.js)
     runes: { bag: {}, sock: {} },
+    // Kombos (Phase 10): entdeckte Kombos (ids aus data/combos.js), fürs Kombo-Buch
+    combos: [],
+    // Fähigkeiten, die in der Rüstkammer schon angesehen wurden (sonst „Neu“-Markierung); die von Anfang an freien gelten als gesehen
+    seen: ABILITY_IDS.filter(id => !ABILITIES[id].unlock),
   };
 }
 
@@ -121,6 +126,8 @@ export function normalize(raw) {
     daily: { day: '', base: {}, claimed: [false, false, false], bonus: false },
   };
   out.runes = normRunes(r.runes, out.abilities);
+  out.combos = Array.isArray(r.combos) ? [...new Set(r.combos.filter(k => COMBOS[k]))] : [];
+  out.seen = Array.isArray(r.seen) ? [...new Set(r.seen.filter(id => ABILITIES[id]))] : d.seen;
   for (const [k, v] of Object.entries(obj(st.c))) { const n = num(v); if (n) out.stats.c[k] = n; }
   for (const [k, v] of Object.entries(obj(r.ach))) if (ACH[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.ach[k] = n; }
   const dl = obj(r.daily);
@@ -180,6 +187,7 @@ function normAbilities(v) {
   for (const [id, a] of Object.entries(obj(v))) {
     if (!treeDef(id)) continue;
     const o = obj(a), pt = obj(o.pts), st = { lv: num(o.lv, 1, 1, ABIL_MAX_LV) | 0, xp: num(o.xp), pts: {} };
+    const stars = num(o.st, 0, 0, STAR_MAX) | 0; if (stars && st.lv >= ABIL_MAX_LV) st.st = stars;   // Sterne erst ab Level 30
     for (const k of Object.keys(TREE)) { const n = num(pt[k], 0, 0, TREE[k].max) | 0; if (n) st.pts[k] = n; }
     // mehr ausgegeben als möglich oder Reihen-Regel verletzt (Baum v1 → v2) → zurücksetzen, Punkte bleiben frei
     if (!treeValid(st)) st.pts = {};
@@ -212,12 +220,21 @@ export function migrateV3(v3) {
   return { ...r, version: 4, stages: {}, map: { si: 0, li: 0, fresh: false, nm: false }, keep };
 }
 
+// v4 → v5 (Phase 10: Runen, Kombos, Sterne, Rüstkammer 2.0). Runen, Kombos und Sterne kommen über normalize dazu.
+// Alles, was schon frei ist, gilt als gesehen – sonst stünde nach dem Update an jeder Fähigkeit „Neu“.
+export function migrateV4(v4) {
+  const r = { ...obj(v4) }, st = obj(r.stages), acct = num(obj(r.profile).level, 1), keep = Array.isArray(r.keep) ? r.keep : [];
+  const seen = ABILITY_IDS.filter(id => keep.includes(id) || abilityUnlocked(id, acct, i => !!obj(st[i + 1]).cleared));
+  return { ...r, version: 5, seen };
+}
+
 // Beliebigen Rohstand auf die aktuelle Version bringen
 export function migrate(raw) {
   let r = obj(raw);
   if (!r.version) r = migrateV1(r);
   if (r.version < 3) r = migrateV2(r);
   if (r.version < 4) r = migrateV3(r);
+  if (r.version < 5) r = migrateV4(r);
   return normalize(r);
 }
 
@@ -265,12 +282,15 @@ export function gainAccountXp(n) {
 
 // Fähigkeiten-Stand (ohne Eintrag: Level 1, nichts gelernt)
 export const abilState = id => save.abilities[id] || (save.abilities[id] = { lv: 1, xp: 0, pts: {} });
+// Ab Level 30 zählt die XP für Sterne weiter (a.st, je STAR_XP einer, bis STAR_MAX). Gibt die neuen Level zurück.
 export function gainAbilXp(id, n) {
   const a = abilState(id); let up = 0;
-  if (a.lv >= ABIL_MAX_LV) return 0;
   a.xp += n;
   while (a.lv < ABIL_MAX_LV && a.xp >= abilXpNeed(a.lv)) { a.xp -= abilXpNeed(a.lv); a.lv++; up++; }
-  if (a.lv >= ABIL_MAX_LV) a.xp = 0;
+  if (a.lv >= ABIL_MAX_LV) {
+    while ((a.st || 0) < STAR_MAX && a.xp >= STAR_XP) { a.xp -= STAR_XP; a.st = (a.st || 0) + 1; }
+    if ((a.st || 0) >= STAR_MAX) a.xp = 0;
+  }
   return up;
 }
 

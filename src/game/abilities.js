@@ -6,7 +6,8 @@ import { RNG, frand, rand, rnd, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { save, stageCleared } from '../core/save.js';
 import { trailCol } from '../data/cosmetics.js';
-import { ABILITIES, MOVE_IDS, SLOT2_ACCT, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
+import { ABILITIES, MOVE_IDS, SLOT2_ACCT, STAR_COLS, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
+import { COMBOS, COMBO_GEMS, COMBO_T, comboOf } from '../data/combos.js';
 import { hurt } from './combat.js';
 import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
 import { runeMods } from './runes.js';
@@ -49,7 +50,7 @@ export function initAbilities() {
   for (const id of MOVE_IDS) run.abMods[id] = abilMods(save.abilities[id]);
   // max: Aufladungen (Doppelhaken), stock: gespeicherte volle Ladungen außer der laufenden
   run.abil = save.loadout.map((id, i) => id && slotOpen(i) && canEquip(id) ? { id, ch: ABILITIES[id].charge === 'once' ? (M(id).a ? 2 : 1) : 0, need: needOf(id), max: id === 'hook' && M(id).m ? 2 : 1, stock: 0 } : null);
-  run.abfx = []; run.tmpAllies = []; run.trapRolls = 0; run.rageExt = 0;
+  run.abfx = []; run.tmpAllies = []; run.trapRolls = 0; run.rageExt = 0; run.lastAbil = null;
   initMoves();
 }
 export const abilReady = s => !!s && (s.ch >= s.need || s.stock > 0) && ABILITIES[s.id].charge !== 'once';
@@ -124,6 +125,8 @@ export function useAbility(i) {
   try {
     if (USE[s.id](M(s.id)) === false) return false;
     echoRune(s.id);
+    checkCombo(s.id);
+    starFx(s.id);
   } finally { setSrc(prev); }
   if (s.stock > 0) s.stock--; else s.ch = 0;
   run.abXp[s.id] = (run.abXp[s.id] || 0) + xpPerUse(s.id);   // XP durch Benutzen, gutgeschrieben am Laufende
@@ -310,11 +313,14 @@ function updMech(dt) {
 function layTraps(m, n = m.a ? 4 : 3) {
   for (let i = 0; i < n; i++) {
     const a = i * TAU / n + run.time, x = n > 1 ? P.x + Math.cos(a) * 55 : P.x, y = n > 1 ? P.y + Math.sin(a) * 45 : P.y + 12;
-    run.abfx.push({ k: 'trap', x, y, t: 0, dur: 20 * m.area, snap: 0, uses: 3 + m.s1, hold: 2 + .4 * m.s2, lure: m.s3 ? 20 + 30 * m.s3 : 0, lureT: 0,
-      dmg: (70 + P.lv * 8) * P.dmgMult * m.pow, splash: (m.b ? 110 : 70) * m.area, sf: m.b ? 1 : .5 });
-    puff(x, y, .5, 'rgba(160,140,110,.8)');
+    trapAt(x, y, m);
   }
   sfx.throw();
+}
+function trapAt(x, y, m) {
+  run.abfx.push({ k: 'trap', x, y, t: 0, dur: 20 * m.area, snap: 0, uses: 3 + m.s1, hold: 2 + .4 * m.s2, lure: m.s3 ? 20 + 30 * m.s3 : 0, lureT: 0,
+    dmg: (70 + P.lv * 8) * P.dmgMult * m.pow, splash: (m.b ? 110 : 70) * m.area, sf: m.b ? 1 : .5 });
+  puff(x, y, .5, 'rgba(160,140,110,.8)');
 }
 
 // ---------- Rauchbombe ----------
@@ -389,8 +395,9 @@ export const bulwark = () => P.shieldT > 0 && M('shield').m;
 // Dornen: Nahkämpfer, die den Schild treffen
 export function shieldThorns(e) {
   const k = M('shield').s3;
-  if (!k || !(P.shieldT > 0) || e.thornT > run.time) return;
-  e.thornT = run.time + .4; const d = Math.hypot(e.x - P.x, e.y - P.y) || 1, prev = setSrc('shield'); hurt(e, 10 * k * P.dmgMult, 200, (e.x - P.x) / d, (e.y - P.y) / d, '#dfe6ea'); setSrc(prev);
+  if ((!k && !(P.bladeT > run.time)) || !(P.shieldT > 0) || e.thornT > run.time) return;
+  e.thornT = run.time + .4; const d = Math.hypot(e.x - P.x, e.y - P.y) || 1, prev = setSrc('shield'); if (k) hurt(e, 10 * k * P.dmgMult, 200, (e.x - P.x) / d, (e.y - P.y) / d, '#dfe6ea'); setSrc(prev);
+  if (P.bladeT > run.time) { const prev2 = setSrc('spin'); hurt(e, (30 + P.lv * 3) * P.dmgMult, 260, (e.x - P.x) / d, (e.y - P.y) / d, '#dfe6ea'); setSrc(prev2); }   // Klingenschild (Kombo)
 }
 // Splitterschild: beim Brechen oder Ende fliegen Splitter um dich
 function shieldShards() {
@@ -728,6 +735,53 @@ function updDots(dt) {
     if (e.psn && (e.psn.t -= dt) <= 0) e.psn = null;
   }
 }
+
+// Sterne (Phase 10): Glanz in der Sternfarbe beim Einsatz; 5 Sterne = Regenbogen (nur Optik, Zufall über frand)
+const RAINBOW = ['#ff5d55', '#ffb02e', '#f4d03f', '#7dff7a', '#6fb7ff', '#c27cff'];
+function starFx(id) {
+  const n = (save.abilities[id] && save.abilities[id].st) || 0; if (!n) return;
+  const col = i => (n >= 5 ? RAINBOW[i % RAINBOW.length] : STAR_COLS[n - 1]);
+  ring(P.x, P.y, 14, 70 + n * 12, .4, n >= 5 ? 'rgba(255,255,255,.9)' : STAR_COLS[n - 1], 4 + n);
+  for (let i = 0; i < 6 + n * 4; i++) { const a = frand(0, TAU), v = frand(80, 200); part(P.x, P.y - 14, Math.cos(a) * v, Math.sin(a) * v - 40, .55, col(i), frand(2.5, 4.5)); }
+}
+
+// ---------- Kombos (Phase 10, data/combos.js) ----------
+// Die zweite Fähigkeit eines Paars höchstens COMBO_T s nach der ersten löst den Zusatz aus. Danach beginnt die Zählung neu
+// (keine Ketten aus einem Einsatz). Erstes Entdecken: Banner, Juwelen, Eintrag im Kombo-Buch (save.combos).
+function checkCombo(id) {
+  const last = run.lastAbil, k = last && last.id !== id && run.time - last.t <= COMBO_T ? comboOf(last.id, id) : null;
+  if (!k) { run.lastAbil = { id, t: run.time }; return; }
+  run.lastAbil = null;
+  COMBO_FX[k]();
+  count(run, 'combo');
+  const C = COMBOS[k];
+  if (!save.combos.includes(k)) { save.combos.push(k); save.wallet.gems += COMBO_GEMS; banner(`Kombo entdeckt: ${C.name}! +${COMBO_GEMS} Juwelen`, ''); sfx.ding(); }
+  else addNum(P.x, P.y - 70, C.name + '!', '#ffd84a', true);
+  ring(P.x, P.y, 10, 220, .45, 'rgba(255,216,74,.95)', 10);
+  for (let i = 0; i < 16; i++) { const a = i * TAU / 16; part(P.x, P.y - 10, Math.cos(a) * 240, Math.sin(a) * 240, .45, i % 2 ? '#ffd84a' : '#fff6b0', 3.5); }
+}
+const live = k => run.abfx.filter(f => f.k === k && !f.done);
+const COMBO_FX = {
+  poisontrap() { for (const f of live('trap')) run.abfx.push({ k: 'gas', x: f.x, y: f.y, r: 110 * P.area, t: 0, dur: 5, tick: 0, dmg: (20 + P.lv * 3) * P.dmgMult }); },
+  inferno() { for (const f of live('oil')) igniteOil(f.x, f.y, 1); for (const f of live('turret')) if (!f.inferno) { f.inferno = true; f.dmg *= 1.5; } },
+  implosion() { later(.6, () => { const R = 360 * P.area; blast(P.x, P.y, R, (300 + P.lv * 20) * P.dmgMult * .5, 500, '#ffe08a'); ring(P.x, P.y, R, 10, .5, 'rgba(255,224,138,.95)', 14); run.shake = Math.max(run.shake, 12); sfx.boom(); }); },
+  bullseye() { run.tele.push({ k: 'boulder', sx: P.x - 30, sy: P.y - 60, x: P.x, y: P.y, t: 0, dur: .8, rad: 170 * P.area, dmg: (250 + P.lv * 25) * P.dmgMult, burn: false, shards: 0, stun: .5, src: abSrc }); },
+  whirlhook() { query(P.x, P.y, 380, e => { if (e.boss || e.obj) return; const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1; e.kx += dx / d * 900; e.ky += dy / d * 900; }); },
+  warfrenzy() { for (const al of run.tmpAllies) if (!al.frenzy) { al.frenzy = true; al.pow *= 1.5; al.spd *= 1.3; } P.rageT = Math.max(P.rageT, 3); },
+  icerink() { for (const f of live('oil')) { query(f.x, f.y, f.r, e => { if (!e.boss && !e.obj) e.freezeT = Math.max(e.freezeT, 2); else e.slowT = Math.max(e.slowT, 2); }); ring(f.x, f.y, 10, f.r, .4, 'rgba(150,220,255,.95)', 8); } sfx.frost(); },
+  baittrap() { const m = M('trap'); for (const f of live('decoy')) trapAt(f.x, f.y + 8, m); },
+  plague() {
+    run.dotOn = true;
+    for (const e of run.enemies) {
+      if (e.dead || e.obj || !onScreen(e.x, e.y)) continue;
+      const p = e.psn; e.psn = { n: Math.min(5, (p ? p.n : 0) + 3), dps: Math.max(p ? p.dps : 0, (5 + P.lv * .5) * P.dmgMult), t: 4.05, src: abSrc }; if (!(e.dotT > 0)) e.dotT = .5;
+      e.slowT = Math.max(e.slowT, 2);
+    }
+  },
+  witchkitchen() { const h = P.maxHp * .25; P.hp = Math.min(P.maxHp, P.hp + h); addNum(P.x, P.y - 40, '+' + Math.round(h), '#7dff7a'); brewPotion(M('brew')); },
+  bladeshield() { if (P.shieldT > 0) { P.shieldHp *= 1.5; P.shieldMax *= 1.5; P.bladeT = run.time + P.shieldT; } },
+  quakebomb() { let n = 0; for (const f of live('tb')) for (const e of f.list) if (!e.dead && n++ < 12) quake(e.x, e.y, 90 * P.area, (60 + P.lv * 7) * P.dmgMult * .7, false); },
+};
 
 // ---------- laufende Effekte ----------
 const FX_UPD = {

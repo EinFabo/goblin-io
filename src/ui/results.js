@@ -33,7 +33,7 @@ export function showResults(r) {
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +
     (r.trophy ? `<p class="vchest trophy">${cosmTile(r.trophy)}<span>Trophäe: <b>${COSM[r.trophy].name}</b><br><small>in der Garderobe (Profil)</small></span></p>` : '') +
     (r.chest ? `<p class="vchest">${chestSvg(r.chest.type)}<span>Siegtruhe: <b>${CHESTS[r.chest.type].name}</b><br><small>${r.chest.shelf ? 'liegt im Truhenregal (Laden)' : 'Regal voll – sie ist sofort aufgegangen'}</small></span>${r.chest.shelf ? '' : '<button class="btn small" id="vchestBtn">Ansehen</button>'}</p>` : '') +
-    r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}</b></p>`).join('');
+    r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}${a.star ? ` · <em>${a.st === 5 ? 'Legende!' : 'Neuer Stern!'}</em> ${'★'.repeat(a.st)}` : ''}</b></p>`).join('');
   $('#nextBtn').hidden = !r.next;
   if (r.next) $('#nextBtn').textContent = STAGES[r.next.si].endless ? 'Endlose Nacht' : r.next.si !== run.si ? `Welt ${r.next.si + 1}` : `Weiter: ${levelLabel(r.next.si, r.next.li)}`;
   $('#againBtn').textContent = r.win ? 'Nochmal' : 'Nochmal versuchen';
@@ -78,7 +78,7 @@ function hatSequence(r) {
     // Juwelen der neuen Hüte fliegen zur Juwelen-Zeile
     const gem = $('#ovGems');
     if (gem && r.newHats) hats.slice(r.hats - r.newHats, r.hats).forEach((h, k) => at(150 + k * 120, () => flyReward(h, 'gems', GEMS.hat, gem)));
-    if (r.abil.some(a => a.up)) at(450, () => sfx.abilUp());
+    if (r.abil.some(a => a.up || a.star)) at(450, () => sfx.abilUp());
   };
   at(t, () => seqDone && seqDone());
 }

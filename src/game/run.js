@@ -220,7 +220,7 @@ export function endRun(win) {
   const nx = rec.first && boss && nextLevel(run.si, run.li);
   if (nx) unlocked.push(STAGES[nx.si].endless ? STAGES[nx.si].name : 'Welt ' + (nx.si + 1));
   // Fähigkeiten-XP durch Benutzen
-  const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const lvUp = gainAbilXp(id, x); return { id, xp: x, lv: abilState(id).lv, up: lvUp }; });
+  const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const st0 = abilState(id).st || 0, lvUp = gainAbilXp(id, x), a = abilState(id); return { id, xp: x, lv: a.lv, up: lvUp, st: a.st || 0, star: (a.st || 0) - st0 }; });
   save.wallet.gold += run.gold + bonus;
   // Juwelen (9.2): neue Hüte, Konto-Level, Boss-Erstsieg
   const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? GEMS.nightmare : 0) + (br ? br.gems : 0);

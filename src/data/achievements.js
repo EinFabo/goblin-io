@@ -37,6 +37,8 @@ export const ACHIEVEMENTS = [
   { id: 'abilLv', name: 'Gelehrter', desc: 'Sammle {n} Fähigkeiten-Level', v: s => Object.values(s.abilities).reduce((n, a) => n + a.lv - 1, 0), goals: [20, 100, 300] },
   { id: 'talents', name: 'Talentiert', desc: 'Kaufe {n} Talent-Stufen', v: s => Object.values(s.talents).reduce((n, x) => n + x, 0), goals: [10, 40, TALENTS.reduce((n, t) => n + t.max, 0)] },
   { id: 'cosm', name: 'Modegoblin', desc: 'Besitze {n} Kosmetik-Teile', v: s => s.cosm.length, goals: [10, 20, COSMETICS.length], title: 'Modegoblin' },
+  { id: 'combos', name: 'Kombo-Meister', desc: 'Entdecke {n} Kombos', v: s => (s.combos || []).length, goals: [3, 8, 12], title: 'Kombo-Meister' },
+  { id: 'stars', name: 'Sternensammler', desc: 'Sammle {n} Fähigkeiten-Sterne', v: s => Object.values(s.abilities).reduce((n, a) => n + (a.st || 0), 0), goals: [1, 10, 40] },
   { id: 'barrel', name: 'Fassbinder', desc: 'Gewinne {n} Level mit dem Sprengfass', v: c('w.barrel'), goals: [1, 10, 50], title: 'Fassbinder' },
   ...Object.entries(WEAPONS).filter(([id]) => id !== 'barrel').map(([id, W]) => ({ id: 'w_' + id, name: `${W.name}-Meister`, desc: `Gewinne {n} Level mit ${W.name}`, v: c('w.' + id), goals: [1, 10, 50] })),
   ...Object.entries(SCHOOL_NAME).map(([k, n]) => ({ id: 'k_' + k, name: `${n}-Bezwinger`, desc: `Besiege {n} ${n}magier`, v: c('k.' + k), goals: [300, 3000, 20000] })),

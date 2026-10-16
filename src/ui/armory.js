@@ -1,7 +1,8 @@
 import { sfx } from '../core/audio.js';
 import { persist, save } from '../core/save.js';
 import { $ } from '../core/util.js';
-import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, SLOT2_ACCT, SLOT_KEYS, abilXpNeed, spentPoints, treeDef, unlockText, xpPerUse } from '../data/abilities.js';
+import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, ROLES, SLOT2_ACCT, SLOT_KEYS, STAR_COLS, STAR_MAX, STAR_NAMES, STAR_XP, abilXpNeed, spentPoints, treeDef, unlockText, xpPerUse } from '../data/abilities.js';
+import { openCombos } from './combobook.js';
 import { canEquip, slotOpen } from '../game/abilities.js';
 import { icon } from '../render/icons.js';
 import { openTree } from './tree.js';
@@ -12,8 +13,11 @@ import { socketOpen, socketsOf } from '../game/runes.js';
 
 // ---------- Rüstkammer: zwei Haken für die Fähigkeiten, Brett mit allen Fähigkeiten, Zettel mit Details ----------
 // Die Auswahl bleibt gespeichert (save.loadout); Stages starten direkt damit.
-let sel = null;
+let sel = null, role = 'all', byLv = false;   // Regal-Filter (Rolle) und Sortierung nach Level
 const st = id => save.abilities[id] || { lv: 1, xp: 0, pts: {} };
+// Sterne (Phase 10) als kleine Reihe, in der Farbe des höchsten Sterns
+const stars = id => { const n = st(id).st || 0; return n ? `<span class="stars" style="--sc:${STAR_COLS[n - 1]}">${'★'.repeat(n)}</span>` : ''; };
+const isNew = id => canEquip(id) && !save.seen.includes(id);
 const freePts = id => { const s = st(id); return s.lv - 1 - spentPoints(s.pts); };
 
 // Ungültige Einträge räumen (z. B. Slot 2 noch zu, Fähigkeit nicht mehr frei)
@@ -36,7 +40,7 @@ function renderHooks(swing = -1) {
     let body;
     if (!slotOpen(i)) body = `<div class="plaque closed">${key}<span class="t">Noch zu</span><span class="lvl">ab Konto-Level ${SLOT2_ACCT}</span></div>`;
     else if (!id) body = `<div class="plaque empty">${key}<span class="t">Frei</span><span class="lvl">Fähigkeit wählen</span></div>`;
-    else body = `<button class="plaque${id === sel ? ' sel' : ''}" data-pick="${id}" aria-label="${ABILITIES[id].name} auf ${SLOT_KEYS[i]}">${key}<img src="${icon(id)}" alt=""><span class="t">${ABILITIES[id].name}</span><span class="lvl">Level ${st(id).lv}</span></button>`;
+    else body = `<button class="plaque${id === sel ? ' sel' : ''}" data-pick="${id}" aria-label="${ABILITIES[id].name} auf ${SLOT_KEYS[i]}">${key}<img src="${icon(id)}" alt=""><span class="t">${ABILITIES[id].name}</span><span class="lvl">Level ${st(id).lv}</span>${stars(id)}</button>`;
     return `<div class="hook${i === swing ? ' swing' : ''}">${body}</div>`;
   }).join('');
 }
@@ -45,20 +49,30 @@ function renderShelf() {
   // Rolle und Sprint: immer dabei, eigene Marken vorn im Regal
   const moves = MOVE_IDS.map(id => `<button class="token move${id === sel ? ' on' : ''}" data-pick="${id}" role="option" aria-selected="${id === sel}">
       <span class="disc"><img src="${icon(MOVES[id].icon)}" alt=""></span><span class="n">${MOVES[id].name}</span><span class="tlv">${st(id).lv}</span>${freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}</button>`).join('');
-  $('#armShelf').innerHTML = moves + ABILITY_IDS.map(id => {
+  // Filter nach Rolle, Sortierung nach Level (gesperrte hinten); Rolle und Sprint nur ohne Filter
+  let ids = role === 'all' ? ABILITY_IDS : ROLES[role].ids;
+  if (byLv) ids = [...ids].sort((a, b) => (canEquip(b) - canEquip(a)) || (st(b).lv + (st(b).st || 0) * 100) - (st(a).lv + (st(a).st || 0) * 100));
+  $('#armShelf').innerHTML = (role === 'all' ? moves : '') + ids.map(id => {
     const ok = canEquip(id), slot = save.loadout.indexOf(id);
     return `<button class="token${ok ? '' : ' locked'}${id === sel ? ' on' : ''}" data-pick="${id}" role="option" aria-selected="${id === sel}">
       <span class="disc"><img src="${icon(id)}" alt=""></span><span class="n">${ABILITIES[id].name}</span>
-      ${ok ? `<span class="tlv">${st(id).lv}</span>` : ''}${slot >= 0 ? `<span class="eq">${SLOT_KEYS[slot]}</span>` : ''}${ok && freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}</button>`;
+      ${ok ? `<span class="tlv">${st(id).lv}</span>` : ''}${slot >= 0 ? `<span class="eq">${SLOT_KEYS[slot]}</span>` : ''}${ok && freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}${isNew(id) ? '<span class="newtag">Neu</span>' : ''}${stars(id)}</button>`;
   }).join('');
+  const nNew = ABILITY_IDS.filter(isNew).length;
+  $('#armChips').innerHTML = [['all', 'Alle'], ...Object.entries(ROLES).map(([k, R]) => [k, R.name])].map(([k, n]) => `<button class="chip${role === k ? ' on' : ''}" data-role="${k}">${n}</button>`).join('') +
+    `<button class="chip sort${byLv ? ' on' : ''}" data-sort aria-pressed="${byLv}">Nach Level</button><button class="chip book" data-combos>Kombo-Buch <b>${save.combos.length}/12</b></button>` + (nNew ? `<span class="chipnew">${nNew} neu</span>` : '');
 }
 
 function renderNote() {
   const id = sel, A = treeDef(id), move = !!MOVES[id], ok = move || canEquip(id), s = st(id), slot = save.loadout.indexOf(id), free = freePts(id);
   let h = `<h3>${A.name}</h3><p class="c">${move ? 'Immer dabei' : CHARGE_TXT[A.charge](A.need)}</p><p>${A.desc}</p>`;
   if (!ok) { $('#armNote').innerHTML = h + `<p class="lock">Noch nicht frei. ${unlockText(id)}.</p>`; return; }
-  const pct = s.lv >= ABIL_MAX_LV ? 100 : Math.min(100, s.xp / abilXpNeed(s.lv) * 100);
-  h += `<div class="bar"><i style="width:${pct.toFixed(0)}%"></i></div><p class="xp">Level ${s.lv}${s.lv < ABIL_MAX_LV ? ` · ${Math.floor(s.xp)} / ${abilXpNeed(s.lv)} XP · +${xpPerUse(id)} ${id === 'sprint' ? 'pro Sekunde' : 'pro Einsatz'}` : ' · Maximum'}</p>`;
+  // ab Level 30: Balken bis zum nächsten Stern (Phase 10), Rolle und Sprint haben keine Sterne
+  const n = s.st || 0, starBar = s.lv >= ABIL_MAX_LV && !move && n < STAR_MAX;
+  const pct = starBar ? Math.min(100, s.xp / STAR_XP * 100) : s.lv >= ABIL_MAX_LV ? 100 : Math.min(100, s.xp / abilXpNeed(s.lv) * 100);
+  const xpTxt = s.lv < ABIL_MAX_LV ? ` · ${Math.floor(s.xp)} / ${abilXpNeed(s.lv)} XP · +${xpPerUse(id)} ${id === 'sprint' ? 'pro Sekunde' : 'pro Einsatz'}`
+    : move ? ' · Maximum' : n >= STAR_MAX ? ` · ${STAR_MAX} Sterne: Legende!` : ` · Stern ${n + 1} (${STAR_NAMES[n]}): ${Math.floor(s.xp)} / ${STAR_XP} XP`;
+  h += `<div class="bar${starBar ? ' starbar' : ''}" style="--sc:${STAR_COLS[Math.min(n, STAR_MAX - 1)]}"><i style="width:${pct.toFixed(0)}%"></i></div><p class="xp">Level ${s.lv}${xpTxt}${n ? ` · +${n * 3} % Kraft` : ''}</p>`;
   const hang = i => move || !slotOpen(i) ? '' : `<button class="btn ${slot === i ? 'ghost' : 'primary'}" data-hang="${i}" ${slot === i ? 'disabled' : ''}>${slot === i ? `Hängt an ${SLOT_KEYS[i]}` : `An ${SLOT_KEYS[i]} hängen`}</button>`;
   h += `<div class="acts">${hang(0)}${hang(1)}<button class="btn" data-tree="${id}">Skill Tree${free > 0 ? ` (${free} frei)` : ''}</button></div>`;
   // Runen-Sockel (Phase 10): Klick öffnet die Runen-Tasche für diesen Sockel
@@ -71,7 +85,8 @@ function renderNote() {
   $('#armNote').innerHTML = h;
 }
 
-function pick(id) { sel = id; sfx.click(); renderHooks(); renderShelf(); renderNote(); }
+// Ansehen nimmt die „Neu“-Markierung weg
+function pick(id) { sel = id; if (isNew(id)) { save.seen.push(id); persist(); } sfx.click(); renderHooks(); renderShelf(); renderNote(); }
 function hang(i) {
   const L = save.loadout, other = 1 - i;
   if (MOVES[sel] || !canEquip(sel) || !slotOpen(i) || L[i] === sel) return;
@@ -87,6 +102,9 @@ $('#armory').addEventListener('click', e => {
   const h = e.target.closest('[data-hang]'); if (h) { hang(+h.dataset.hang); return; }
   const k = e.target.closest('[data-sock], [data-runes]');
   if (k) { openRunes(sel, k.dataset.sock !== undefined ? +k.dataset.sock : null, () => { if (!$('#armory').hidden) renderArmory(); }); return; }
+  const c = e.target.closest('[data-role]'); if (c) { role = c.dataset.role; sfx.click(); renderShelf(); return; }
+  if (e.target.closest('[data-sort]')) { byLv = !byLv; sfx.click(); renderShelf(); return; }
+  if (e.target.closest('[data-combos]')) { openCombos(); return; }
   const b = e.target.closest('[data-pick]'); if (b) pick(b.dataset.pick);
 });
 

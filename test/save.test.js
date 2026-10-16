@@ -120,3 +120,12 @@ test('Weitermachen: Boss-Level geschafft, aber ohne Bestzeit (noBest)', () => {
   recordLevel(0, 4, { win: true, time: 100, hats: 1, hatOk: [true, false, false], noBest: true });
   assert.equal(save.stages[1].lv[4].fast, 180);
 });
+
+test('v4 → v5: freie Fähigkeiten gelten als gesehen, Runen/Kombos leer', () => {
+  const s = migrate({ version: 4, profile: { level: 20 }, stages: { 1: { cleared: true } }, keep: ['bees'] });
+  assert.equal(s.version, 5);
+  assert.ok(s.seen.includes('rage') && s.seen.includes('oilcask') && s.seen.includes('bees'));   // Konto 10, keep
+  assert.ok(!s.seen.includes('turret'));   // erst ab Konto 22
+  assert.deepEqual(s.runes, { bag: {}, sock: {} }); assert.deepEqual(s.combos, []);
+  assert.deepEqual(normalize(s).seen, s.seen);
+});

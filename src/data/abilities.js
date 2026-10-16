@@ -132,6 +132,11 @@ export const ABILITY_IDS = Object.keys(ABILITIES);
 // ---------- Level und Skill Tree (PLAN 8.4) ----------
 export const ABIL_MAX_LV = 30;
 export const abilXpNeed = L => 60 + 40 * L;
+// Sterne (Phase 10): nach Level 30 sammelt die Fähigkeit weiter XP, je STAR_XP ein Stern (bis 5), jeder +3 % Kraft
+// und ein anderer Glanz beim Einsatz (Bronze, Silber, Gold, Lila, Regenbogen). 5 Sterne: Titel „Legende der …“
+export const STAR_XP = 2000, STAR_MAX = 5, STAR_POW = .03;
+export const STAR_COLS = ['#c9844a', '#dfe6ea', '#f4d03f', '#c27cff', '#ff7ad9'];
+export const STAR_NAMES = ['Bronze', 'Silber', 'Gold', 'Lila', 'Regenbogen'];
 // XP pro Einsatz: ein voller Lauf bringt jeder Fähigkeit ~100 XP, egal wie oft sie lädt
 export function xpPerUse(id) {
   if (id === 'dash') return 3;
@@ -194,12 +199,20 @@ export function treeValid(st) {
 // Wirkung des Baums für einen Lauf; s1–s3 = Ränge der eigenen Skills
 export function abilMods(st) {
   const p = (st && st.pts) || {};
-  return { pow: 1 + .08 * (p.pow || 0), spd: 1 - .05 * (p.cd || 0), area: 1 + .08 * (p.area || 0), a: !!p.a, b: !!p.b, m: !!p.m,
+  return { pow: (1 + .08 * (p.pow || 0)) * (1 + STAR_POW * ((st && st.st) || 0)), spd: 1 - .05 * (p.cd || 0), area: 1 + .08 * (p.area || 0), a: !!p.a, b: !!p.b, m: !!p.m,
     s1: p.s1 || 0, s2: p.s2 || 0, s3: p.s3 || 0, r: { pow: p.pow || 0, cd: p.cd || 0, area: p.area || 0 } };
 }
 // Rauchbombe: Angriffstempo-Malus der Waffen, solange man unsichtbar ist (Wunsch Fabi).
 // 60 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 20 %.
 export const smokeAtkSlow = calm => .6 - .4 * Math.min(calm || 0, 3) / 3;
+// Rollen für den Regal-Filter der Rüstkammer (Phase 10)
+export const ROLES = {
+  atk: { name: 'Angriff', ids: ['catapult', 'bigbang', 'spin', 'turret', 'bees', 'grudge'] },
+  ctrl: { name: 'Kontrolle', ids: ['trap', 'smoke', 'timebomb', 'oilcask', 'decoy', 'scrapmag'] },
+  move: { name: 'Bewegung', ids: ['hook', 'burrow', 'cannon'] },
+  guard: { name: 'Schutz', ids: ['shield', 'shroom', 'charm'] },
+  help: { name: 'Helfer', ids: ['rage', 'totem', 'rats', 'call', 'brew', 'mech'] },
+};
 export const SLOT2_ACCT = 3;
 export const SLOT_KEYS = ['Q', 'E'];
 export const DEFAULT_LOADOUT = ['rage', 'trap'];

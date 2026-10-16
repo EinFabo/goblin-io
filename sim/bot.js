@@ -3,11 +3,13 @@
 // step: Länge eines Logikschritts in s (Standard wie im Spiel: 1/60)
 // god: Leben jeden Schritt auffüllen (misst in der Endlosen Nacht, ob noch etwas stirbt, statt wann der Bot fällt)
 // runes: je Slot eine Liste von Runen-Schlüsseln (['fire.3', 'bolt.3']); die Fähigkeit steht dann auf Level 20 (beide Sockel offen)
-export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20, god = false, runes = null }) {
+// tree: Skill-Tree-Punkte für beide Fähigkeiten (Level 30), z. B. alle Knoten voll (--tree full)
+export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20, god = false, runes = null, tree = null }) {
   const G = window.GOBLIN, joy = G.joy, STEP = step || G.STEP;
   G.save.talents = { ...talents }; G.save.loadout = [...loadout]; G.save.profile.level = acct;
   G.save.runes = { bag: {}, sock: {} };
-  if (runes) loadout.forEach((id, i) => { if (!id || !runes[i] || !runes[i].length) return; G.save.abilities[id] = { lv: 20, xp: 0, pts: {} }; G.save.runes.sock[id] = [runes[i][0] || null, runes[i][1] || null]; });
+  for (const id of loadout) if (id) G.save.abilities[id] = tree ? { lv: 30, xp: 0, pts: { ...tree } } : { lv: 1, xp: 0, pts: {} };
+  if (runes) loadout.forEach((id, i) => { if (!id || !runes[i] || !runes[i].length) return; const a = G.save.abilities[id]; a.lv = Math.max(20, a.lv); G.save.runes.sock[id] = [runes[i][0] || null, runes[i][1] || null]; });
   for (let k = 1; k <= 8; k++) G.save.stages[k] = { cleared: true, stars: 0, best: 0, nightmare: false };   // alles freigeschaltet
   G.newRun(si, seed, li);
   const run = G.run, P = G.P;
