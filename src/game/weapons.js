@@ -19,7 +19,7 @@ export function shootRaw(k, a, dmg, pierce, spd, life, extra = {}) {
 }
 export function updWeapons(dt) {
   const smoke = P.smokeT > 0 && run.abMods && run.abMods.smoke;
-  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1) * (P.atkSpd || 1);   // Kriegshorn
+  const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1) * (P.burrowT > 0 ? .5 : 1) * (P.brew && P.brew.swift > 0 ? 1.5 : 1) * (P.atkSpd || 1);   // Kriegshorn; eingegraben halb so schnell
   // Kartenstufe (9.3): mehr Grundschaden je Waffe (dm statt P.dmgMult), auf Stufe 10 schneller
   for (const w of run.weapons) stepWeapon(w, rate * (w.fast || 1), P.dmgMult * (w.card || 1), dt);
 }

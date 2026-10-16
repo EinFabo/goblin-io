@@ -71,7 +71,7 @@ export function updHud(dt) {
   }
 }
 // Leiste: Aufladung, während der Wirkung die Restzeit
-const abilActive = id => id === 'rage' ? P.rageT > 0 : id === 'mech' ? P.mechT > 0 : id === 'smoke' ? P.smokeT > 0 : id === 'shield' ? P.shieldT > 0 : id === 'totem' ? run.goldT > 0 : false;
+const abilActive = id => id === 'rage' ? P.rageT > 0 : id === 'mech' ? P.mechT > 0 : id === 'smoke' ? P.smokeT > 0 : id === 'shield' ? P.shieldT > 0 : id === 'totem' ? run.goldT > 0 : id === 'burrow' ? P.burrowT > 0 : id === 'spin' ? P.spinT > 0 : false;
 function abilFill(s) {
   if (s.id === 'mech' && P.mechT > 0) return P.mechT / P.mechMax;
   if (s.id === 'shield' && P.shieldT > 0) return P.shieldHp / P.shieldMax;
@@ -89,7 +89,7 @@ export function setupAbilButtons() {
   // Rolle/Sprint: neuer Lauf ohne Pop und Klick vom Stand des letzten
   for (const id of ['#dashBtn', '#sprintBtn']) for (const k of ['p', 'r', 'n']) delete hudCache[id + k];
 }
-const ABIL_COL = { rage: '#ff5a3c', mech: '#e0a83a', trap: '#c9a26a', smoke: '#b8b8c8', catapult: '#a08a6a', hook: '#8fd0ff', shroom: '#7be04a', shield: '#dfe6ea', rats: '#d9a066', call: '#6fc23a', totem: '#ffd84a', timebomb: '#8fe6ff', bigbang: '#ff9a2e', charm: '#ffd84a' };
+const ABIL_COL = { rage: '#ff5a3c', mech: '#e0a83a', trap: '#c9a26a', smoke: '#b8b8c8', catapult: '#a08a6a', hook: '#8fd0ff', shroom: '#7be04a', shield: '#dfe6ea', rats: '#d9a066', call: '#6fc23a', totem: '#ffd84a', timebomb: '#8fe6ff', bigbang: '#ff9a2e', charm: '#ffd84a', oilcask: '#6a5a8a', burrow: '#a8865a', cannon: '#c9973a', decoy: '#e2c46a', turret: '#ff9a2e', spin: '#dfe6ea', grudge: '#ff7a3c', scrapmag: '#e5484d', bees: '#ffd84a', brew: '#9cf06a' };
 export function slotHtml(ic, lv, evo, auto = false, mega = false) { return `<div class="slot${evo ? ' evo' : ''}${auto ? ' auto' : ''}${mega ? ' mega' : ''}"><img src="${ic}" alt=""><i>${mega ? '★★' : evo ? '★' : lv}</i></div>`; }
 // Fortschritt bis zur nächsten Auto-Stufe (0…1) bzw. null, wenn ausgebaut (game/levelup.js autoUp)
 function autoProgress(w) {

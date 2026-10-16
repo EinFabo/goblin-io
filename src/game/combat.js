@@ -107,6 +107,8 @@ export function damagePlayer(d, src = 'contact') {
   d = shieldAbsorb(d);
   if (d <= 0) { P.inv = .5; return; }
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
+  chargeAbil('hurt', d / P.maxHp * 100);   // Goblin-Groll lädt mit eingestecktem Schaden
+  if (run.hitBy) run.foe = run.hitBy;      // Racheblick: wer zuletzt im Nahkampf traf
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
   emit('playerHurt', { amount: d, src: run.boss ? 'boss.' + src : src });   // im Bosskampf mit Vorsilbe (Sim: Schaden je Boss-Angriff)

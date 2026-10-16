@@ -10,7 +10,7 @@ import { part } from './fx.js';
 import { save } from '../core/save.js';
 import { trailCol } from '../data/cosmetics.js';
 import { hint } from './run.js';
-import { P, clampToArena, pR, query, run } from './state.js';
+import { P, clampToArena, pR, query, run, hidden } from './state.js';
 
 // ---------- Spieler ----------
 export function updPlayer(dt) {
@@ -44,7 +44,7 @@ export function updPlayer(dt) {
     P.trailT -= dt; if (P.trailT <= 0) { P.trailT = .06; P.trail.push({ x: P.x, y: P.y, spr: curPlayerSpr(), t: .25 }); }
     if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, trailCol(save.look.trail), frand(4, 7));
   } else {
-    const sp = P.moving ? P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? P.sprintMul : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * (P.hasteT > 0 ? 1 + P.haste : 1) * Math.min(1, len) : 0;
+    const sp = P.moving ? P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? P.sprintMul : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * (P.hasteT > 0 ? 1 + P.haste : 1) * (P.spinT > 0 ? P.spinSlow : 1) * Math.min(1, len) : 0;
     // Auf Eis (Frostbart) schlittert man: Tempo folgt der Eingabe nur langsam
     const wx = P.aimX * sp, wy = P.aimY * sp;
     if (P.iceT > 0) { const k = 1 - Math.pow(.1, dt); P.ivx += (wx - P.ivx) * k; P.ivy += (wy - P.ivy) * k; P.iceT -= dt; }
@@ -73,9 +73,9 @@ export function updPlayer(dt) {
   P.inv -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
   if (P.hp < P.maxHp * LOW_HP) run.lowT += dt;
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
-  if (!(P.smokeT > 0)) query(P.x, P.y, pR(), e => {
+  if (!hidden()) query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {
-      const was = P.inv, before = P.hp; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg); affixOnHitPlayer(e, before - P.hp);
+      const was = P.inv, before = P.hp; run.hitBy = e; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg); run.hitBy = null; affixOnHitPlayer(e, before - P.hp);
       shieldThorns(e);
       if (e.melee === 'slow' && was <= 0 && P.mechT <= 0 && !bulwark()) P.slowT = .6;
       return false;

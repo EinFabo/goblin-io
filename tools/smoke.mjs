@@ -254,7 +254,8 @@ if (roll.max !== 2 || roll.n !== 0 || roll.xp !== 6) errs.push('Rolle mit zwei L
 console.log('Skill Tree (Tippen/Halten) und Rolle mit Ladungen:', JSON.stringify({ tap, held, roll }));
 // Alle Bäume voll ausgebaut: jede Fähigkeit 40 s lang einsetzen, dazu rollen und sprinten (mit Zeichnen)
 const full = { pow: 5, cd: 5, area: 3, s1: 3, a: 1, s2: 3, s3: 3, b: 1, m: 1 };
-const ids = ['rage', 'trap', 'mech', 'charm', 'smoke', 'catapult', 'hook', 'shroom', 'shield', 'rats', 'call', 'totem', 'timebomb', 'bigbang'];   // Maschine mit Amulett: sie sperrt die andere Fähigkeit
+const ids = ['rage', 'trap', 'mech', 'charm', 'smoke', 'catapult', 'hook', 'shroom', 'shield', 'rats', 'call', 'totem', 'timebomb', 'bigbang',
+  'oilcask', 'turret', 'burrow', 'cannon', 'decoy', 'spin', 'grudge', 'scrapmag', 'bees', 'brew'];   // Maschine mit Amulett: sie sperrt die andere Fähigkeit; Öl mit Flammenturm (zündet)
 const used = {};
 for (let i = 0; i < ids.length; i += 2) {
   await p.evaluate(([a, b, full]) => {

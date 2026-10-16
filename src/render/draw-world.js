@@ -14,7 +14,8 @@ import { DPR, H, W, ZOOM, ctx, cv, drawImgC, drawSpr } from './canvas.js';
 import { iconCanvas } from './icons.js';
 import { PROC } from './proc.js';
 import { drawGround } from './tiles.js';
-import { drawAbilGround, drawAbilTop } from './draw-abilities.js';
+import { ABIL_OBJ, drawAbilGround, drawAbilObj, drawAbilTop, drawBrewAura, drawBurrow } from './draw-abilities.js';
+import { potionGiant } from '../game/abilities.js';
 import { daggerTint } from './sprites.js';
 import { drawProj2, drawWfxGround, drawWfxTop } from './draw-weapons2.js';
 import { MECH_PAINT, TRAIL } from '../data/cosmetics.js';
@@ -107,6 +108,7 @@ function drawRun(now) {
   for (const al of run.allies) list.push(al);
   for (const al of run.tmpAllies) list.push(al);
   for (const pl of run.pillars) list.push(pl);
+  for (const f of run.abfx) if (ABIL_OBJ.has(f.k)) list.push(f);   // Strohpuppe, Flammenturm, Kanone
   list.push(P);
   list.sort((a, b) => a.y - b.y);
   const trT = (TRAIL[save.look.trail] || TRAIL.dust).tint;
@@ -114,6 +116,7 @@ function drawRun(now) {
   const gang = run.weapons.find(w => w.id === 'gang');
   for (const o of list) {
     if (o === P) { if (P.mechT > 0) drawMech(); else drawPlayer(t); }
+    else if (ABIL_OBJ.has(o.k) && !o.type) drawAbilObj(o, t);
     else if (o.ally) drawAlly(o, o.big ? CHIEF_LOOK : o.tmp ? CALL_LOOK : gang);
     else if (!o.type) drawPillar(o, t);
     else drawEnemy(o, t);
@@ -333,6 +336,7 @@ export function drawAlly(al, w) {
   }
 }
 export function drawPlayer(t) {
+  if (P.burrowT > 0 && !run.over) { drawBurrow(t); return; }   // Maulwurfsgang: nur der wandernde Erdhügel
   const roll = P.rollT > 0 && !run.over;
   const flick = P.inv > 0 && !roll && !run.over && Math.floor(t * 20) % 2 === 0;
   if (P.slowT > 0) { ctx.fillStyle = 'rgba(120,210,255,.4)'; ctx.beginPath(); ctx.ellipse(P.x, P.y + 14, 22, 8, 0, 0, TAU); ctx.fill(); }
@@ -350,7 +354,8 @@ export function drawPlayer(t) {
     // unverwundbar: weißer Rand
     if (P.inv > 0) drawSpr(spr, 0, 0, 1.12, 0, 'white', .85);
   }
-  drawSpr(spr, 0, 0, 1, 0, P.rageT > 0 ? 'rage' : null, P.smokeT > 0 ? .35 : flick ? .45 : 1);
+  if (P.brew) drawBrewAura(t);
+  drawSpr(spr, 0, 0, potionGiant() ? 1.3 : 1, 0, P.rageT > 0 ? 'rage' : null, P.smokeT > 0 ? .35 : flick ? .45 : 1);
   ctx.restore();
 }
 export function drawPlayerBars() {

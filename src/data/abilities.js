@@ -1,5 +1,6 @@
 // ---------- Fähigkeiten (PLAN 8.3) ----------
-// charge: 'cd' (Sekunden), 'kills' (besiegte Gegner), 'scrap' (Schrott in %, Zahnräder +7, Kills +0,35)
+// charge: 'cd' (Sekunden), 'kills' (besiegte Gegner), 'scrap' (Schrott in %, Zahnräder +7, Kills +0,35),
+//         'hurt' (eingesteckter Schaden in % des max. Lebens, Goblin-Groll)
 //         'once' (ein Mal pro Lauf, wirkt von selbst)
 // unlock: { acct: Konto-Level } oder { stage: gewonnene Stage, 1-basiert }; ohne unlock = von Anfang an
 export const ABILITIES = {
@@ -68,6 +69,57 @@ export const ABILITIES = {
     extras: [{ name: 'Nachbeben', desc: '1 s später ein zweiter Knall mit halber Kraft.' }, { name: 'Erschütterung', desc: 'Überlebende sind 1,5 s eingefroren.' }],
     skills: [{ name: 'Volltreffer', desc: '+15 % Schaden gegen Elite, Mini-Boss und Boss pro Rang.' }, { name: 'Beben', desc: 'Überlebende sind 1 s pro Rang verlangsamt.' }, { name: 'Kristallregen', desc: 'Getötete geben +20 % Erfahrung pro Rang.' }],
     master: { name: 'Nachhall', desc: 'Nach dem Knall startet die Aufladung bei 30 %.' } },
+  // ---------- Rüstkammer 2.0 (Phase 10, Wunsch Fabi 2026-10-14) ----------
+  oilcask: { name: 'Ölfass', short: 'Öl', charge: 'cd', need: 10, dur: 6, unlock: { acct: 10 },
+    desc: 'Kippt einen Ölteppich vor dich (6 s): Gegner darauf rutschen und sind langsamer. Feuer entzündet ihn zu einem Flammensee.',
+    extras: [{ name: 'Großes Fass', desc: 'Der Ölteppich wird 40 % größer.' }, { name: 'Selbstzünder', desc: 'Das Öl fängt nach 2 s von selbst Feuer.' }],
+    skills: [{ name: 'Klebrig', desc: 'Gegner im Öl +10 % stärker verlangsamt pro Rang.' }, { name: 'Heißes Öl', desc: 'Der Flammensee macht +20 % Schaden pro Rang.' }, { name: 'Ausrutscher', desc: '5 % pro Rang und Sekunde: ein Gegner im Öl fällt 1 s hin.' }],
+    master: { name: 'Ölquelle', desc: 'Solange der Teppich liegt, hinterlässt du eine Ölspur.' } },
+  burrow: { name: 'Maulwurfsgang', short: 'Graben', charge: 'cd', need: 12, dur: 2, unlock: { acct: 15 },
+    desc: '2 s eingegraben: unverwundbar, 40 % schneller, die Gegner verlieren dich. Deine Waffen greifen dabei halb so schnell an. Beim Auftauchen schleudert ein Erdstoß alles weg.',
+    extras: [{ name: 'Tunnelspur', desc: 'Auf deinem Weg brechen Erdspitzen aus dem Boden.' }, { name: 'Beben', desc: 'Das Auftauchen betäubt Gegner 1 s.' }],
+    skills: [{ name: 'Spitzbohrer', desc: 'Erdstoß +15 % Schaden pro Rang.' }, { name: 'Lange Grabung', desc: '+0,4 s unter der Erde pro Rang.' }, { name: 'Schatzgräber', desc: 'Beim Auftauchen fliegen 2 Kristalle pro Rang heraus.' }],
+    master: { name: 'Doppelstoß', desc: 'Auch beim Eingraben gibt es einen Erdstoß.' } },
+  cannon: { name: 'Goblin-Kanone', short: 'Kanone', charge: 'kills', need: 60, unlock: { acct: 18 },
+    desc: 'Schießt dich als Kugel in die dichteste Gegnergruppe: unterwegs unverwundbar, Treffer entlang der Bahn, großer Einschlag.',
+    extras: [{ name: 'Doppelschuss', desc: 'Nach der Landung ein zweiter, kurzer Sprung zur nächsten Gruppe.' }, { name: 'Feuerspur', desc: 'Die Bahn brennt 3 s (zündet auch Öl).' }],
+    skills: [{ name: 'Pulver', desc: 'Einschlag +12 % Schaden pro Rang.' }, { name: 'Weite Bahn', desc: '+15 % Reichweite und Breite pro Rang.' }, { name: 'Abprall', desc: 'Die Landung schleudert 1 Gegner pro Rang weit weg (mit vollem Schaden).' }],
+    master: { name: 'Kanonade', desc: '3 Mini-Goblin-Kugeln schlagen neben dir ein.' } },
+  decoy: { name: 'Strohgoblin', short: 'Puppe', charge: 'cd', need: 15, dur: 5, unlock: { acct: 20 },
+    desc: 'Eine Strohpuppe lockt 5 s alle Gegner im Umkreis an und hält Treffer aus. Am Ende explodiert sie mit der Hälfte des eingesteckten Schadens.',
+    extras: [{ name: 'Zwei Puppen', desc: 'Du stellst zwei Puppen auf.' }, { name: 'Dornenpuppe', desc: 'Nahkämpfer, die die Puppe schlagen, nehmen Schaden.' }],
+    skills: [{ name: 'Zähes Stroh', desc: 'Puppe +20 % Leben pro Rang.' }, { name: 'Lauter Ruf', desc: 'Lock-Umkreis +15 % pro Rang.' }, { name: 'Sprengladung', desc: 'Explosion +20 % Schaden pro Rang.' }],
+    master: { name: 'Spiegelgoblin', desc: 'Die Puppe wirft Dolche wie du (halber Schaden).' } },
+  turret: { name: 'Flammenturm', short: 'Turm', charge: 'scrap', need: 45, dur: 10, unlock: { acct: 22 },
+    desc: 'Baut einen Schrott-Turm, der 10 s einen Flammenstrahl auf den nächsten Gegner speit (zündet Öl).',
+    extras: [{ name: 'Zweiter Turm', desc: 'Du baust zwei Türme.' }, { name: 'Blauflamme', desc: '+50 % Schaden gegen Elite, Mini-Boss und Boss.' }],
+    skills: [{ name: 'Heiße Düse', desc: '+12 % Schaden pro Rang.' }, { name: 'Lange Leitung', desc: '+15 % Reichweite pro Rang.' }, { name: 'Schrottpanzer', desc: 'Der Turm steht 2 s länger pro Rang.' }],
+    master: { name: 'Mobiler Turm', desc: 'Der Turm läuft dir hinterher.' } },
+  spin: { name: 'Wirbelaxt', short: 'Wirbel', charge: 'cd', need: 9, dur: 2.5, unlock: { acct: 25 },
+    desc: '2,5 s Drehung mit zwei Äxten: trifft alles um dich viermal pro Sekunde, stößt weg und wehrt Geschosse ab. Du läufst dabei 20 % langsamer.',
+    extras: [{ name: 'Sog', desc: 'Der Wirbel zieht Gegner heran.' }, { name: 'Klingenwind', desc: 'Am Ende fliegen 8 Äxte in alle Richtungen.' }],
+    skills: [{ name: 'Schärfe', desc: '+12 % Schaden pro Rang.' }, { name: 'Ausdauer', desc: '+0,4 s Drehung pro Rang.' }, { name: 'Wirbeltempo', desc: 'Weniger Tempo-Malus und 15 % mehr Treffer pro Rang.' }],
+    master: { name: 'Tornado', desc: 'Am Ende bleibt ein Tornado 3 s stehen und wirbelt weiter.' } },
+  grudge: { name: 'Goblin-Groll', short: 'Groll', charge: 'hurt', need: 60, unlock: { acct: 28 },
+    desc: 'Lädt, wenn du Schaden einsteckst (60 % deines Lebens). Entlädt sich als Feuerring mit 400 % des eingesteckten Schadens und heilt dich um 15 %.',
+    extras: [{ name: 'Racheblick', desc: 'Wer dich zuletzt getroffen hat, nimmt 5 s doppelten Schaden.' }, { name: 'Dickes Fell', desc: 'Solange der Groll voll ist, nimmst du 20 % weniger Schaden.' }],
+    skills: [{ name: 'Zorn', desc: '+40 % Ring-Schaden pro Rang.' }, { name: 'Brodeln', desc: 'Eine perfekte Rolle lädt 5 % pro Rang.' }, { name: 'Heißblut', desc: '+5 % Heilung pro Rang.' }],
+    master: { name: 'Unendlicher Groll', desc: 'Danach 3 s unverwundbar, die Ladung startet bei 30 %.' } },
+  scrapmag: { name: 'Schrottmagnet', short: 'Magnet', charge: 'cd', need: 18, dur: 2, unlock: { acct: 30 },
+    desc: 'Zieht 2 s alle Gegner im großen Umkreis zu dir (Elite und Bosse nicht), dann fliegt der Schrott in einer Explosion auseinander.',
+    extras: [{ name: 'Dauermagnet', desc: 'Zieht 1,5 s länger.' }, { name: 'Kristallmagnet', desc: 'Zieht auch Kristalle und Münzen an.' }],
+    skills: [{ name: 'Starke Pole', desc: '+15 % Zug pro Rang, ab Rang 1 auch Elite.' }, { name: 'Schrottsplitter', desc: 'Explosion +20 % Schaden pro Rang.' }, { name: 'Verbiegen', desc: 'Gezogene nehmen 3 s lang +10 % Schaden pro Rang.' }],
+    master: { name: 'Polwechsel', desc: 'Nach der Explosion fliegt alles weg und ist 1 s betäubt.' } },
+  bees: { name: 'Bienenstock', short: 'Bienen', charge: 'kills', need: 70, dur: 8, unlock: { acct: 35 },
+    desc: '25 Bienen jagen 8 s die Gegner. Ihre Stiche vergiften und verlangsamen.',
+    extras: [{ name: 'Königin', desc: 'Eine große Biene fliegt mit, dreifacher Schaden gegen Elite, Mini-Boss und Boss.' }, { name: 'Honig', desc: 'Eine Honigpfütze heilt dich 2 % pro Sekunde und klebt Gegner fest.' }],
+    skills: [{ name: 'Spitze Stachel', desc: '+12 % Stichschaden pro Rang.' }, { name: 'Großer Schwarm', desc: '+5 Bienen pro Rang.' }, { name: 'Wütende Bienen', desc: 'Bienen +10 % schneller pro Rang.' }],
+    master: { name: 'Ewiger Stock', desc: 'Bis zum nächsten Einsatz kommt alle 10 s ein kleiner Schwarm nach.' } },
+  brew: { name: 'Hexenkessel', short: 'Kessel', charge: 'cd', need: 20, dur: 8, unlock: { stage: 7 },
+    desc: 'Der Kessel braut einen von 5 Tränken für 8 s: Riese (größer, +40 % Schaden, Stampfen), Flink (+50 % Tempo und Angriffstempo), Feuer (spuckt Feuer), Heil (40 % Leben und Erholung) oder Gold (dreifache Münzen).',
+    extras: [{ name: 'Doppelbrau', desc: 'Du bekommst zwei Tränke auf einmal.' }, { name: 'Lieblingsrezept', desc: 'Der erste Trank im Lauf kommt danach doppelt so oft.' }],
+    skills: [{ name: 'Starker Sud', desc: '+10 % Wirkung pro Rang.' }, { name: 'Lange Wirkung', desc: '+1 s pro Rang.' }, { name: 'Übersprudeln', desc: 'Beim Brauen spritzt kochender Sud um dich (mehr Schaden pro Rang).' }],
+    master: { name: 'Meistertrank', desc: '10 % Chance auf alle fünf Tränke zugleich.' } },
   // Sicherheitsnetz aus 7.5: belegt einen Slot, wirkt von selbst
   charm: { name: 'Goblin-Amulett', short: 'Amulett', charge: 'once', need: 1, unlock: { acct: 6 },
     desc: 'Ein Mal pro Lauf: Statt zu sterben stehst du mit halbem Leben wieder auf und stößt alles weg.',
@@ -85,7 +137,7 @@ export function xpPerUse(id) {
   if (id === 'dash') return 3;
   if (id === 'sprint') return 1.5;   // pro Sekunde Sprinten
   const A = ABILITIES[id];
-  return Math.max(2, Math.round(A.charge === 'cd' ? A.need * .42 : A.charge === 'kills' ? A.need * .25 : A.charge === 'scrap' ? A.need * .3 : 50));
+  return Math.max(2, Math.round(A.charge === 'cd' ? A.need * .42 : A.charge === 'kills' ? A.need * .25 : A.charge === 'scrap' ? A.need * .3 : A.charge === 'hurt' ? A.need * .8 : 50));
 }
 // Baum (PLAN 8.4): vier Reihen von unten nach oben. Eine Reihe öffnet sich, wenn in den Reihen darunter
 // genug Punkte stecken (req). Reihe 1 ist bei allen Fähigkeiten Kraft/Tempo/Reichweite, bei Rolle und Sprint eigene Wurzeln.
@@ -151,7 +203,7 @@ export const smokeAtkSlow = calm => .6 - .4 * Math.min(calm || 0, 3) / 3;
 export const SLOT2_ACCT = 3;
 export const SLOT_KEYS = ['Q', 'E'];
 export const DEFAULT_LOADOUT = ['rage', 'trap'];
-export const CHARGE_TXT = { cd: s => `alle ${s} s`, kills: n => `${n} Kills`, scrap: n => `${n} % Schrott`, once: () => '1× pro Lauf' };
+export const CHARGE_TXT = { cd: s => `alle ${s} s`, kills: n => `${n} Kills`, scrap: n => `${n} % Schrott`, hurt: n => `${n} % Leben einstecken`, once: () => '1× pro Lauf' };
 
 // Freigeschaltet? acct = Konto-Level, cleared(i) = Stage i (0-basiert) gewonnen
 export function abilityUnlocked(id, acct, cleared) {

@@ -8,11 +8,11 @@ import { save, stageCleared } from '../core/save.js';
 import { trailCol } from '../data/cosmetics.js';
 import { ABILITIES, MOVE_IDS, SLOT2_ACCT, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
 import { hurt } from './combat.js';
-import { addItem, addNum, animFx, explode, part, puff, ring } from './fx.js';
+import { addItem, addNum, animFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { TAU } from '../core/util.js';
 import { P, nearest, onScreen, pR, query, randomEnemyInView, run } from './state.js';
-import { stepAlly } from './weapons.js';
+import { shootRaw, stepAlly } from './weapons.js';
 import { recalc } from './run.js';
 import { banner } from '../ui/hud.js';
 
@@ -73,6 +73,8 @@ export function onKill(e) {
     if (m.s3 && run.rageExt < 4) { const x = Math.min(.1 * m.s3, 4 - run.rageExt); run.rageExt += x; P.rageT += x; }
   }
   if (P.mechT > 0 && M('mech').s3) { const s = run.abil.find(x => x && x.id === 'mech'); if (s) s.ch = Math.min(s.need, s.ch + s.need * .004 * M('mech').s3); }
+  // Goldtrank (Hexenkessel): dreifache Münzen
+  if (P.brew && P.brew.gold > 0 && !e.boss && RNG.loot.next() < .5) { addItem('coin', e.x, e.y); addItem('coin', e.x, e.y); }
   if (run.totem && M('totem').s1 && !e.boss && (e.x - run.totem.x) ** 2 + (e.y - run.totem.y) ** 2 < 400 * 400 && RNG.loot.next() < .1 * M('totem').s1) addItem('coin', e.x, e.y);
 }
 // Schaden, den der Spieler nimmt: Berserker, Ausweichen beim Sprinten, Goldener Schutz. 0 = geschluckt
@@ -80,13 +82,16 @@ export function takenMult() {
   let k = 1;
   if (P.rageT > 0 && M('rage').m) k *= .7;
   if (P.sprinting) k *= 1 - .06 * M('sprint').s2;
+  // Dickes Fell (Goblin-Groll): solange die Ladung voll ist
+  if (M('grudge').b) { const s = run.abil.find(x => x && x.id === 'grudge'); if (s && s.ch >= s.need) k *= .8; }
   if (run.goldT > 0 && M('totem').m && run.totem) {
     if (run.gold - run.totem.gold >= 25) { run.totem.gold += 25; addNum(P.x, P.y - 40, 'Goldschutz', '#ffd84a', false); return 0; }
   }
   return k;
 }
 // Schaden, den Gegner nehmen: Hinterhalt, Widerhaken/Sporen; Glücksbringer erhöht kritische Treffer
-export const dealtMult = e => (P.ambushT > 0 ? 2 : 1) * (e.vulnT > 0 ? 1 + e.vuln : 1);
+// Racheblick (Groll): markierter Gegner nimmt doppelt; Riesentrank (Hexenkessel): +40 %
+export const dealtMult = e => (P.ambushT > 0 ? 2 : 1) * (e.vulnT > 0 ? 1 + e.vuln : 1) * (e.foeT > run.time ? 2 : 1) * (P.brew && P.brew.giant > 0 ? 1 + .4 * P.brew.k : 1);
 export const critBonus = () => (run.goldT > 0 ? .04 * M('totem').s2 : 0);
 export const xpBonus = () => (run.goldT > 0 ? 1 + .1 * M('totem').s3 : 1);
 
@@ -102,6 +107,8 @@ export function chargeAbil(kind, n) {
 const USE = {
   rage: doRage, mech: startMech, trap: layTraps, smoke: throwSmoke, catapult: fireCatapult, hook: throwHook,
   shroom: growShrooms, shield: raiseShield, rats: releaseRats, call: callGoblins, totem: raiseTotem, timebomb: dropTimebomb, bigbang: bigBang,
+  oilcask: pourOil, burrow: digIn, cannon: fireCannon, decoy: placeDecoy, turret: buildTurret,
+  spin: startSpin, grudge: unleashGrudge, scrapmag: startMagnet, bees: releaseBees, brew: brewPotion,
 };
 export function useAbility(i) {
   const s = run && run.abil[i];
@@ -116,12 +123,15 @@ export function useAbility(i) {
 }
 
 export function updAbilities(dt) {
+  run.lures = [];   // Strohgoblins melden sich jeden Schritt neu an (game/enemies.js)
   for (const s of run.abil) {
     if (!s || ABILITIES[s.id].charge !== 'cd') continue;
     s.ch = Math.min(s.need, s.ch + dt);
     if (s.ch >= s.need && s.stock < s.max - 1) { s.stock++; s.ch = 0; }
   }
-  updMech(dt); updMoves(dt);
+  updMech(dt); updMoves(dt); updBrew(dt);
+  // Ewiger Stock: bis zum nächsten Einsatz alle 10 s ein kleiner Schwarm
+  if (run.hive && (run.hive.t -= dt) <= 0) { run.hive.t = 10; swarmOf(M('bees'), 10, ABILITIES.bees.dur * .6); }
   if (P.smokeT > 0) { P.smokeT -= dt; if (P.smokeT <= 0) smokeEnd(M('smoke')); }
   if (P.ambushT > 0) P.ambushT -= dt;
   if (P.shieldT > 0) {
@@ -206,6 +216,7 @@ export function perfectRoll(x, y) {
   if (P.perfect) return;
   P.perfect = true; run.slowT = .15;
   chargeAbil('kills', 5 + 2 * M('dash').s1);
+  if (M('grudge').s2) chargeAbil('hurt', 5 * M('grudge').s2);   // Brodeln
   run.abXp.dash = (run.abXp.dash || 0) + 2; count(run, 'perfect');
   for (let i = 0; i < 12; i++) { const a = i * TAU / 12; part(x, y, Math.cos(a) * 160, Math.sin(a) * 160, .4, i % 2 ? '#fff6b0' : '#8fe6ff', 2.8); }
   addNum(P.x, P.y - 52, 'Perfekt!', '#8fe6ff', true);
@@ -307,11 +318,17 @@ function smokeEnd(m) {
   if (m.m) { P.ambushT = 1.5; addNum(P.x, P.y - 52, 'Hinterhalt!', '#c9b6ff', true); }
 }
 
-// ---------- Goblin-Katapult ----------
-function fireCatapult(m, pow = 1) {
-  const c = randomEnemyInView(0);
+// Dichteste Gegnergruppe im Bild (Katapult, Kanone); maxD: höchstens so weit vom Goblin
+function densest(maxD = 1e9) {
+  const c = randomEnemyInView(0).filter(e => (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < maxD * maxD);
   let best = null, bn = -1;
   for (const e of c) { let n = 0; for (const o of c) if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 < 90 * 90) n++; if (n > bn) { bn = n; best = e; } }
+  return best;
+}
+
+// ---------- Goblin-Katapult ----------
+function fireCatapult(m, pow = 1) {
+  const best = densest();
   const tx = best ? best.x : P.x + P.aimX * 200, ty = best ? best.y : P.y + P.aimY * 200;
   for (let i = 0; i < (m.a ? 8 : 5); i++) {
     const a = rand(0, TAU), r = i ? rand(20, 80) * m.area : 0;
@@ -459,8 +476,311 @@ export function tryRevive() {
   return true;
 }
 
+// ---------- Ölfass (Phase 10) ----------
+const LAKE_T = 4;   // so lange brennt der Flammensee
+const oilFx = (x, y, r, dur, m) => ({ k: 'oil', x, y, r, t: 0, dur, lit: -1, self: m.b ? 2 : 0, slowK: Math.max(.2, .5 - .1 * m.s1), fall: .05 * m.s3, tick: 0, fallT: 1,
+  burn: (18 + P.lv * 2.5) * P.dmgMult * m.pow * (1 + .2 * m.s2), seed: Math.random() * 100 });
+function pourOil(m) {
+  const dur = ABILITIES.oilcask.dur * m.area, R = 110 * P.area * m.area * (m.a ? 1.4 : 1);
+  run.abfx.push(oilFx(P.x + P.aimX * 90, P.y + P.aimY * 70, R, dur, m));
+  if (m.m) run.abfx.push({ k: 'oilTrail', t: 0, dur, tick: 0, m });   // Ölquelle
+  for (let i = 0; i < 10; i++) part(P.x + P.aimX * 40, P.y + P.aimY * 30, P.aimX * 160 + frand(-60, 60), P.aimY * 120 + frand(-60, 20), .4, 'rgba(40,32,24,.85)', frand(4, 7));
+  sfx.throw();
+}
+
+// ---------- Maulwurfsgang ----------
+function quake(x, y, r, dmg, stun) {
+  query(x, y, r, e => { const d = Math.hypot(e.x - x, e.y - y) || 1; hurt(e, dmg, 520, (e.x - x) / d, (e.y - y) / d, '#c9a26a'); if (stun && !e.boss && !e.dead) e.freezeT = Math.max(e.freezeT, 1); });
+  ring(x, y, 10, r, .4, 'rgba(170,130,80,.9)', 10);
+  for (let i = 0; i < 18; i++) part(x + frand(-30, 30), y + frand(-10, 10), frand(-220, 220), frand(-260, -60), frand(.4, .7), i % 2 ? '#7a5a36' : '#a8865a', frand(4, 8));
+  run.shake = Math.max(run.shake, 9); sfx.stomp(); sfx.boom();
+}
+function digIn(m) {
+  const dur = (ABILITIES.burrow.dur + .4 * m.s2) * m.area, dmg = (60 + P.lv * 7) * P.dmgMult * m.pow * (1 + .15 * m.s1), r = 130 * P.area * m.area;
+  P.burrowT = dur; P.inv = Math.max(P.inv, dur + .2); haste(dur, .4); run.decoy = { x: P.x, y: P.y };
+  run.abfx.push({ k: 'burrow', t: 0, dur, dmg, r, stun: m.b, gems: 2 * m.s3, spikes: m.a, spikeT: 0 });
+  if (m.m) quake(P.x, P.y, r * .8, dmg * .6, false);   // Doppelstoß
+  else { for (let i = 0; i < 12; i++) part(P.x + frand(-14, 14), P.y + 14, frand(-120, 120), frand(-160, -40), .5, '#7a5a36', frand(4, 7)); sfx.stomp(); }
+}
+
+// ---------- Goblin-Kanone ----------
+function fireCannon(m, second = false) {
+  const reach = (second ? 260 : 440) * (1 + .15 * m.s2), g = densest(reach);
+  const tx = g ? g.x : P.x + P.aimX * reach * .6, ty = g ? g.y : P.y + P.aimY * reach * .6;
+  const dx = tx - P.x, dy = ty - P.y, d = Math.hypot(dx, dy) || 1, T = Math.max(.25, Math.min(.5, d / 900));
+  P.dashT = T; P.dvx = dx / T; P.dvy = dy / T; P.inv = Math.max(P.inv, T + .35);
+  P.rollT = ROLL_T; P.perfect = false; P.trailT = 0; P.rollHit = null;
+  run.abfx.push({ k: 'cannon', t: 0, dur: T, hit: new Set(), w: 30 * (1 + .15 * m.s2), path: (25 + P.lv * 2.5) * P.dmgMult * m.pow,
+    land: (120 + P.lv * 12) * P.dmgMult * m.pow * (1 + .12 * m.s1) * (second ? .6 : 1), r: 150 * P.area * m.area * (second ? .75 : 1),
+    fire: m.b, fireT: 0, bounce: m.s3, again: m.a && !second, salvo: m.m && !second, m });
+  if (!second) run.abfx.push({ k: 'cannonGun', x: P.x, y: P.y, a: Math.atan2(dy, dx), t: 0, dur: .9 });
+  for (let i = 0; i < 12; i++) part(P.x, P.y - 10, dx / d * 120 + frand(-60, 60), dy / d * 120 + frand(-80, 0), .6, 'rgba(200,200,205,.75)', frand(7, 12));
+  sfx.boom();
+}
+function cannonLand(f) {
+  blast(P.x, P.y, f.r, f.land, 650, '#ffb35c');
+  // Abprall: die nächsten Gegner fliegen besonders weit
+  if (f.bounce) { const near = []; query(P.x, P.y, f.r, e => { if (!e.boss && !e.obj && !e.dead) near.push(e); }); near.sort((a, b) => ((a.x - P.x) ** 2 + (a.y - P.y) ** 2) - ((b.x - P.x) ** 2 + (b.y - P.y) ** 2)); for (const e of near.slice(0, f.bounce)) { const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; e.kx += (e.x - P.x) / d * 1400; e.ky += (e.y - P.y) / d * 1400; } }
+  animFx('f_fireball_hit_', 5, P.x, P.y - 10, 4); ring(P.x, P.y, 10, f.r, .45, 'rgba(255,170,60,.95)', 12);
+  run.shake = Math.max(run.shake, 12); sfx.boom();
+  if (f.again) run.abfx.push({ k: 'refire', t: 0, dur: .2, m: f.m });
+  // Kanonade: drei Mini-Kugeln neben dir
+  if (f.salvo) for (let i = 0; i < 3; i++) { const a = rand(0, TAU), r = rand(70, 150), x = P.x + Math.cos(a) * r, y = P.y + Math.sin(a) * r, dmg = f.land * .35; later(.25 + i * .18, () => { blast(x, y, 80 * P.area, dmg, 400, '#ffb35c'); animFx('f_fireball_hit_', 5, x, y - 10, 2); sfx.boom(); }); }
+}
+
+// ---------- Strohgoblin ----------
+function placeDecoy(m) {
+  const n = m.a ? 2 : 1, a0 = Math.atan2(P.aimY, P.aimX);
+  for (let i = 0; i < n; i++) {
+    const a = n > 1 ? a0 + (i ? 1 : -1) * 1.2 : a0, x = P.x + Math.cos(a) * 80, y = P.y + Math.sin(a) * 60;
+    run.abfx.push({ k: 'decoy', x, y, t: 0, dur: ABILITIES.decoy.dur * m.area, hp: P.maxHp * .6 * (1 + .2 * m.s1) * m.pow, taken: 0, lure: 260 * (1 + .15 * m.s2), boom: .5 * (1 + .2 * m.s3),
+      thorns: m.b ? (12 + P.lv) * P.dmgMult * m.pow : 0, mirror: m.m, dagT: 0, r: 18, hitT: 0 });
+    puff(x, y, .8, 'rgba(230,200,120,.8)');
+  }
+  sfx.throw();
+}
+
+// ---------- Flammenturm ----------
+function buildTurret(m) {
+  const n = m.a ? 2 : 1;
+  for (let i = 0; i < n; i++) {
+    const off = n > 1 ? (i ? 1 : -1) * 55 : 0;
+    run.abfx.push({ k: 'turret', x: P.x + off, y: P.y + 34, t: 0, dur: (ABILITIES.turret.dur + 2 * m.s3) * m.area, range: 260 * (1 + .15 * m.s2), dmg: (6 + P.lv * .9) * P.dmgMult * m.pow * (1 + .12 * m.s1),
+      blue: m.b, follow: m.m, off, tick: 0, a: -Math.PI / 2, beam: null });
+    puff(P.x + off, P.y + 34, .8, 'rgba(200,200,205,.8)');
+  }
+  sfx.mechOn();
+}
+
+// ---------- Wirbelaxt ----------
+function startSpin(m) {
+  const dur = (ABILITIES.spin.dur + .4 * m.s2) * m.area;
+  P.spinT = dur; P.spinSlow = 1 - .2 * (1 - .33 * m.s3);
+  run.abfx.push(spinFx(m, dur, null));
+  sfx.whoosh();
+}
+const spinFx = (m, dur, at) => ({ k: 'spin', t: 0, dur, at, tick: 0, every: .25 / (1 + .15 * m.s3), r: 95 * P.area * m.area, dmg: (14 + P.lv * 1.8) * P.dmgMult * m.pow * (1 + .12 * m.s1),
+  pull: m.a, wind: m.b && !at, tornado: m.m && !at, m, a: 0 });
+
+// ---------- Goblin-Groll ----------
+function unleashGrudge(m) {
+  const taken = ABILITIES.grudge.need / 100 * P.maxHp, R = 300 * P.area * m.area;
+  blast(P.x, P.y, R, 4 * taken * P.dmgMult * m.pow * (1 + .4 * m.s1), 600, '#ff7a3c');
+  const heal = P.maxHp * (.15 + .05 * m.s3) * m.pow; P.hp = Math.min(P.maxHp, P.hp + heal); addNum(P.x, P.y - 40, '+' + Math.round(heal), '#7dff7a');
+  // Racheblick: wer zuletzt traf, nimmt 5 s doppelten Schaden
+  if (m.a && run.foe && !run.foe.dead) { run.foe.foeT = run.time + 5; addNum(run.foe.x, run.foe.y - 40, 'Rache!', '#ff7a3c', true); }
+  if (m.m) { P.inv = Math.max(P.inv, 3); run.abfx.push({ k: 'refill', t: 0, dur: 0, id: 'grudge', p: .3 }); }
+  for (let i = 0; i < 3; i++) ring(P.x, P.y, 10, R * (1 - i * .2), .5 + i * .1, i ? 'rgba(255,200,60,.9)' : 'rgba(255,90,40,.95)', 14 - i * 4);
+  for (let i = 0; i < 30; i++) { const a = i * TAU / 30; part(P.x, P.y - 10, Math.cos(a) * 340, Math.sin(a) * 250, .5, i % 2 ? '#ff7a3c' : '#ffd84a', 5); }
+  run.shake = 16; sfx.ult(); sfx.boom(); banner('Goblin-Groll!', 'danger');
+}
+
+// ---------- Schrottmagnet ----------
+function startMagnet(m) {
+  run.abfx.push({ k: 'magnet', t: 0, dur: (ABILITIES.scrapmag.dur + (m.a ? 1.5 : 0)) * m.area, r: 420 * P.area * m.area, pull: 620 * (1 + .15 * m.s1), elite: m.s1 > 0, gems: m.b,
+    boom: (80 + P.lv * 9) * P.dmgMult * m.pow * (1 + .2 * m.s2), vuln: .1 * m.s3, flip: m.m, got: new Set() });
+  sfx.mechOn();
+}
+
+// ---------- Bienenstock ----------
+function releaseBees(m) {
+  run.hive = m.m ? { t: 10 } : null;   // Ewiger Stock bis zum nächsten Einsatz
+  swarmOf(m, 25 + 5 * m.s2, ABILITIES.bees.dur * m.area, m.a);
+  if (m.b) run.abfx.push({ k: 'honey', x: P.x, y: P.y + 8, r: 90 * P.area * m.area, t: 0, dur: 6 * m.area });
+  sfx.warn(); banner('Bienenstock!', '');
+}
+function swarmOf(m, n, dur, queen = false) {
+  const bees = [];
+  for (let i = 0; i < n + (queen ? 1 : 0); i++) { const a = rand(0, TAU); bees.push({ x: P.x + Math.cos(a) * 20, y: P.y - 20 + Math.sin(a) * 14, tgt: null, hitT: rand(0, .4), q: queen && i === n, a: frand(0, 6) }); }
+  run.abfx.push({ k: 'bees', bees, t: 0, dur, spd: 260 * (1 + .1 * m.s3), dmg: (6 + P.lv * .6) * P.dmgMult * m.pow * (1 + .12 * m.s1) });
+}
+
+// ---------- Hexenkessel ----------
+const POTIONS = ['giant', 'swift', 'fire', 'heal', 'gold'];
+export const POTION_INFO = { giant: ['Riesentrank!', '#e5a03a'], swift: ['Flinktrank!', '#7fd8ff'], fire: ['Feuertrank!', '#ff6a1f'], heal: ['Heiltrank!', '#7dff7a'], gold: ['Goldtrank!', '#ffd84a'] };
+function brewPotion(m) {
+  const dur = (ABILITIES.brew.dur + m.s2) * m.area, k = m.pow * (1 + .1 * m.s1);
+  // Lieblingsrezept: die erste Sorte im Lauf kommt danach doppelt so oft (Zufall aus dem Spielablauf: Sim bleibt gleich)
+  const pick1 = () => { const pool = m.b && run.favPotion ? [...POTIONS, run.favPotion] : POTIONS; return pool[Math.floor(RNG.game.next() * pool.length)]; };
+  let got = RNG.game.next() < (m.m ? .1 : 0) ? [...POTIONS] : [pick1()];
+  if (m.a && got.length === 1) { let p2 = pick1(); for (let i = 0; i < 3 && p2 === got[0]; i++) p2 = pick1(); got.push(p2); }
+  if (!run.favPotion) run.favPotion = got[0];
+  P.brew = P.brew || { giant: 0, swift: 0, fire: 0, heal: 0, gold: 0, k: 1, fireT: 0, stompT: 0 };
+  P.brew.k = k;
+  for (const p of got) {
+    P.brew[p] = dur;
+    if (p === 'swift') haste(dur, .5 * k);
+    if (p === 'heal') { const h = P.maxHp * .4 * k; P.hp = Math.min(P.maxHp, P.hp + h); addNum(P.x, P.y - 40, '+' + Math.round(h), '#7dff7a'); }
+  }
+  // Übersprudeln: kochender Sud spritzt um dich
+  if (m.s3) blast(P.x, P.y, 120 * P.area, (30 + P.lv * 3) * m.s3 * P.dmgMult * m.pow, 260, '#9cf06a');
+  run.abfx.push({ k: 'kettle', x: P.x + 26, y: P.y + 12, t: 0, dur: 1.1, cols: got.map(p => POTION_INFO[p][1]) });
+  banner(got.length > 2 ? 'Meistertrank!' : got.map(p => POTION_INFO[p][0]).join(' + '), '');
+  sfx.heal();
+}
+function updBrew(dt) {
+  const b = P.brew; if (!b) return;
+  for (const p of POTIONS) if (b[p] > 0) b[p] -= dt;
+  if (b.heal > 0 && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .02 * b.k * dt);
+  // Riese stampft
+  if (b.giant > 0 && (b.stompT -= dt) <= 0) { b.stompT = .6; const r = 90 * P.area; blast(P.x, P.y, r, (20 + P.lv * 2) * P.dmgMult * b.k, 260, '#e5a03a'); ring(P.x, P.y + 10, 6, r, .3, 'rgba(230,170,80,.8)', 6); run.shake = Math.max(run.shake, 3); }
+  // Feuer spucken: Kegel zum nächsten Gegner
+  if (b.fire > 0 && (b.fireT -= dt) <= 0) {
+    b.fireT = .2; const t = nearest(200), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
+    for (let i = 1; i <= 4; i++) { const x = P.x + Math.cos(a) * 38 * i, y = P.y - 14 + Math.sin(a) * 38 * i; query(x, y, 14 + 6 * i, e => { hurt(e, (5 + P.lv * .6) * P.dmgMult * b.k, 40, Math.cos(a), Math.sin(a), '#ff8a3c'); }); igniteOil(x, y, 10); }
+    for (let i = 0; i < 6; i++) part(P.x + Math.cos(a) * 20, P.y - 16 + Math.sin(a) * 20, Math.cos(a + frand(-.3, .3)) * frand(200, 320), Math.sin(a + frand(-.3, .3)) * frand(200, 320), .45, Math.random() < .5 ? '#ffb02e' : '#ff5a1f', frand(5, 9));
+  }
+}
+export const potionGiant = () => !!(P.brew && P.brew.giant > 0);
+
 // ---------- laufende Effekte ----------
 const FX_UPD = {
+  spin(f, dt) {
+    if (f.t >= f.dur) {
+      f.done = true; if (!f.at) { P.spinT = 0; P.spinSlow = 1; }
+      // Klingenwind: 8 Äxte fliegen davon; Tornado bleibt stehen
+      if (f.wind) for (let i = 0; i < 8; i++) shootRaw('boomer', i * TAU / 8, f.dmg * 1.5, 99, 460 * P.proj, 1.1, { out: 300, dist: 0, back: false, sc: 1.1 });
+      if (f.tornado) run.abfx.push(spinFx(f.m, 3, { x: P.x, y: P.y }));
+      return;
+    }
+    const x = f.at ? f.at.x : P.x, y = f.at ? f.at.y : P.y;
+    f.a += dt * 18;
+    if (f.pull || f.at) query(x, y, f.r * 2.3, e => { if (e.boss || e.obj) return; const dx = x - e.x, dy = y - e.y, d = Math.hypot(dx, dy) || 1; e.kx += dx / d * 900 * dt; e.ky += dy / d * 900 * dt; });
+    for (const p of run.eproj) if ((p.x - x) ** 2 + (p.y - y) ** 2 < f.r * f.r && !p.lob) p.life = 0;   // abgewehrt
+    if ((f.tick -= dt) > 0) return;
+    f.tick = f.every;
+    blast(x, y, f.r, f.dmg, f.at ? 60 : 320, '#dfe6ea');
+    if (!f.at) sfx.whoosh();
+  },
+  magnet(f, dt) {
+    const pulling = f.t < f.dur;
+    if (pulling) {
+      query(P.x, P.y, f.r, e => {
+        if (e.boss || e.obj || ((e.elite || e.miniboss) && !f.elite)) return;
+        const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1;
+        if (d > 50) { e.kx += dx / d * f.pull * dt * 6; e.ky += dy / d * f.pull * dt * 6; }
+        f.got.add(e);
+      });
+      if (f.gems) for (const it of run.items) if (!it.mag && pullable(it) && (it.x - P.x) ** 2 + (it.y - P.y) ** 2 < f.r * f.r) it.mag = true;
+      if (Math.random() < dt * 30) { const a = Math.random() * TAU, r = f.r * frand(.5, 1); part(P.x + Math.cos(a) * r, P.y + Math.sin(a) * r * .75, -Math.cos(a) * r * 1.6, -Math.sin(a) * r * 1.2, .55, Math.random() < .5 ? '#9aa3aa' : '#c9973a', frand(3, 5)); }
+      return;
+    }
+    f.done = true;
+    for (const e of f.got) if (!e.dead && f.vuln) { e.vulnT = 3; e.vuln = Math.max(e.vuln || 0, f.vuln); }
+    blast(P.x, P.y, 210 * P.area, f.boom, f.flip ? 1100 : 500, '#c9d1d8');
+    if (f.flip) query(P.x, P.y, f.r, e => { if (!e.boss) e.freezeT = Math.max(e.freezeT, 1); });
+    for (let i = 0; i < 26; i++) { const a = i * TAU / 26; part(P.x, P.y - 10, Math.cos(a) * frand(200, 380), Math.sin(a) * frand(160, 300), .55, i % 3 ? '#9aa3aa' : '#c9973a', frand(4, 7)); }
+    ring(P.x, P.y, 10, 210 * P.area, .4, 'rgba(210,215,220,.95)', 12); run.shake = Math.max(run.shake, 12); sfx.boom();
+  },
+  bees(f, dt) {
+    if (f.t >= f.dur) { f.done = true; for (const b of f.bees) part(b.x, b.y, 0, -30, .4, '#ffd84a', 3); return; }
+    for (const b of f.bees) {
+      b.a += dt;
+      if (!b.tgt || b.tgt.dead) b.tgt = b.q ? nearest(500, b) : pick(randomEnemyInView(0)) || null;
+      const tx = b.tgt ? b.tgt.x : P.x + Math.cos(b.a * 3) * 40, ty = b.tgt ? b.tgt.y - 16 : P.y - 30 + Math.sin(b.a * 4) * 20;
+      const dx = tx - b.x, dy = ty - b.y, d = Math.hypot(dx, dy) || 1, sp = f.spd * (b.q ? .8 : 1) * dt;
+      b.x += dx / d * Math.min(d, sp) + Math.sin(b.a * 23) * 2; b.y += dy / d * Math.min(d, sp) + Math.cos(b.a * 19) * 2;
+      if ((b.hitT -= dt) <= 0 && b.tgt && d < 24) {
+        b.hitT = .5; const e = b.tgt, big = b.q && (e.elite || e.boss || e.miniboss) ? 3 : 1;
+        hurt(e, f.dmg * big * (b.q ? 2 : 1), 0, 0, 0, '#ffd84a'); if (!e.dead) e.slowT = Math.max(e.slowT, .6);
+      }
+    }
+  },
+  honey(f, dt) {
+    if (f.t >= f.dur) { f.done = true; return; }
+    if ((P.x - f.x) ** 2 + (P.y - f.y) ** 2 < f.r * f.r && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .02 * dt);
+    query(f.x, f.y, f.r, e => { if (e.obj) return; e.slowT = Math.max(e.slowT, .2); e.slowK = .25; e.slowKT = run.time + .25; });
+  },
+  kettle(f) { if (f.t >= f.dur) f.done = true; },
+  oil(f, dt) {
+    const lit = f.lit >= 0;
+    if (!lit && f.self && f.t >= f.self) igniteOil(f.x, f.y, 1);
+    // brennender Boden (Katapult, Feuerspur der Kanone, Meteore …) zündet das Öl
+    if (!lit) for (const z of run.zones) if (z.k === 'burn' && (z.x - f.x) ** 2 + (z.y - f.y) ** 2 < (z.r + f.r) ** 2) { igniteOil(f.x, f.y, 1); break; }
+    if (f.lit >= 0 ? run.time - f.lit >= LAKE_T : f.t >= f.dur) { f.done = true; return; }
+    f.tick -= dt; const bite = f.lit >= 0 && f.tick <= 0; if (bite) f.tick = .5;
+    f.fallT -= dt; const roll = f.fall && f.fallT <= 0; if (roll) f.fallT = 1;
+    query(f.x, f.y, f.r, e => {
+      if (e.obj) return;
+      e.slowT = Math.max(e.slowT, .2); e.slowK = f.slowK; e.slowKT = run.time + .25;
+      if (bite) hurt(e, f.burn * .5, 0, 0, 0, '#ffb35c');
+      if (roll && !e.boss && RNG.game.next() < f.fall) e.freezeT = Math.max(e.freezeT, 1);   // Ausrutscher
+    });
+    if (f.lit >= 0 && Math.random() < dt * 30) { const a = Math.random() * TAU, r = Math.random() * f.r; part(f.x + Math.cos(a) * r, f.y + Math.sin(a) * r * .7, frand(-15, 15), frand(-110, -50), .5, Math.random() < .5 ? '#ffb02e' : '#ff6a1f', frand(5, 9)); }
+  },
+  oilTrail(f, dt) {
+    if (f.t >= f.dur) { f.done = true; return; }
+    if ((f.tick -= dt) <= 0) { f.tick = .35; run.abfx.push(oilFx(P.x, P.y + 8, 45 * P.area, 3, f.m)); }
+  },
+  burrow(f, dt) {
+    P.burrowT = Math.max(0, f.dur - f.t);
+    // Tunnelspur: Erdspitzen auf dem Weg
+    if (f.spikes && (f.spikeT -= dt) <= 0) { f.spikeT = .18; run.abfx.push({ k: 'spike', x: P.x, y: P.y + 6, t: 0, dur: .55, dmg: f.dmg * .35, hit: false }); }
+    if (Math.random() < dt * 25) part(P.x + frand(-14, 14), P.y + 12, frand(-60, 60), frand(-90, -30), .35, '#7a5a36', frand(3, 6));
+    if (f.t < f.dur) return;
+    f.done = true; P.burrowT = 0; P.inv = Math.max(P.inv, .3);
+    quake(P.x, P.y, f.r, f.dmg, f.stun);
+    // Schatzgräber: Kristalle fliegen heraus
+    for (let i = 0; i < f.gems; i++) { const a = i * TAU / f.gems; dropGem(P.x + Math.cos(a) * 40, P.y + Math.sin(a) * 30, 3); }
+  },
+  spike(f) {
+    if (!f.hit && f.t >= .12) { f.hit = true; query(f.x, f.y, 34 * P.area, e => { hurt(e, f.dmg, 260, 0, -1, '#c9a26a'); }); }
+    if (f.t >= f.dur) f.done = true;
+  },
+  cannon(f, dt) {
+    if (f.t < f.dur) {
+      P.rollT = ROLL_T * (1 - ((f.t * 4) % 1) * .95);   // rollt während des Flugs
+      query(P.x, P.y, pR() + f.w * .5, e => {
+        if (f.hit.has(e) || e.obj) return; f.hit.add(e);
+        const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, f.path, 380, (e.x - P.x) / d, (e.y - P.y) / d, '#ffd27a');
+      });
+      if (f.fire && (f.fireT -= dt) <= 0) { f.fireT = .06; run.zones.push({ k: 'burn', x: P.x, y: P.y + 6, r: 34 * P.area, t: 3, dur: 3, tick: 0, dmg: (6 + P.lv * .8) * P.dmgMult }); }
+      return;
+    }
+    f.done = true; cannonLand(f);
+  },
+  refire(f) { if (f.t >= f.dur) { f.done = true; fireCannon(f.m, true); } },
+  cannonGun(f) { if (f.t >= f.dur) f.done = true; },
+  decoy(f, dt) {
+    const over = f.t >= f.dur || f.hp <= 0;
+    if (over) {
+      f.done = true;
+      blast(f.x, f.y, 150 * P.area, Math.max(f.taken * f.boom, (30 + P.lv * 4) * P.dmgMult), 520, '#ffd27a');
+      animFx('f_fireball_hit_', 5, f.x, f.y - 10, 3); ring(f.x, f.y, 10, 150 * P.area, .4, 'rgba(255,210,120,.9)', 10);
+      for (let i = 0; i < 16; i++) part(f.x, f.y - 14, frand(-200, 200), frand(-240, -40), frand(.4, .8), i % 2 ? '#e6c46a' : '#c9a24a', frand(3, 6));
+      run.shake = Math.max(run.shake, 8); sfx.boom(); return;
+    }
+    run.lures.push(f);
+    f.hitT = Math.max(0, f.hitT - dt);
+    // Gegner an der Puppe schlagen zu (je Gegner alle 0,5 s); Dornenpuppe schlägt zurück
+    query(f.x, f.y, f.r + 6, e => {
+      if (e.obj || e.boss || e.dead || !(e.dmg > 0) || (e.lureHitT || 0) > run.time) return;
+      e.lureHitT = run.time + .5; f.hp -= e.dmg; f.taken += e.dmg; f.hitT = .15;
+      if (f.thorns) { const d = Math.hypot(e.x - f.x, e.y - f.y) || 1; hurt(e, f.thorns, 220, (e.x - f.x) / d, (e.y - f.y) / d, '#e6c46a'); }
+    });
+    // Spiegelgoblin: die Puppe wirft Dolche
+    if (f.mirror && (f.dagT -= dt) <= 0) {
+      f.dagT = .7; const t = nearest(420, f);
+      if (t) { const a = Math.atan2(t.y - f.y, t.x - f.x); for (const o of [-.12, .12]) shootRaw('dagger', a + o, 8 * P.dmgMult, 0, 560 * P.proj, .85, { x: f.x, y: f.y - 20 }); }
+    }
+  },
+  turret(f, dt) {
+    if (f.t >= f.dur) { f.done = true; puff(f.x, f.y, 1, 'rgba(120,120,125,.8)'); sfx.stomp(); return; }
+    if (f.follow) { const tx = P.x + f.off, ty = P.y + 40, dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy); if (d > 30) { const s = Math.min(d, 210 * dt); f.x += dx / d * s; f.y += dy / d * s; } }
+    if ((f.tick -= dt) > 0) return;
+    f.tick = .12;
+    const t = nearest(f.range, f);
+    f.beam = t ? { x: t.x, y: t.y - 10 } : null;
+    if (!t) return;
+    f.a = Math.atan2(t.y - (f.y - 30), t.x - f.x);
+    // Strahl: Treffer am Ziel und entlang der Linie
+    const hit = new Set(), sx = f.x, sy = f.y - 30, L = Math.hypot(t.x - sx, t.y - sy), n = Math.max(1, Math.ceil(L / 40));
+    for (let i = 1; i <= n; i++) {
+      const x = sx + (t.x - sx) * i / n, y = sy + (t.y - sy) * i / n;
+      query(x, y, 16, e => { if (hit.has(e) || e.obj) return; hit.add(e); hurt(e, f.dmg * (f.blue && (e.elite || e.boss || e.miniboss) ? 1.5 : 1), 30, Math.cos(f.a), Math.sin(f.a), f.blue ? '#8fd0ff' : '#ffb35c'); });
+    }
+    igniteOil(t.x, t.y, 20);
+  },
   trap(f, dt) {
     if (f.snap > 0) { f.snap -= dt; if (f.snap <= 0 && f.uses <= 0) f.done = true; return; }
     if (f.t >= f.dur) { f.done = true; return; }

@@ -12,7 +12,7 @@ import { damagePlayer, hurt } from './combat.js';
 import { addItem, animFx, part, puff, ring } from './fx.js';
 import { hint, startClear } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
-import { P, onScreen, pR, query, run, viewR } from './state.js';
+import { P, onScreen, pR, query, run, viewR, hidden } from './state.js';
 import { banner } from '../ui/hud.js';
 
 export { eShot } from './casts.js';
@@ -187,7 +187,7 @@ export function updEnemy(e, dt) {
   const kd = Math.exp(-9 * dt); e.kx *= kd; e.ky *= kd;
   if (e.freezeT > 0) { e.freezeT -= dt; return; }
   // Rauchbombe: alle außer dem Boss laufen zu deinem alten Platz und zaubern nicht
-  const blind = P.smokeT > 0 && !e.boss && run.decoy;
+  const blind = hidden() && !e.boss && run.decoy;
   let tx = P.x, ty = P.y;
   if (blind) {
     // Nicht alle auf einen Punkt (dort zittern sie hin und her): jeder sucht auf einem eigenen Ring um den alten Platz,
@@ -196,6 +196,9 @@ export function updEnemy(e, dt) {
     const a = e.seekA + run.time * .5 * e.side;
     tx = run.decoy.x + Math.cos(a) * e.seekR; ty = run.decoy.y + Math.sin(a) * e.seekR;
   }
+  // Strohgoblin: wer im Lock-Umkreis einer Puppe steht, geht auf sie los und zaubert nicht
+  let lured = null;
+  if (!blind && !e.boss && !e.obj && run.lures && run.lures.length) for (const L of run.lures) if ((e.x - L.x) ** 2 + (e.y - L.y) ** 2 < L.lure * L.lure) { lured = L; tx = L.x; ty = L.y; break; }
   const dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy) || 1;
   if (e.boss) { bossAI(e, dt, dx, dy, d); return; }
   if (e.bomber) { updBomber(e, dt, dx, dy, d); return; }
@@ -249,7 +252,7 @@ export function updEnemy(e, dt) {
   // Zauber: der erste, der bereit ist und gewirkt werden darf
   for (const c of e.casts) {
     c.t -= dt;
-    if (c.t > 0 || e.state === 'cast' || blind) continue;
+    if (c.t > 0 || e.state === 'cast' || blind || lured) continue;
     if (d < c.range && onScreen(e.x, e.y, -20)) { if (castAllowed(e, c)) startCast(e, c); else c.t = .6; }
   }
   if (d > viewR() * 1.9 && !e.elite && !e.miniboss) { e.px = e.x = P.x + dx / d * viewR() * 1.1; e.py = e.y = P.y + dy / d * viewR() * 1.1; }

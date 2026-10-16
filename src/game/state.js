@@ -50,6 +50,8 @@ export const viewR = () => Math.hypot(W / 2 / ZOOM, H / 2 / ZOOM);
 export const onScreen = (x, y, m = 0) => Math.abs(x - P.x) < W / 2 / ZOOM + m && Math.abs(y - P.y) < H / 2 / ZOOM + m;
 export { xpNeed } from './balance.js';
 export const pR = () => P.mechT > 0 ? 26 : 16;
+// Unsichtbar für die Gegner: Rauchbombe oder eingegraben (Maulwurfsgang); sie suchen dann bei run.decoy
+export const hidden = () => P.smokeT > 0 || P.burrowT > 0;
 // Punkt bzw. Objekt in die Boss-Arena zurückschieben (margin = Abstand zum Rand)
 export function clampToArena(o, margin) {
   const A = run.arena; if (!A) return o;

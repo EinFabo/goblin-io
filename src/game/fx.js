@@ -38,7 +38,13 @@ export function boltFx(x0, y0, x1, y1, w = 3, col = null) {
 }
 // kind: fire | frost | shade | rock (Bild der Explosion); Glutkern: +Flächenschaden
 const BOOM = { fire: ['f_fireball_hit_', '#ffb35c'], shade: ['p.shade_hit.', '#c9a8ff'], rock: ['p.rock_hit.', '#d8c4a0'] };
+// Ölfass: Feuer in der Nähe entzündet den Teppich zum Flammensee (Fähigkeit in game/abilities.js)
+export function igniteOil(x, y, r) {
+  if (!run.abfx) return;
+  for (const f of run.abfx) if (f.k === 'oil' && f.lit < 0 && (f.x - x) ** 2 + (f.y - y) ** 2 < (f.r + r) ** 2) { f.lit = run.time; f.tick = 0; ring(f.x, f.y, 10, f.r, .4, 'rgba(255,150,40,.9)', 8); }
+}
 export function explode(x, y, rad, dmg, kind = 'fire') {
+  if (kind === 'fire') igniteOil(x, y, rad);
   const [pre, col] = BOOM[kind] || ['e_frostbolt_hit_', null];
   dmg *= P.aoeMult || 1;
   query(x, y, rad, e => { const d = Math.hypot(e.x - x, e.y - y) || 1; hurt(e, dmg, 160, (e.x - x) / d, (e.y - y) / d, col); });

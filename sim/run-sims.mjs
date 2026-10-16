@@ -2,7 +2,7 @@
 // npm run sim                         → alle 5 Level jeder Welt mit den erwarteten Upgrades, mit Zielwerten
 // npm run sim -- --stage 2            → nur Welt 2 (--levels ist gleichbedeutend mit dem Standard)
 // npm run sim -- --stage 3 --level 5   → nur ein Level (5 = Boss-Level)
-// npm run sim -- --loadout rage,trap  → andere Fähigkeiten (Standard rage,mech wie v2)
+// npm run sim -- --loadout rage,trap  → andere Fähigkeiten (Standard rage,mech wie v2); --acct 40 für spät freie
 // npm run sim -- --stage 3 --runs 50 --talents atk=4,hp=4 [--seed 1] [--hz 60] [--par 3] [--html datei]
 // npm run sim -- --endless [--time 1800] [--god]  → Endlose Nacht: Überlebenszeit und je Minute Kills, Gegner, Ø Leben
 //                                                   (--god: Bot stirbt nicht, zeigt, ob die Gegner noch sterben)
@@ -67,7 +67,7 @@ for (const [stage, talents, level] of configs) {
   const res = new Array(runs);
   let next = 0;
   await Promise.all(pages.map(async p => {
-    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout, maxTime, god: !!args.god }); }
+    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout, maxTime, god: !!args.god, acct: +args.acct || 20 }); }
   }));
   lastRes = res;
   const wins = res.filter(r => r.win).length;
