@@ -347,7 +347,7 @@ const dieNow = () => p.evaluate(() => { const G = GOBLIN; G.P.inv = 0; G.P.dashT
 const c1 = await dieNow(); await p.click('#contYes'); await p.waitForTimeout(300);
 const c2 = await p.evaluate(() => ({ gems: GOBLIN.save.wallet.gems, cont: GOBLIN.run.cont, full: GOBLIN.P.hp === GOBLIN.P.maxHp, boss: GOBLIN.run.boss && GOBLIN.run.boss.hp === GOBLIN.run.boss.maxHp, paused: GOBLIN.run.paused }));
 await p.waitForTimeout(4500);
-const c3 = await dieNow(); await p.click('#contYes'); const c4 = await p.evaluate(() => !document.querySelector('#cont').hidden);
+const c3 = await dieNow(); await p.evaluate(() => document.querySelector('#contYes').click()); const c4 = await p.evaluate(() => !document.querySelector('#cont').hidden);
 await p.click('#contNo'); await p.waitForTimeout(800);
 const c5 = await p.evaluate(() => ({ over: GOBLIN.run.over, cont: GOBLIN.run.result.cont, hats: GOBLIN.run.result.hats }));
 if (!c1 || c2.gems !== 5 || c2.cont !== 1 || !c2.full || !c2.boss || c2.paused || !c3 || !c4 || !c5.over || c5.cont !== 1) errs.push('Weitermachen: ' + JSON.stringify({ c1, c2, c3, c4, c5 }));
