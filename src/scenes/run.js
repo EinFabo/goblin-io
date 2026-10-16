@@ -25,7 +25,7 @@ defineScene('run', {
     $('#stageTxt').textContent = (run.nm ? '☠ ' : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`);
     refreshSlots(); setupAbilButtons();
     banner((run.nm ? 'Albtraum · ' : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`), run.nm ? 'danger' : '');
-    Music.boss = false; Music.theme = null; Music.hold = false; Music.world = run.st.music || null; Music.start();
+    Music.boss = false; Music.theme = null; Music.hold = false; Music.world = run.st.music || null; Music.part = Music.cur = 0; Music.step = 0; Music.start();
     offs = [
       on('runEnd', r => go('results', r)),
       // Boss-Auftritt: Musik schweigt für das Intro, danach das Thema des Bosses von vorn
@@ -38,6 +38,8 @@ defineScene('run', {
   exit() { for (const f of offs) f(); offs = []; endCine(); Music.hold = false; },
   update(step) {
     if (run.paused) return;
+    // Musik-Teil (core/music.js): ruhig am Anfang, treibend ab 45 s, eigener Teil solange ein Mini-Boss lebt
+    Music.part = run.mini && !run.mini.dead ? 2 : run.time >= 45 ? 1 : 0;
     // Mega-Entwicklung: die Welt steht, solange die Verschmelz-Animation läuft (ui/mega-fx.js)
     if (run.megaFreeze > performance.now()) return;
     // Hitstop: Spiel steht kurz still (Elite-Kill, Boss besiegt)

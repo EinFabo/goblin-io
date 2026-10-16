@@ -22,3 +22,14 @@ test('Melodien liegen in der Tonleiter, schwere Zählzeiten auf Akkordtönen', (
     }
   }
 });
+
+test('Welten: eigene Instrumente, alle Melodien (Lied, Polka, Marsch) in der Tonleiter', () => {
+  for (const st of STAGES) {
+    const T = THEMES[st.music];
+    assert.ok(T.inst && T.inst.lead && T.inst.drum, st.name + ' hat Instrumente');
+    for (const mel of ['polka', 'song', 'march']) for (let bar = 0; bar < 4; bar++) for (let s = 0; s < 16; s++) {
+      const n = melNote(T, bar, s, mel); if (n === null) continue;
+      assert.ok(inScale(T, n), `${st.music} ${mel} Takt ${bar} Schritt ${s}`);
+    }
+  }
+});

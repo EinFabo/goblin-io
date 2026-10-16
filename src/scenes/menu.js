@@ -13,7 +13,7 @@ defineScene('menu', {
   enter(screen = '#menu') {
     pauseBackground(false);   // Magier der übrigen Welten dürfen weiterladen
     setRun(null, null); Music.stop();
-    Music.boss = false; Music.hold = false; Music.world = 'title'; Music.start();
+    Music.boss = false; Music.hold = false; Music.world = 'title'; Music.part = Music.cur = 0; Music.start();
     off = on('audioReady', () => Music.start());
     $('#hud').hidden = true; $('#ctrl').hidden = true; $('#hint').hidden = true;
     hideOverlays(); showScreen(screen);
