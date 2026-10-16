@@ -314,6 +314,8 @@ const rbGot = await p.evaluate(() => Object.values(GOBLIN.save.runes.bag).reduce
 if (rbGot !== 3 || rbHtml !== 3) errs.push(`Runenkiste: ${rbGot} Runen in der Tasche, ${rbHtml} in der Übersicht (soll 3)`);
 await p.evaluate(() => { const S = GOBLIN.save; S.abilities.catapult = { lv: 20, xp: 0, pts: {} }; S.runes = { bag: { 'fire.0': 3, 'bolt.1': 1 }, sock: {} }; S.profile.level = 20; GOBLIN.go('menu', '#armory'); });
 await p.waitForTimeout(300);
+await p.click('#armShelf [data-pick="dash"]');   // Rolle/Sprint: keine „Neu“-Prüfung über ABILITIES (stürzte ab)
+if ((await p.evaluate(() => document.querySelector('#armNote h3').textContent)) !== 'Rolle') errs.push('Rüstkammer: Rolle lässt sich nicht auswählen');
 await p.click('#armShelf [data-pick="catapult"]'); await p.click('#armNote [data-sock="0"]');
 await p.waitForSelector('#runeBag:not([hidden])');
 await p.click('#runeGrid [data-rune="fire.0"]'); await p.click('#runeNote [data-fuse]');

@@ -31,5 +31,5 @@ $('#contYes').addEventListener('click', yes);
 $('#contNo').addEventListener('click', no);
 window.addEventListener('keydown', e => {
   if (ov().hidden) return;
-  if (e.code === 'Enter') { e.preventDefault(); yes(); } else if (e.code === 'Escape') { e.preventDefault(); no(); }
+  if (e.code === 'Enter' && !e.altKey) { e.preventDefault(); yes(); }   // Alt+Enter ist Vollbild else if (e.code === 'Escape') { e.preventDefault(); no(); }
 });

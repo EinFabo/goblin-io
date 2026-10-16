@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaults, migrate, migrateV1, migrateV2, normalize, recordLevel, save, setSave, VERSION } from '../src/core/save.js';
+import { defaults, migrate, migrateV1, migrateV2, normalize, gainAbilXp, recordLevel, save, setSave, VERSION } from '../src/core/save.js';
 import { oldShopCost } from '../src/data/talents.js';
 
 const V1 = { gold: 812, unlocked: 3, cleared: { 0: true, 1: true }, best: { 0: 251, 1: 244, 2: 130 }, shop: { atk: 4, hp: 3, reroll: 1 }, mute: true, musicOff: false };
@@ -128,4 +128,12 @@ test('v4 → v5: freie Fähigkeiten gelten als gesehen, Runen/Kombos leer', () =
   assert.ok(!s.seen.includes('turret'));   // erst ab Konto 22
   assert.deepEqual(s.runes, { bag: {}, sock: {} }); assert.deepEqual(s.combos, []);
   assert.deepEqual(normalize(s).seen, s.seen);
+});
+
+test('Sterne: nach Level 30 je 2000 XP, bis 5; Rolle und Sprint bekommen keine', () => {
+  setSave(defaults());
+  save.abilities.trap = { lv: 30, xp: 0, pts: {} }; save.abilities.dash = { lv: 30, xp: 0, pts: {} };
+  gainAbilXp('trap', 4500); assert.equal(save.abilities.trap.st, 2); assert.equal(save.abilities.trap.xp, 500);
+  gainAbilXp('trap', 99999); assert.equal(save.abilities.trap.st, 5); assert.equal(save.abilities.trap.xp, 0);
+  gainAbilXp('dash', 9999); assert.equal(save.abilities.dash.st, undefined); assert.equal(save.abilities.dash.xp, 0);
 });

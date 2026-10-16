@@ -44,10 +44,13 @@ export function makeBoss(id, { x = P.x, y = P.y - 300 } = {}) {
   b.spr = mspr(b, 'idle', 1);
   return b;
 }
-export function spawnBoss() {
+// Weitere Körper eines Bosses (Morgras Teile, Spiegelbilder, Malvorns Schatten)
+export const bodyOf = (e, b) => e.link === b || e.of === b || e.decoyOf === b;
+// loot = false: Weitermachen – übrige Gegner verschwinden ohne Kristalle (sonst gäbe jedes Weitermachen Gratis-XP)
+export function spawnBoss(loot = true) {
   // Endlose Nacht: jedes Mal ein zufälliger Boss
   const id = run.st.boss.id === 'random' ? BOSS_IDS[Math.floor(RNG.spawn.next() * BOSS_IDS.length)] : run.st.boss.id;
-  for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); dropGem(e.x, e.y, e.xp); }
+  for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); if (loot) dropGem(e.x, e.y, e.xp); }
   run.eproj.length = 0; run.haz.length = 0;
   clearBossWorld();
   run.arena = { x: P.x, y: P.y, r: 470, burn: 0 };
@@ -60,10 +63,10 @@ export function spawnBoss() {
 // Boss und seine weiteren Körper verschwinden ohne Beute, Wetter und Bodeneffekte gehen mit, dann ein frischer Auftritt.
 export function restartBoss() {
   const b = run.boss; if (!b) return;
-  for (const e of run.enemies) if (!e.dead && (e === b || e.link === b || e.decoyOf === b || e.of === b)) { e.dead = true; puff(e.x, e.y, e.sc); }
-  run.boss = null; run.storm = 0; run.tele.length = 0; run.zones.length = 0;
+  for (const e of run.enemies) if (!e.dead && (e === b || bodyOf(e, b))) { e.dead = true; puff(e.x, e.y, e.sc); }
+  run.boss = null; run.storm = 0;
   $('#bossBar').hidden = true;
-  spawnBoss();
+  spawnBoss(false);
 }
 
 // ---------- Szenen: Auftritt und Phasenwechsel ----------

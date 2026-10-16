@@ -154,7 +154,7 @@ export function updAbilities(dt) {
       // Nachladen: ungebrochen abgelaufen → Abklingzeit kürzer
       const m = M('shield'), s = run.abil.find(x => x && x.id === 'shield');
       if (P.shieldHp > 0 && m.s2 && s) s.ch = Math.min(s.need, s.ch + s.need * .1 * m.s2);
-      P.shieldT = 0; puff(P.x, P.y - 10, 1, 'rgba(200,205,210,.8)'); if (P.shieldShard) { setSrc('shield'); shieldShards(); setSrc(null); }
+      P.shieldT = 0; P.bladeT = 0; puff(P.x, P.y - 10, 1, 'rgba(200,205,210,.8)'); if (P.shieldShard) { setSrc('shield'); shieldShards(); setSrc(null); }
     }
   }
   if (run.goldT > 0) { run.goldT -= dt; if (run.goldT <= 0) run.totem = null; }

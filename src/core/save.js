@@ -187,7 +187,7 @@ function normAbilities(v) {
   for (const [id, a] of Object.entries(obj(v))) {
     if (!treeDef(id)) continue;
     const o = obj(a), pt = obj(o.pts), st = { lv: num(o.lv, 1, 1, ABIL_MAX_LV) | 0, xp: num(o.xp), pts: {} };
-    const stars = num(o.st, 0, 0, STAR_MAX) | 0; if (stars && st.lv >= ABIL_MAX_LV) st.st = stars;   // Sterne erst ab Level 30
+    const stars = num(o.st, 0, 0, STAR_MAX) | 0; if (stars && st.lv >= ABIL_MAX_LV && ABILITIES[id]) st.st = stars;   // Sterne erst ab Level 30, nur Fähigkeiten
     for (const k of Object.keys(TREE)) { const n = num(pt[k], 0, 0, TREE[k].max) | 0; if (n) st.pts[k] = n; }
     // mehr ausgegeben als möglich oder Reihen-Regel verletzt (Baum v1 → v2) → zurücksetzen, Punkte bleiben frei
     if (!treeValid(st)) st.pts = {};
@@ -288,8 +288,9 @@ export function gainAbilXp(id, n) {
   a.xp += n;
   while (a.lv < ABIL_MAX_LV && a.xp >= abilXpNeed(a.lv)) { a.xp -= abilXpNeed(a.lv); a.lv++; up++; }
   if (a.lv >= ABIL_MAX_LV) {
-    while ((a.st || 0) < STAR_MAX && a.xp >= STAR_XP) { a.xp -= STAR_XP; a.st = (a.st || 0) + 1; }
-    if ((a.st || 0) >= STAR_MAX) a.xp = 0;
+    // Sterne nur für Fähigkeiten, nicht für Rolle und Sprint
+    while (ABILITIES[id] && (a.st || 0) < STAR_MAX && a.xp >= STAR_XP) { a.xp -= STAR_XP; a.st = (a.st || 0) + 1; }
+    if (!ABILITIES[id] || (a.st || 0) >= STAR_MAX) a.xp = 0;
   }
   return up;
 }

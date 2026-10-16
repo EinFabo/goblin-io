@@ -95,6 +95,7 @@ const INSTR = {
 // Welche Melodie in welchem Teil: ruhig = Lied, treibend = Polka und Marsch im Wechsel, Mini-Boss = Marsch
 function melOf(T, part, phrase) {
   if (T.mel) return T.mel;
+  if (T.boss) return 'polka';   // Bosse wie bisher
   if (part === 0) return 'song';
   if (part === 2) return 'march';
   return phrase % 2 ? 'march' : 'polka';

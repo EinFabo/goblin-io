@@ -3,7 +3,7 @@ import { stageCleared } from '../core/save.js';
 import { startStage } from './menus.js';
 import { $, fmtTime } from '../core/util.js';
 import { P, run } from '../game/state.js';
-import { treeDef } from '../data/abilities.js';
+import { STAR_MAX, treeDef } from '../data/abilities.js';
 import { sfx } from '../core/audio.js';
 import { levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
@@ -33,7 +33,7 @@ export function showResults(r) {
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +
     (r.trophy ? `<p class="vchest trophy">${cosmTile(r.trophy)}<span>Trophäe: <b>${COSM[r.trophy].name}</b><br><small>in der Garderobe (Profil)</small></span></p>` : '') +
     (r.chest ? `<p class="vchest">${chestSvg(r.chest.type)}<span>Siegtruhe: <b>${CHESTS[r.chest.type].name}</b><br><small>${r.chest.shelf ? 'liegt im Truhenregal (Laden)' : 'Regal voll – sie ist sofort aufgegangen'}</small></span>${r.chest.shelf ? '' : '<button class="btn small" id="vchestBtn">Ansehen</button>'}</p>` : '') +
-    r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}${a.star ? ` · <em>${a.st === 5 ? 'Legende!' : 'Neuer Stern!'}</em> ${'★'.repeat(a.st)}` : ''}</b></p>`).join('');
+    r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}${a.star ? ` · <em>${a.st >= STAR_MAX ? 'Legende!' : 'Neuer Stern!'}</em> ${'★'.repeat(a.st)}` : ''}</b></p>`).join('');
   $('#nextBtn').hidden = !r.next;
   if (r.next) $('#nextBtn').textContent = STAGES[r.next.si].endless ? 'Endlose Nacht' : r.next.si !== run.si ? `Welt ${r.next.si + 1}` : `Weiter: ${levelLabel(r.next.si, r.next.li)}`;
   $('#againBtn').textContent = r.win ? 'Nochmal' : 'Nochmal versuchen';

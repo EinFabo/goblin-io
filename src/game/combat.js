@@ -5,7 +5,7 @@ import { $ } from '../core/util.js';
 import { chargeAbil, critBonus, dealtMult, inProc, onKill, runeHit, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
 import { hitDamage, endlessCap } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
-import { bossHurt, bossOnKill, shadeDown } from './boss.js';
+import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js';
 import { addEvents } from './run.js';
@@ -89,7 +89,7 @@ function healPity(e) { if (run.lowT >= LOW_T) { run.lowT = 0; addItem('heal', e.
 export function bossDown(b) {
   run.boss = null; run.arena = null; emit('bossDown', b);
   // Teile und Seelengefäße gehen mit
-  for (const e of run.enemies) if ((e.link === b || e.of === b || e.decoyOf === b) && !e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
+  for (const e of run.enemies) if (bodyOf(e, b) && !e.dead) { e.dead = true; puff(e.x, e.y, e.sc); }
   clearBossWorld();
   $('#bossBar').hidden = true;
   for (let i = 0; i < 25; i++) addItem('coin', b.x, b.y);

@@ -3,6 +3,7 @@ import { persist, save } from '../core/save.js';
 import { $ } from '../core/util.js';
 import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, ROLES, SLOT2_ACCT, SLOT_KEYS, STAR_COLS, STAR_MAX, STAR_NAMES, STAR_XP, abilXpNeed, spentPoints, treeDef, unlockText, xpPerUse } from '../data/abilities.js';
 import { openCombos } from './combobook.js';
+import { COMBO_IDS } from '../data/combos.js';
 import { canEquip, slotOpen } from '../game/abilities.js';
 import { icon } from '../render/icons.js';
 import { openTree } from './tree.js';
@@ -17,7 +18,7 @@ let sel = null, role = 'all', byLv = false;   // Regal-Filter (Rolle) und Sortie
 const st = id => save.abilities[id] || { lv: 1, xp: 0, pts: {} };
 // Sterne (Phase 10) als kleine Reihe, in der Farbe des höchsten Sterns
 const stars = id => { const n = st(id).st || 0; return n ? `<span class="stars" style="--sc:${STAR_COLS[n - 1]}">${'★'.repeat(n)}</span>` : ''; };
-const isNew = id => canEquip(id) && !save.seen.includes(id);
+const isNew = id => !!ABILITIES[id] && canEquip(id) && !save.seen.includes(id);   // Rolle/Sprint sind nie „neu“
 const freePts = id => { const s = st(id); return s.lv - 1 - spentPoints(s.pts); };
 
 // Ungültige Einträge räumen (z. B. Slot 2 noch zu, Fähigkeit nicht mehr frei)
@@ -60,7 +61,7 @@ function renderShelf() {
   }).join('');
   const nNew = ABILITY_IDS.filter(isNew).length;
   $('#armChips').innerHTML = [['all', 'Alle'], ...Object.entries(ROLES).map(([k, R]) => [k, R.name])].map(([k, n]) => `<button class="chip${role === k ? ' on' : ''}" data-role="${k}">${n}</button>`).join('') +
-    `<button class="chip sort${byLv ? ' on' : ''}" data-sort aria-pressed="${byLv}">Nach Level</button><button class="chip book" data-combos>Kombo-Buch <b>${save.combos.length}/12</b></button>` + (nNew ? `<span class="chipnew">${nNew} neu</span>` : '');
+    `<button class="chip sort${byLv ? ' on' : ''}" data-sort aria-pressed="${byLv}">Nach Level</button><button class="chip book" data-combos>Kombo-Buch <b>${save.combos.length}/${COMBO_IDS.length}</b></button>` + (nNew ? `<span class="chipnew">${nNew} neu</span>` : '');
 }
 
 function renderNote() {

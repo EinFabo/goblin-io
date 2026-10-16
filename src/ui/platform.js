@@ -49,6 +49,6 @@ document.body.classList.toggle('nofull', !canFullscreen());
 export function startPlatform() {
   if (desktopApp) {
     if (save.settings.full) setFull(true); else syncFull();
-    try { appWin().onFocusChanged(({ payload }) => { if (!payload) lostFocus(); }); } catch (_) { /* ältere Tauri-Version */ }
+    try { appWin().onFocusChanged(({ payload }) => { if (!payload) lostFocus(); }).catch(() => {}); } catch (_) { /* ältere Tauri-Version: blur reicht */ }
   } else syncFull();
 }
