@@ -32,8 +32,8 @@
 </div>
 
 <div id="ctrl" hidden>
-  <button class="abil" id="ab0Btn" aria-label="Fähigkeit 1"><img alt=""><span class="lbl"></span><span class="key">Q</span><span class="cnt"></span></button>
-  <button class="abil" id="ab1Btn" aria-label="Fähigkeit 2"><img alt=""><span class="lbl"></span><span class="key">E</span><span class="cnt"></span></button>
+  <button class="abil" id="ab0Btn" aria-label="Fähigkeit 1"><img alt=""><span class="lbl"></span><span class="key">Q</span><span class="cnt"></span><span class="rdots"></span></button>
+  <button class="abil" id="ab1Btn" aria-label="Fähigkeit 2"><img alt=""><span class="lbl"></span><span class="key">E</span><span class="cnt"></span><span class="rdots"></span></button>
   <button class="abil" id="dashBtn" aria-label="Rolle"><img alt="" data-icon="dash"><span class="lbl">Rolle</span><span class="key">Leer</span><span class="cnt"></span></button>
   <button class="abil" id="sprintBtn" aria-label="Sprint (gedrückt halten)"><img alt="" data-icon="boots"><span class="lbl">Sprint</span><span class="key">Shift</span></button>
 </div>
@@ -118,6 +118,20 @@
     </div>
   </div>
 </section>
+
+<div class="overlay" id="runeBag" hidden>
+  <div class="panel runepanel">
+    <div class="phead"><h2 id="runeTitle">Runen</h2><button class="iconbtn" id="runeClose" aria-label="Schließen">✕</button></div>
+    <div class="runewrap">
+      <div class="runeleft">
+        <div class="rsocks" id="runeSocks"></div>
+        <div class="rgrid" id="runeGrid"></div>
+      </div>
+      <div class="parch rnote" id="runeNote" aria-live="polite"></div>
+    </div>
+    <div class="rfuse" id="runeFuse" hidden></div>
+  </div>
+</div>
 
 <div class="overlay" id="tree" hidden>
   <div class="panel treepanel">

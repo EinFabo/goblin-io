@@ -297,6 +297,40 @@ for (let i = 0; i < 120 && !(await p.evaluate(() => !!document.querySelector('#c
 await p.click('#coDone');
 const shop = await p.evaluate(() => { const S = GOBLIN.save; return { chests: S.stats.chests, cards: Object.values(S.cards).reduce((a, c) => a + c.n, 0), gold: S.wallet.gold }; });
 if (shop.chests !== before.chests + 1 || shop.cards <= before.cards) errs.push('Holztruhe: ' + JSON.stringify(shop));
+// Runen (Phase 10): Runenkiste kaufen, Tasche in der Rüstkammer (einsetzen, verschmelzen, ausbauen), Lauf mit allen Runenarten
+await p.evaluate(() => { const S = GOBLIN.save; S.wallet.gems = 100; S.runes = { bag: {}, sock: {} }; GOBLIN.go('menu', '#store'); });
+await p.waitForTimeout(300);
+await p.click('[data-runebag]'); await p.waitForSelector('#chestOpen:not([hidden])');
+for (let i = 0; i < 60 && !(await p.evaluate(() => !!document.querySelector('#coDone'))); i++) { await p.mouse.click(640, 380); await p.waitForTimeout(200); }
+const rbHtml = await p.evaluate(() => document.querySelectorAll('.co-sum .rune').length);
+await p.click('#coDone');
+const rbGot = await p.evaluate(() => Object.values(GOBLIN.save.runes.bag).reduce((a, b) => a + b, 0));
+if (rbGot !== 3 || rbHtml !== 3) errs.push(`Runenkiste: ${rbGot} Runen in der Tasche, ${rbHtml} in der Übersicht (soll 3)`);
+await p.evaluate(() => { const S = GOBLIN.save; S.abilities.catapult = { lv: 20, xp: 0, pts: {} }; S.runes = { bag: { 'fire.0': 3, 'bolt.1': 1 }, sock: {} }; S.profile.level = 20; GOBLIN.go('menu', '#armory'); });
+await p.waitForTimeout(300);
+await p.click('#armShelf [data-pick="catapult"]'); await p.click('#armNote [data-sock="0"]');
+await p.waitForSelector('#runeBag:not([hidden])');
+await p.click('#runeGrid [data-rune="fire.0"]'); await p.click('#runeNote [data-fuse]');
+await p.waitForTimeout(1700);
+await p.click('#runeGrid [data-rune="fire.1"]'); await p.click('#runeNote [data-in]');
+await p.click('#runeSocks [data-slot="1"]'); await p.click('#runeGrid [data-rune="bolt.1"]'); await p.click('#runeNote [data-in]');
+await p.click('#runeSocks [data-slot="1"]'); await p.click('#runeNote [data-out]');
+await p.keyboard.press('Escape');
+const rs = await p.evaluate(() => ({ runes: GOBLIN.save.runes, open: !document.querySelector('#runeBag').hidden, note: document.querySelectorAll('#armNote .asock .rune').length }));
+if (JSON.stringify(rs.runes) !== JSON.stringify({ bag: { 'bolt.1': 1 }, sock: { catapult: ['fire.1', null] } }) || rs.open || rs.note !== 1) errs.push('Runen-Tasche: ' + JSON.stringify(rs));
+// Lauf: jede Runenart steckt in einer Fähigkeit, die sie trägt (Katapult + Bienenstock), 40 s mit Zeichnen
+for (const [a, b] of [[['fire.3', 'bolt.3'], ['echo.3', 'poison.3']], [['frost.3', 'luck.3'], ['blood.3', 'soul.3']], [['greed.3', 'might.3'], ['haste.3', 'wide.3']]]) {
+  await p.evaluate(([a, b]) => { const G = GOBLIN, S = G.save; S.abilities.catapult = { lv: 20, xp: 0, pts: {} }; S.abilities.bees = { lv: 20, xp: 0, pts: {} }; S.profile.level = 40;
+    S.runes = { bag: {}, sock: { catapult: a, bees: b } }; S.loadout = ['catapult', 'bees']; G.go('run', { si: 3, li: 2, seed: 5 }); }, [a, b]);
+  const rr = await p.evaluate(() => { const G = GOBLIN, run = G.run; run.paused = true; let uses = 0, fill = 2;
+    while (run.time < 40 && !run.over) { G.P.inv = 9; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); }
+      if (run.time >= fill) { fill += 4; for (const s of run.abil) if (s) s.ch = s.need; }   // alle 4 s voll laden (Kill-Fähigkeiten)
+      run.paused = false; for (let k = 0; k < 2; k++) if (G.abilReady(run.abil[k]) && G.useAbility(k)) uses++; run.paused = true; }
+    run.paused = false; return { uses, kills: run.kills, runes: JSON.stringify(run.runes) }; });
+  await p.waitForTimeout(200);
+  if (!rr.uses || !rr.kills || rr.runes === '{}') errs.push('Lauf mit Runen: ' + JSON.stringify(rr));
+}
+console.log('Runen (Runenkiste, Tasche, Läufe mit allen Runenarten): geprüft');
 await p.evaluate(() => { GOBLIN.save.cards.dagger = { lv: 1, n: 2 }; GOBLIN.go('menu', '#shop'); });
 await p.waitForTimeout(200);
 await p.click('[data-card="dagger"]'); await p.click('#cardUp');

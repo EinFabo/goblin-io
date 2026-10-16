@@ -4,7 +4,7 @@ import { sfx } from '../core/audio.js';
 import { save } from '../core/save.js';
 import { TAU } from '../core/util.js';
 import { hurt } from './combat.js';
-import { P, query, run } from './state.js';
+import { P, abSrc, query, run } from './state.js';
 
 // ---------- Gegenstände & Effekte ----------
 export function dropGem(x, y, v) {
@@ -27,8 +27,8 @@ export function addNum(x, y, v, c, crit, dmg = false) {
 export function part(x, y, vx, vy, life, c, s) { if (run.parts.length > 600) return; run.parts.push({ x, y, vx, vy, t: 0, life, c, s }); }
 export function puff(x, y, sc = 1, col = null) { for (let i = 0; i < 7; i++) part(x + frand(-10, 10) * sc, y + frand(-12, 8) * sc, frand(-40, 40), frand(-60, -10), frand(.35, .6), col || (i % 2 ? 'rgba(170,140,220,.75)' : 'rgba(230,230,230,.75)'), frand(5, 9) * sc); }
 export function animFx(pre, n, x, y, sc = 1, fps = 18, rot = 0) { run.fx.push({ k: 'anim', pre, n, x, y, sc, fps, rot, t: 0 }); }
-// fn nach t Sekunden Spielzeit (steht in Pause, Hitstop und Zeitlupe mit still)
-export function later(t, fn) { run.fx.push({ k: 'later', t: 0, dur: t, fn }); }
+// fn nach t Sekunden Spielzeit (steht in Pause, Hitstop und Zeitlupe mit still); merkt sich die Schadensquelle (Runen)
+export function later(t, fn) { run.fx.push({ k: 'later', t: 0, dur: t, fn, src: abSrc }); }
 export function ring(x, y, r0, r1, dur, c, w = 4) { run.fx.push({ k: 'ring', x, y, r0, r1, dur, c, w, t: 0 }); }
 export function boltFx(x0, y0, x1, y1, w = 3, col = null) {
   const pts = [[x0, y0]], n = 7;

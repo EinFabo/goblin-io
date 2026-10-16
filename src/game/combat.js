@@ -2,14 +2,14 @@ import { RNG, rnd, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { $ } from '../core/util.js';
-import { chargeAbil, critBonus, dealtMult, onKill, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
+import { chargeAbil, critBonus, dealtMult, inProc, onKill, runeHit, shieldAbsorb, takenMult, tryRevive } from './abilities.js';
 import { hitDamage, endlessCap } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js';
 import { addEvents } from './run.js';
-import { P, aoeId, run } from './state.js';
+import { P, abSrc, aoeId, run } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun, startClear } from './run.js';
 import { count } from './progress.js';
@@ -19,7 +19,8 @@ import { ETYPES } from '../data/enemies.js';
 // xpMul: tötet dieser Treffer, gibt der Gegner so viel mehr Erfahrung (Kristallregen)
 export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   if (e.dead || e.spawnT > 0) return;   // im Portal noch nicht angreifbar
-  const crit = rnd() < P.crit + critBonus();
+  const raw = dmg;   // vor Krit, Hinterhalt & Co.: Grundlage für Brand, Gift und Runen-Blitz (die laufen wieder durch hurt)
+  const crit = !inProc() && rnd() < P.crit + critBonus();   // Brand, Gift, Runen-Blitz: nie kritisch
   if (e.tbShock && e.freezeT > 0) dmg *= 1.5;   // Zeitbombe: Kälteschock
   dmg *= dealtMult(e);
   if (P.bigMult > 1 && (e.elite || e.boss || e.miniboss || e.link)) dmg *= P.bigMult;   // Knochenschädel
@@ -42,6 +43,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   sfx.hit();
   if (tgt.boss) bossHurt(tgt);
   if (tgt.hp <= 0) kill(tgt, xpMul);
+  if (abSrc && d > 0) runeHit(e, raw);   // Runen der Fähigkeit, die getroffen hat (Phase 10)
 }
 // Vampirzahn: Lebensraub ohne Overkill, höchstens 3 % des Lebens pro Sekunde (Flächen-Treffer zählen sonst vielfach)
 function leech(d) {

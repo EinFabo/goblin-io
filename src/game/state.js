@@ -21,6 +21,12 @@ export function buildGrid() {
 // damit ein Ereignis Morgras Teile (gemeinsames Leben) nur einmal trifft. aoeScope macht dasselbe für Schleifen ohne query.
 export let aoeId = 0; let aoeSeq = 0;
 export function aoeScope(fn) { const prev = aoeId; aoeId = ++aoeSeq; try { fn(); } finally { aoeId = prev; } }
+// Runen (Phase 10): Von welcher Fähigkeit kommt der Schaden gerade? hurt()/kill() lesen abSrc und wenden deren Runen an.
+// Gesetzt um den Einsatz, die laufenden Effekte (run.abfx) und alles, was eine Fähigkeit hinterlässt
+// (Geschosse, Felsen, Brandzonen, Krieger, later()) – diese Dinge merken sich die Quelle als src.
+// setSrc gibt die vorige Quelle zurück, damit man sie wiederherstellen kann.
+export let abSrc = null;
+export function setSrc(s) { const p = abSrc; abSrc = s || null; return p; }
 export function query(x, y, r, cb) {
   const prev = aoeId; aoeId = ++aoeSeq;
   try {

@@ -3,7 +3,7 @@ import { sfx } from '../core/audio.js';
 import { TAU, angDiff, clamp, face8 } from '../core/util.js';
 import { hurt } from './combat.js';
 import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
-import { P, nearest, query, randomEnemyInView, run } from './state.js';
+import { P, abSrc, nearest, query, randomEnemyInView, run, setSrc } from './state.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { smokeAtkSlow } from '../data/abilities.js';
 import { onProjHit, stepWeapon2 } from './weapons2.js';
@@ -15,7 +15,7 @@ export function shoot(k, a, dmg, pierce, spd, life, extra = {}) { shootRaw(k, a,
 // ohne den Schadensfaktor der gerade schießenden Waffe (dmg schon fertig); Splitterkristall: mehr Durchbohren
 export function shootRaw(k, a, dmg, pierce, spd, life, extra = {}) {
   if (pierce < 99) pierce += P.pierceAdd || 0;
-  run.pproj.push(Object.assign({ k, x: P.x, y: P.y - 8, a, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, dmg, pierce, life, hit: new Set(), r: 13, t: 0 }, extra));
+  run.pproj.push(Object.assign({ k, x: P.x, y: P.y - 8, a, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, dmg, pierce, life, hit: new Set(), r: 13, t: 0, src: abSrc }, extra));
 }
 export function updWeapons(dt) {
   const smoke = P.smokeT > 0 && run.abMods && run.abMods.smoke;
@@ -181,6 +181,7 @@ export function stepAlly(al, i, n, dmg, spd, rate, dt) {
 export function updPProj(dt) {
   const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
   for (const p of run.pproj) {
+    setSrc(p.src);   // Geschosse von Fähigkeiten (Mech, Schild, Wirbelaxt …) tragen deren Runen
     p.t += dt; p.life -= dt;
     // Irrlichter und Funken suchen sich ein neues Ziel, wenn ihres stirbt
     if ((p.k === 'soul' || p.k === 'spark') && (!p.target || p.target.dead) && p.t >= (p.rt || .15)) { p.rt = p.t + .2; p.target = nearest(420, p); }
@@ -224,5 +225,6 @@ export function updPProj(dt) {
       if (p.pierce < 0) { p.life = -1; return false; }
     });
   }
+  setSrc(null);
   run.pproj = run.pproj.filter(p => p.life > 0);
 }

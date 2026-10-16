@@ -3,15 +3,16 @@ import { save } from '../core/save.js';
 import { $, restart } from '../core/util.js';
 import { CARD_MAX, CHESTS, RARITIES, RARITY, cardName, upgradeCost } from '../data/cards.js';
 import { cardState } from '../game/chests.js';
-import { cardHtml, chestSvg } from './cardart.js';
+import { cardHtml, chestSvg, runeSvg } from './cardart.js';
 import { COSM, COSMO_CHEST } from '../data/cosmetics.js';
+import { RUNE_BAG, parseRune, runeName, tierInfo } from '../data/runes.js';
 import { cosmTile } from './cosmart.js';
-const chestName = t => (CHESTS[t] || COSMO_CHEST).name;
+const chestName = t => (CHESTS[t] || (t === 'runebag' ? RUNE_BAG : COSMO_CHEST)).name;
 
 // ---------- Truhe öffnen (PLAN 9.5, Umbau 2026-10-14) ----------
 // Ablauf: Truhe fällt herein → wackelt (Tippen = nächster Wackler), Licht aus dem Spalt steigt Stufe um Stufe
 // (weiß → blau → lila → gold) bis zur besten Seltenheit → Hitstop, Blitz, Deckel fliegt auf → Karten fliegen
-// verdeckt heraus und drehen sich um → Bonusfund → Übersicht. Licht, Strahl und Strahlenkranz liegen HINTER der Truhe.
+// verdeckt heraus und drehen sich um → Runen (Phase 10) → Bonusfund → Übersicht. Licht, Strahl und Strahlenkranz liegen HINTER der Truhe.
 // Das Ergebnis steht vorher fest (res kommt aus rollChest und ist schon gutgeschrieben, grantChest hat c.before gesetzt);
 // die Animation zeigt es nur – keine Beinahe-Treffer.
 let S = null;   // { res, step, i, timers, done, best, n, k, tier, ups, flipped, lastWob, bonusShown }
@@ -24,13 +25,14 @@ const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduce
 export function playChest(res, done = () => {}) {
   audioInit();
   if (S) clearTimers();   // alte Sitzung (z. B. von außen versteckt) beenden, bevor ihre Timer feuern
-  const best = RARITIES.indexOf(res.best);
+  // Das Licht steigt bis zur besten Seltenheit, Runen eingeschlossen (keine Beinahe-Treffer)
+  const best = Math.max(RARITIES.indexOf(res.best), ...(res.runes || []).map(k => parseRune(k).tier));
   // 2 + best Wackler, manchmal einer mehr, damit die Zahl nicht alles verrät. Bei best davon steigt das Licht.
   const n = 2 + best + (Math.random() < .35 ? 1 : 0);
-  S = { res, step: 'wobble', i: -1, timers: [], done, best, n, k: 0, tier: 0, ups: pickUps(n, best), flipped: false, lastWob: 0, bonusShown: false };
+  S = { res, step: 'wobble', i: -1, timers: [], done, best, n, k: 0, tier: 0, ups: pickUps(n, best), flipped: false, lastWob: 0, bonusShown: false, runesShown: false };
   const o = ov();
   o.hidden = false; o.classList.remove('dark');
-  o.style.setProperty('--bc', RARITY[res.best].color); setTier(0); o.style.setProperty('--gs', .3);
+  o.style.setProperty('--bc', RARITY[RARITIES[best]].color); setTier(0); o.style.setProperty('--gs', .3);
   coStage().className = 'co-stage';
   coStage().innerHTML = `<div class="co-rays"></div><div class="co-chest drop"><div class="co-back"><div class="co-glow"></div><div class="co-beam"></div></div>${chestSvg(res.type)}</div><div class="co-name">${chestName(res.type)}</div><div class="co-pop"></div>`;
   $('#coSkip').hidden = false;
@@ -89,7 +91,7 @@ function openLid() {
     shake(1 + S.best); buzz([30, 40, 40 + 40 * S.best]);
     sfx.thump(); sfx.lidOpen(S.best); if (S.best >= 3) sfx.legendary();
     const [x, y] = seam();
-    sparks(x, y, 40 + S.best * 20, RARITY[S.res.best].color); sparks(x, y, 20, '#ffffff');
+    sparks(x, y, 40 + S.best * 20, RARITY[RARITIES[S.best]].color); sparks(x, y, 20, '#ffffff');
     later(650 + (S.best >= 3 ? 300 : 0), nextCard);
   });
 }
@@ -108,7 +110,7 @@ function nextCard() {
     hint('Tippen für die Übersicht'); return;
   }
   const c = S.res.cards[S.i];
-  if (!c) { if (S.res.bonus && !S.bonusShown) showBonus(); else summary(); return; }
+  if (!c) { if (hasRunes() && !S.runesShown) showRunes(); else if (S.res.bonus && !S.bonusShown) showBonus(); else summary(); return; }
   const now = cardState(save, c.id), b = c.before, ri = RARITIES.indexOf(c.rarity);
   const isNew = !b.n && b.lv === RARITY[c.rarity].start;   // vorher nie eine Karte davon gehabt
   // Karte fliegt verdeckt aus der Truhe; der Rand der Rückseite glüht kurz vorher in der Seltenheit
@@ -144,7 +146,20 @@ function flip() {
     later(fresh ? 650 : 250, () => { el.insertAdjacentHTML('beforeend', '<span class="co-up">Aufwerten möglich!</span>'); if (fresh) sfx.ding(); });
   }
   const left = S.res.cards.length - S.i - 1;
-  hint(left ? `Tippen für die nächste Karte (noch ${left})` : S.res.bonus ? 'Tippen – da ist noch was …' : 'Tippen für die Übersicht');
+  hint(left ? `Tippen für die nächste Karte (noch ${left})` : S.res.bonus || hasRunes() ? 'Tippen – da ist noch was …' : 'Tippen für die Übersicht');
+}
+
+// Runen (Phase 10): alle Runen der Truhe zusammen, beste zuletzt mit dem meisten Glanz
+const hasRunes = () => !!(S.res.runes && S.res.runes.length);
+function showRunes() {
+  S.runesShown = true; S.step = 'card'; S.flipped = true;
+  const rs = S.res.runes, top = rs.reduce((m, k) => Math.max(m, parseRune(k).tier), 0), col = tierInfo(top).color;
+  ov().style.setProperty('--tc', col);
+  coStage().insertAdjacentHTML('beforeend', `<div class="co-card co-runes shown r${top}" style="--rc:${col}"><b>${rs.length > 1 ? rs.length + ' Runen!' : 'Rune!'}</b>
+    <div class="co-runelist">${rs.map((k, i) => `<span class="co-rune" style="--d:${i * 120}ms" title="${runeName(k)}">${runeSvg(k)}</span>`).join('')}</div><small>In der Rüstkammer einsetzen</small></div>`);
+  sfx.reveal(top); if (top >= 2) { shake(top - 1); buzz(20 + 30 * top); }
+  sparks(...cardAt(), 16 + top * 14, col);
+  hint(S.res.bonus ? 'Tippen – da ist noch was …' : 'Tippen für die Übersicht');
 }
 
 // Bonusfund (Juwelen oder Goldader) als eigene Überraschung nach der letzten Karte
@@ -169,10 +184,12 @@ function summary() {
   const r = S.res, B = r.bonus;
   // Beste zuerst; die beste Karte ist größer und glüht
   const cards = r.cards.slice().sort((a, b) => RARITIES.indexOf(b.rarity) - RARITIES.indexOf(a.rarity) || b.n - a.n);
+  const runes = hasRunes() ? `<div class="co-runelist small">${r.runes.map(k => `<span class="co-rune" title="${runeName(k)}">${runeSvg(k)}</span>`).join('')}</div>` : '';
   const bonus = B ? `<p class="co-gold co-bonusline"><span class="${B.kind === 'gems' ? 'gem' : 'coin'}"></span>+${B.n.toLocaleString('de-DE')} ${B.kind === 'gems' ? 'Juwelen (Bonusfund)' : 'Gold (Goldader)'}</p>` : '';
   coStage().insertAdjacentHTML('beforeend', `<div class="co-sum">
     <h2>${chestName(r.type)}</h2>
-    ${r.cosmetic ? `<div class="co-cosm-sum">${cosmTile(r.cosmetic, 'big')}<p>In der Garderobe (Profil) anziehen.</p></div>` : `<p class="co-gold"><span class="coin"></span>+${r.gold.toLocaleString('de-DE')} Gold</p>${bonus}`}
+    ${r.cosmetic ? `<div class="co-cosm-sum">${cosmTile(r.cosmetic, 'big')}<p>In der Garderobe (Profil) anziehen.</p></div>` : `${r.gold ? `<p class="co-gold"><span class="coin"></span>+${r.gold.toLocaleString('de-DE')} Gold</p>` : ''}${bonus}`}
+    ${runes}
     <div class="co-list">${cards.map((c, i) => `<div class="co-mini${i === 0 && RARITIES.indexOf(c.rarity) >= 1 ? ' best' : ''}" style="--rc:${RARITY[c.rarity].color}" title="${cardName(c.id)}">${cardHtml(c.id, cardState(save, c.id))}<span class="co-n">×${c.n}</span></div>`).join('')}</div>
     <button class="btn primary" id="coDone">Weiter</button></div>`);
   hint('');

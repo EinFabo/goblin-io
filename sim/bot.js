@@ -2,9 +2,12 @@
 // darf also nichts von außen benutzen außer window.GOBLIN.
 // step: Länge eines Logikschritts in s (Standard wie im Spiel: 1/60)
 // god: Leben jeden Schritt auffüllen (misst in der Endlosen Nacht, ob noch etwas stirbt, statt wann der Bot fällt)
-export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20, god = false }) {
+// runes: je Slot eine Liste von Runen-Schlüsseln (['fire.3', 'bolt.3']); die Fähigkeit steht dann auf Level 20 (beide Sockel offen)
+export function botRun({ si, li = 0, talents, seed, maxTime = 330, step, loadout = ['rage', 'mech'], acct = 20, god = false, runes = null }) {
   const G = window.GOBLIN, joy = G.joy, STEP = step || G.STEP;
   G.save.talents = { ...talents }; G.save.loadout = [...loadout]; G.save.profile.level = acct;
+  G.save.runes = { bag: {}, sock: {} };
+  if (runes) loadout.forEach((id, i) => { if (!id || !runes[i] || !runes[i].length) return; G.save.abilities[id] = { lv: 20, xp: 0, pts: {} }; G.save.runes.sock[id] = [runes[i][0] || null, runes[i][1] || null]; });
   for (let k = 1; k <= 8; k++) G.save.stages[k] = { cleared: true, stars: 0, best: 0, nightmare: false };   // alles freigeschaltet
   G.newRun(si, seed, li);
   const run = G.run, P = G.P;

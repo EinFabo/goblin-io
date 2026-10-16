@@ -5,6 +5,10 @@ import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, SLOT2
 import { canEquip, slotOpen } from '../game/abilities.js';
 import { icon } from '../render/icons.js';
 import { openTree } from './tree.js';
+import { openRunes } from './runes.js';
+import { runeSvg } from './cardart.js';
+import { SOCKET_LV } from '../data/runes.js';
+import { socketOpen, socketsOf } from '../game/runes.js';
 
 // ---------- Rüstkammer: zwei Haken für die Fähigkeiten, Brett mit allen Fähigkeiten, Zettel mit Details ----------
 // Die Auswahl bleibt gespeichert (save.loadout); Stages starten direkt damit.
@@ -57,6 +61,13 @@ function renderNote() {
   h += `<div class="bar"><i style="width:${pct.toFixed(0)}%"></i></div><p class="xp">Level ${s.lv}${s.lv < ABIL_MAX_LV ? ` · ${Math.floor(s.xp)} / ${abilXpNeed(s.lv)} XP · +${xpPerUse(id)} ${id === 'sprint' ? 'pro Sekunde' : 'pro Einsatz'}` : ' · Maximum'}</p>`;
   const hang = i => move || !slotOpen(i) ? '' : `<button class="btn ${slot === i ? 'ghost' : 'primary'}" data-hang="${i}" ${slot === i ? 'disabled' : ''}>${slot === i ? `Hängt an ${SLOT_KEYS[i]}` : `An ${SLOT_KEYS[i]} hängen`}</button>`;
   h += `<div class="acts">${hang(0)}${hang(1)}<button class="btn" data-tree="${id}">Skill Tree${free > 0 ? ` (${free} frei)` : ''}</button></div>`;
+  // Runen-Sockel (Phase 10): Klick öffnet die Runen-Tasche für diesen Sockel
+  if (!move) {
+    const socks = socketsOf(save, id);
+    h += `<div class="asocks"><span>Runen</span>${[0, 1].map(i => { const open = socketOpen(save, id, i), k = socks[i];
+      return `<button class="asock${open ? '' : ' locked'}" data-sock="${i}" aria-label="Runen-Sockel ${i + 1}" title="${open ? (k ? 'Rune tauschen' : 'Rune einsetzen') : 'ab Level ' + SOCKET_LV[i]}">${k ? runeSvg(k) : open ? '<span class="hole"></span>' : `<small>Lv ${SOCKET_LV[i]}</small>`}</button>`; }).join('')}
+      <button class="btn small" data-runes>Runen-Tasche</button></div>`;
+  }
   $('#armNote').innerHTML = h;
 }
 
@@ -74,6 +85,8 @@ function hang(i) {
 $('#armory').addEventListener('click', e => {
   const t = e.target.closest('[data-tree]'); if (t) { openTree(t.dataset.tree, () => { if (!$('#armory').hidden) renderArmory(); }); return; }
   const h = e.target.closest('[data-hang]'); if (h) { hang(+h.dataset.hang); return; }
+  const k = e.target.closest('[data-sock], [data-runes]');
+  if (k) { openRunes(sel, k.dataset.sock !== undefined ? +k.dataset.sock : null, () => { if (!$('#armory').hidden) renderArmory(); }); return; }
   const b = e.target.closest('[data-pick]'); if (b) pick(b.dataset.pick);
 });
 

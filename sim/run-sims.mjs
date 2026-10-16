@@ -3,6 +3,7 @@
 // npm run sim -- --stage 2            → nur Welt 2 (--levels ist gleichbedeutend mit dem Standard)
 // npm run sim -- --stage 3 --level 5   → nur ein Level (5 = Boss-Level)
 // npm run sim -- --loadout rage,trap  → andere Fähigkeiten (Standard rage,mech wie v2); --acct 40 für spät freie
+// npm run sim -- --runes fire.3+bolt.3,might.2  → Runen je Slot (Komma), zwei Sockel mit + (Fähigkeiten auf Level 20)
 // npm run sim -- --stage 3 --runs 50 --talents atk=4,hp=4 [--seed 1] [--hz 60] [--par 3] [--html datei]
 // npm run sim -- --endless [--time 1800] [--god]  → Endlose Nacht: Überlebenszeit und je Minute Kills, Gegner, Ø Leben
 //                                                   (--god: Bot stirbt nicht, zeigt, ob die Gegner noch sterben)
@@ -18,6 +19,7 @@ const args = Object.fromEntries(process.argv.slice(2).join(' ').split('--').filt
 const html = resolve(args.html || join(ROOT, 'dist', 'goblin-io.html'));
 const runs = +args.runs || 20, seed0 = args.seed !== undefined ? +args.seed : 1, hz = +args.hz || 60;
 const loadout = args.loadout ? String(args.loadout).split(',') : ['rage', 'mech'];
+const runes = args.runes ? String(args.runes).split(',').map(x => x ? x.split('+') : []) : null;
 const parseTalents = s => Object.fromEntries(String(s || '').split(',').filter(Boolean).map(x => { const [k, v] = x.split('='); return [k, +v]; }));
 
 const SRC = { contact: 'Kontakt', proj: 'Geschoss', boss: 'Boss', bomb: 'Bombe', strike: 'Blitz', zone: 'Pfütze', wall: 'Feuerwand', beam: 'Strahl', gas: 'Gas', rock: 'Fels', spikes: 'Stacheln', burn: 'Glutrand', meteor: 'Meteor', ice: 'Eis' };
@@ -46,7 +48,7 @@ const pages = await Promise.all(Array.from({ length: par }, async () => {
 
 const pct = (a, n) => (100 * a / n).toFixed(0).padStart(3) + ' %';
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
-console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz, Fähigkeiten ${loadout.join(' + ')}\n`);
+console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz, Fähigkeiten ${loadout.join(' + ')}${runes ? ', Runen ' + args.runes : ''}\n`);
 console.log('Level  Talente               Siege   Ziel       Ø Zeit  Boss    Fähigk.  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
 const t0 = Date.now();
 let lastRes = [];
@@ -67,7 +69,7 @@ for (const [stage, talents, level] of configs) {
   const res = new Array(runs);
   let next = 0;
   await Promise.all(pages.map(async p => {
-    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout, maxTime, god: !!args.god, acct: +args.acct || 20 }); }
+    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout, runes, maxTime, god: !!args.god, acct: +args.acct || 20 }); }
   }));
   lastRes = res;
   const wins = res.filter(r => r.win).length;

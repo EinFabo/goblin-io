@@ -6,6 +6,8 @@ import { CARD_MAX, CHESTS, CHEST_IDS, PITY_EPIC, PITY_LEG, RARITIES, RARITY, SHE
 import { cardState, chestLeft, chestReady, freeChests, grantCards, grantChest, rollChest, skipUnlock, startUnlock, takeFromShelf, unlocking } from '../game/chests.js';
 import { GOLD_PACKS, canPay, dailyOffers, msToMidnight, pay, shopToday } from '../game/shop.js';
 import { cardHtml, chestSvg } from './cardart.js';
+import { CHEST_RUNES, RUNE_BAG } from '../data/runes.js';
+import { addRunes, rollRuneBag } from '../game/runes.js';
 import { playChest } from './chest-open.js';
 import { COSM, COSMO_CHEST } from '../data/cosmetics.js';
 import { grantCosmetic, missing, owns } from '../game/cosmetics.js';
@@ -90,21 +92,33 @@ function renderBuy() {
   const left = missing(save).length;
   const cosmo = `<div class="offer chestoffer">${chestSvg('cosmo')}<b>${COSMO_CHEST.name}</b><small>1 Kosmetik-Teil, das du noch nicht hast (noch ${left})</small>
       <div class="row"><button class="btn primary small" data-cosmo ${left ? (canPay(save, COSMO_CHEST.price) ? '' : 'aria-disabled="true"') : 'disabled'}>${left ? price(COSMO_CHEST.price) : 'Alles da'}</button></div></div>`;
-  $('#chestBuy').innerHTML = cosmo + CHEST_IDS.map(t => {
+  const bag = `<div class="offer chestoffer">${chestSvg('runebag')}<b>${RUNE_BAG.name}</b><small>${RUNE_BAG.n} Runen, mindestens eine seltene</small>
+      <div class="row"><button class="iconbtn info" data-odds="runebag" aria-label="Wahrscheinlichkeiten">i</button><button class="btn primary small" data-runebag ${canPay(save, RUNE_BAG.price) ? '' : 'aria-disabled="true"'}>${price(RUNE_BAG.price)}</button></div></div>`;
+  $('#chestBuy').innerHTML = cosmo + bag + CHEST_IDS.map(t => {
     const C = CHESTS[t];
     // Pity sichtbar (Gold- und Magiertruhe zählen gemeinsam). Hat die Truhe schon sicher eine epische Karte, zählt Legendär
     const sureEpic = C.sure && RARITIES.indexOf(C.sure[0]) >= 2;
     const pity = !C.pity ? '' : sureEpic ? `<small class="pity">Legendär spätestens in ${Math.max(1, PITY_LEG - save.pity.leg)}</small>` : `<small class="pity">Episch spätestens in ${Math.max(1, PITY_EPIC - save.pity.epic)}</small>`;
-    return `<div class="offer chestoffer">${chestSvg(t)}<b>${C.name}</b><small>${C.cards} Karten · ${C.gold[0]}–${C.gold[1]} Gold</small>${pity}
+    return `<div class="offer chestoffer">${chestSvg(t)}<b>${C.name}</b><small>${C.cards} Karten · ${C.gold[0]}–${C.gold[1]} Gold · ${runeTxt(t)}</small>${pity}
       <div class="row"><button class="iconbtn info" data-odds="${t}" aria-label="Wahrscheinlichkeiten">i</button><button class="btn primary small" data-buy-chest="${t}" ${canPay(save, C.price) ? '' : 'aria-disabled="true"'}>${price(C.price)}</button></div></div>`;
   }).join('');
 }
+// Runen je Truhe als kurzer Text (Phase 10)
+function runeTxt(t) { const [p, a, b] = CHEST_RUNES[t].n; return p < 1 ? `${Math.round(p * 100)} %: ${a} Rune` : `${a}${b > a ? '–' + b : ''} Runen`; }
+const runeRows = odds => RARITIES.map((r, k) => odds[k] ? `<li style="--rc:${RARITY[r].color}"><span>${RARITY[r].name}</span><b>${odds[k]} %</b></li>` : '').join('');
 function showOdds(t) {
+  if (t === 'runebag') {
+    $('#oddsPanel').innerHTML = `<div class="phead"><h2>${RUNE_BAG.name}</h2><button class="iconbtn" data-close aria-label="Schließen">✕</button></div>
+      <p>${RUNE_BAG.n} Runen, die erste ist mindestens selten. Pro Rune gilt:</p><ul class="odds">${runeRows(RUNE_BAG.odds)}</ul>
+      <p class="note">3 gleiche Runen verschmelzen in der Rüstkammer zu einer der nächsten Stufe.</p>`;
+    $('#oddsInfo').hidden = false; return;
+  }
   const C = CHESTS[t];
   const rows = RARITIES.map((r, k) => C.odds[k] ? `<li style="--rc:${RARITY[r].color}"><span>${RARITY[r].name}</span><b>${C.odds[k]} %</b></li>` : '').join('');
   const pity = C.pity ? `<p>Spätestens jede <b>${PITY_EPIC}.</b> Gold- oder Magiertruhe hat eine epische Karte (noch ${Math.max(1, PITY_EPIC - save.pity.epic)}), jede <b>${PITY_LEG}.</b> eine legendäre (noch ${Math.max(1, PITY_LEG - save.pity.leg)}).</p>` : '';
   $('#oddsPanel').innerHTML = `<div class="phead"><h2>${C.name}</h2><button class="iconbtn" data-close aria-label="Schließen">✕</button></div>
     <p>Pro Karte gilt:</p><ul class="odds">${rows}</ul>
+    <p>Dazu ${runeTxt(t)}, pro Rune:</p><ul class="odds">${runeRows(CHEST_RUNES[t].odds)}</ul>
     ${C.sure ? `<p>Garantiert: mindestens ${C.sure[1]} ${RARITY[C.sure[0]].name.toLowerCase()}${C.sure[1] > 1 ? 'e' : ''} Karte${C.sure[1] > 1 ? 'n' : ''}.</p>` : ''}${pity}
     <p class="note">Legendäre Gegenstände gibt es noch nicht – ein legendärer Wurf wird bis dahin zu einer epischen Karte. Im Regal braucht diese Truhe ${dur(C.wait)} zum Öffnen.</p>`;
   $('#oddsInfo').hidden = false;
@@ -125,6 +139,12 @@ $('#store').addEventListener('click', e => {
   if (d.skip !== undefined) { if (skipUnlock(save, +d.skip)) { persist(); sfx.buy(); renderShelf(); onChange(); } else nope(b); return; }
   if (d.open !== undefined) { const t = takeFromShelf(save, +d.open); if (t) openChest(t); return; }
   if (d.odds) { showOdds(d.odds); return; }
+  if (d.runebag !== undefined) {
+    if (!pay(save, RUNE_BAG.price)) { nope(b); return; }
+    const runes = rollRuneBag(mulberry32(newSeed())); addRunes(save, runes); persist();
+    playChest({ type: 'runebag', gold: 0, cards: [], runes, best: 'common' }, () => { renderStore(); onChange(); });
+    return;
+  }
   if (d.cosmo !== undefined) { if (!openCosmoChest(renderStore)) nope(b); return; }
   if (d.buyChest) { const C = CHESTS[d.buyChest]; if (!pay(save, C.price)) { nope(b); return; } openChest(d.buyChest); return; }
   if (d.pack !== undefined) { const g = GOLD_PACKS[+d.pack]; if (!pay(save, { gems: g.gems })) { nope(b); return; } save.wallet.gold += g.gold; persist(); sfx.chest(); flyReward(b, 'gold', g.gold); renderStore(); onChange(); return; }

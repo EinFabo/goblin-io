@@ -1,12 +1,13 @@
 import { CARD_MAX, CARD_RARITY, CHESTS, RARITY, cardName, isWeapon, upgradeCost } from '../data/cards.js';
 import { COSMO_CHEST } from '../data/cosmetics.js';
 import { icon } from '../render/icons.js';
+import { RUNES, RUNE_BAG, parseRune, tierInfo } from '../data/runes.js';
 
 // ---------- Bilder für Truhen und Karten (SVG/HTML) ----------
 // Truhe: Korpus aus Brettern mit Metallbeschlägen, Deckel als eigene Gruppe (.lid) zum Aufklappen
 export function chestSvg(type, cls = '') {
-  const C = CHESTS[type] || COSMO_CHEST, c = C.color, m = C.metal, dark = 'rgba(0,0,0,.28)';
-  const rune = type === 'cosmo' ? `<path d="M52 60h16M60 52v16" stroke="${m}" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="60" r="4" fill="${m}"/>` : type === 'mage' ? `<path d="M60 58l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7-5.5-4.5 7-.5Z" fill="${m}" stroke="#1a1408" stroke-width="1.2"/>` : '';
+  const C = CHESTS[type] || (type === 'runebag' ? RUNE_BAG : COSMO_CHEST), c = C.color, m = C.metal, dark = 'rgba(0,0,0,.28)';
+  const rune = type === 'runebag' ? `<path d="M56 52v18M56 52l8 4.5-8 4.5 8 9" stroke="${m}" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : type === 'cosmo' ? `<path d="M52 60h16M60 52v16" stroke="${m}" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="60" r="4" fill="${m}"/>` : type === 'mage' ? `<path d="M60 58l3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7-5.5-4.5 7-.5Z" fill="${m}" stroke="#1a1408" stroke-width="1.2"/>` : '';
   return `<svg class="chest ${cls}" viewBox="0 0 120 104" aria-hidden="true">
     <ellipse cx="60" cy="96" rx="48" ry="7" fill="rgba(0,0,0,.35)"/>
     <g class="body">
@@ -32,4 +33,22 @@ export function cardHtml(id, st, extra = '') {
     : `<div class="cbar${ready ? ' ready' : ''}"><i style="width:${Math.min(100, st.n / cost.cards * 100).toFixed(0)}%"></i><span>${st.n} / ${cost.cards}</span></div>`;
   return `<div class="ccard r-${r}${ready ? ' up' : ''}" style="--rc:${RARITY[r].color}" ${extra}>
     <span class="clv">Stufe ${st.lv}</span><img src="${icon(id)}" alt=""><b>${cardName(id)}</b><small>${isWeapon(id) ? 'Waffe' : 'Passiv'}</small>${bar}</div>`;
+}
+
+// Rune: Steinplättchen mit eingeritztem, glühendem Zeichen; der Rand zeigt die Seltenheit (Wunsch Fabi 2026-10-16)
+// Der Stein ist bei allen Runen gleich grau, damit Farbe = Runenart und Rand = Stufe eindeutig bleiben
+export function runeSvg(key, cls = '') {
+  const p = parseRune(key); if (!p) return '';
+  const R = RUNES[p.id], rc = tierInfo(p.tier).color, g = R.glyph;
+  return `<svg class="rune t${p.tier} ${cls}" viewBox="0 0 40 46" aria-hidden="true">
+    <path d="M9 2.5h22l6.5 7v27l-6.5 7H9l-6.5-7v-27Z" fill="#6c6760" stroke="${rc}" stroke-width="${(2.2 + p.tier * .5).toFixed(1)}" stroke-linejoin="round"/>
+    <path d="M10 5h20l4.5 5h-29Z" fill="rgba(255,255,255,.16)"/><path d="M5.5 33.5 10 41h20l4.5-7.5Z" fill="rgba(0,0,0,.24)"/>
+    <path d="M6 14l3 1M33 25l-3 2M12 36l2-1.5" stroke="rgba(0,0,0,.25)" stroke-width="1" fill="none"/>
+    <g transform="translate(10 13)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="${g}" stroke="rgba(0,0,0,.5)" stroke-width="3.6" transform="translate(.7 .9)"/>
+      <path d="${g}" stroke="${R.col}" stroke-width="5.5" opacity=".3"/>
+      <path d="${g}" stroke="${R.col}" stroke-width="2.3"/>
+      <path d="${g}" stroke="#fff" stroke-width=".8" opacity=".55"/>
+    </g>
+  </svg>`;
 }

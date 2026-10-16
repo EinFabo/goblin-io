@@ -1,6 +1,7 @@
 // ---------- Truhen öffnen, Karten gutschreiben (PLAN 9.5) ----------
 // Reine Logik ohne DOM: rollChest würfelt mit einem übergebenen Zufall (r() → 0..1), damit Tests
 // und Pity reproduzierbar sind. grant* ändert den Spielstand.
+import { addRunes, rollRunes } from './runes.js';
 import { CARD_IDS, CARD_MAX, CARD_RARITY, CHESTS, FREE_EVERY, FREE_MAX, GOLD_PER_SPARE, PITY_EPIC, PITY_LEG, RARITIES, RARITY, SHELF, cardsToMax, skipGems, upgradeCost } from '../data/cards.js';
 
 const POOL = Object.fromEntries(RARITIES.map(r => [r, CARD_IDS.filter(id => CARD_RARITY[id] === r)]));
@@ -41,7 +42,9 @@ export function rollChest(type, r, pity = { epic: 0, leg: 0 }) {
   // Bonusfund (selten, als Überraschung am Ende): Juwelen oder Goldader (das Gold noch einmal)
   let bonus = null;
   if (C.bonus && r() < C.bonus[0]) bonus = r() < .5 ? { kind: 'gems', n: Math.round(C.bonus[1] + r() * (C.bonus[2] - C.bonus[1])) } : { kind: 'gold', n: gold };
-  return { type, gold, cards, best: RARITIES[best], bonus };
+  // Runen (Phase 10) zuletzt würfeln: so bleiben Karten, Gold und Bonus bei gleichem Zufall wie vor den Runen
+  const runes = rollRunes(r, type);
+  return { type, gold, cards, best: RARITIES[best], bonus, runes };
 }
 
 // Kartenstand (ohne Eintrag: Startstufe der Seltenheit, 0 Karten)
@@ -68,6 +71,7 @@ export function grantChest(save, res) {
   if (res.bonus) save.wallet[res.bonus.kind === 'gems' ? 'gems' : 'gold'] += res.bonus.n;
   let spare = 0;
   for (const c of res.cards) { c.before = { ...cardState(save, c.id) }; spare += grantCards(save, c.id, c.n); }
+  if (res.runes) addRunes(save, res.runes);
   save.stats.chests = (save.stats.chests || 0) + 1;
   return spare;
 }

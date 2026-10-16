@@ -20,7 +20,7 @@ import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
 import { ensureDaily, mergeRun } from './progress.js';
-import { P, buildGrid, grid, query, run, setRun, xpNeed } from './state.js';
+import { P, buildGrid, grid, query, run, setRun, setSrc, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 import { updWfx } from './weapons2.js';
 import { updMegas } from './mega.js';
@@ -168,7 +168,7 @@ export function update(dt) {
 }
 // Effekte, Partikel, Schadenszahlen, Wackeln
 export function updFx(dt) {
-  for (const f of run.fx) { f.t += dt; if (f.k === 'later' && f.t >= f.dur) f.fn(); }
+  for (const f of run.fx) { f.t += dt; if (f.k === 'later' && f.t >= f.dur) { setSrc(f.src); f.fn(); setSrc(null); } }
   run.fx = run.fx.filter(f => f.k === 'anim' ? f.t * f.fps < f.n : f.t < f.dur);
   for (const p of run.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .96; p.vy *= .96; }
   run.parts = run.parts.filter(p => p.t < p.life);

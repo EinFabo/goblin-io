@@ -2,16 +2,17 @@ import { emit } from '../core/events.js';
 import { pullAll, pullable } from './items.js';
 import { count } from './progress.js';
 import { ROLL_T } from './player.js';
-import { RNG, frand, rand, pick } from '../core/rng.js';
+import { RNG, frand, rand, rnd, pick } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { save, stageCleared } from '../core/save.js';
 import { trailCol } from '../data/cosmetics.js';
 import { ABILITIES, MOVE_IDS, SLOT2_ACCT, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
 import { hurt } from './combat.js';
-import { addItem, addNum, animFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
+import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
+import { runeMods } from './runes.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { TAU } from '../core/util.js';
-import { P, nearest, onScreen, pR, query, randomEnemyInView, run } from './state.js';
+import { P, abSrc, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc } from './state.js';
 import { shootRaw, stepAlly } from './weapons.js';
 import { recalc } from './run.js';
 import { banner } from '../ui/hud.js';
@@ -28,16 +29,22 @@ function blast(x, y, r, dmg, kb, col) {
   query(x, y, r, e => { const d = Math.hypot(e.x - x, e.y - y) || 1; hurt(e, dmg, kb, (e.x - x) / d, (e.y - y) / d, col); });
 }
 function needOf(id) {
-  const A = ABILITIES[id], m = M(id);
+  const A = ABILITIES[id], m = M(id), k = m.spd * (1 - ((run.runes[id] || {}).haste || 0));   // Eilrune
   if (A.charge === 'once') return A.need;
-  return A.charge === 'cd' ? A.need * m.spd : Math.round(A.need * m.spd);   // Kills, Schrott: ganze Zahl
+  return A.charge === 'cd' ? A.need * k : Math.max(1, Math.round(A.need * k));   // Kills, Schrott: ganze Zahl
 }
 export const slotOpen = i => i === 0 || save.profile.level >= SLOT2_ACCT;
 export const canEquip = id => save.keep.includes(id) || abilityUnlocked(id, save.profile.level, stageCleared);
 
 export function initAbilities() {
-  run.abMods = {}; run.abXp = {};
-  for (const id of save.loadout) if (id) run.abMods[id] = abilMods(save.abilities[id]);
+  run.abMods = {}; run.abXp = {}; run.runes = {};
+  for (const id of save.loadout) {
+    if (!id) continue;
+    const m = run.abMods[id] = abilMods(save.abilities[id]), rn = runeMods(save, id);
+    // Runen (Phase 10): Wucht und Weite wirken wie Baum-Punkte auf Kraft und Fläche/Dauer
+    if (Object.keys(rn).length) { run.runes[id] = rn; m.pow *= 1 + (rn.might || 0); m.area *= 1 + (rn.wide || 0); }
+  }
+  run.dotOn = Object.values(run.runes).some(r => r.fire || r.poison);
   // Rolle und Sprint sind immer dabei und haben eigene Bäume
   for (const id of MOVE_IDS) run.abMods[id] = abilMods(save.abilities[id]);
   // max: Aufladungen (Doppelhaken), stock: gespeicherte volle Ladungen außer der laufenden
@@ -74,6 +81,7 @@ export function onKill(e) {
   }
   if (P.mechT > 0 && M('mech').s3) { const s = run.abil.find(x => x && x.id === 'mech'); if (s) s.ch = Math.min(s.need, s.ch + s.need * .004 * M('mech').s3); }
   if (run.totem && M('totem').s1 && !e.boss && (e.x - run.totem.x) ** 2 + (e.y - run.totem.y) ** 2 < 400 * 400 && RNG.loot.next() < .1 * M('totem').s1) addItem('coin', e.x, e.y);
+  const rn = RN(abSrc); if (rn && !e.obj) runeKill(e, rn);
 }
 // Schaden, den der Spieler nimmt: Berserker, Ausweichen beim Sprinten, Goldener Schutz. 0 = geschluckt
 export function takenMult() {
@@ -90,7 +98,7 @@ export function takenMult() {
 // Schaden, den Gegner nehmen: Hinterhalt, Widerhaken/Sporen; Glücksbringer erhöht kritische Treffer
 // Racheblick (Groll): markierter Gegner nimmt doppelt; Riesentrank (Hexenkessel): +40 %
 export const dealtMult = e => (P.ambushT > 0 ? 2 : 1) * (e.vulnT > 0 ? 1 + e.vuln : 1) * (e.foeT > run.time ? 2 : 1) * (P.brew && P.brew.giant > 0 ? 1 + .4 * P.brew.k : 1);
-export const critBonus = () => (run.goldT > 0 ? .04 * M('totem').s2 : 0);
+export const critBonus = () => (run.goldT > 0 ? .04 * M('totem').s2 : 0) + ((RN(abSrc) || {}).luck || 0);
 export const xpBonus = () => (run.goldT > 0 ? 1 + .1 * M('totem').s3 : 1);
 
 // Kills und Schrott laden die passenden Slots
@@ -112,7 +120,11 @@ export function useAbility(i) {
   const s = run && run.abil[i];
   if (!s || run.paused || run.over || run.cut || !abilReady(s)) return false;
   const why = lockOf(s.id); if (why) { lockedBuzz(why); return false; }
-  if (USE[s.id](M(s.id)) === false) return false;
+  const prev = setSrc(s.id);
+  try {
+    if (USE[s.id](M(s.id)) === false) return false;
+    echoRune(s.id);
+  } finally { setSrc(prev); }
   if (s.stock > 0) s.stock--; else s.ch = 0;
   run.abXp[s.id] = (run.abXp[s.id] || 0) + xpPerUse(s.id);   // XP durch Benutzen, gutgeschrieben am Laufende
   count(run, 'abil');
@@ -127,9 +139,10 @@ export function updAbilities(dt) {
     s.ch = Math.min(s.need, s.ch + dt);
     if (s.ch >= s.need && s.stock < s.max - 1) { s.stock++; s.ch = 0; }
   }
-  updMech(dt); updMoves(dt); updBrew(dt);
+  setSrc('mech'); updMech(dt); setSrc(null); updMoves(dt); setSrc('brew'); updBrew(dt); setSrc(null);
+  updDots(dt);
   // Ewiger Stock: bis zum nächsten Einsatz alle 10 s ein kleiner Schwarm
-  if (run.hive && (run.hive.t -= dt) <= 0) { run.hive.t = 10; swarmOf(M('bees'), 10, ABILITIES.bees.dur * .6); }
+  if (run.hive && (run.hive.t -= dt) <= 0) { run.hive.t = 10; setSrc('bees'); swarmOf(M('bees'), 10, ABILITIES.bees.dur * .6); setSrc(null); }
   if (P.smokeT > 0) { P.smokeT -= dt; if (P.smokeT <= 0) smokeEnd(M('smoke')); }
   if (P.ambushT > 0) P.ambushT -= dt;
   if (P.shieldT > 0) {
@@ -138,11 +151,12 @@ export function updAbilities(dt) {
       // Nachladen: ungebrochen abgelaufen → Abklingzeit kürzer
       const m = M('shield'), s = run.abil.find(x => x && x.id === 'shield');
       if (P.shieldHp > 0 && m.s2 && s) s.ch = Math.min(s.need, s.ch + s.need * .1 * m.s2);
-      P.shieldT = 0; puff(P.x, P.y - 10, 1, 'rgba(200,205,210,.8)'); if (P.shieldShard) shieldShards();
+      P.shieldT = 0; puff(P.x, P.y - 10, 1, 'rgba(200,205,210,.8)'); if (P.shieldShard) { setSrc('shield'); shieldShards(); setSrc(null); }
     }
   }
   if (run.goldT > 0) { run.goldT -= dt; if (run.goldT <= 0) run.totem = null; }
-  for (const f of run.abfx) { f.t += dt; FX_UPD[f.k](f, dt); }
+  for (const f of run.abfx) { f.t += dt; setSrc(FX_SRC[f.k]); FX_UPD[f.k](f, dt); }
+  setSrc(null);
   run.abfx = run.abfx.filter(f => !f.done);
   // Verwirrte Gegner (Rauchbombe) schlagen auf Nachbarn ein
   for (const e of run.enemies) {
@@ -151,6 +165,7 @@ export function updAbilities(dt) {
     if (e.confHit <= 0) { e.confHit = .5; query(e.x, e.y, 40, o => { if (o !== e && !o.boss) { hurt(o, 6 + e.dmg, 0, 0, 0, '#c9b6ff'); return false; } }); }
   }
   // Goblin-Ruf: Krieger auf Zeit
+  setSrc('call');
   run.tmpAllies.forEach((al, i) => {
     al.t -= dt; stepAlly(al, i, run.tmpAllies.length, (25 + P.lv * 1.5) * P.dmgMult * al.pow, 260 * al.spd, (P.rageT > 0 ? 1.6 : 1) * al.spd, dt);
     if (al.t <= 0) {
@@ -159,6 +174,7 @@ export function updAbilities(dt) {
       if (al.boom) { blast(al.x, al.y, 70, al.boom, 200, '#9be36a'); ring(al.x, al.y, 6, 70, .3, 'rgba(160,230,100,.9)', 5); }
     }
   });
+  setSrc(null);
   run.tmpAllies = run.tmpAllies.filter(a => !a.done);
 }
 
@@ -264,7 +280,7 @@ function updMech(dt) {
     P.gunT = .085 / (1 + .12 * M('mech').s1);
     const side = Math.cos(P.gunA) >= 0 ? 1 : -1, gx = P.x + side * 28 + Math.cos(P.gunA) * 34, gy = P.y - 22 + Math.sin(P.gunA) * 34;
     const a = P.gunA + rand(-.07, .07);
-    run.pproj.push({ k: 'bullet', x: gx, y: gy, a, vx: Math.cos(a) * 760, vy: Math.sin(a) * 760, dmg: 9 * P.dmgMult * P.mechPow, pierce: 0, life: .7, hit: new Set(), r: 8, t: 0 });
+    run.pproj.push({ k: 'bullet', x: gx, y: gy, a, vx: Math.cos(a) * 760, vy: Math.sin(a) * 760, dmg: 9 * P.dmgMult * P.mechPow, pierce: 0, life: .7, hit: new Set(), r: 8, t: 0, src: abSrc });
     P.gunFlash = .04; sfx.gun();
   }
   P.rocketT -= dt;
@@ -274,7 +290,7 @@ function updMech(dt) {
     if (c.length) {
       for (let i = 0; i < 4; i++) {
         const e = pick(c), a = -Math.PI / 2 + (i - 1.5) * .5;
-        run.pproj.push({ k: 'rocket', x: P.x - 10, y: P.y - 50, a, vx: Math.cos(a) * 380, vy: Math.sin(a) * 380, target: e, dmg: 30 * P.dmgMult * P.mechPow, rad: 60 * P.area, pierce: 0, life: 2.2, hit: new Set(), r: 10, t: 0 });
+        run.pproj.push({ k: 'rocket', x: P.x - 10, y: P.y - 50, a, vx: Math.cos(a) * 380, vy: Math.sin(a) * 380, target: e, dmg: 30 * P.dmgMult * P.mechPow, rad: 60 * P.area, pierce: 0, life: 2.2, hit: new Set(), r: 10, t: 0, src: abSrc });
       }
       sfx.rocket();
     }
@@ -330,7 +346,7 @@ function fireCatapult(m, pow = 1) {
   const tx = best ? best.x : P.x + P.aimX * 200, ty = best ? best.y : P.y + P.aimY * 200;
   for (let i = 0; i < (m.a ? 8 : 5); i++) {
     const a = rand(0, TAU), r = i ? rand(20, 80) * m.area : 0;
-    run.tele.push({ k: 'boulder', sx: P.x - 30, sy: P.y - 40, x: tx + Math.cos(a) * r, y: ty + Math.sin(a) * r, t: -i * .12, dur: .7 / (1 + .15 * m.s2), rad: 85 * P.area * m.area, dmg: (100 + P.lv * 10) * P.dmgMult * m.pow * pow, burn: m.b, shards: m.s1, stun: .3 * m.s3 });
+    run.tele.push({ k: 'boulder', sx: P.x - 30, sy: P.y - 40, x: tx + Math.cos(a) * r, y: ty + Math.sin(a) * r, t: -i * .12, dur: .7 / (1 + .15 * m.s2), rad: 85 * P.area * m.area, dmg: (100 + P.lv * 10) * P.dmgMult * m.pow * pow, burn: m.b, shards: m.s1, stun: .3 * m.s3, src: abSrc });
   }
   // Dauerfeuer: 2 s später eine zweite Salve mit halbem Schaden
   if (m.m && pow === 1) run.abfx.push({ k: 'volley', t: 0, dur: 2 });
@@ -374,7 +390,7 @@ export const bulwark = () => P.shieldT > 0 && M('shield').m;
 export function shieldThorns(e) {
   const k = M('shield').s3;
   if (!k || !(P.shieldT > 0) || e.thornT > run.time) return;
-  e.thornT = run.time + .4; const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, 10 * k * P.dmgMult, 200, (e.x - P.x) / d, (e.y - P.y) / d, '#dfe6ea');
+  e.thornT = run.time + .4; const d = Math.hypot(e.x - P.x, e.y - P.y) || 1, prev = setSrc('shield'); hurt(e, 10 * k * P.dmgMult, 200, (e.x - P.x) / d, (e.y - P.y) / d, '#dfe6ea'); setSrc(prev);
 }
 // Splitterschild: beim Brechen oder Ende fliegen Splitter um dich
 function shieldShards() {
@@ -394,7 +410,7 @@ export function shieldAbsorb(d) {
 // Geschoss prallt vom Schild zurück
 export function reflect(p) {
   const sp = Math.hypot(p.vx, p.vy) || 400, a = Math.atan2(-p.vy, -p.vx);
-  run.pproj.push({ k: 'bullet', x: p.x, y: p.y, a, vx: Math.cos(a) * sp * 1.3, vy: Math.sin(a) * sp * 1.3, dmg: 20 * P.dmgMult * (1 + .3 * M('shield').s1), pierce: 1, life: 1.2, hit: new Set(), r: 10, t: 0 });
+  run.pproj.push({ k: 'bullet', x: p.x, y: p.y, a, vx: Math.cos(a) * sp * 1.3, vy: Math.sin(a) * sp * 1.3, dmg: 20 * P.dmgMult * (1 + .3 * M('shield').s1), pierce: 1, life: 1.2, hit: new Set(), r: 10, t: 0, src: 'shield' });
   sfx.ezap();
 }
 
@@ -467,7 +483,7 @@ export function tryRevive() {
   P.hp = P.maxHp * (m.b ? 1 : .5); P.inv = 2 + .5 * m.s1;
   if (m.m) P.rageT = Math.max(P.rageT, 5);   // Wiedergeburt
   run.abXp.charm = (run.abXp.charm || 0) + xpPerUse('charm');
-  blast(P.x, P.y, R, 50 * P.dmgMult * (1 + .5 * m.s2), 800, '#ffd84a');
+  const prev = setSrc('charm'); blast(P.x, P.y, R, 50 * P.dmgMult * (1 + .5 * m.s2), 800, '#ffd84a'); setSrc(prev);
   for (const p of run.eproj) p.life = 0;
   ring(P.x, P.y, 10, R, .6, 'rgba(255,215,80,.95)', 14); run.shake = 14; run.slowT = .4;
   sfx.ult(); banner('Das Amulett rettet dich!', '');
@@ -634,6 +650,85 @@ function updBrew(dt) {
 }
 export const potionGiant = () => !!(P.brew && P.brew.giant > 0);
 
+// ---------- Runen im Lauf (Phase 10) ----------
+// run.runes[id] = { fire: .25, bolt: .15, jumps: 1, … } (game/runes.js runeMods). Die Quelle eines Treffers ist abSrc (state.js).
+const RN = id => (id && run.runes && run.runes[id]) || null;
+// Welche Fähigkeit hinter einem laufenden Effekt steckt (Krähenfüße gehören zur Rolle: keine Runen).
+// Neue Effekte hier eintragen – fehlt einer, bricht das Spiel beim Laden ab (Prüfung unter FX_UPD)
+const FX_SRC = { spin: 'spin', magnet: 'scrapmag', bees: 'bees', honey: 'bees', kettle: 'brew', oil: 'oilcask', oilTrail: 'oilcask', burrow: 'burrow', spike: 'burrow',
+  cannon: 'cannon', refire: 'cannon', cannonGun: 'cannon', decoy: 'decoy', turret: 'turret', trap: 'trap', gas: 'smoke', echo: 'bigbang', refill: null, volley: 'catapult',
+  caltrop: null, hook: 'hook', shroom: 'shroom', rats: 'rats', tb: 'timebomb' };
+// Brand-, Gift- und Blitzschaden lösen keine Runen aus (und treffen nicht kritisch), sonst schaukelt es sich auf
+let procLock = false;
+export const inProc = () => procLock;
+// Nach einem Treffer der Fähigkeit abSrc (combat.js hurt). base = Schaden vor Krit und Multiplikatoren:
+// Brand, Gift und Blitz laufen wieder durch hurt() und bekommen die Multiplikatoren dort (nicht doppelt)
+export function runeHit(e, base) {
+  const r = RN(abSrc); if (!r || procLock || e.obj) return;
+  if (!e.dead) {
+    // t mit kleinem Puffer: der letzte Tick (bei 2,0 s bzw. 4,0 s) soll trotz Rundung noch kommen
+    if (r.fire) { const b = e.burn; e.burn = { dps: Math.max(b ? b.dps : 0, base * r.fire), t: 2.05, src: abSrc }; if (!(e.dotT > 0)) e.dotT = .5; }
+    if (r.poison) { const p = e.psn; e.psn = { n: Math.min(5, (p ? p.n : 0) + 1), dps: Math.max(p ? p.dps : 0, base * r.poison), t: 4.05, src: abSrc }; if (!(e.dotT > 0)) e.dotT = .5; }
+    // Bosse nicht: ihr Tempo kennt nur „verlangsamt ja/nein“ (−40 %, boss.js), Dauertreffer hielten sie sonst ständig fest
+    if (r.frost && !e.boss) frostAt(e, 1 - r.frost, 1.5);
+  }
+  if (r.bolt && rnd() < r.bolt) chainBolt(e, base * .5, r.jumps || 1);
+}
+// Verlangsamen für t s; eine stärkere laufende Verlangsamung bleibt
+function frostAt(e, k, t) {
+  const cur = e.slowT > 0 ? (e.slowKT > run.time ? e.slowK : .5) : 1;
+  if (k > cur) return;
+  e.slowK = k; e.slowKT = run.time + t; e.slowT = Math.max(e.slowT, t);
+}
+// Blitz springt auf die nächsten Gegner (wie der Blitzstab, game/weapons.js)
+function chainBolt(e, dmg, n) {
+  procLock = true;
+  try {
+    const hit = new Set([e]); let cur = e;
+    for (let j = 0; j < n; j++) {
+      let nx = null, nd = 160 * 160;
+      query(cur.x, cur.y, 160, o => { if (hit.has(o) || o.obj) return; const d = (o.x - cur.x) ** 2 + (o.y - cur.y) ** 2; if (d < nd) { nd = d; nx = o; } });
+      if (!nx) break;
+      boltFx(cur.x, cur.y - 10, nx.x, nx.y - 10, 2.5, '#fff38a'); hurt(nx, dmg, 0, 0, 0, '#fff38a'); hit.add(nx); cur = nx;
+    }
+  } finally { procLock = false; }
+}
+// Kill durch die Fähigkeit: Blut heilt (höchstens 3 % pro Sekunde), Gier wirft Münzen, Seele lädt die andere Fähigkeit
+function runeKill(e, r) {
+  if (r.blood && P.hp > 0 && P.hp < P.maxHp) {
+    const sec = Math.floor(run.time); if (run.bloodSec !== sec) { run.bloodSec = sec; run.bloodGot = 0; }
+    const h = Math.min(P.maxHp * r.blood, P.maxHp * .03 - run.bloodGot);
+    if (h > 0) { run.bloodGot += h; P.hp = Math.min(P.maxHp, P.hp + h); }
+  }
+  if (r.greed && RNG.loot.next() < r.greed) addItem('coin', e.x, e.y);
+  if (r.soul) for (const s of run.abil) if (s && s.id !== abSrc && ABILITIES[s.id].charge !== 'once') s.ch = Math.min(s.need, s.ch + s.need * r.soul);
+}
+// Echo: 0,5 s später noch einmal mit halber Kraft (later merkt sich die Quelle)
+function echoRune(id) {
+  const r = RN(id); if (!r || !r.echo || rnd() >= r.echo) return;
+  const m = M(id), half = { ...m, pow: m.pow * .5 };
+  later(.5, () => { if (run.over || run.cut || !hasAbil(id)) return; USE[id](half); addNum(P.x, P.y - 64, 'Echo!', '#c9a8ff', true); });
+}
+// Brand und Gift ticken alle 0,5 s (erst ticken, dann ablaufen lassen); Kills daraus zählen für Blut, Gier und Seele.
+// Nur wenn eine Feuer- oder Giftrune steckt (run.dotOn), sonst nicht jeden Schritt alle Gegner durchgehen
+function updDots(dt) {
+  if (!run.dotOn) return;
+  for (const e of run.enemies) {
+    if (!e.burn && !e.psn) continue;
+    if (e.dead) { e.burn = e.psn = null; continue; }
+    if ((e.dotT -= dt) <= 0) {
+      e.dotT += .5;
+      const fire = e.burn ? e.burn.dps : 0, pois = e.psn ? e.psn.dps * e.psn.n : 0;
+      const prev = setSrc((e.burn || e.psn).src); procLock = true;
+      try { hurt(e, (fire + pois) * .5, 0, 0, 0, fire >= pois ? '#ff9a3c' : '#9cf06a'); } finally { procLock = false; setSrc(prev); }
+      part(e.x + frand(-10, 10) * e.sc, e.y - frand(8, 30) * e.sc, frand(-15, 15), frand(-70, -30), .45, fire >= pois ? '#ff7a2e' : '#9cf06a', frand(4, 7));
+      if (e.dead) continue;
+    }
+    if (e.burn && (e.burn.t -= dt) <= 0) e.burn = null;
+    if (e.psn && (e.psn.t -= dt) <= 0) e.psn = null;
+  }
+}
+
 // ---------- laufende Effekte ----------
 const FX_UPD = {
   spin(f, dt) {
@@ -738,7 +833,7 @@ const FX_UPD = {
         if (f.hit.has(e) || e.obj) return; f.hit.add(e);
         const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, f.path, 380, (e.x - P.x) / d, (e.y - P.y) / d, '#ffd27a');
       });
-      if (f.fire && (f.fireT -= dt) <= 0) { f.fireT = .06; run.zones.push({ k: 'burn', x: P.x, y: P.y + 6, r: 34 * P.area, t: 3, dur: 3, tick: 0, dmg: (6 + P.lv * .8) * P.dmgMult }); }
+      if (f.fire && (f.fireT -= dt) <= 0) { f.fireT = .06; run.zones.push({ k: 'burn', x: P.x, y: P.y + 6, r: 34 * P.area, t: 3, dur: 3, tick: 0, dmg: (6 + P.lv * .8) * P.dmgMult, src: abSrc }); }
       return;
     }
     f.done = true; cannonLand(f);
@@ -879,10 +974,11 @@ const FX_UPD = {
       const dmg = (100 + P.lv * 12) * P.dmgMult * f.pow + (e.tb || 0); e.tb = undefined; e.tbShock = false;
       explode(e.x, e.y, f.boom, dmg * .6, 'frost'); hurt(e, dmg, 0, 0, 0, '#bff0ff');
       // Splitterregen: Eissplitter in alle Richtungen
-      for (let i = 0; i < f.shards; i++) { const a = i * TAU / f.shards + rand(0, 1); run.pproj.push({ k: 'bullet', x: e.x, y: e.y, a, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, dmg: dmg * .25, pierce: 1, life: .5, hit: new Set([e]), r: 8, t: 0 }); }
+      for (let i = 0; i < f.shards; i++) { const a = i * TAU / f.shards + rand(0, 1); run.pproj.push({ k: 'bullet', x: e.x, y: e.y, a, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, dmg: dmg * .25, pierce: 1, life: .5, hit: new Set([e]), r: 8, t: 0, src: abSrc }); }
       // Zeitschleife: Überlebende frieren noch einmal ein
       if (f.loop && !e.dead) e.freezeT = Math.max(e.freezeT, 1.5);
     }
     run.shake = Math.max(run.shake, 10);
   },
 };
+for (const k in FX_UPD) if (!(k in FX_SRC)) throw new Error('FX_SRC fehlt: ' + k);   // Runen-Quelle jedes Effekts

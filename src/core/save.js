@@ -9,6 +9,7 @@ import { CARD_MAX, CARD_RARITY, CHESTS, FREE_MAX, RARITY, SHELF } from '../data/
 import { COSM, DEFAULT_LOOK_KEYS, SLOTS, START_COSM } from '../data/cosmetics.js';
 import { ACH } from '../data/achievements.js';
 import { LEVELS } from '../data/levels.js';
+import { normRunes } from '../game/runes.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
@@ -53,6 +54,8 @@ export function defaults() {
     // Erfolge (9.8): abgeholte Stufe je Erfolg; Tagesaufgaben: Tag, Zählerstand am Tagesbeginn, abgeholt
     ach: {},
     daily: { day: '', base: {}, claimed: [false, false, false], bonus: false },
+    // Runen (Phase 10): Tasche { 'fire.0': 3 }, Sockel je Fähigkeit [Sockel 1, Sockel 2] (game/runes.js)
+    runes: { bag: {}, sock: {} },
   };
 }
 
@@ -116,6 +119,7 @@ export function normalize(raw) {
     ach: {},
     daily: { day: '', base: {}, claimed: [false, false, false], bonus: false },
   };
+  out.runes = normRunes(r.runes, out.abilities);
   for (const [k, v] of Object.entries(obj(st.c))) { const n = num(v); if (n) out.stats.c[k] = n; }
   for (const [k, v] of Object.entries(obj(r.ach))) if (ACH[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.ach[k] = n; }
   const dl = obj(r.daily);

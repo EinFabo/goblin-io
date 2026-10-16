@@ -95,6 +95,8 @@ body.cine #hud,body.cine #ctrl,body.cine #hint{opacity:0;transition:opacity .3s}
 .abil.ready{box-shadow:0 4px 0 var(--edge),0 0 18px var(--c)}
 .abil.ready img{filter:none;transform:scale(1.08)}
 .abil.ready .lbl{color:var(--ink)}
+.abil .rdots{position:absolute;top:-4px;right:-4px;display:flex;gap:2px}
+.abil .rdots i{width:9px;height:9px;border-radius:3px;background:var(--rc);border:2px solid var(--rt);box-shadow:0 0 0 1px var(--edge)}
 .abil.on{box-shadow:0 2px 0 var(--edge),0 0 22px var(--c);transform:translateY(2px)}
 .abil.on img{filter:none}
 /* bereite Ladungen (Doppelhaken, Zweite/Dritte Rolle) */
@@ -342,6 +344,57 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
   .parch{min-height:0;transform:none}
 }
 @media (prefers-reduced-motion:reduce){.hook.swing{animation:none}}
+
+/* Runen (Phase 10): Sockel auf dem Zettel, Runen-Tasche als Overlay */
+.asocks{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:2px dashed rgba(122,78,30,.35)}
+.asocks>span{font-family:var(--font-display);font-size:17px;margin-right:2px}
+.asocks .btn{margin-left:auto;color:var(--ink);font-size:14px;padding:6px 10px}
+.asock{width:44px;height:50px;padding:0;display:grid;place-items:center;border:0;background:none;cursor:pointer}
+.asock .rune{width:40px;height:46px;filter:drop-shadow(0 2px 0 rgba(0,0,0,.4))}
+.asock .hole,.rsock .hole{display:block;width:34px;height:40px;border-radius:9px;background:radial-gradient(ellipse at 50% 40%,#3a2a18,#1d140b);box-shadow:inset 0 3px 6px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.35)}
+.asock.locked{opacity:.75;cursor:default}.asock.locked small{display:grid;place-items:center;width:34px;height:40px;border-radius:9px;border:2px dashed #8a6a3a;font-size:11px;color:#5a4320}
+.asock:not(.locked):hover .hole,.asock:not(.locked):hover .rune{filter:brightness(1.25)}
+.runepanel{position:relative;box-sizing:border-box;width:min(780px,calc(100vw - 32px));padding:14px 16px}
+.runewrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,300px);gap:16px;align-items:start}
+.rsocks{display:flex;gap:12px;justify-content:center;padding:10px;margin-bottom:10px;border-radius:12px;background:linear-gradient(var(--wood),var(--wood-d));border:3px solid var(--edge)}
+.rsock{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px 6px;border-radius:10px;border:2px solid transparent;background:rgba(0,0,0,.2);color:var(--ink);cursor:pointer;font:inherit}
+.rsock .rune{width:46px;height:53px}.rsock .hole{width:40px;height:46px}
+.rsock small{font-size:12px;font-weight:700}
+.rsock.on{border-color:var(--gold);box-shadow:0 0 12px rgba(244,208,63,.5)}
+.rsock.locked{opacity:.6}.rsock.nope{animation:tnNope .3s}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:8px;max-height:min(46vh,340px);overflow:auto;padding:4px}
+.rtile{position:relative;padding:4px 0 2px;border:2px solid transparent;border-radius:10px;background:rgba(0,0,0,.18);cursor:pointer;display:grid;place-items:center}
+.rtile .rune{width:44px;height:51px}
+.rtile.on{border-color:var(--gold);background:rgba(244,208,63,.15)}
+.rtile.nofit .rune{filter:grayscale(.85) brightness(.6)}
+.rtile .rn{position:absolute;right:2px;bottom:0;font-weight:900;font-size:13px;color:var(--ink);text-shadow:0 1px 0 #000,0 0 3px #000}
+.rtile .rfz{position:absolute;left:4px;top:4px;width:10px;height:10px;border-radius:50%;background:#c27cff;box-shadow:0 0 6px #c27cff;border:2px solid var(--edge)}
+.rempty{grid-column:1/-1;color:var(--muted);font-weight:700;text-align:center;padding:18px 8px}
+.rnote{min-height:220px}
+.rnote .rhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}.rnote .rhead .rune{width:48px;height:55px;flex:none}
+.rnote .rt{display:inline-block;margin-top:2px;padding:1px 8px;border-radius:8px;font-size:12px;font-weight:900;color:var(--edge);background:var(--rc);border:2px solid var(--edge)}
+.rnote .why{margin:8px 0 0;font-size:13px;color:#9a3a1a}.rnote .hint{margin:10px 0 0;font-size:12.5px;color:#5a4320}
+.rfuse{position:absolute;inset:0;z-index:5;border-radius:16px;background:rgba(6,9,4,.82);pointer-events:none;overflow:hidden}
+.rfuse .rune{width:64px;height:74px}
+.rf-a,.rf-new,.rf-flash{position:absolute;left:50%;top:50%;translate:-50% -50%}
+.rfuse.go .rf-0{animation:rfIn0 .6s ease-in forwards}.rfuse.go .rf-1{animation:rfIn1 .6s ease-in forwards}.rfuse.go .rf-2{animation:rfIn2 .6s ease-in forwards}
+.rf-flash{width:30px;height:30px;border-radius:50%;background:#fff;box-shadow:0 0 60px 30px var(--rc);opacity:0}
+.rfuse.go .rf-flash{animation:rfFlash .5s .55s ease-out}
+.rf-new{display:flex;flex-direction:column;align-items:center;gap:6px;opacity:0}
+.rf-new .rune{width:88px;height:101px;filter:drop-shadow(0 0 18px var(--rc))}
+.rf-new b{font-family:var(--font-display);font-weight:400;font-size:24px;color:var(--rc);text-shadow:0 2px 0 #000}
+.rfuse.go .rf-new{animation:rfNew .5s .65s cubic-bezier(.3,1.6,.5,1) forwards}
+@keyframes rfIn0{from{transform:translate(-160px,40px) rotate(-30deg)}to{transform:translate(0,0) rotate(0) scale(.5);opacity:.4}}
+@keyframes rfIn1{from{transform:translate(0,-130px)}to{transform:translate(0,0) scale(.5);opacity:.4}}
+@keyframes rfIn2{from{transform:translate(160px,40px) rotate(30deg)}to{transform:translate(0,0) rotate(0) scale(.5);opacity:.4}}
+@keyframes rfFlash{0%{opacity:0;scale:.2}30%{opacity:1;scale:1.6}100%{opacity:0;scale:3}}
+@keyframes rfNew{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+@media (max-width:720px){
+  .runewrap{grid-template-columns:minmax(0,1fr)}
+  .rgrid{max-height:32vh}
+  .rnote{min-height:0;transform:none}
+}
+@media (prefers-reduced-motion:reduce){.rfuse.go .rf-a{animation-duration:.01s}}
 
 /* Skill Tree */
 .xpb{display:inline-block;width:46px;height:6px;border-radius:3px;background:rgba(10,15,6,.8);vertical-align:middle;margin-left:5px;overflow:hidden}
@@ -651,6 +704,14 @@ body.hub .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px);padding-b
 .co-bonusbox b{font-family:var(--font-display);font-weight:400;font-size:26px;color:var(--tc);text-shadow:0 2px 0 #000}
 .co-bonusbox small{font-size:20px;font-weight:900}
 .co-bonusbox .coin.big{margin-left:0}.co-bonusbox .gem.big{width:40px;height:40px;margin-left:0}
+/* Runen in der Truhe (Phase 10): Steinplättchen hüpfen nacheinander heraus */
+.co-runes{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 10px 16px;border-radius:14px;border:3px solid var(--edge);background:linear-gradient(#34302b,#1b1815);box-shadow:0 4px 0 var(--edge),0 0 36px var(--rc);width:min(260px,70vw)}
+.co-runes b{font-family:var(--font-display);font-weight:400;font-size:24px;color:var(--rc);text-shadow:0 2px 0 #000}
+.co-runes small{font-size:13px;opacity:.8}
+.co-runelist{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+.co-rune .rune{width:46px;height:53px;display:block;filter:drop-shadow(0 3px 0 rgba(0,0,0,.5))}
+.co-runes .co-rune{animation:coStamp .35s var(--d,0ms) cubic-bezier(.3,1.6,.5,1) both}
+.co-runelist.small .rune{width:34px;height:39px}
 .co-hint{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 18px);left:0;right:0;margin:0;text-align:center;color:var(--muted);font-weight:800;animation:hintBlink 1.6s ease-in-out infinite}
 @keyframes hintBlink{50%{opacity:.4}}
 .co-sum{position:absolute;inset:0;z-index:5;background:inherit;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:default;animation:abUp .4s ease-out both}
