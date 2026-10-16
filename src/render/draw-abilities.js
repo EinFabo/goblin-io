@@ -1,6 +1,6 @@
 import { TAU } from '../core/util.js';
 import { P, run } from '../game/state.js';
-import { POTION_INFO } from '../game/abilities.js';
+import { POTIONS, POTION_INFO } from '../game/abilities.js';
 import { ctx, drawSpr } from './canvas.js';
 
 // ---------- Fähigkeiten zeichnen ----------
@@ -259,9 +259,10 @@ function drawKettle(f, t) {
 }
 // Tränke: farbiger Schein am Boden, solange einer wirkt
 export function drawBrewAura(t) {
-  const on = Object.keys(POTION_INFO).filter(p => P.brew[p] > 0);
-  if (!on.length) return;
-  const col = POTION_INFO[on[Math.floor(t * 3) % on.length]][1];
+  let n = 0; for (const p of POTIONS) if (P.brew[p] > 0) n++;
+  if (!n) return;
+  let k = Math.floor(t * 3) % n, col = null;
+  for (const p of POTIONS) if (P.brew[p] > 0 && k-- === 0) { col = POTION_INFO[p][1]; break; }
   ctx.save(); ctx.globalAlpha = .35 + .15 * Math.sin(t * 8); ctx.fillStyle = col;
   ctx.beginPath(); ctx.ellipse(0, 22, 26, 8, 0, 0, TAU); ctx.fill(); ctx.restore();
 }

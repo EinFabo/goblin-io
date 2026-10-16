@@ -1160,7 +1160,11 @@ Aus Fabis Notiz, umgesetzt nach Recherche zu Spielen dieser Art (Plan: Tippen/Ha
 
 ### Phase 10 – Rüstkammer 2.0 (Wunsch Fabi, 2026-10-14)
 Fabi hat gewählt: 10 neue Fähigkeiten (24 gesamt), dazu Runen, Kombos und Fähigkeiten-Sterne. Kein dritter Slot. Runen brauchen die Truhen als Quelle, deshalb nach dem Truhen-Umbau aus Phase 8 (erledigt 2026-10-14).
-- [ ] **10 neue Fähigkeiten** im Format von `src/data/abilities.js` (je `extras` a/b, `skills` s1–s3, `master` m). Gegenstände (Puppe, Turm, Kessel, Magnet, Kanone, Bienenstock) als neues `src/gen/props.js`, Effekte in `src/render/draw-abilities.js`, Icons in `src/render/icons.js`.
+- [x] **10 neue Fähigkeiten** im Format von `src/data/abilities.js` (je `extras` a/b, `skills` s1–s3, `master` m). Effekte in `src/render/draw-abilities.js`, Icons in `src/render/icons.js`. – erledigt 2026-10-16
+  - Abweichung: Puppe, Turm, Kanone, Kessel, Magnet, Bienen werden wie Fallen und Pilze direkt auf die Zeichenfläche gemalt (kein `gen/props.js`); Puppe, Turm und Kanone stehen in der y-Sortierung der Figuren (`ABIL_OBJ`). IDs `oilcask` und `scrapmag`, weil `oil` und `magnet` schon Passive sind (gleiche Icons).
+  - Neue Regeln: Feuer entzündet Öl (`igniteOil` in `game/fx.js`: Feuer-Explosionen, brennender Boden, Flammenturm, Feuertrank, Feuerspur der Kanone). Unsichtbar ist jetzt `hidden()` (Rauch oder eingegraben). Strohpuppen melden sich in `run.lures`, Gegner im Umkreis gehen auf sie los und zaubern nicht. Neue Ladeart `hurt` (Groll lädt in `damagePlayer`), `damagePlayer` kennt den Angreifer (Racheblick). `nearest()` hat einen Filter.
+  - Stärke (Bot, Boss-Level Welt 8, Partner Totem ≈ keine Fähigkeit, je 30 Läufe, Mittel aus Seeds 1/101): ohne 67 %; alt: Wut 82, Falle 99 (auffällig stark), Katapult 82, Rauch 77; neu: Ölfass 84, Maulwurfsgang 90, Kanone 80, Strohgoblin 87, Flammenturm 80, Wirbelaxt 82, Groll 87, Schrottmagnet 85, Bienenstock 92, Hexenkessel 88. Alle im Bereich der alten. Sim mit gleichen Seeds zweimal gleich (auch Bienen/Kessel/Puppe/Kanone).
+  - `npm run smoke` setzt alle 24 Fähigkeiten mit vollem Baum je 40 s ein. Code-Review (high): 10 Funde behoben (Bienen mit `Math.random` bewegt → nicht wiederholbar; Goldtrank ~20× zu viele Münzen; Turm zielte auf Objekte; Kanonenflug zählte als perfekte Rolle; schwächere Verlangsamung überschrieb stärkere; Turm lud im Mech nicht; Racheblick nur im Nahkampf; Bienengift fehlte; Ziel-Suche je Biene; Aura legte Arrays an).
 
   | id | Name | Ladung | Frei ab | Kern |
   |---|---|---|---|---|

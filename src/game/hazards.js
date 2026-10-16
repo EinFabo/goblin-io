@@ -73,7 +73,7 @@ export function updEProj(dt) {
     if (p.fake && dx * dx + dy * dy < rr * rr) { p.life = 0; part(p.x, p.y, 0, -30, .3, 'rgba(200,160,255,.6)', 5); continue; }
     if (dx * dx + dy * dy < rr * rr && P.shieldT > 0 && !p.fake) { p.life = 0; reflect(p); continue; }
     if (dx * dx + dy * dy < rr * rr && P.dashT <= 0 && P.inv <= 0) {
-      const before = P.hp; damagePlayer(p.dmg, 'proj'); affixOnHitPlayer(p.owner, before - P.hp);
+      const before = P.hp; damagePlayer(p.dmg, 'proj', p.owner); affixOnHitPlayer(p.owner, before - P.hp);
       if (p.kind === 'frost' && P.mechT <= 0 && !bulwark()) P.slowT = 1.2;
       p.life = 0;
       animFx(HIT_FX[p.kind] || 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
@@ -147,7 +147,7 @@ function updHaz(dt) {
       h.warn -= dt;
       if (h.warn > 0) continue;
       hazFx(h);
-      if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) { const b0 = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, b0 - P.hp); } h.done = true; continue; }
+      if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) { const b0 = P.hp; damagePlayer(h.dmg, h.src, h.owner); affixOnHitPlayer(h.owner, b0 - P.hp); } h.done = true; continue; }
     }
     h.act -= dt; h.tk -= dt;
     if (h.r1 !== undefined) h.r = h.r1 + (h.r0 - h.r1) * Math.max(0, h.act / h.act0);   // Käfig zieht sich zu
@@ -155,7 +155,7 @@ function updHaz(dt) {
     if (h.kind === 'ice' && hazDist(h, P.x, P.y)[0] < 0) P.iceT = .12;
     if (h.tk <= 0 && h.dmg > 0 && hazHitsPlayer(h)) {
       h.tk = h.tick;
-      const before = P.hp; damagePlayer(h.dmg, h.src); affixOnHitPlayer(h.owner, before - P.hp);
+      const before = P.hp; damagePlayer(h.dmg, h.src, h.owner); affixOnHitPlayer(h.owner, before - P.hp);
       if (h.drain && !h.drain.dead) { const got = before - P.hp; h.drain.hp = Math.max(h.drain.hp, Math.min(h.drainMax ?? h.drain.maxHp, h.drain.hp + got * 3)); }
     }
     if (h.act <= 0) h.done = true;

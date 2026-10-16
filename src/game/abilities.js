@@ -73,8 +73,6 @@ export function onKill(e) {
     if (m.s3 && run.rageExt < 4) { const x = Math.min(.1 * m.s3, 4 - run.rageExt); run.rageExt += x; P.rageT += x; }
   }
   if (P.mechT > 0 && M('mech').s3) { const s = run.abil.find(x => x && x.id === 'mech'); if (s) s.ch = Math.min(s.need, s.ch + s.need * .004 * M('mech').s3); }
-  // Goldtrank (Hexenkessel): dreifache Münzen
-  if (P.brew && P.brew.gold > 0 && !e.boss && RNG.loot.next() < .5) { addItem('coin', e.x, e.y); addItem('coin', e.x, e.y); }
   if (run.totem && M('totem').s1 && !e.boss && (e.x - run.totem.x) ** 2 + (e.y - run.totem.y) ** 2 < 400 * 400 && RNG.loot.next() < .1 * M('totem').s1) addItem('coin', e.x, e.y);
 }
 // Schaden, den der Spieler nimmt: Berserker, Ausweichen beim Sprinten, Goldener Schutz. 0 = geschluckt
@@ -99,7 +97,7 @@ export const xpBonus = () => (run.goldT > 0 ? 1 + .1 * M('totem').s3 : 1);
 export function chargeAbil(kind, n) {
   for (const s of run.abil) {
     if (!s || ABILITIES[s.id].charge !== kind) continue;
-    if (kind === 'scrap' && P.mechT > 0) continue;
+    if (kind === 'scrap' && P.mechT > 0 && s.id === 'mech') continue;   // die Maschine lädt sich nicht selbst
     s.ch = Math.min(s.need, s.ch + n);
   }
 }
@@ -476,6 +474,9 @@ export function tryRevive() {
   return true;
 }
 
+// Stärkere Verlangsamung für 0,25 s (slowK = Tempo-Faktor); eine schwächere überschreibt sie nicht
+function slowAt(e, k) { e.slowK = e.slowKT > run.time ? Math.min(e.slowK, k) : k; e.slowKT = run.time + .25; }
+
 // ---------- Ölfass (Phase 10) ----------
 const LAKE_T = 4;   // so lange brennt der Flammensee
 const oilFx = (x, y, r, dur, m) => ({ k: 'oil', x, y, r, t: 0, dur, lit: -1, self: m.b ? 2 : 0, slowK: Math.max(.2, .5 - .1 * m.s1), fall: .05 * m.s3, tick: 0, fallT: 1,
@@ -509,7 +510,7 @@ function fireCannon(m, second = false) {
   const tx = g ? g.x : P.x + P.aimX * reach * .6, ty = g ? g.y : P.y + P.aimY * reach * .6;
   const dx = tx - P.x, dy = ty - P.y, d = Math.hypot(dx, dy) || 1, T = Math.max(.25, Math.min(.5, d / 900));
   P.dashT = T; P.dvx = dx / T; P.dvy = dy / T; P.inv = Math.max(P.inv, T + .35);
-  P.rollT = ROLL_T; P.perfect = false; P.trailT = 0; P.rollHit = null;
+  P.rollT = ROLL_T; P.perfect = true; P.trailT = 0; P.rollHit = null;   // perfect = true: der Flug ist keine perfekte Rolle
   run.abfx.push({ k: 'cannon', t: 0, dur: T, hit: new Set(), w: 30 * (1 + .15 * m.s2), path: (25 + P.lv * 2.5) * P.dmgMult * m.pow,
     land: (120 + P.lv * 12) * P.dmgMult * m.pow * (1 + .12 * m.s1) * (second ? .6 : 1), r: 150 * P.area * m.area * (second ? .75 : 1),
     fire: m.b, fireT: 0, bounce: m.s3, again: m.a && !second, salvo: m.m && !second, m });
@@ -591,12 +592,12 @@ function releaseBees(m) {
 }
 function swarmOf(m, n, dur, queen = false) {
   const bees = [];
-  for (let i = 0; i < n + (queen ? 1 : 0); i++) { const a = rand(0, TAU); bees.push({ x: P.x + Math.cos(a) * 20, y: P.y - 20 + Math.sin(a) * 14, tgt: null, hitT: rand(0, .4), q: queen && i === n, a: frand(0, 6) }); }
-  run.abfx.push({ k: 'bees', bees, t: 0, dur, spd: 260 * (1 + .1 * m.s3), dmg: (6 + P.lv * .6) * P.dmgMult * m.pow * (1 + .12 * m.s1) });
+  for (let i = 0; i < n + (queen ? 1 : 0); i++) { const a = rand(0, TAU); bees.push({ x: P.x + Math.cos(a) * 20, y: P.y - 20 + Math.sin(a) * 14, tgt: null, hitT: rand(0, .4), q: queen && i === n, a: rand(0, 6) }); }   // a bewegt die Biene: Seed-Zufall
+  run.abfx.push({ k: 'bees', bees, t: 0, dur, spd: 260 * (1 + .1 * m.s3), dmg: (6 + P.lv * .6) * P.dmgMult * m.pow * (1 + .12 * m.s1), sick: new Set(), sickT: .5 });
 }
 
 // ---------- Hexenkessel ----------
-const POTIONS = ['giant', 'swift', 'fire', 'heal', 'gold'];
+export const POTIONS = ['giant', 'swift', 'fire', 'heal', 'gold'];
 export const POTION_INFO = { giant: ['Riesentrank!', '#e5a03a'], swift: ['Flinktrank!', '#7fd8ff'], fire: ['Feuertrank!', '#ff6a1f'], heal: ['Heiltrank!', '#7dff7a'], gold: ['Goldtrank!', '#ffd84a'] };
 function brewPotion(m) {
   const dur = (ABILITIES.brew.dur + m.s2) * m.area, k = m.pow * (1 + .1 * m.s1);
@@ -673,23 +674,26 @@ const FX_UPD = {
     ring(P.x, P.y, 10, 210 * P.area, .4, 'rgba(210,215,220,.95)', 12); run.shake = Math.max(run.shake, 12); sfx.boom();
   },
   bees(f, dt) {
-    if (f.t >= f.dur) { f.done = true; for (const b of f.bees) part(b.x, b.y, 0, -30, .4, '#ffd84a', 3); return; }
+    // Gift der Stiche: alle 0,5 s, 3 s lang (wirkt nach, auch wenn die Bienen weg sind)
+    if ((f.sickT -= dt) <= 0) { f.sickT = .5; for (const e of f.sick) { if (e.dead || !(e.beeT > run.time)) { f.sick.delete(e); continue; } hurt(e, f.dmg * .25, 0, 0, 0, '#c9e04a'); } }
+    if (f.t >= f.dur) { if (f.bees.length) { for (const b of f.bees) part(b.x, b.y, 0, -30, .4, '#ffd84a', 3); f.bees = []; } if (!f.sick.size) f.done = true; return; }
+    let view = null;   // Ziele einmal je Schritt sammeln, nicht je Biene
     for (const b of f.bees) {
       b.a += dt;
-      if (!b.tgt || b.tgt.dead) b.tgt = b.q ? nearest(500, b) : pick(randomEnemyInView(0)) || null;
+      if (!b.tgt || b.tgt.dead) b.tgt = b.q ? nearest(500, b, e => !e.obj) : pick(view || (view = randomEnemyInView(0).filter(e => !e.obj))) || null;
       const tx = b.tgt ? b.tgt.x : P.x + Math.cos(b.a * 3) * 40, ty = b.tgt ? b.tgt.y - 16 : P.y - 30 + Math.sin(b.a * 4) * 20;
       const dx = tx - b.x, dy = ty - b.y, d = Math.hypot(dx, dy) || 1, sp = f.spd * (b.q ? .8 : 1) * dt;
       b.x += dx / d * Math.min(d, sp) + Math.sin(b.a * 23) * 2; b.y += dy / d * Math.min(d, sp) + Math.cos(b.a * 19) * 2;
       if ((b.hitT -= dt) <= 0 && b.tgt && d < 24) {
         b.hitT = .5; const e = b.tgt, big = b.q && (e.elite || e.boss || e.miniboss) ? 3 : 1;
-        hurt(e, f.dmg * big * (b.q ? 2 : 1), 0, 0, 0, '#ffd84a'); if (!e.dead) e.slowT = Math.max(e.slowT, .6);
+        hurt(e, f.dmg * big * (b.q ? 2 : 1), 0, 0, 0, '#ffd84a'); if (!e.dead) { e.slowT = Math.max(e.slowT, .6); e.beeT = run.time + 3; f.sick.add(e); }
       }
     }
   },
   honey(f, dt) {
     if (f.t >= f.dur) { f.done = true; return; }
     if ((P.x - f.x) ** 2 + (P.y - f.y) ** 2 < f.r * f.r && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .02 * dt);
-    query(f.x, f.y, f.r, e => { if (e.obj) return; e.slowT = Math.max(e.slowT, .2); e.slowK = .25; e.slowKT = run.time + .25; });
+    query(f.x, f.y, f.r, e => { if (e.obj) return; e.slowT = Math.max(e.slowT, .2); slowAt(e, .25); });
   },
   kettle(f) { if (f.t >= f.dur) f.done = true; },
   oil(f, dt) {
@@ -702,7 +706,7 @@ const FX_UPD = {
     f.fallT -= dt; const roll = f.fall && f.fallT <= 0; if (roll) f.fallT = 1;
     query(f.x, f.y, f.r, e => {
       if (e.obj) return;
-      e.slowT = Math.max(e.slowT, .2); e.slowK = f.slowK; e.slowKT = run.time + .25;
+      e.slowT = Math.max(e.slowT, .2); slowAt(e, f.slowK);
       if (bite) hurt(e, f.burn * .5, 0, 0, 0, '#ffb35c');
       if (roll && !e.boss && RNG.game.next() < f.fall) e.freezeT = Math.max(e.freezeT, 1);   // Ausrutscher
     });
@@ -769,7 +773,7 @@ const FX_UPD = {
     if (f.follow) { const tx = P.x + f.off, ty = P.y + 40, dx = tx - f.x, dy = ty - f.y, d = Math.hypot(dx, dy); if (d > 30) { const s = Math.min(d, 210 * dt); f.x += dx / d * s; f.y += dy / d * s; } }
     if ((f.tick -= dt) > 0) return;
     f.tick = .12;
-    const t = nearest(f.range, f);
+    const t = nearest(f.range, f, e => !e.obj);   // Seelengefäße, Portale: der Strahl würde sie nicht treffen
     f.beam = t ? { x: t.x, y: t.y - 10 } : null;
     if (!t) return;
     f.a = Math.atan2(t.y - (f.y - 30), t.x - f.x);

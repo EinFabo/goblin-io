@@ -75,7 +75,7 @@ export function updPlayer(dt) {
   if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
   if (!hidden()) query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {
-      const was = P.inv, before = P.hp; run.hitBy = e; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg); run.hitBy = null; affixOnHitPlayer(e, before - P.hp);
+      const was = P.inv, before = P.hp; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg, 'contact', e); affixOnHitPlayer(e, before - P.hp);
       shieldThorns(e);
       if (e.melee === 'slow' && was <= 0 && P.mechT <= 0 && !bulwark()) P.slowT = .6;
       return false;

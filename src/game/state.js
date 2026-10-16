@@ -36,9 +36,10 @@ export function query(x, y, r, cb) {
     }
   } finally { aoeId = prev; }
 }
-export function nearest(maxD = 1e9, from = P) {
+// ok: zusätzlicher Filter (z. B. keine Objekte)
+export function nearest(maxD = 1e9, from = P, ok = null) {
   let best = null, bd = maxD * maxD;
-  for (const e of run.enemies) { if (e.dead || e.spawnT > 0) continue; const d = (e.x - from.x) ** 2 + (e.y - from.y) ** 2; if (d < bd) { bd = d; best = e; } }
+  for (const e of run.enemies) { if (e.dead || e.spawnT > 0 || (ok && !ok(e))) continue; const d = (e.x - from.x) ** 2 + (e.y - from.y) ** 2; if (d < bd) { bd = d; best = e; } }
   return best;
 }
 export function randomEnemyInView(margin = 0) {

@@ -67,11 +67,12 @@ export function kill(e, xpMul = 1) {
   sfx.kill();
   if (e.bomber && !e.boomed) bomberBoom(e, false);
   deathRules(e);
-  if (e.miniboss) { for (let i = 0; i < 12; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'mini'); healPity(e); }
-  else if (e.elite) { for (let i = 0; i < 8; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'elite'); healPity(e); }
+  const ck = P.brew && P.brew.gold > 0 ? 3 : 1;   // Goldtrank (Hexenkessel): dreifache Münzen
+  if (e.miniboss) { for (let i = 0; i < 12 * ck; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'mini'); healPity(e); }
+  else if (e.elite) { for (let i = 0; i < 8 * ck; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'elite'); healPity(e); }
   else if (!e.boss) {
     const r = RNG.loot.next();
-    if (r < .05) addItem('coin', e.x, e.y);
+    if (r < .05) for (let i = 0; i < ck; i++) addItem('coin', e.x, e.y);
     else if (r < .1) addItem('gear', e.x, e.y);
     const r2 = RNG.loot.next();
     if (r2 < .006) addItem('heal', e.x, e.y); else if (r2 < .009) addItem('magnet', e.x, e.y); else if (r2 < .0115) addItem('bomb', e.x, e.y);
@@ -98,7 +99,8 @@ export function bossDown(b) {
   else startClear(3);
 }
 // src: contact | proj | bomb | strike | zone (für Statistik und Sim)
-export function damagePlayer(d, src = 'contact') {
+// by: wer getroffen hat (Racheblick des Goblin-Grolls)
+export function damagePlayer(d, src = 'contact', by = null) {
   if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
   // Schattenmantel: ausweichen
   if (P.dodge && rnd() < P.dodge) { P.inv = .3; addNum(P.x, P.y - 40, 'Ausgewichen', '#d9c8ff', false); return; }
@@ -108,7 +110,7 @@ export function damagePlayer(d, src = 'contact') {
   if (d <= 0) { P.inv = .5; return; }
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
   chargeAbil('hurt', d / P.maxHp * 100);   // Goblin-Groll lädt mit eingestecktem Schaden
-  if (run.hitBy) run.foe = run.hitBy;      // Racheblick: wer zuletzt im Nahkampf traf
+  if (by && !by.dead) run.foe = by;        // Racheblick: wer zuletzt traf
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
   emit('playerHurt', { amount: d, src: run.boss ? 'boss.' + src : src });   // im Bosskampf mit Vorsilbe (Sim: Schaden je Boss-Angriff)
