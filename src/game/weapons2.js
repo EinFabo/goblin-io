@@ -215,30 +215,30 @@ export function stepWeapon2(w, L, dm, dt, rate) {
     case 'club': {
       w.t -= dt * rate; if (w.t > 0) break;
       const t = nearest(220), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
-      // jeder Schlag schickt dazu eine Schockwelle nach vorn (halber Schaden, durchschlägt alles): Bosse halten Abstand
+      // jeder Schlag schickt dazu eine Schockwelle nach vorn (40 % Schaden, durchschlägt alles): Bosse halten Abstand
       if (w.evo) {
         w.t = .7 * P.cdMult; w.n = (w.n || 0) + 1;
-        swing(a, 160 * P.area, 66 * dm, 200, true);
-        shoot('quake', a, 26, 99, 480 * P.proj, .75, { r: 26, sc: 1.4, kb: 60, big: 1.6 });
+        swing(a, 160 * P.area, 52 * dm, 200, true);
+        shoot('quake', a, 26, 99, 480 * P.proj, .75, { r: 26, sc: 1.4, kb: 60, big: 2 });
         if (w.n % 3 === 0) later(.12, () => wave(P.x, P.y, 220 * P.area, 36 * dm * aoe(), 220, '#c9a35a'));
       } else {
         w.t = [.85, .85, .8, .8, .65][L] * P.cdMult;
-        const dmg = [24, 31, 31, 39, 48][L];
+        const dmg = [20, 25, 25, 31, 38][L];
         swing(a, [100, 100, 115, 125, 130][L] * P.area, dmg * dm, 120, L >= 3);
-        shoot('quake', a, dmg * .4, 99, 440 * P.proj, .65, { r: 20, sc: 1, kb: 40, big: 1.6 });
+        shoot('quake', a, dmg * .4, 99, 440 * P.proj, .65, { r: 20, sc: 1, kb: 40, big: 2 });
       }
       w.swing = { a, at: run.time, R: (w.evo ? 160 : [100, 100, 115, 125, 130][L]) * P.area, full: w.evo || L >= 3 };
       sfx.whoosh(); break;
     }
   }
 }
-// Keulenschlag: Halbkreis (oder rundherum) um den Goblin, Rückstoß nach außen; Elite und Bosse +60 % (Nahkampf-Ausgleich)
+// Keulenschlag: Halbkreis (oder rundherum) um den Goblin, Rückstoß nach außen; Elite und Bosse doppelt (Nahkampf-Ausgleich)
 function swing(a, R, dmg, kb, full) {
   const ca = Math.cos(a), sa = Math.sin(a);
   query(P.x, P.y, R, e => {
     const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
     if (!full && (dx * ca + dy * sa) / d < -.2) return;   // hinter dem Goblin: kein Treffer
-    hurt(e, isBig(e) ? dmg * 1.6 : dmg, kb, dx / d, dy / d, '#e8c88a');
+    hurt(e, isBig(e) ? dmg * 2 : dmg, kb, dx / d, dy / d, '#e8c88a');
   });
   run.shake = Math.max(run.shake, 2);
 }
