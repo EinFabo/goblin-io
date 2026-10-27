@@ -26,7 +26,10 @@ export const LEVEL_KIND = [
 // von STAGE_HP. Neue Welten hängen hier einen Eintrag an.
 // boss: Boss-Level leichter (Schaden und Spawnrate ×boss; der Schaden gilt auch für den Boss selbst, so ist es eingestellt)
 // – Welten mit vielen Beschwörern/Pfützen
-export const WORLD_LV = [{ dmg: 1, rate: 1, bossHp: .7 }, { dmg: 1.08, rate: 1.04, bossHp: .7 }, { dmg: .76, rate: .88, boss: .84 }, { dmg: .97, rate: 1, boss: .9 }, { dmg: 1.31, rate: 1.19, boss: .85 },
+// lvHp: Gegner-Leben in einzelnen Leveln (Index 0–3) zusätzlich ×; 2026-10-27 (Balance nach neuen Karten und Rüstkammer 2.0):
+// Welt 1 und 2 waren in Level 3–4 zu leicht (Sim 100 %), Schaden und Spawnrate wirken dort kaum (Treffer gedeckelt).
+// Welt 5: mehr Schaden/Spawnrate (Level 4 war 98 %), Boss-Level über boss gleich schwer gelassen
+export const WORLD_LV = [{ dmg: 1, rate: 1, bossHp: .7, lvHp: { 2: 1.6, 3: 1.42 } }, { dmg: 1.08, rate: 1.04, bossHp: .7, lvHp: { 2: 1.5, 3: 1.33 } }, { dmg: .76, rate: .88, boss: .84 }, { dmg: .97, rate: 1, boss: .9 }, { dmg: 1.42, rate: 1.25, boss: .78, lvHp: { 2: 1.18 } },
   { dmg: 1.33, rate: 1.22, boss: .97 }, { dmg: 1.45, rate: 1.28, boss: .85 }, { dmg: 1.38, rate: 1.25, boss: .75 }];
 const damp = v => 1 + (v - 1) * .5;
 // Leben des Bosses im Boss-Level (×2500 × STAGE_HP wie bisher)
@@ -94,7 +97,7 @@ export function levelStage(si, li = 0) {
   const K = LEVEL_KIND[li], boss = li === LEVELS - 1, W = WORLD_LV[Math.min(si, WORLD_LV.length - 1)];
   return {
     ...st, li, len: boss ? 0 : LEVEL_LEN, waves: levelWaves(st, li), dmg: W.dmg * K.dmg * (boss ? (W.boss || 1) * BOSS_EASE : 1), rate: W.rate * K.rate * (boss ? (W.boss || 1) * BOSS_EASE : 1), hpT: K.hpT,
-    hpMul: damp(STAGE_HP[si]) / STAGE_HP[si],
+    hpMul: damp(STAGE_HP[si]) / STAGE_HP[si] * ((W.lvHp && W.lvHp[li]) || 1),
     lvName: boss ? st.boss.name : K.name, bossHp: boss ? BOSS_HP * (W.bossHp || 1) : 1,
   };
 }
