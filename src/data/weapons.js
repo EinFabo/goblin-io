@@ -71,7 +71,7 @@ export const WEAPONS = {
     info: ['Schießt zielsuchende Magie-Kugeln.', '+1 Kugel', '+35 % Schaden', '+1 Kugel, durchbohrt einen Gegner', '+1 Kugel, zaubert schneller'],
     evoInfo: 'Ein Ring aus Magie-Kugeln schwärmt aus und jagt jeden Gegner.' },
   club: { name: 'Keule', evo: 'Erdspalter', with: 'armor', auto: 3, cls: 'war',
-    info: ['Schwingt eine Keule im Halbkreis und stößt Gegner zurück.', '+30 % Schaden', 'Größerer Schwung', 'Schlägt rundherum, +20 % Schaden', '+15 % Schaden, schlägt schneller'],
+    info: ['Schwingt eine Keule im Halbkreis, dazu rollt eine Schockwelle nach vorn.', '+30 % Schaden', 'Größerer Schwung', 'Schlägt rundherum, +20 % Schaden', '+15 % Schaden, schlägt schneller'],
     evoInfo: 'Riesige Rundum-Schläge, jeder dritte spaltet den Boden mit einer Druckwelle.' },
 };
 export const PASSIVES = {

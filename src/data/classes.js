@@ -8,7 +8,7 @@ export const CLASSES = {
     desc: 'Der Allrounder: wirft Dolche, rollt durch Geschosse.', master: 'Meister-Goblin' },
   bow: { name: 'Bogen-Goblin', short: 'Bogen', weapon: 'bow', dash: 'flip', sprint: 'sprint', hp: .9, speed: 1.05, cd: 1, unlock: { stage: 2 },
     desc: 'Schießt von weit weg. Der Salto springt vom nächsten Gegner weg und lässt Pfeile regnen.', master: 'Meisterschütze' },
-  mage: { name: 'Magier-Goblin', short: 'Magier', weapon: 'staff', dash: 'blink', sprint: 'sprint', hp: .85, speed: 1, cd: .92, unlock: { stage: 4 },
+  mage: { name: 'Magier-Goblin', short: 'Magier', weapon: 'staff', dash: 'blink', sprint: 'sprint', hp: .9, speed: 1, cd: .92, unlock: { stage: 4 },
     desc: 'Gestohlene Magie: zielsuchende Kugeln, schnellere Zauber. Teleportiert statt zu rollen.', master: 'Erzmagier' },
   war: { name: 'Krieger-Goblin', short: 'Krieger', weapon: 'club', dash: 'roll', sprint: 'charge', hp: 1.25, speed: .95, cd: 1, unlock: { stage: 6 },
     desc: 'Dick und laut: Keule im Nahkampf. Der Sturmangriff walzt kleine Gegner um.', master: 'Kriegsherr' },

@@ -183,17 +183,17 @@ export function stepWeapon2(w, L, dm, dt, rate) {
         // Pfeilregen alle 2,4 s auf bis zu sechs Gegner (fällt nach 0,35 s)
         w.t2 -= dt * rate;
         if (w.t2 <= 0) {
-          w.t2 = 2.4 * P.cdMult; const c = randomEnemyInView(20);
-          for (let i = 0; i < 6 && c.length; i++) { const e = c.splice((rnd() * c.length) | 0, 1)[0]; run.wfx.push({ k: 'arrows', x: e.x, y: e.y, t: 0, dur: .35, rad: 55 * P.area, dmg: 26 * dm * aoe() }); }
+          w.t2 = 2.6 * P.cdMult; const c = randomEnemyInView(20);
+          for (let i = 0; i < 6 && c.length; i++) { const e = c.splice((rnd() * c.length) | 0, 1)[0]; run.wfx.push({ k: 'arrows', x: e.x, y: e.y, t: 0, dur: .35, rad: 55 * P.area, dmg: 20 * dm * aoe() }); }
         }
       }
       w.t -= dt * rate; if (w.t > 0) break;
-      const t = nearest(640), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
-      if (w.evo) { w.t = .55 * P.cdMult; for (let i = 0; i < 5; i++) shoot('arrow', a + (i - 2) * .1, 22, 99, 820 * P.proj, .9, { r: 11 }); }
+      const t = nearest(600), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
+      if (w.evo) { w.t = .6 * P.cdMult; for (let i = 0; i < 5; i++) shoot('arrow', a + (i - 2) * .12, 16, 99, 760 * P.proj, .9, { r: 11 }); }
       else {
         w.t = [.8, .8, .75, .75, .6][L] * P.cdMult;
-        const n = [1, 2, 2, 3, 4][L], dmg = [14, 14, 19, 19, 21][L], pierce = [1, 1, 1, 2, 2][L];
-        for (let i = 0; i < n; i++) shoot('arrow', a + (i - (n - 1) / 2) * .09, dmg, pierce, 760 * P.proj, .9, { r: 10 });
+        const n = [1, 2, 2, 3, 4][L], dmg = [12, 12, 16, 16, 18][L], pierce = [1, 1, 1, 2, 2][L];
+        for (let i = 0; i < n; i++) shoot('arrow', a + (i - (n - 1) / 2) * .09, dmg, pierce, 700 * P.proj, .9, { r: 10 });
       }
       sfx.throw(); break;
     }
@@ -202,28 +202,32 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       const c = randomEnemyInView(20);
       if (w.evo) {
         w.t = .7 * P.cdMult; w.rot += .4;
-        for (let i = 0; i < 6; i++) shoot('orb', w.rot + i * TAU / 6, 20, 1, 380 * P.proj, 2.2, { target: c.length ? pick(c) : null, sc: 1.3 });
+        for (let i = 0; i < 6; i++) shoot('orb', w.rot + i * TAU / 6, 24, 1, 420 * P.proj, 2.2, { target: c.length ? pick(c) : null, sc: 1.3 });
       } else {
         w.t = [.95, .95, .9, .9, .75][L] * P.cdMult;
-        const n = [1, 2, 2, 3, 4][L], dmg = [15, 15, 20, 20, 22][L], pierce = [0, 0, 0, 1, 1][L];
+        const n = [1, 2, 2, 3, 4][L], dmg = [17, 17, 23, 23, 26][L], pierce = [0, 0, 0, 1, 1][L];
         const t = nearest(560), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
         // die erste Kugel jagt den nächsten Gegner, weitere zufällige im Bild
-        for (let i = 0; i < n; i++) shoot('orb', a + (i - (n - 1) / 2) * .5, dmg, pierce, 400 * P.proj, 1.8, { target: i && c.length ? pick(c) : t, sc: 1 });
+        for (let i = 0; i < n; i++) shoot('orb', a + (i - (n - 1) / 2) * .5, dmg, pierce, 460 * P.proj, 1.8, { target: i && c.length ? pick(c) : t, sc: 1 });
       }
       sfx.cast(); break;
     }
     case 'club': {
       w.t -= dt * rate; if (w.t > 0) break;
       const t = nearest(220), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
+      // jeder Schlag schickt dazu eine Schockwelle nach vorn (halber Schaden, durchschlägt alles): Bosse halten Abstand
       if (w.evo) {
-        w.t = .8 * P.cdMult; w.n = (w.n || 0) + 1;
-        swing(a, 150 * P.area, 45 * dm, 300, true);
-        if (w.n % 3 === 0) later(.12, () => wave(P.x, P.y, 210 * P.area, 30 * dm * aoe(), 260, '#c9a35a'));
+        w.t = .7 * P.cdMult; w.n = (w.n || 0) + 1;
+        swing(a, 160 * P.area, 66 * dm, 200, true);
+        shoot('quake', a, 33, 99, 480 * P.proj, .6, { r: 26, sc: 1.4, kb: 60 });
+        if (w.n % 3 === 0) later(.12, () => wave(P.x, P.y, 220 * P.area, 36 * dm * aoe(), 220, '#c9a35a'));
       } else {
-        w.t = [.9, .9, .85, .85, .7][L] * P.cdMult;
-        swing(a, [95, 95, 110, 115, 120][L] * P.area, [20, 26, 26, 31, 36][L] * dm, 200, L >= 3);
+        w.t = [.85, .85, .8, .8, .65][L] * P.cdMult;
+        const dmg = [24, 31, 31, 39, 48][L];
+        swing(a, [100, 100, 115, 125, 130][L] * P.area, dmg * dm, 120, L >= 3);
+        shoot('quake', a, dmg * .5, 99, 440 * P.proj, .5, { r: 20, sc: 1, kb: 40 });
       }
-      w.swing = { a, at: run.time, R: (w.evo ? 150 : [95, 95, 110, 115, 120][L]) * P.area, full: w.evo || L >= 3 };
+      w.swing = { a, at: run.time, R: (w.evo ? 160 : [100, 100, 115, 125, 130][L]) * P.area, full: w.evo || L >= 3 };
       sfx.whoosh(); break;
     }
   }

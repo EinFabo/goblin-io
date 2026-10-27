@@ -43,6 +43,12 @@ export function drawProj2(p) {
     case 'xbolt': drawImgC(I.xbolt, p.x, p.y, 40 * p.sc, p.a); return true;
     case 'shard': drawImgC(I.shard, p.x, p.y, 16, p.a); return true;
     case 'arrow': drawImgC(I.arrow, p.x, p.y, 34, p.a); return true;
+    case 'quake': {
+      // Schockwelle der Keule: brauner Halbmond, der beim Rollen verblasst
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 3));
+      ctx.strokeStyle = '#3b2414'; ctx.lineWidth = 9 * p.sc; ctx.beginPath(); ctx.arc(-10 * p.sc, 0, 22 * p.sc, -1.1, 1.1); ctx.stroke();
+      ctx.strokeStyle = '#e8c88a'; ctx.lineWidth = 5 * p.sc; ctx.stroke(); ctx.restore(); return true;
+    }
     case 'orb': drawImgC(I.orb, p.x, p.y, 30 * p.sc * (1 + .08 * Math.sin(p.t * 20)), 0); return true;
     case 'shade': drawSpr('p.shade.' + fr(p.t), p.x, p.y, 1.1 * p.sc, p.a); return true;
     case 'rock': drawSpr('p.rock.' + fr(p.t, 10), p.x, p.y, .9 * p.sc, p.t * 8); return true;
