@@ -175,7 +175,7 @@ export function stepAlly(al, i, n, dmg, spd, rate, dt) {
   const reach = tgt ? tgt.r + 12 : 6;
   al.moving = d > reach;
   if (al.moving) { const s = Math.min(d - reach, spd * dt); al.x += dx / d * s; al.y += dy / d * s; al.face = face8(dx, dy, al.face); al.at += dt; }
-  if (tgt && d < reach + 6 && al.atk <= 0) { al.atk = .45; al.slash = .15; al.sa = Math.atan2(dy, dx); hurt(tgt, dmg, 90, dx / d, dy / d); }
+  if (tgt && d < reach + 6 && al.atk <= 0) { al.atk = .45; al.slash = .15; al.sa = Math.atan2(dy, dx); hurt(tgt, al.tmp && (tgt.boss || tgt.elite || tgt.miniboss || tgt.link) ? dmg * .3 : dmg, 90, dx / d, dy / d); }   // Goblin-Ruf: gegen Große 30 % (sonst legen die Krieger den Boss allein um)
   if (Math.hypot(al.x - P.x, al.y - P.y) > 520) { al.px = al.x = P.x + rand(-30, 30); al.py = al.y = P.y + rand(-30, 30); puff(al.x, al.y, .5); }
 }
 export function updPProj(dt) {

@@ -10,7 +10,7 @@ export const ABILITIES = {
     skills: [{ name: 'Blutdurst', desc: 'Kills in der Raserei heilen dich um 1 Leben pro Rang.' }, { name: 'Weite Welle', desc: 'Schockwelle +12 % Umkreis und Wucht pro Rang.' }, { name: 'Kettenwut', desc: 'Jeder Kill in der Raserei verlängert sie um 0,1 s pro Rang (höchstens +4 s).' }],
     master: { name: 'Berserker', desc: 'In der Raserei nimmst du 30 % weniger Schaden.' } },
   trap: { name: 'Bärenfalle', short: 'Falle', charge: 'cd', need: 7,
-    desc: 'Legt 3 Fallen um dich, jede schnappt bis zu 3-mal zu. Wer hineintritt, hängt 2 s fest, Splitter treffen die Gegner daneben.',
+    desc: 'Legt 3 Fallen um dich, jede schnappt bis zu 3-mal zu. Wer hineintritt, hängt 1,6 s fest, Splitter treffen die Gegner daneben.',
     extras: [{ name: 'Vierte Falle', desc: 'Du legst 4 statt 3 Fallen.' }, { name: 'Sprengfallen', desc: 'Die Splitter fliegen weiter und machen vollen Schaden.' }],
     skills: [{ name: 'Scharfe Zähne', desc: 'Jede Falle schnappt 1-mal öfter zu pro Rang.' }, { name: 'Festbeißen', desc: 'Gefangene hängen 0,4 s länger fest pro Rang.' }, { name: 'Köder', desc: 'Fallen locken Gegner im Umkreis an (50/80/110).' }],
     master: { name: 'Fallensteller', desc: 'Jede 3. Rolle legt eine Bärenfalle.' } },
@@ -20,9 +20,9 @@ export const ABILITIES = {
     skills: [{ name: 'Schnellfeuer', desc: 'MG feuert 12 % schneller pro Rang.' }, { name: 'Schwere Stiefel', desc: 'Stampfer +25 % Schaden und Fläche pro Rang.' }, { name: 'Schrottsammler', desc: 'Kills im Mech füllen 0,4 % Schrott pro Rang zurück.' }],
     master: { name: 'Überladung', desc: 'Die Schlussexplosion ist doppelt so stark und größer.' } },
   smoke: { name: 'Rauchbombe', short: 'Rauch', charge: 'cd', need: 14, dur: 3, unlock: { stage: 1 },
-    desc: '3 s unsichtbar. Gegner laufen zu deinem alten Platz, manche schlagen verwirrt aufeinander ein. Im Rauch greifen deine Waffen 60 % langsamer an, jeder Punkt im Skill Tree senkt das (bis 20 %).',
+    desc: '3 s unsichtbar. Gegner laufen zu deinem alten Platz, manche schlagen verwirrt aufeinander ein. Im Rauch greifen deine Waffen 45 % langsamer an, jeder Punkt im Skill Tree senkt das (bis 15 %).',
     extras: [{ name: 'Dichter Rauch', desc: 'Du bleibst 2 s länger unsichtbar.' }, { name: 'Giftrauch', desc: 'Gegner rund um den Rauch nehmen jede Sekunde Schaden.' }],
-    skills: [{ name: 'Ruhige Hand', desc: 'Angriffs-Malus im Rauch 60 → 47 → 33 → 20 %.' }, { name: 'Verwirrung', desc: '+12 % Chance pro Rang, dass Gegner sich gegenseitig angreifen.' }, { name: 'Schattenschritt', desc: 'Nach dem Rauch 1 s pro Rang +20 % Tempo.' }],
+    skills: [{ name: 'Ruhige Hand', desc: 'Angriffs-Malus im Rauch 45 → 35 → 25 → 15 %.' }, { name: 'Verwirrung', desc: '+12 % Chance pro Rang, dass Gegner sich gegenseitig angreifen.' }, { name: 'Schattenschritt', desc: 'Nach dem Rauch 1 s pro Rang +20 % Tempo.' }],
     master: { name: 'Hinterhalt', desc: 'Nach dem Rauch machst du 1,5 s lang doppelten Schaden.' } },
   catapult: { name: 'Goblin-Katapult', short: 'Katapult', charge: 'scrap', need: 35, unlock: { acct: 5 },
     desc: '5 Felsen schlagen in die dichteste Gegnergruppe ein.',
@@ -49,11 +49,11 @@ export const ABILITIES = {
     extras: [{ name: 'Rattenkönig', desc: '20 Ratten mehr.' }, { name: 'Pestratten', desc: 'Gebissene Gegner sind 3 s verlangsamt.' }],
     skills: [{ name: 'Hungrige Ratten', desc: 'Jede Ratte beißt 1-mal öfter pro Rang.' }, { name: 'Beuteratten', desc: 'Ratten schleppen Kristalle und Münzen zu dir (größerer Umkreis pro Rang).' }, { name: 'Seuche', desc: 'Gebissene nehmen 3 s lang Giftschaden (mehr pro Rang).' }],
     master: { name: 'Rückkehr', desc: 'Die Ratten rennen noch einmal zurück.' } },
-  call: { name: 'Goblin-Ruf', short: 'Ruf', charge: 'cd', need: 16, dur: 10, unlock: { acct: 12 },
-    desc: '8 Goblin-Krieger kämpfen 10 s an deiner Seite.',
-    extras: [{ name: 'Mehr Krieger', desc: '4 Krieger mehr.' }, { name: 'Kriegsschrei', desc: 'Beim Rufen bekommst du 4 s Raserei wie bei der Goblin-Wut.' }],
-    skills: [{ name: 'Scharfe Speere', desc: 'Krieger +12 % Schaden pro Rang.' }, { name: 'Flinke Krieger', desc: 'Krieger laufen und schlagen 12 % schneller pro Rang.' }, { name: 'Letzter Hieb', desc: 'Krieger explodieren beim Gehen (mehr Schaden pro Rang).' }],
-    master: { name: 'Häuptling', desc: 'Ein großer Häuptling mit dreifachem Schaden kommt mit.' } },
+  call: { name: 'Goblin-Ruf', short: 'Ruf', charge: 'cd', need: 20, dur: 10, unlock: { acct: 12 },
+    desc: '8 Goblin-Krieger kämpfen 10 s an deiner Seite (gegen Elite und Bosse mit 30 % Schaden).',
+    extras: [{ name: 'Mehr Krieger', desc: '2 Krieger mehr.' }, { name: 'Kriegsschrei', desc: 'Beim Rufen bekommst du 2,5 s Raserei wie bei der Goblin-Wut.' }],
+    skills: [{ name: 'Scharfe Speere', desc: 'Krieger +12 % Schaden pro Rang.' }, { name: 'Flinke Krieger', desc: 'Krieger laufen 12 % und schlagen 6 % schneller pro Rang.' }, { name: 'Letzter Hieb', desc: 'Krieger explodieren beim Gehen (mehr Schaden pro Rang).' }],
+    master: { name: 'Häuptling', desc: 'Ein großer Häuptling mit doppeltem Schaden kommt mit.' } },
   totem: { name: 'Totem der Gier', short: 'Totem', charge: 'cd', need: 25, dur: 10, unlock: { stage: 5 },
     desc: 'Saugt alle Kristalle und Münzen an. 10 s doppeltes Gold.',
     extras: [{ name: 'Goldregen', desc: 'Doppeltes Gold hält 5 s länger.' }, { name: 'Heiltotem', desc: 'Das Totem heilt dich um 25 %.' }],
@@ -112,9 +112,9 @@ export const ABILITIES = {
     master: { name: 'Polwechsel', desc: 'Nach der Explosion fliegt alles weg und ist 1 s betäubt.' } },
   bees: { name: 'Bienenstock', short: 'Bienen', charge: 'kills', need: 70, dur: 8, unlock: { acct: 35 },
     desc: '25 Bienen jagen 8 s die Gegner. Ihre Stiche vergiften und verlangsamen.',
-    extras: [{ name: 'Königin', desc: 'Eine große Biene fliegt mit, dreifacher Schaden gegen Elite, Mini-Boss und Boss.' }, { name: 'Honig', desc: 'Eine Honigpfütze heilt dich 2 % pro Sekunde und klebt Gegner fest.' }],
-    skills: [{ name: 'Spitze Stachel', desc: '+12 % Stichschaden pro Rang.' }, { name: 'Großer Schwarm', desc: '+5 Bienen pro Rang.' }, { name: 'Wütende Bienen', desc: 'Bienen +10 % schneller pro Rang.' }],
-    master: { name: 'Ewiger Stock', desc: 'Bis zum nächsten Einsatz kommt alle 10 s ein kleiner Schwarm nach.' } },
+    extras: [{ name: 'Königin', desc: 'Eine große Biene fliegt mit, doppelter Schaden gegen Elite, Mini-Boss und Boss.' }, { name: 'Honig', desc: 'Eine Honigpfütze heilt dich 2 % pro Sekunde und klebt Gegner fest.' }],
+    skills: [{ name: 'Spitze Stachel', desc: '+12 % Stichschaden pro Rang.' }, { name: 'Großer Schwarm', desc: '+4 Bienen pro Rang.' }, { name: 'Wütende Bienen', desc: 'Bienen +10 % schneller pro Rang.' }],
+    master: { name: 'Ewiger Stock', desc: 'Bis zum nächsten Einsatz kommt alle 15 s ein kleiner Schwarm nach.' } },
   brew: { name: 'Hexenkessel', short: 'Kessel', charge: 'cd', need: 20, dur: 8, unlock: { stage: 7 },
     desc: 'Der Kessel braut einen von 5 Tränken für 8 s: Riese (größer, +40 % Schaden, Stampfen), Flink (+50 % Tempo und Angriffstempo), Feuer (spuckt Feuer), Heil (40 % Leben und Erholung) oder Gold (dreifache Münzen).',
     extras: [{ name: 'Doppelbrau', desc: 'Du bekommst zwei Tränke auf einmal.' }, { name: 'Lieblingsrezept', desc: 'Der erste Trank im Lauf kommt danach doppelt so oft.' }],
@@ -204,7 +204,7 @@ export function abilMods(st) {
 }
 // Rauchbombe: Angriffstempo-Malus der Waffen, solange man unsichtbar ist (Wunsch Fabi).
 // 60 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 20 %.
-export const smokeAtkSlow = calm => .6 - .4 * Math.min(calm || 0, 3) / 3;
+export const smokeAtkSlow = calm => .45 - .3 * Math.min(calm || 0, 3) / 3;   // 2026-10-27: 60 % war im Bosskampf schlechter als keine Fähigkeit
 // Rollen für den Regal-Filter der Rüstkammer (Phase 10)
 export const ROLES = {
   atk: { name: 'Angriff', ids: ['catapult', 'bigbang', 'spin', 'turret', 'bees', 'grudge'] },

@@ -70,13 +70,13 @@ test('alter Baum (v1) mit Extra B ab 6 Punkten wird zurückgesetzt, gültiger bl
   assert.equal(normalize({ abilities: { dash: { lv: 4, pts: { pow: 3 } } } }).abilities.dash.lv, 4, 'Rolle wird gespeichert');
 });
 
-test('Rauchbombe: Angriffs-Malus 60 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 20 %', async () => {
+test('Rauchbombe: Angriffs-Malus 45 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 15 %', async () => {
   const { smokeAtkSlow, abilMods } = await import('../src/data/abilities.js');
   const near = (a, b) => Math.abs(a - b) < 1e-9;
-  assert.ok(near(smokeAtkSlow(abilMods({ pts: {} }).s1), .6));
-  assert.ok(near(smokeAtkSlow(abilMods(undefined).s1), .6), 'ohne Spielstand');
-  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 5, cd: 5, area: 3 } }).s1), .6), 'Wurzeln senken ihn nicht mehr');
-  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 3, s1: 3 } }).s1), .2));
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: {} }).s1), .45));
+  assert.ok(near(smokeAtkSlow(abilMods(undefined).s1), .45), 'ohne Spielstand');
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 5, cd: 5, area: 3 } }).s1), .45), 'Wurzeln senken ihn nicht mehr');
+  assert.ok(near(smokeAtkSlow(abilMods({ pts: { pow: 3, s1: 3 } }).s1), .15));
 });
 
 test('Fähigkeiten-Stand im Spielstand wird repariert', () => {

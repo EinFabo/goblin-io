@@ -145,7 +145,7 @@ export function updAbilities(dt) {
   setSrc('mech'); updMech(dt); setSrc(null); updMoves(dt); setSrc('brew'); updBrew(dt); setSrc(null);
   updDots(dt);
   // Ewiger Stock: bis zum nächsten Einsatz alle 10 s ein kleiner Schwarm
-  if (run.hive && (run.hive.t -= dt) <= 0) { run.hive.t = 10; setSrc('bees'); swarmOf(M('bees'), 10, ABILITIES.bees.dur * .6); setSrc(null); }
+  if (run.hive && (run.hive.t -= dt) <= 0) { run.hive.t = 15; setSrc('bees'); swarmOf(M('bees'), 10, ABILITIES.bees.dur * .6); setSrc(null); }
   if (P.smokeT > 0) { P.smokeT -= dt; if (P.smokeT <= 0) smokeEnd(M('smoke')); }
   if (P.ambushT > 0) P.ambushT -= dt;
   if (P.shieldT > 0) {
@@ -170,7 +170,7 @@ export function updAbilities(dt) {
   // Goblin-Ruf: Krieger auf Zeit
   setSrc('call');
   run.tmpAllies.forEach((al, i) => {
-    al.t -= dt; stepAlly(al, i, run.tmpAllies.length, (25 + P.lv * 1.5) * P.dmgMult * al.pow, 260 * al.spd, (P.rageT > 0 ? 1.6 : 1) * al.spd, dt);
+    al.t -= dt; stepAlly(al, i, run.tmpAllies.length, (13 + P.lv * .8) * P.dmgMult * al.pow, 260 * al.spd, (P.rageT > 0 ? 1.6 : 1) * al.rate, dt);
     if (al.t <= 0) {
       al.done = true; puff(al.x, al.y, .6);
       // Letzter Hieb: Krieger explodieren beim Gehen
@@ -318,7 +318,7 @@ function layTraps(m, n = m.a ? 4 : 3) {
   sfx.throw();
 }
 function trapAt(x, y, m) {
-  run.abfx.push({ k: 'trap', x, y, t: 0, dur: 20 * m.area, snap: 0, uses: 3 + m.s1, hold: 2 + .4 * m.s2, lure: m.s3 ? 20 + 30 * m.s3 : 0, lureT: 0,
+  run.abfx.push({ k: 'trap', x, y, t: 0, dur: 20 * m.area, snap: 0, uses: 3 + m.s1, hold: 1.6 + .4 * m.s2, lure: m.s3 ? 20 + 30 * m.s3 : 0, lureT: 0,
     dmg: (70 + P.lv * 8) * P.dmgMult * m.pow, splash: (m.b ? 110 : 70) * m.area, sf: m.b ? 1 : .5 });
   puff(x, y, .5, 'rgba(160,140,110,.8)');
 }
@@ -432,9 +432,9 @@ function releaseRats(m) {
 
 // ---------- Goblin-Ruf ----------
 function callGoblins(m) {
-  const n = m.a ? 12 : 8, pow = m.pow * (1 + .12 * m.s1), spd = 1 + .12 * m.s2, boom = m.s3 ? 20 * m.s3 * P.dmgMult : 0;
-  if (m.b) P.rageT = Math.max(P.rageT, 4);
-  const add = (a, r, big) => { run.tmpAllies.push({ ally: true, tmp: true, x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r, face: 'down', at: 0, atk: 0, slash: 0, sa: 0, moving: false, off: a, t: ABILITIES.call.dur * m.area, pow: big ? pow * 3 : pow, spd, boom, big }); puff(P.x + Math.cos(a) * r, P.y + Math.sin(a) * r, big ? 1 : .6); };
+  const n = m.a ? 10 : 8, pow = m.pow * (1 + .12 * m.s1), spd = 1 + .12 * m.s2, rate = 1 + .06 * m.s2, boom = m.s3 ? 20 * m.s3 * P.dmgMult : 0;
+  if (m.b) P.rageT = Math.max(P.rageT, 2.5);
+  const add = (a, r, big) => { run.tmpAllies.push({ ally: true, tmp: true, x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r, face: 'down', at: 0, atk: 0, slash: 0, sa: 0, moving: false, off: a, t: ABILITIES.call.dur * m.area, pow: big ? pow * 2 : pow, spd, rate, boom, big }); puff(P.x + Math.cos(a) * r, P.y + Math.sin(a) * r, big ? 1 : .6); };
   for (let i = 0; i < n; i++) add(i * TAU / n, 50, false);
   if (m.m) add(0, 0, true);   // Häuptling
   sfx.ult(); banner('Goblin-Ruf!', '');
@@ -569,7 +569,7 @@ function buildTurret(m) {
   const n = m.a ? 2 : 1;
   for (let i = 0; i < n; i++) {
     const off = n > 1 ? (i ? 1 : -1) * 55 : 0;
-    run.abfx.push({ k: 'turret', x: P.x + off, y: P.y + 34, t: 0, dur: (ABILITIES.turret.dur + 2 * m.s3) * m.area, range: 260 * (1 + .15 * m.s2), dmg: (6 + P.lv * .9) * P.dmgMult * m.pow * (1 + .12 * m.s1),
+    run.abfx.push({ k: 'turret', x: P.x + off, y: P.y + 34, t: 0, dur: (ABILITIES.turret.dur + 2 * m.s3) * m.area, range: 260 * (1 + .15 * m.s2), dmg: (5 + P.lv * .75) * P.dmgMult * m.pow * (1 + .12 * m.s1),
       blue: m.b, follow: m.m, off, tick: 0, a: -Math.PI / 2, beam: null });
     puff(P.x + off, P.y + 34, .8, 'rgba(200,200,205,.8)');
   }
@@ -583,7 +583,7 @@ function startSpin(m) {
   run.abfx.push(spinFx(m, dur, null));
   sfx.whoosh();
 }
-const spinFx = (m, dur, at) => ({ k: 'spin', t: 0, dur, at, tick: 0, every: .25 / (1 + .15 * m.s3), r: 95 * P.area * m.area, dmg: (14 + P.lv * 1.8) * P.dmgMult * m.pow * (1 + .12 * m.s1),
+const spinFx = (m, dur, at) => ({ k: 'spin', t: 0, dur, at, tick: 0, every: .25 / (1 + .15 * m.s3), r: 95 * P.area * m.area, dmg: (12 + P.lv * 1.5) * P.dmgMult * m.pow * (1 + .12 * m.s1),
   pull: m.a, wind: m.b && !at, tornado: m.m && !at, m, a: 0 });
 
 // ---------- Goblin-Groll ----------
@@ -608,15 +608,15 @@ function startMagnet(m) {
 
 // ---------- Bienenstock ----------
 function releaseBees(m) {
-  run.hive = m.m ? { t: 10 } : null;   // Ewiger Stock bis zum nächsten Einsatz
-  swarmOf(m, 25 + 5 * m.s2, ABILITIES.bees.dur * m.area, m.a);
+  run.hive = m.m ? { t: 15 } : null;   // Ewiger Stock bis zum nächsten Einsatz
+  swarmOf(m, 25 + 4 * m.s2, ABILITIES.bees.dur * m.area, m.a);
   if (m.b) run.abfx.push({ k: 'honey', x: P.x, y: P.y + 8, r: 90 * P.area * m.area, t: 0, dur: 6 * m.area });
   sfx.warn(); banner('Bienenstock!', '');
 }
 function swarmOf(m, n, dur, queen = false) {
   const bees = [];
   for (let i = 0; i < n + (queen ? 1 : 0); i++) { const a = rand(0, TAU); bees.push({ x: P.x + Math.cos(a) * 20, y: P.y - 20 + Math.sin(a) * 14, tgt: null, hitT: rand(0, .4), q: queen && i === n, a: rand(0, 6) }); }   // a bewegt die Biene: Seed-Zufall
-  run.abfx.push({ k: 'bees', bees, t: 0, dur, spd: 260 * (1 + .1 * m.s3), dmg: (6 + P.lv * .6) * P.dmgMult * m.pow * (1 + .12 * m.s1), sick: new Set(), sickT: .5 });
+  run.abfx.push({ k: 'bees', bees, t: 0, dur, spd: 260 * (1 + .1 * m.s3), dmg: (5 + P.lv * .5) * P.dmgMult * m.pow * (1 + .12 * m.s1), sick: new Set(), sickT: .5 });
 }
 
 // ---------- Hexenkessel ----------
@@ -767,7 +767,7 @@ const COMBO_FX = {
   implosion() { later(.6, () => { const R = 360 * P.area; blast(P.x, P.y, R, (300 + P.lv * 20) * P.dmgMult * .5, 500, '#ffe08a'); ring(P.x, P.y, R, 10, .5, 'rgba(255,224,138,.95)', 14); run.shake = Math.max(run.shake, 12); sfx.boom(); }); },
   bullseye() { run.tele.push({ k: 'boulder', sx: P.x - 30, sy: P.y - 60, x: P.x, y: P.y, t: 0, dur: .8, rad: 170 * P.area, dmg: (250 + P.lv * 25) * P.dmgMult, burn: false, shards: 0, stun: .5, src: abSrc }); },
   whirlhook() { query(P.x, P.y, 380, e => { if (e.boss || e.obj) return; const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1; e.kx += dx / d * 900; e.ky += dy / d * 900; }); },
-  warfrenzy() { for (const al of run.tmpAllies) if (!al.frenzy) { al.frenzy = true; al.pow *= 1.5; al.spd *= 1.3; } P.rageT = Math.max(P.rageT, 3); },
+  warfrenzy() { for (const al of run.tmpAllies) if (!al.frenzy) { al.frenzy = true; al.pow *= 1.5; al.spd *= 1.3; al.rate *= 1.3; } P.rageT = Math.max(P.rageT, 3); },
   icerink() { for (const f of live('oil')) { query(f.x, f.y, f.r, e => { if (!e.boss && !e.obj) e.freezeT = Math.max(e.freezeT, 2); else e.slowT = Math.max(e.slowT, 2); }); ring(f.x, f.y, 10, f.r, .4, 'rgba(150,220,255,.95)', 8); } sfx.frost(); },
   baittrap() { const m = M('trap'); for (const f of live('decoy')) trapAt(f.x, f.y + 8, m); },
   plague() {
@@ -834,7 +834,7 @@ const FX_UPD = {
       const dx = tx - b.x, dy = ty - b.y, d = Math.hypot(dx, dy) || 1, sp = f.spd * (b.q ? .8 : 1) * dt;
       b.x += dx / d * Math.min(d, sp) + Math.sin(b.a * 23) * 2; b.y += dy / d * Math.min(d, sp) + Math.cos(b.a * 19) * 2;
       if ((b.hitT -= dt) <= 0 && b.tgt && d < 24) {
-        b.hitT = .5; const e = b.tgt, big = b.q && (e.elite || e.boss || e.miniboss) ? 3 : 1;
+        b.hitT = .5; const e = b.tgt, big = b.q && (e.elite || e.boss || e.miniboss) ? 2 : 1;
         hurt(e, f.dmg * big * (b.q ? 2 : 1), 0, 0, 0, '#ffd84a'); if (!e.dead) { e.slowT = Math.max(e.slowT, .6); e.beeT = run.time + 3; f.sick.add(e); }
       }
     }
@@ -942,7 +942,7 @@ const FX_UPD = {
     // Zuschnappen: Opfer hängt fest, Splitter treffen die Nachbarn
     query(f.x, f.y, 34, e => {
       if (e.obj) return;
-      hurt(e, f.dmg, 0, 0, 0, '#d9c9a0'); if (!e.boss) e.freezeT = Math.max(e.freezeT, f.hold); else e.slowT = 2;
+      hurt(e, f.dmg * (e.boss || e.link ? .4 : 1), 0, 0, 0, '#d9c9a0'); if (!e.boss) e.freezeT = Math.max(e.freezeT, f.hold); else e.slowT = 2;   // Bosse treten oft hinein: 40 %
       query(f.x, f.y, f.splash, o => { if (o !== e) { const d = Math.hypot(o.x - f.x, o.y - f.y) || 1; hurt(o, f.dmg * f.sf, 120, (o.x - f.x) / d, (o.y - f.y) / d, '#d9c9a0'); } });
       if (f.sf >= 1) ring(f.x, f.y, 6, f.splash, .3, 'rgba(230,210,160,.8)', 5);
       f.snap = .4; f.uses--; sfx.stomp(); return false;
