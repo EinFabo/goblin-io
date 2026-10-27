@@ -225,7 +225,7 @@ export function doDash() {
     // Salto (Bogen-Goblin): weg vom nächsten Gegner, dabei fünf Pfeile auf ihn
     const t = nearest(320), a = t ? Math.atan2(P.y - t.y, P.x - t.x) : Math.atan2(P.aimY, P.aimX), back = a + Math.PI;
     P.dashT = .22; P.dvx = Math.cos(a) * sp * .85; P.dvy = Math.sin(a) * sp * .85;
-    for (let i = 0; i < 5; i++) shootRaw('arrow', back + (i - 2) * .16, (10 + P.lv * .8) * P.dmgMult, 1, 760 * P.proj, .7, { r: 10 });
+    for (let i = 0; i < 5; i++) shootRaw('arrow', back + (i - 2) * .16, (8 + P.lv * .6) * P.dmgMult, 1, 760 * P.proj, .7, { r: 10 });
     sfx.throw();
   } else if (P.dashKind === 'blink') {
     // Teleport (Magier-Goblin): sofort ein Stück in Laufrichtung; das kurze dashT hält die Unverwundbarkeit und die perfekte Rolle

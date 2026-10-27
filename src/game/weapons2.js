@@ -8,7 +8,7 @@ import { sfx } from '../core/audio.js';
 import { TAU } from '../core/util.js';
 import { hurt } from './combat.js';
 import { explode, later, part, ring } from './fx.js';
-import { P, nearest, query, randomEnemyInView, run } from './state.js';
+import { P, isBig, nearest, query, randomEnemyInView, run } from './state.js';
 // Kreis-Import (weapons.js ↔ weapons2.js) ist unbedenklich: beides sind Funktions-Deklarationen
 import { shoot, shootRaw } from './weapons.js';
 
@@ -188,7 +188,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
         }
       }
       w.t -= dt * rate; if (w.t > 0) break;
-      const t = nearest(600), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
+      const t = nearest(560), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
       if (w.evo) { w.t = .6 * P.cdMult; for (let i = 0; i < 5; i++) shoot('arrow', a + (i - 2) * .12, 16, 99, 760 * P.proj, .9, { r: 11 }); }
       else {
         w.t = [.8, .8, .75, .75, .6][L] * P.cdMult;
@@ -205,7 +205,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
         for (let i = 0; i < 6; i++) shoot('orb', w.rot + i * TAU / 6, 24, 1, 420 * P.proj, 2.2, { target: c.length ? pick(c) : null, sc: 1.3 });
       } else {
         w.t = [.95, .95, .9, .9, .75][L] * P.cdMult;
-        const n = [1, 2, 2, 3, 4][L], dmg = [17, 17, 23, 23, 26][L], pierce = [0, 0, 0, 1, 1][L];
+        const n = [1, 2, 2, 3, 4][L], dmg = [16, 16, 21, 21, 24][L], pierce = [0, 0, 0, 1, 1][L];
         const t = nearest(560), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
         // die erste Kugel jagt den nächsten Gegner, weitere zufällige im Bild
         for (let i = 0; i < n; i++) shoot('orb', a + (i - (n - 1) / 2) * .5, dmg, pierce, 460 * P.proj, 1.8, { target: i && c.length ? pick(c) : t, sc: 1 });
@@ -219,26 +219,26 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       if (w.evo) {
         w.t = .7 * P.cdMult; w.n = (w.n || 0) + 1;
         swing(a, 160 * P.area, 66 * dm, 200, true);
-        shoot('quake', a, 33, 99, 480 * P.proj, .6, { r: 26, sc: 1.4, kb: 60 });
+        shoot('quake', a, 26, 99, 480 * P.proj, .6, { r: 26, sc: 1.4, kb: 60 });
         if (w.n % 3 === 0) later(.12, () => wave(P.x, P.y, 220 * P.area, 36 * dm * aoe(), 220, '#c9a35a'));
       } else {
         w.t = [.85, .85, .8, .8, .65][L] * P.cdMult;
         const dmg = [24, 31, 31, 39, 48][L];
         swing(a, [100, 100, 115, 125, 130][L] * P.area, dmg * dm, 120, L >= 3);
-        shoot('quake', a, dmg * .5, 99, 440 * P.proj, .5, { r: 20, sc: 1, kb: 40 });
+        shoot('quake', a, dmg * .4, 99, 440 * P.proj, .5, { r: 20, sc: 1, kb: 40 });
       }
       w.swing = { a, at: run.time, R: (w.evo ? 160 : [100, 100, 115, 125, 130][L]) * P.area, full: w.evo || L >= 3 };
       sfx.whoosh(); break;
     }
   }
 }
-// Keulenschlag: Halbkreis (oder rundherum) um den Goblin, Rückstoß nach außen
+// Keulenschlag: Halbkreis (oder rundherum) um den Goblin, Rückstoß nach außen; Elite und Bosse +40 % (Nahkampf-Ausgleich)
 function swing(a, R, dmg, kb, full) {
   const ca = Math.cos(a), sa = Math.sin(a);
   query(P.x, P.y, R, e => {
     const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
     if (!full && (dx * ca + dy * sa) / d < -.2) return;   // hinter dem Goblin: kein Treffer
-    hurt(e, dmg, kb, dx / d, dy / d, '#e8c88a');
+    hurt(e, isBig(e) ? dmg * 1.4 : dmg, kb, dx / d, dy / d, '#e8c88a');
   });
   run.shake = Math.max(run.shake, 2);
 }
