@@ -1,5 +1,5 @@
 import { sfx } from '../core/audio.js';
-import { clsState, persist, save, stageCleared } from '../core/save.js';
+import { activeCls, clsState, persist, save, stageCleared } from '../core/save.js';
 import { CLASSES, CLASS_IDS, CLASS_MAX_LV, CLASS_PERKS, DASH_KIND, SPRINT_KIND, classUnlockText, classUnlocked, classXpNeed } from '../data/classes.js';
 import { WEAPONS } from '../data/weapons.js';
 import { loadGoblin } from '../render/sprites.js';
@@ -41,7 +41,8 @@ export function renderArmory() {
 
 // ---------- Klassen (Phase 9): Leiste über dem Regal, Antippen wählt die Klasse ----------
 // Bewegung der gewählten Klasse (Salto, Teleport, Sturmangriff): eigener Name, gleicher Baum wie Rolle bzw. Sprint
-const moveKind = id => { const C = CLASSES[clsOk(save.cls) ? save.cls : 'gob']; return id === 'dash' ? DASH_KIND[C.dash] : SPRINT_KIND[C.sprint]; };
+const moveKind = id => { const C = CLASSES[activeCls()]; return id === 'dash' ? DASH_KIND[C.dash] : SPRINT_KIND[C.sprint]; };
+let reload = 0;
 const clsSel = () => (sel && sel.startsWith('cls:') ? sel.slice(4) : null);
 const clsOk = id => classUnlocked(id, stageCleared);
 const pct = v => (v > 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + ' %';
@@ -68,8 +69,8 @@ function clsNote(id) {
 function useClass(id) {
   if (!clsOk(id) || save.cls === id) return;
   save.cls = id; persist(); sfx.pickCard();
-  // Aussehen neu laden (Klassenwaffe in der Hand), Icons mit Goblin-Bildern neu zeichnen
-  loadGoblin().then(dropGoblinIcons);
+  // Aussehen neu laden (Klassenwaffe in der Hand), Icons mit Goblin-Bildern neu zeichnen; entprellt wie in der Garderobe
+  clearTimeout(reload); reload = setTimeout(() => loadGoblin().then(dropGoblinIcons), 400);
   renderClasses(); renderShelf(); renderNote();
 }
 

@@ -1,6 +1,6 @@
-import { CLASS_MAX_LV, classUnlocked } from '../data/classes.js';
+import { hasPerk } from '../data/classes.js';
 import { ANIMS, goblinSvg } from '../gen/goblin.js';
-import { save, stageCleared } from '../core/save.js';
+import { activeCls, clsState, save } from '../core/save.js';
 import { DAGGER_TINT } from '../data/cosmetics.js';
 import { DRAWN, MIRROR } from '../gen/svg.js';
 import { MAGE_ANIMS, castOffsets, mageSvg } from '../gen/mages.js';
@@ -178,8 +178,8 @@ async function loadGoblinRun() {
 // Klasse (Phase 9): Ausstattung und Klassenwaffe; Klassen-Level 20 macht sie golden
 // (gesperrte Klasse – alter oder fremder Stand – spielt und sieht aus wie der Goblin, s. newRun)
 export function goblinLook() {
-  const cls = classUnlocked(save.cls, stageCleared) ? save.cls : 'gob';
-  return { skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat, cls, gold: !!(save.classes[cls] && save.classes[cls].lv >= CLASS_MAX_LV) };
+  const cls = activeCls();
+  return { skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat, cls, gold: hasPerk(clsState(cls).lv, 'master') };
 }
 let gobToken = 0;
 export async function loadGoblin(look = goblinLook()) {

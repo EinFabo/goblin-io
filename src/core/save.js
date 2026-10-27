@@ -11,7 +11,7 @@ import { ACH } from '../data/achievements.js';
 import { LEVELS } from '../data/levels.js';
 import { normRunes } from '../game/runes.js';
 import { COMBOS } from '../data/combos.js';
-import { CLASSES, CLASS_MAX_LV, classXpNeed } from '../data/classes.js';
+import { CLASS_MAX_LV, classUnlocked, classXpNeed, isClass } from '../data/classes.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
@@ -131,9 +131,9 @@ export function normalize(raw) {
   };
   out.runes = normRunes(r.runes, out.abilities);
   out.combos = Array.isArray(r.combos) ? [...new Set(r.combos.filter(k => COMBOS[k]))] : [];
-  out.cls = CLASSES[r.cls] ? r.cls : 'gob';
+  out.cls = isClass(r.cls) ? r.cls : 'gob';
   out.classes = {};
-  for (const [k, v] of Object.entries(obj(r.classes))) if (CLASSES[k]) { const c = obj(v); out.classes[k] = { lv: num(c.lv, 1, 1, CLASS_MAX_LV) | 0, xp: num(c.xp) }; }
+  for (const [k, v] of Object.entries(obj(r.classes))) if (isClass(k)) { const c = obj(v); out.classes[k] = { lv: num(c.lv, 1, 1, CLASS_MAX_LV) | 0, xp: num(c.xp) }; }
   out.seen = Array.isArray(r.seen) ? [...new Set(r.seen.filter(id => ABILITIES[id]))] : d.seen;
   for (const [k, v] of Object.entries(obj(st.c))) { const n = num(v); if (n) out.stats.c[k] = n; }
   for (const [k, v] of Object.entries(obj(r.ach))) if (ACH[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.ach[k] = n; }
@@ -291,6 +291,8 @@ export function gainAccountXp(n) {
   return up;
 }
 
+// Gespielte Klasse: die gewählte, falls frei, sonst der Goblin (alter oder fremder Stand). Lauf, Aussehen und Hub nutzen nur das.
+export const activeCls = () => (classUnlocked(save.cls, stageCleared) ? save.cls : 'gob');
 // Klassen-Level (Phase 9): Stand ohne Eintrag Level 1; gibt die neuen Level zurück
 export const clsState = id => save.classes[id] || { lv: 1, xp: 0 };
 export function gainClassXp(id, n) {

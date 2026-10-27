@@ -207,7 +207,8 @@ export function stepWeapon2(w, L, dm, dt, rate) {
         w.t = [.95, .95, .9, .9, .75][L] * P.cdMult;
         const n = [1, 2, 2, 3, 4][L], dmg = [15, 15, 20, 20, 22][L], pierce = [0, 0, 0, 1, 1][L];
         const t = nearest(560), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
-        for (let i = 0; i < n; i++) shoot('orb', a + (i - (n - 1) / 2) * .5, dmg, pierce, 400 * P.proj, 1.8, { target: c.length ? c[i % c.length] : t, sc: 1 });
+        // die erste Kugel jagt den nächsten Gegner, weitere zufällige im Bild
+        for (let i = 0; i < n; i++) shoot('orb', a + (i - (n - 1) / 2) * .5, dmg, pierce, 400 * P.proj, 1.8, { target: i && c.length ? pick(c) : t, sc: 1 });
       }
       sfx.cast(); break;
     }

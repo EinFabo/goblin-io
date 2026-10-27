@@ -4,7 +4,7 @@
 import { hashSeed, mulberry32 } from '../core/rng.js';
 import { ACH, ACHIEVEMENTS, DAILY_BONUS, DAILY_POOL, TIERS } from '../data/achievements.js';
 import { ABILITIES, STAR_MAX } from '../data/abilities.js';
-import { CLASSES, CLASS_MAX_LV } from '../data/classes.js';
+import { CLASSES, hasPerk, isClass } from '../data/classes.js';
 import { dayKey } from './shop.js';
 import { grantCosmetic } from './cosmetics.js';
 
@@ -44,7 +44,7 @@ export function claimAch(save, id) {
 export const titles = save => [...ACHIEVEMENTS.filter(a => a.title && (save.ach[a.id] || 0) >= 3).map(a => a.title),
   ...Object.entries(save.abilities).filter(([id, a]) => ABILITIES[id] && (a.st || 0) >= STAR_MAX).map(([id]) => 'Legende der ' + ABILITIES[id].name),
   // Klassen-Level 20 (Phase 9): Meister-Titel der Klasse
-  ...Object.entries(save.classes || {}).filter(([id, c]) => CLASSES[id] && c.lv >= CLASS_MAX_LV).map(([id]) => CLASSES[id].master)];
+  ...Object.entries(save.classes || {}).filter(([id, c]) => isClass(id) && hasPerk(c.lv, 'master')).map(([id]) => CLASSES[id].master)];
 
 // ---------- Tagesaufgaben ----------
 // Drei Aufgaben je Tag (gleich für alle, Seed = Datum). Der Tagesbeginn (Zählerstand) wird nur an festen Stellen

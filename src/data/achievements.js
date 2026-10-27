@@ -40,7 +40,7 @@ export const ACHIEVEMENTS = [
   { id: 'combos', name: 'Kombo-Meister', desc: 'Entdecke {n} Kombos', v: s => (s.combos || []).length, goals: [3, 8, 12], title: 'Kombo-Meister' },
   { id: 'stars', name: 'Sternensammler', desc: 'Sammle {n} Fähigkeiten-Sterne', v: s => Object.values(s.abilities).reduce((n, a) => n + (a.st || 0), 0), goals: [1, 10, 40] },
   { id: 'barrel', name: 'Fassbinder', desc: 'Gewinne {n} Level mit dem Sprengfass', v: c('w.barrel'), goals: [1, 10, 50], title: 'Fassbinder' },
-  ...Object.entries(WEAPONS).filter(([id]) => id !== 'barrel').map(([id, W]) => ({ id: 'w_' + id, name: `${W.name}-Meister`, desc: `Gewinne {n} Level mit ${W.name}`, v: c('w.' + id), goals: [1, 10, 50] })),
+  ...Object.entries(WEAPONS).filter(([id, W]) => id !== 'barrel' && !W.cls).map(([id, W]) => ({ id: 'w_' + id, name: `${W.name}-Meister`, desc: `Gewinne {n} Level mit ${W.name}`, v: c('w.' + id), goals: [1, 10, 50] })),
   ...Object.entries(SCHOOL_NAME).map(([k, n]) => ({ id: 'k_' + k, name: `${n}-Bezwinger`, desc: `Besiege {n} ${n}magier`, v: c('k.' + k), goals: [300, 3000, 20000] })),
 ];
 export const ACH = Object.fromEntries(ACHIEVEMENTS.map(a => [a.id, a]));

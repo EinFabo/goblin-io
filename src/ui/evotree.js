@@ -6,7 +6,7 @@ import { sfx } from '../core/audio.js';
 import { $ } from '../core/util.js';
 import { CLASS_WEAPONS, MEGAS, PASSIVES, WEAPONS, megaOf, weaponOf } from '../data/weapons.js';
 import { previewFrame, previewOn, previewStart, previewStop } from '../game/preview.js';
-import { run } from '../game/state.js';
+import { ownIds, run } from '../game/state.js';
 import { withCanvas } from '../render/canvas.js';
 import { renderRun } from '../render/draw-world.js';
 import { icon } from '../render/icons.js';
@@ -25,15 +25,17 @@ function nodeCls(k, id) {
   const w = k === 'w' || k === 'e' ? own(id) : null;
   if (k === 'w') return w ? (w.lv >= 5 ? ' have max' : ' have') : '';
   if (k === 'p') return plv(id) ? ' have' : '';
+  if (k === 'c') return plv(WEAPONS[id].with) ? ' have' : '';
   if (k === 'e') return w && w.evo ? ' done' : evoReady(id) ? ' ready' : '';
   const ws = MEGAS[id].of.map(own);
   return ws.every(x => x && x.mega) ? ' done' : ws.every(x => x && x.evo) ? ' ready' : '';
 }
 function node(k, id) {
-  const name = k === 'w' ? WEAPONS[id].name : k === 'p' ? PASSIVES[id].name : k === 'e' ? WEAPONS[id].evo : MEGAS[id].name;
-  const lv = k === 'w' ? (own(id) || {}).lv : k === 'p' ? plv(id) : 0;
+  // c: Passiv einer Klassenwaffe (id = die Waffe), damit Text und Vorschau zur Klassenwaffe passen
+  const name = k === 'w' ? WEAPONS[id].name : k === 'p' ? PASSIVES[id].name : k === 'c' ? PASSIVES[WEAPONS[id].with].name : k === 'e' ? WEAPONS[id].evo : MEGAS[id].name;
+  const lv = k === 'w' ? (own(id) || {}).lv : k === 'p' ? plv(id) : k === 'c' ? plv(WEAPONS[id].with) : 0;
   const img = k === 'm' ? `<span class="mic">${MEGAS[id].of.map(w => `<img src="${icon(w + '_evo')}" alt="">`).join('')}</span>`
-    : `<img src="${icon(k === 'e' ? id + '_evo' : id)}" alt="">`;
+    : `<img src="${icon(k === 'e' ? id + '_evo' : k === 'c' ? WEAPONS[id].with : id)}" alt="">`;
   return `<button class="en ${k}${nodeCls(k, id)}${sel === k + ':' + id ? ' sel' : ''}" data-n="${k}:${id}" title="${name}" aria-label="${name}">${img}${lv ? `<i>${lv}</i>` : ''}</button>`;
 }
 function groupHtml(m) {
@@ -42,7 +44,7 @@ function groupHtml(m) {
 }
 // Klassenwaffen (Phase 9): Entwicklung ohne Mega-Partner
 function clsGroupHtml() {
-  const row = w => `${node('w', w)}<span class="op">+</span>${node('p', WEAPONS[w].with)}<span class="op">→</span>${node('e', w)}`;
+  const row = w => `${node('w', w)}<span class="op">+</span>${node('c', w)}<span class="op">→</span>${node('e', w)}`;
   return `<div class="evogrp" style="--mc:#c9a35a"><div class="egrid cls">${CLASS_WEAPONS.map(row).join('')}</div><div class="mname">Klassenwaffen</div></div>`;
 }
 // Im Lauf: Gruppen mit eigenen Waffen zuerst
@@ -59,8 +61,12 @@ function capHtml(k, id) {
     return cap(icon(id), D.name, 'Waffe', D.info[0], `${live ? `Stufe ${w ? w.lv : 0}/5 · ` : ''}Mit ${PASSIVES[D.with].name} auf Stufe 5 → <b>${D.evo}</b>`, 'Vorschau: Stufe 5');
   }
   if (k === 'p') {
-    const D = PASSIVES[id], wid = weaponOf(id, live ? run.weapons.map(w => w.id) : null);
+    const D = PASSIVES[id], wid = weaponOf(id, live ? ownIds() : null);
     return cap(icon(id), D.name, 'Passiv', D.info, wid ? `Entwickelt ${WEAPONS[wid].name} zu <b>${WEAPONS[wid].evo}</b>` : '', wid ? 'Vorschau: ' + WEAPONS[wid].evo : '');
+  }
+  if (k === 'c') {
+    const D = PASSIVES[WEAPONS[id].with];
+    return cap(icon(WEAPONS[id].with), D.name, 'Passiv', D.info, `Entwickelt ${WEAPONS[id].name} zu <b>${WEAPONS[id].evo}</b>`, 'Vorschau: ' + WEAPONS[id].evo);
   }
   if (k === 'e') {
     const D = WEAPONS[id], w = own(id), m = megaOf(id);

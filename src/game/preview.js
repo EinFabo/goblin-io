@@ -19,7 +19,8 @@ export const PREVIEW_STEP = 1 / 60;
 const RATS = 16, RAT_HP = 140;
 let sb = null;   // { run, P, rng, acc }
 
-// Welche Waffen ein Knoten zeigt: w Waffe (Stufe 5), p Passiv (zeigt die Entwicklung, die es freischaltet), e Entwicklung, m Mega
+// Welche Waffen ein Knoten zeigt: w Waffe (Stufe 5), p Passiv (zeigt die Entwicklung, die es freischaltet), e Entwicklung, m Mega,
+// c Passiv einer Klassenwaffe (id = die Klassenwaffe, zeigt deren Entwicklung)
 const weaponsFor = (k, id) => (k === 'm' ? MEGAS[id].of : [k === 'p' ? weaponOf(id) : id]);
 
 // fn läuft mit dem Mini-Lauf als run/P und dessen Zufall; alles Echte kommt danach zurück, auch das Raster

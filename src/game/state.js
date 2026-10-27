@@ -68,3 +68,5 @@ export function clampToArena(o, margin) {
   if (d > A.r - margin && d > 0) { o.x = A.x + dx / d * (A.r - margin); o.y = A.y + dy / d * (A.r - margin); }
   return o;
 }
+// Eigene Waffen-ids für weaponOf: noch nicht entwickelte zuerst (Klassenwaffen teilen sich Passive mit anderen Waffen)
+export const ownIds = () => [...run.weapons].sort((a, b) => a.evo - b.evo).map(w => w.id);

@@ -17,16 +17,17 @@ export const CLASS_IDS = Object.keys(CLASSES);
 // Bewegungen der Klassen: Name, Knopf-Bild (render/icons.js) und Kurztext
 export const DASH_KIND = {
   roll: { name: 'Rolle', icon: 'dash', desc: 'Kurze Rolle in Laufrichtung, kurz unverwundbar.' },
-  flip: { name: 'Salto', icon: 'flip', desc: 'Salto weg vom nächsten Gegner, dabei ein Pfeilfächer nach vorn.' },
+  flip: { name: 'Salto', icon: 'flip', desc: 'Salto weg vom nächsten Gegner, dabei fliegen fünf Pfeile auf ihn.' },
   blink: { name: 'Teleport', icon: 'blink', desc: 'Springt sofort ein Stück in Laufrichtung, kurz unverwundbar.' },
 };
 export const SPRINT_KIND = {
   sprint: { name: 'Sprint', icon: 'boots', desc: 'Gedrückt halten: schneller laufen, kostet Ausdauer.' },
   charge: { name: 'Sturmangriff', icon: 'charge', desc: 'Gedrückt halten: losstürmen, kleine Gegner fliegen weg und nehmen Schaden.' },
 };
-export const classOf = id => CLASSES[id] || CLASSES.gob;
+export const isClass = id => typeof id === 'string' && Object.hasOwn(CLASSES, id);
+export const classOf = id => (isClass(id) ? CLASSES[id] : CLASSES.gob);
 // Freigeschaltet? cleared(i) = Welt i (0-basiert) gewonnen
-export const classUnlocked = (id, cleared) => !!CLASSES[id] && (!CLASSES[id].unlock || cleared(CLASSES[id].unlock.stage - 1));
+export const classUnlocked = (id, cleared) => isClass(id) && (!CLASSES[id].unlock || cleared(CLASSES[id].unlock.stage - 1));
 export const classUnlockText = id => { const u = CLASSES[id].unlock; return u ? `Boss von Welt ${u.stage} besiegen` : ''; };
 
 // ---------- Klassen-Level ----------

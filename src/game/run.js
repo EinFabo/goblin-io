@@ -1,7 +1,7 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { mulberry32, newSeed, seedRun } from '../core/rng.js';
-import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, persist, recordLevel, save, stageCleared, talent } from '../core/save.js';
+import { abilState, activeCls, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, persist, recordLevel, save, talent } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp, bonusReward } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
@@ -16,7 +16,7 @@ import { pullable, updItems } from './items.js';
 import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
 import { BOONS, cardIdOf } from '../data/weapons.js';
-import { CLASSES, DASH_KIND, SPRINT_KIND, classOf, classUnlocked, hasPerk } from '../data/classes.js';
+import { CLASSES, DASH_KIND, SPRINT_KIND, classOf, hasPerk } from '../data/classes.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
@@ -43,7 +43,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
     mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0, iceT: 0, ivx: 0, ivy: 0 };
   // Klasse (Phase 9): gesperrte Klasse (alter oder fremder Stand) → Goblin
-  r.cls = classUnlocked(save.cls, i => stageCleared(i)) ? save.cls : 'gob'; r.clsLv = clsState(r.cls).lv;
+  r.cls = activeCls(); r.clsLv = clsState(r.cls).lv;
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
   ensureDaily(save);
   // Kartenstufen für diesen Lauf (9.3)

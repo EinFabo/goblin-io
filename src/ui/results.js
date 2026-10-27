@@ -7,13 +7,14 @@ import { STAR_MAX, treeDef } from '../data/abilities.js';
 import { sfx } from '../core/audio.js';
 import { levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
-import { icon } from '../render/icons.js';
+import { dropGoblinIcons, icon } from '../render/icons.js';
 import { HAT_TXT, hatsHtml } from './hats.js';
 import { noteNewHats } from './worldmap.js';
 import { CHESTS, GEMS, cardName } from '../data/cards.js';
 import { burstAt, centerOf, countUp, flyReward } from './rewardfx.js';
 import { chestSvg } from './cardart.js';
-import { CLASSES, CLASS_PERKS } from '../data/classes.js';
+import { CLASSES, CLASS_PERKS, hasPerk } from '../data/classes.js';
+import { loadGoblin } from '../render/sprites.js';
 import { playChest } from './chest-open.js';
 import { cosmTile } from './cosmart.js';
 import { COSM } from '../data/cosmetics.js';
@@ -55,6 +56,8 @@ const at = (ms, fn) => seqT.push(setTimeout(fn, ms));   // alle Zeitgeber der Fo
 // Klassen-XP (Phase 9): Zeile wie bei den Fähigkeiten, neue Boni beim Aufstieg
 function clsXpHtml(c) {
   if (!c || !c.xp) return '';
+  // Meister geworden: goldene Klassenwaffe ab sofort im Hub und im nächsten Lauf
+  if (hasPerk(c.lv, 'master') && !hasPerk(c.from, 'master')) loadGoblin().then(dropGoblinIcons);
   const C = CLASSES[c.id], perks = c.up ? CLASS_PERKS.filter(p => p.lv > c.from && p.lv <= c.lv).map(p => p.txt) : [];
   return `<p class="abxp${c.up ? ' up' : ''}"><img src="${icon(C.weapon)}" alt=""><span>${C.name}</span><b>+${c.xp} XP${c.up ? ` · <em>Klassen-Level ${c.lv}!</em>${perks.length ? ' ' + perks.join(', ') : ''}` : ''}</b></p>`;
 }

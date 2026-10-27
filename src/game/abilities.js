@@ -216,7 +216,7 @@ function updMoves(dt) {
 export function doDash() {
   if (!run || run.paused || run.over || run.cut || P.dashN <= 0 || P.dashT > 0) return;
   const why = lockOf('dash'); if (why) { lockedBuzz(why); return; }
-  const d = M('dash'), sp = 900 * (1 + .08 * d.r.cd);
+  const d = M('dash'), sp = 900 * (1 + .08 * d.r.cd), sx = P.x, sy = P.y;   // Startpunkt (Teleport versetzt sofort)
   P.dashN--; if (P.dashCd <= 0) P.dashCd = dashCdOf();
   P.dashT = .18; P.inv = Math.max(P.inv, .3 + .06 * d.r.area);
   P.dvx = P.aimX * sp; P.dvy = P.aimY * sp;
@@ -236,7 +236,7 @@ export function doDash() {
   }
   if (d.s3) haste(1.2 + .18, .1 * d.s3);
   // Krähenfüße bleiben am Startpunkt liegen
-  if (d.b) run.abfx.push({ k: 'caltrop', x: P.x, y: P.y + 10, r: 48, t: 0, dur: 2.5, tick: 0, dmg: (8 + P.lv) * P.dmgMult, seed: Math.random() * 100 });
+  if (d.b) run.abfx.push({ k: 'caltrop', x: sx, y: sy + 10, r: 48, t: 0, dur: 2.5, tick: 0, dmg: (8 + P.lv) * P.dmgMult, seed: Math.random() * 100 });
   // Fallensteller (Meister der Bärenfalle): jede 3. Rolle legt eine Falle
   if (hasAbil('trap') && M('trap').m && ++run.trapRolls % 3 === 0) layTraps(M('trap'), 1);
   run.abXp.dash = (run.abXp.dash || 0) + xpPerUse('dash'); count(run, 'rolls');

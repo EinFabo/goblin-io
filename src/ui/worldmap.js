@@ -1,5 +1,5 @@
 import { audioInit, sfx } from '../core/audio.js';
-import { levelDone, levelInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
+import { activeCls, levelDone, levelInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
 import { $, fmtTime } from '../core/util.js';
 import { ENDLESS, LEVELS, LEVEL_KIND, WORLDS, levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
@@ -115,7 +115,7 @@ function renderNodes() {
 // Gewählte Klasse (Phase 9) mit Wechsel-Knopf zur Rüstkammer, sobald mehr als eine frei ist
 function clsHtml() {
   if (CLASS_IDS.filter(id => classUnlocked(id, stageCleared)).length < 2) return '';
-  const C = CLASSES[classUnlocked(save.cls, stageCleared) ? save.cls : 'gob'];
+  const C = CLASSES[activeCls()];
   return `<p class="clsline"><img src="${icon(C.weapon)}" alt="">Klasse: <b>${C.name}</b><button class="btn small ghost" data-clsgo>Wechseln</button></p>`;
 }
 // Markierung umsetzen, ohne die Punkte neu aufzubauen (sonst spielt ihre Einblend-Animation erneut)
