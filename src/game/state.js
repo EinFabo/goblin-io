@@ -53,6 +53,8 @@ export function randomEnemyInView(margin = 0) {
   for (const e of run.enemies) if (!e.dead && !(e.spawnT > 0) && Math.abs(e.x - P.x) < hw && Math.abs(e.y - P.y) < hh) c.push(e);
   return c;
 }
+// Große Gegner (Boss, Teile des Bosses, Elite, Mini-Boss): für Schadens-Regeln von Fähigkeiten und Passiven
+export const isBig = e => !!(e.boss || e.link || e.elite || e.miniboss);
 export const viewR = () => Math.hypot(W / 2 / ZOOM, H / 2 / ZOOM);
 export const onScreen = (x, y, m = 0) => Math.abs(x - P.x) < W / 2 / ZOOM + m && Math.abs(y - P.y) < H / 2 / ZOOM + m;
 export { xpNeed } from './balance.js';

@@ -10,7 +10,7 @@ export const ABILITIES = {
     skills: [{ name: 'Blutdurst', desc: 'Kills in der Raserei heilen dich um 1 Leben pro Rang.' }, { name: 'Weite Welle', desc: 'Schockwelle +12 % Umkreis und Wucht pro Rang.' }, { name: 'Kettenwut', desc: 'Jeder Kill in der Raserei verlängert sie um 0,1 s pro Rang (höchstens +4 s).' }],
     master: { name: 'Berserker', desc: 'In der Raserei nimmst du 30 % weniger Schaden.' } },
   trap: { name: 'Bärenfalle', short: 'Falle', charge: 'cd', need: 7,
-    desc: 'Legt 3 Fallen um dich, jede schnappt bis zu 3-mal zu. Wer hineintritt, hängt 1,6 s fest, Splitter treffen die Gegner daneben.',
+    desc: 'Legt 3 Fallen um dich, jede schnappt bis zu 3-mal zu. Wer hineintritt, hängt 1,6 s fest, Splitter treffen die Gegner daneben. Bosse hängen nicht fest und nehmen 40 % Schaden.',
     extras: [{ name: 'Vierte Falle', desc: 'Du legst 4 statt 3 Fallen.' }, { name: 'Sprengfallen', desc: 'Die Splitter fliegen weiter und machen vollen Schaden.' }],
     skills: [{ name: 'Scharfe Zähne', desc: 'Jede Falle schnappt 1-mal öfter zu pro Rang.' }, { name: 'Festbeißen', desc: 'Gefangene hängen 0,4 s länger fest pro Rang.' }, { name: 'Köder', desc: 'Fallen locken Gegner im Umkreis an (50/80/110).' }],
     master: { name: 'Fallensteller', desc: 'Jede 3. Rolle legt eine Bärenfalle.' } },
@@ -50,7 +50,7 @@ export const ABILITIES = {
     skills: [{ name: 'Hungrige Ratten', desc: 'Jede Ratte beißt 1-mal öfter pro Rang.' }, { name: 'Beuteratten', desc: 'Ratten schleppen Kristalle und Münzen zu dir (größerer Umkreis pro Rang).' }, { name: 'Seuche', desc: 'Gebissene nehmen 3 s lang Giftschaden (mehr pro Rang).' }],
     master: { name: 'Rückkehr', desc: 'Die Ratten rennen noch einmal zurück.' } },
   call: { name: 'Goblin-Ruf', short: 'Ruf', charge: 'cd', need: 20, dur: 10, unlock: { acct: 12 },
-    desc: '8 Goblin-Krieger kämpfen 10 s an deiner Seite (gegen Elite und Bosse mit 30 % Schaden).',
+    desc: '8 Goblin-Krieger kämpfen 10 s an deiner Seite (gegen Elite, Mini-Bosse und Bosse mit 30 % Schaden).',
     extras: [{ name: 'Mehr Krieger', desc: '2 Krieger mehr.' }, { name: 'Kriegsschrei', desc: 'Beim Rufen bekommst du 2,5 s Raserei wie bei der Goblin-Wut.' }],
     skills: [{ name: 'Scharfe Speere', desc: 'Krieger +12 % Schaden pro Rang.' }, { name: 'Flinke Krieger', desc: 'Krieger laufen 12 % und schlagen 6 % schneller pro Rang.' }, { name: 'Letzter Hieb', desc: 'Krieger explodieren beim Gehen (mehr Schaden pro Rang).' }],
     master: { name: 'Häuptling', desc: 'Ein großer Häuptling mit doppeltem Schaden kommt mit.' } },
@@ -112,7 +112,7 @@ export const ABILITIES = {
     master: { name: 'Polwechsel', desc: 'Nach der Explosion fliegt alles weg und ist 1 s betäubt.' } },
   bees: { name: 'Bienenstock', short: 'Bienen', charge: 'kills', need: 70, dur: 8, unlock: { acct: 35 },
     desc: '25 Bienen jagen 8 s die Gegner. Ihre Stiche vergiften und verlangsamen.',
-    extras: [{ name: 'Königin', desc: 'Eine große Biene fliegt mit, doppelter Schaden gegen Elite, Mini-Boss und Boss.' }, { name: 'Honig', desc: 'Eine Honigpfütze heilt dich 2 % pro Sekunde und klebt Gegner fest.' }],
+    extras: [{ name: 'Königin', desc: 'Eine große Biene fliegt mit: doppelter Stich, gegen Elite, Mini-Boss und Boss vierfach.' }, { name: 'Honig', desc: 'Eine Honigpfütze heilt dich 2 % pro Sekunde und klebt Gegner fest.' }],
     skills: [{ name: 'Spitze Stachel', desc: '+12 % Stichschaden pro Rang.' }, { name: 'Großer Schwarm', desc: '+4 Bienen pro Rang.' }, { name: 'Wütende Bienen', desc: 'Bienen +10 % schneller pro Rang.' }],
     master: { name: 'Ewiger Stock', desc: 'Bis zum nächsten Einsatz kommt alle 15 s ein kleiner Schwarm nach.' } },
   brew: { name: 'Hexenkessel', short: 'Kessel', charge: 'cd', need: 20, dur: 8, unlock: { stage: 7 },
@@ -203,8 +203,8 @@ export function abilMods(st) {
     s1: p.s1 || 0, s2: p.s2 || 0, s3: p.s3 || 0, r: { pow: p.pow || 0, cd: p.cd || 0, area: p.area || 0 } };
 }
 // Rauchbombe: Angriffstempo-Malus der Waffen, solange man unsichtbar ist (Wunsch Fabi).
-// 60 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 20 %.
-export const smokeAtkSlow = calm => .45 - .3 * Math.min(calm || 0, 3) / 3;   // 2026-10-27: 60 % war im Bosskampf schlechter als keine Fähigkeit
+// 45 % ohne Punkte, „Ruhige Hand“ senkt ihn bis 15 % (2026-10-27; vorher 60→20 %, im Bosskampf schlechter als keine Fähigkeit).
+export const smokeAtkSlow = calm => .45 - .3 * Math.min(calm || 0, 3) / 3;
 // Rollen für den Regal-Filter der Rüstkammer (Phase 10)
 export const ROLES = {
   atk: { name: 'Angriff', ids: ['catapult', 'bigbang', 'spin', 'turret', 'bees', 'grudge'] },

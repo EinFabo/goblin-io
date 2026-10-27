@@ -3,7 +3,7 @@ import { sfx } from '../core/audio.js';
 import { TAU, angDiff, clamp, face8 } from '../core/util.js';
 import { hurt } from './combat.js';
 import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
-import { P, abSrc, nearest, query, randomEnemyInView, run, setSrc } from './state.js';
+import { P, abSrc, isBig, nearest, query, randomEnemyInView, run, setSrc } from './state.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { smokeAtkSlow } from '../data/abilities.js';
 import { onProjHit, stepWeapon2 } from './weapons2.js';
@@ -161,7 +161,8 @@ export function updAllies(dt) {
   run.allies.forEach((al, i) => stepAlly(al, i, run.allies.length, w.dmg, w.spd, rate, dt));
 }
 // Ein Kumpel: nächsten Gegner in Reichweite suchen, hinlaufen, zustechen (auch für den Goblin-Ruf)
-export function stepAlly(al, i, n, dmg, spd, rate, dt) {
+// bigMul: Schadensfaktor gegen große Gegner (Goblin-Ruf .3)
+export function stepAlly(al, i, n, dmg, spd, rate, dt, bigMul = 1) {
   al.atk -= dt * rate; al.slash -= dt;
   let tgt = null, td = 0;
   for (const e of run.enemies) {
@@ -175,7 +176,7 @@ export function stepAlly(al, i, n, dmg, spd, rate, dt) {
   const reach = tgt ? tgt.r + 12 : 6;
   al.moving = d > reach;
   if (al.moving) { const s = Math.min(d - reach, spd * dt); al.x += dx / d * s; al.y += dy / d * s; al.face = face8(dx, dy, al.face); al.at += dt; }
-  if (tgt && d < reach + 6 && al.atk <= 0) { al.atk = .45; al.slash = .15; al.sa = Math.atan2(dy, dx); hurt(tgt, al.tmp && (tgt.boss || tgt.elite || tgt.miniboss || tgt.link) ? dmg * .3 : dmg, 90, dx / d, dy / d); }   // Goblin-Ruf: gegen Große 30 % (sonst legen die Krieger den Boss allein um)
+  if (tgt && d < reach + 6 && al.atk <= 0) { al.atk = .45; al.slash = .15; al.sa = Math.atan2(dy, dx); hurt(tgt, isBig(tgt) ? dmg * bigMul : dmg, 90, dx / d, dy / d); }
   if (Math.hypot(al.x - P.x, al.y - P.y) > 520) { al.px = al.x = P.x + rand(-30, 30); al.py = al.y = P.y + rand(-30, 30); puff(al.x, al.y, .5); }
 }
 export function updPProj(dt) {

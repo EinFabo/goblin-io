@@ -144,7 +144,7 @@ export function updAbilities(dt) {
   }
   setSrc('mech'); updMech(dt); setSrc(null); updMoves(dt); setSrc('brew'); updBrew(dt); setSrc(null);
   updDots(dt);
-  // Ewiger Stock: bis zum nächsten Einsatz alle 10 s ein kleiner Schwarm
+  // Ewiger Stock: bis zum nächsten Einsatz alle 15 s ein kleiner Schwarm
   if (run.hive && (run.hive.t -= dt) <= 0) { run.hive.t = 15; setSrc('bees'); swarmOf(M('bees'), 10, ABILITIES.bees.dur * .6); setSrc(null); }
   if (P.smokeT > 0) { P.smokeT -= dt; if (P.smokeT <= 0) smokeEnd(M('smoke')); }
   if (P.ambushT > 0) P.ambushT -= dt;
@@ -170,7 +170,7 @@ export function updAbilities(dt) {
   // Goblin-Ruf: Krieger auf Zeit
   setSrc('call');
   run.tmpAllies.forEach((al, i) => {
-    al.t -= dt; stepAlly(al, i, run.tmpAllies.length, (13 + P.lv * .8) * P.dmgMult * al.pow, 260 * al.spd, (P.rageT > 0 ? 1.6 : 1) * al.rate, dt);
+    al.t -= dt; stepAlly(al, i, run.tmpAllies.length, (13 + P.lv * .8) * P.dmgMult * al.pow, 260 * al.spd, (P.rageT > 0 ? 1.6 : 1) * al.rate, dt, .3);   // gegen Große 30 %, sonst legen die Krieger den Boss allein um
     if (al.t <= 0) {
       al.done = true; puff(al.x, al.y, .6);
       // Letzter Hieb: Krieger explodieren beim Gehen
@@ -942,8 +942,10 @@ const FX_UPD = {
     // Zuschnappen: Opfer hängt fest, Splitter treffen die Nachbarn
     query(f.x, f.y, 34, e => {
       if (e.obj) return;
-      hurt(e, f.dmg * (e.boss || e.link ? .4 : 1), 0, 0, 0, '#d9c9a0'); if (!e.boss) e.freezeT = Math.max(e.freezeT, f.hold); else e.slowT = 2;   // Bosse treten oft hinein: 40 %
-      query(f.x, f.y, f.splash, o => { if (o !== e) { const d = Math.hypot(o.x - f.x, o.y - f.y) || 1; hurt(o, f.dmg * f.sf, 120, (o.x - f.x) / d, (o.y - f.y) / d, '#d9c9a0'); } });
+      // Bosse (und ihre Teile) treten oft hinein: 40 % Schaden, auch durch Splitter, und sie hängen nicht fest
+      const bossy = o => o.boss || o.link;
+      hurt(e, f.dmg * (bossy(e) ? .4 : 1), 0, 0, 0, '#d9c9a0'); if (!bossy(e)) e.freezeT = Math.max(e.freezeT, f.hold); else e.slowT = 2;
+      query(f.x, f.y, f.splash, o => { if (o !== e) { const d = Math.hypot(o.x - f.x, o.y - f.y) || 1; hurt(o, f.dmg * f.sf * (bossy(o) ? .4 : 1), 120, (o.x - f.x) / d, (o.y - f.y) / d, '#d9c9a0'); } });
       if (f.sf >= 1) ring(f.x, f.y, 6, f.splash, .3, 'rgba(230,210,160,.8)', 5);
       f.snap = .4; f.uses--; sfx.stomp(); return false;
     });

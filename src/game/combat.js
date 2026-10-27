@@ -9,7 +9,7 @@ import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js';
 import { addEvents } from './run.js';
-import { P, abSrc, aoeId, run } from './state.js';
+import { P, abSrc, aoeId, isBig, run } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
@@ -23,7 +23,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   const crit = !inProc() && rnd() < P.crit + critBonus();   // Brand, Gift, Runen-Blitz: nie kritisch
   if (e.tbShock && e.freezeT > 0) dmg *= 1.5;   // Zeitbombe: Kälteschock
   dmg *= dealtMult(e);
-  if (P.bigMult > 1 && (e.elite || e.boss || e.miniboss || e.link)) dmg *= P.bigMult;   // Knochenschädel
+  if (P.bigMult > 1 && isBig(e)) dmg *= P.bigMult;   // Knochenschädel
   const rule = damageRules(e, dmg * (crit ? 2 : 1) * rand(.9, 1.1), kx, ky);
   const d = Math.max(rule.dmg > 0 ? 1 : 0, Math.round(rule.dmg));
   // Teile von Morgra teilen sich das Leben des Bosses. Ein Treffer-Ereignis (Explosion, Zone, Geschoss = ein query),
