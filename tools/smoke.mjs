@@ -430,7 +430,8 @@ console.log('Entwicklungs-Baum mit Vorschau:', JSON.stringify(evo));
 // Goblin-Klassen (Phase 9): Wahl in der Rüstkammer, je Klasse 30 s mit Zeichnen, Startwaffe, Knopf, Leertasten-
 // Bewegung (Salto, Teleport, Rolle) und Shift (Sturmangriff walzt kleine Gegner um); gesperrte Klasse spielt als Goblin
 const cls = {};
-await p.evaluate(() => { const G = GOBLIN; for (let s = 1; s <= 8; s++) G.save.stages[s] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 1, kills: 0, fast: 0 })) }; G.go('menu', '#armory'); });
+// Sprint-Baum leer (oben voll ausgebaut, mit Rammbock): dann rammt nur der Sturmangriff des Kriegers
+await p.evaluate(() => { const G = GOBLIN; G.save.abilities.sprint = { lv: 1, xp: 0, pts: {} }; for (let s = 1; s <= 8; s++) G.save.stages[s] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 1, kills: 0, fast: 0 })) }; G.go('menu', '#armory'); });
 await p.waitForTimeout(300);
 for (const c of ['bow', 'mage', 'war', 'gob']) {
   await p.click(`[data-cls="${c}"]`); await p.waitForTimeout(400);
