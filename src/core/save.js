@@ -11,10 +11,11 @@ import { ACH } from '../data/achievements.js';
 import { LEVELS } from '../data/levels.js';
 import { normRunes } from '../game/runes.js';
 import { COMBOS } from '../data/combos.js';
+import { CLASSES, CLASS_MAX_LV, classXpNeed } from '../data/classes.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
-export const VERSION = 5;
+export const VERSION = 6;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -62,6 +63,9 @@ export function defaults() {
     combos: [],
     // Fähigkeiten, die in der Rüstkammer schon angesehen wurden (sonst „Neu“-Markierung); die von Anfang an freien gelten als gesehen
     seen: ABILITY_IDS.filter(id => !ABILITIES[id].unlock),
+    // Goblin-Klassen (Phase 9): gewählte Klasse und Klassen-Level { id: { lv, xp } }
+    cls: 'gob',
+    classes: {},
   };
 }
 
@@ -127,6 +131,9 @@ export function normalize(raw) {
   };
   out.runes = normRunes(r.runes, out.abilities);
   out.combos = Array.isArray(r.combos) ? [...new Set(r.combos.filter(k => COMBOS[k]))] : [];
+  out.cls = CLASSES[r.cls] ? r.cls : 'gob';
+  out.classes = {};
+  for (const [k, v] of Object.entries(obj(r.classes))) if (CLASSES[k]) { const c = obj(v); out.classes[k] = { lv: num(c.lv, 1, 1, CLASS_MAX_LV) | 0, xp: num(c.xp) }; }
   out.seen = Array.isArray(r.seen) ? [...new Set(r.seen.filter(id => ABILITIES[id]))] : d.seen;
   for (const [k, v] of Object.entries(obj(st.c))) { const n = num(v); if (n) out.stats.c[k] = n; }
   for (const [k, v] of Object.entries(obj(r.ach))) if (ACH[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.ach[k] = n; }
@@ -228,6 +235,9 @@ export function migrateV4(v4) {
   return { ...r, version: 5, seen };
 }
 
+// v5 → v6 (Phase 9: Goblin-Klassen). Klasse und Klassen-Level kommen über normalize dazu (Goblin, Level 1).
+export function migrateV5(v5) { return { ...obj(v5), version: 6 }; }
+
 // Beliebigen Rohstand auf die aktuelle Version bringen
 export function migrate(raw) {
   let r = obj(raw);
@@ -235,6 +245,7 @@ export function migrate(raw) {
   if (r.version < 3) r = migrateV2(r);
   if (r.version < 4) r = migrateV3(r);
   if (r.version < 5) r = migrateV4(r);
+  if (r.version < 6) r = migrateV5(r);
   return normalize(r);
 }
 
@@ -277,6 +288,16 @@ export function gainAccountXp(n) {
   const p = save.profile; let up = 0;
   p.xp += n;
   while (p.level < 50 && p.xp >= accountXpNeed(p.level)) { p.xp -= accountXpNeed(p.level); p.level++; up++; }
+  return up;
+}
+
+// Klassen-Level (Phase 9): Stand ohne Eintrag Level 1; gibt die neuen Level zurück
+export const clsState = id => save.classes[id] || { lv: 1, xp: 0 };
+export function gainClassXp(id, n) {
+  const c = save.classes[id] || (save.classes[id] = { lv: 1, xp: 0 }); let up = 0;
+  c.xp += n;
+  while (c.lv < CLASS_MAX_LV && c.xp >= classXpNeed(c.lv)) { c.xp -= classXpNeed(c.lv); c.lv++; up++; }
+  if (c.lv >= CLASS_MAX_LV) c.xp = 0;
   return up;
 }
 

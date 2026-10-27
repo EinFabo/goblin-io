@@ -1,7 +1,7 @@
 // ---------- Karten und Truhen (PLAN 9.3, 9.5) ----------
 // Jede Waffe und jedes Passiv hat eine Kartenstufe. Karten kommen aus Truhen und dem Laden,
 // Aufwerten kostet Karten + Gold. Alle Gegenstände sind auch ohne Karten im Lauf wählbar.
-import { PASSIVES, WEAPONS } from './weapons.js';
+import { PASSIVES, POOL_WEAPONS, WEAPONS } from './weapons.js';
 
 export const RARITIES = ['common', 'rare', 'epic', 'legendary'];
 export const RARITY = {
@@ -27,7 +27,7 @@ export const CARD_RARITY = {
   horn: 'rare', skull: 'rare', hourglass: 'rare',
   cloak: 'epic', fang: 'epic',
 };
-export const CARD_IDS = [...Object.keys(WEAPONS), ...Object.keys(PASSIVES)];
+export const CARD_IDS = [...POOL_WEAPONS, ...Object.keys(PASSIVES)];
 export const isWeapon = id => !!WEAPONS[id];
 export const cardName = id => (WEAPONS[id] || PASSIVES[id]).name;
 export const CARD_MAX = 10;

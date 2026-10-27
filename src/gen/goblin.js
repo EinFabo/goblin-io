@@ -22,7 +22,7 @@ export const HATS = {
   pirate: { col: '#26232a', shape: 'pirate', trim: '#e8d36a' }, viking: { col: '#9aa3aa', shape: 'viking', trim: '#efe6c8' },
   wizard: { col: '#2a3a8a', shape: 'wizard', trim: '#ffd84a' }, crown: { col: '#f4c430', shape: 'crown', trim: '#d63a3a' },
 };
-export const DEFAULT_LOOK = { skin: 'green', outfit: 'vest', hat: 'zipfel' };
+export const DEFAULT_LOOK = { skin: 'green', outfit: 'vest', hat: 'zipfel', cls: 'gob', gold: false };
 
 export const ANIMS = { idle: 4, walk: 6, sprint: 6, roll: 6, hurt: 2, victory: 6, death: 6 };
 
@@ -101,15 +101,21 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
     const lift = s < 0 ? p.handLiftL : p.handLiftR;
     const hx = x - k * (h + 2) + (lift > 8 ? 6 * s * ac : 0), hy = 6 + c * .43 * h - lift;
     const el = [circ(hx, hy, 5, S.skin)];
-    if (s > 0 && p.dagger) el.unshift(dagger(hx, hy));
-    return { d: d + h * c, el, up: (s < 0 ? p.handLiftL : p.handLiftR) > 8 };
+    // Klassen (Phase 9): Bogen, Stab oder Keule immer in der rechten Hand; sonst der Dolch beim Jubeln
+    const item = s > 0 && clsItem(look.cls, hx, hy, look.gold, S.skin);
+    if (!item && s > 0 && p.dagger) el.unshift(dagger(hx, hy));
+    return { d: d + h * c, el, up: (s < 0 ? p.handLiftL : p.handLiftR) > 8, item };
   });
+  // Klassenwaffe: in der vorderen Hand vor dem Kopf (Stab und Bogen ragen über ihn), in der hinteren hinter dem Körper
+  const itemBack = hands.filter(h => h.item && h.d < -2 && !h.up).map(h => h.item);
+  // von hinten gesehen verdeckt der Kopf den Gegenstand
+  const itemFront = hands.filter(h => h.item && (h.d >= -2 || h.up)).map(h => h.item), itemMid = c > -0.2 ? [] : itemFront.splice(0);
   const handsBack = hands.filter(h => h.d < -2 && !h.up).flatMap(h => h.el);
   const handsFront = hands.filter(h => h.d >= -2 && !h.up).flatMap(h => h.el);
   const handsTop = hands.filter(h => h.up).flatMap(h => h.el);
 
   // Körper (Outfit-Ebene)
-  const bw = 18 + 4 * ac;
+  const bw = 18 + 4 * ac + (look.cls === 'war' ? 3 : 0);   // Krieger etwas breiter
   const body = [rect(-bw / 2, -2, bw, 20, 6, O.body), rect(-bw / 2 + 1, 9, bw - 2, 4, 0, O.belt, NOSTROKE)];
   // Outfit-Details auf der Vorderseite (wandern mit der Drehung zur Seite)
   if (c > -0.2) {
@@ -118,6 +124,18 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
     else if (O.deco === 'straps') for (const s of [-1, 1]) { const [sx] = T(5 * s, 8); body.push(line(sx, -2, sx, 9, ` stroke="${O.belt}" stroke-width="2.4"`), circ(sx, 1, 1.3, O.trim, NOSTROKE)); }   // Träger
     if (O.plate) { body.push(rect(mx - 6 * w, 0, 12 * w, 7, 3, O.plate, ' stroke-width="1.2"')); for (const s of [-1, 1]) body.push(circ(mx + s * 7 * w, 5, 1.2, '#5a6068', NOSTROKE)); }
     if (O.patch) { const [px] = T(-4, 9); body.push(rect(px - 3, 2, 6, 5, 1, O.patch, ' stroke-width="1"')); }
+  }
+  // Klassen-Ausstattung am Körper: Robe (Magier), Fellkragen (Krieger), Köcher (Bogen, s. back)
+  if (look.cls === 'mage') body.push(path(`M${f(-bw / 2)} 11 L${f(-bw / 2 - 3)} 21 Q0 24 ${f(bw / 2 + 3)} 21 L${f(bw / 2)} 11Z`, '#4a3a8a'), line(-bw / 2 - 2, 19, bw / 2 + 2, 19, ' stroke="#ffd84a" stroke-width="1.4"'));
+  if (look.cls === 'war') for (const sd of [-1, 1]) { const [sx, sdp] = T(13 * sd, 0); if (sdp > -12) body.push(ell(sx, 4, 6.5, 5, '#8a6a44'), path(`M${f(sx - 6)} 6 l2 3 l2 -2 l2 3 l2 -2 l2 3`, 'none', ' stroke="#5a4428" stroke-width="1"')); }
+  const back = [];
+  if (look.cls === 'bow') {
+    // Köcher auf dem Rücken: von vorn der Gurt quer über die Brust, von hinten der Köcher mit Pfeilen über der Schulter
+    if (c > -0.2) { const [ax] = T(-8, 9), [bx] = T(8, 9); body.push(line(bx, -1, ax, 12, ' stroke="#3b2414" stroke-width="2.6"')); }
+    else {
+      const [qx] = T(-6, -9), g = [line(-2, -8, -4, -16, ' stroke="#e5484d" stroke-width="2.6"'), line(1, -8, 1, -18, ' stroke="#f2ead6" stroke-width="2.6"'), line(4, -8, 6, -15, ' stroke="#e5484d" stroke-width="2.6"'), rect(-5, -9, 10, 24, 2, '#6b4424')];
+      back.push(group(g, ` transform="translate(${f(qx)} 0) rotate(-18)"`));
+    }
   }
   if (O.patch) body.push(poly([[-bw / 2, 15], [-bw / 4, 19], [0, 15], [bw / 4, 19], [bw / 2, 15], [bw / 2, 18], [-bw / 2, 18]], O.body, NOSTROKE));   // ausgefranster Saum
 
@@ -170,14 +188,18 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
 
   // Oberkörper neigen (um die Hüfte), vorne wirkt das als leichtes Absenken
   const up = group([
+    group(itemBack, ' id="item-back"'),
     group(handsBack, ' id="arms-back"'),
     group(body, ' id="outfit"'),
     group(handsFront, ' id="arms-front"'),
+    group(itemMid, ' id="item-mid"'),
     group(byDepth(earsBack), ' id="ears-back"'),
     group(head, ' id="head"'),
+    group(back, ' id="gear-back"'),
     group(hat, ' id="hat"'),
     group(byDepth(earsFront), ' id="ears-front"'),
     group(face, ' id="face"'),
+    group(itemFront, ' id="item"'),
     group(handsTop, ' id="arms-top"'),
   ], ` transform="translate(0 ${f(-p.b + p.lean / 15 * 2 * ac)}) rotate(${f(-p.lean * k)} 0 12)"`);
 
@@ -265,6 +287,14 @@ function hatShape(H, hy, { k, c, ak, ac, T }) {
   return out;
 }
 
+// Klassenwaffe in der Hand (gold: Klassen-Level 20)
+function clsItem(cls, hx, hy, gold, skin) {
+  const hand = circ(0, 0, 5, skin), wood = gold ? '#f4c430' : '#8a5a32', t = ` transform="translate(${f(hx)} ${f(hy)})"`;
+  if (cls === 'bow') return group([path('M3 -17 Q13 0 3 17', 'none', ' stroke-width="5"'), path('M3 -17 Q13 0 3 17', 'none', ` stroke="${wood}" stroke-width="2.6"`), line(3, -17, 3, 17, ' stroke="#f2ead6" stroke-width=".9"'), hand], t);
+  if (cls === 'mage') return group([line(1, 12, 3, -22, ' stroke-width="4.6"'), line(1, 12, 3, -22, ` stroke="${gold ? '#f4c430' : '#6b4424'}" stroke-width="2.4"`), poly([[3, -31], [7, -24], [3, -18], [-1, -24]], '#a77bff', ' stroke-width="1.4"'), circ(3, -24, 7, '#b48cff', ' fill-opacity=".3"' + NOSTROKE), hand], t);
+  if (cls === 'war') return group([line(0, 8, 5, -10, ' stroke-width="5.4"'), line(0, 8, 5, -10, ' stroke="#5a3a22" stroke-width="3"'), path('M1 -7 Q-3 -26 9 -30 Q20 -23 10 -6Z', gold ? '#f4c430' : '#a8763e', ' stroke-width="1.8"'), circ(6, -20, 1.6, '#c9d1d8', ' stroke-width=".7"'), circ(11, -13, 1.6, '#c9d1d8', ' stroke-width=".7"'), hand], t);
+  return null;
+}
 function dagger(hx, hy) {
   // Dolch nach oben in der Hand
   return group([

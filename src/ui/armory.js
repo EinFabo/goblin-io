@@ -1,5 +1,9 @@
 import { sfx } from '../core/audio.js';
-import { persist, save } from '../core/save.js';
+import { clsState, persist, save, stageCleared } from '../core/save.js';
+import { CLASSES, CLASS_IDS, CLASS_MAX_LV, CLASS_PERKS, DASH_KIND, SPRINT_KIND, classUnlockText, classUnlocked, classXpNeed } from '../data/classes.js';
+import { WEAPONS } from '../data/weapons.js';
+import { loadGoblin } from '../render/sprites.js';
+import { dropGoblinIcons } from '../render/icons.js';
 import { $ } from '../core/util.js';
 import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, ROLES, SLOT2_ACCT, SLOT_KEYS, STAR_COLS, STAR_MAX, STAR_NAMES, STAR_XP, abilXpNeed, spentPoints, treeDef, unlockText, xpPerUse } from '../data/abilities.js';
 import { openCombos } from './combobook.js';
@@ -31,8 +35,42 @@ export function cleanLoadout() {
 
 export function renderArmory() {
   cleanLoadout();
-  if (!sel || !treeDef(sel)) sel = save.loadout[0];
-  renderHooks(); renderShelf(); renderNote();
+  if (!sel || (!treeDef(sel) && !clsSel())) sel = save.loadout[0];
+  renderHooks(); renderClasses(); renderShelf(); renderNote();
+}
+
+// ---------- Klassen (Phase 9): Leiste über dem Regal, Antippen wählt die Klasse ----------
+// Bewegung der gewählten Klasse (Salto, Teleport, Sturmangriff): eigener Name, gleicher Baum wie Rolle bzw. Sprint
+const moveKind = id => { const C = CLASSES[clsOk(save.cls) ? save.cls : 'gob']; return id === 'dash' ? DASH_KIND[C.dash] : SPRINT_KIND[C.sprint]; };
+const clsSel = () => (sel && sel.startsWith('cls:') ? sel.slice(4) : null);
+const clsOk = id => classUnlocked(id, stageCleared);
+const pct = v => (v > 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + ' %';
+function renderClasses() {
+  $('#armCls').innerHTML = CLASS_IDS.map(id => {
+    const C = CLASSES[id], ok = clsOk(id), on = save.cls === id;
+    return `<button class="clsbtn${on ? ' on' : ''}${ok ? '' : ' locked'}${clsSel() === id ? ' sel' : ''}" data-cls="${id}" aria-pressed="${on}">
+      <img src="${icon(C.weapon)}" alt=""><span class="n">${C.short}</span>${ok ? `<span class="tlv">${clsState(id).lv}</span>` : '<span class="lk">🔒</span>'}</button>`;
+  }).join('');
+}
+function clsNote(id) {
+  const C = CLASSES[id], ok = clsOk(id), c = clsState(id), W = WEAPONS[C.weapon];
+  const stats = [C.hp !== 1 && `Leben ${pct(C.hp)}`, C.speed !== 1 && `Tempo ${pct(C.speed)}`, C.cd !== 1 && `Abklingzeit ${pct(C.cd)}`].filter(Boolean);
+  let h = `<h3>${C.name}</h3><p class="c">${save.cls === id ? 'Gewählt' : ok ? 'Klasse' : 'Gesperrt'}</p><p>${C.desc}</p>
+    <p class="clsw"><img src="${icon(C.weapon)}" alt=""><span><b>${W.name}</b> – ${W.info[0]}</span></p>
+    <p class="clsmv"><span class="key">Leer</span> ${DASH_KIND[C.dash].name} · <span class="key">Shift</span> ${SPRINT_KIND[C.sprint].name}${stats.length ? ` · ${stats.join(', ')}` : ''}</p>`;
+  if (!ok) return h + `<p class="lock">Noch nicht frei. ${classUnlockText(id)}.</p>`;
+  const full = c.lv >= CLASS_MAX_LV;
+  h += `<div class="bar"><i style="width:${full ? 100 : Math.min(100, c.xp / classXpNeed(c.lv) * 100).toFixed(0)}%"></i></div><p class="xp">Klassen-Level ${c.lv}${full ? ` · Maximum: ${C.master}` : ` · ${Math.floor(c.xp)} / ${classXpNeed(c.lv)} XP (wie Konto-XP)`}</p>`;
+  h += `<ul class="perks">${CLASS_PERKS.map(p => `<li class="${c.lv >= p.lv ? 'have' : ''}"><b>${p.lv}</b> ${p.txt}</li>`).join('')}</ul>`;
+  h += `<div class="acts"><button class="btn ${save.cls === id ? 'ghost' : 'primary'}" data-usecls="${id}" ${save.cls === id ? 'disabled' : ''}>${save.cls === id ? 'Gewählt' : 'Diese Klasse spielen'}</button></div>`;
+  return h;
+}
+function useClass(id) {
+  if (!clsOk(id) || save.cls === id) return;
+  save.cls = id; persist(); sfx.pickCard();
+  // Aussehen neu laden (Klassenwaffe in der Hand), Icons mit Goblin-Bildern neu zeichnen
+  loadGoblin().then(dropGoblinIcons);
+  renderClasses(); renderShelf(); renderNote();
 }
 
 function renderHooks(swing = -1) {
@@ -49,7 +87,7 @@ function renderHooks(swing = -1) {
 function renderShelf() {
   // Rolle und Sprint: immer dabei, eigene Marken vorn im Regal
   const moves = MOVE_IDS.map(id => `<button class="token move${id === sel ? ' on' : ''}" data-pick="${id}" role="option" aria-selected="${id === sel}">
-      <span class="disc"><img src="${icon(MOVES[id].icon)}" alt=""></span><span class="n">${MOVES[id].name}</span><span class="tlv">${st(id).lv}</span>${freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}</button>`).join('');
+      <span class="disc"><img src="${icon(moveKind(id).icon)}" alt=""></span><span class="n">${moveKind(id).name}</span><span class="tlv">${st(id).lv}</span>${freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}</button>`).join('');
   // Filter nach Rolle, Sortierung nach Level (gesperrte hinten); Rolle und Sprint nur ohne Filter
   let ids = role === 'all' ? ABILITY_IDS : ROLES[role].ids;
   if (byLv) ids = [...ids].sort((a, b) => (canEquip(b) - canEquip(a)) || (st(b).lv + (st(b).st || 0) * 100) - (st(a).lv + (st(a).st || 0) * 100));
@@ -65,8 +103,10 @@ function renderShelf() {
 }
 
 function renderNote() {
+  if (clsSel()) { $('#armNote').innerHTML = clsNote(clsSel()); return; }
   const id = sel, A = treeDef(id), move = !!MOVES[id], ok = move || canEquip(id), s = st(id), slot = save.loadout.indexOf(id), free = freePts(id);
-  let h = `<h3>${A.name}</h3><p class="c">${move ? 'Immer dabei' : CHARGE_TXT[A.charge](A.need)}</p><p>${A.desc}</p>`;
+  const K = move && moveKind(id), alt = K && K.name !== A.name;
+  let h = `<h3>${alt ? K.name : A.name}</h3><p class="c">${move ? 'Immer dabei' : CHARGE_TXT[A.charge](A.need)}</p><p>${alt ? `${K.desc} Teilt Level und Skill Tree mit ${id === 'dash' ? 'der Rolle' : 'dem Sprint'}.` : A.desc}</p>`;
   if (!ok) { $('#armNote').innerHTML = h + `<p class="lock">Noch nicht frei. ${unlockText(id)}.</p>`; return; }
   // ab Level 30: Balken bis zum nächsten Stern (Phase 10), Rolle und Sprint haben keine Sterne
   const n = s.st || 0, starBar = s.lv >= ABIL_MAX_LV && !move && n < STAR_MAX;
@@ -87,7 +127,7 @@ function renderNote() {
 }
 
 // Ansehen nimmt die „Neu“-Markierung weg
-function pick(id) { sel = id; if (isNew(id)) { save.seen.push(id); persist(); } sfx.click(); renderHooks(); renderShelf(); renderNote(); }
+function pick(id) { sel = id; if (isNew(id)) { save.seen.push(id); persist(); } sfx.click(); renderHooks(); renderClasses(); renderShelf(); renderNote(); }
 function hang(i) {
   const L = save.loadout, other = 1 - i;
   if (MOVES[sel] || !canEquip(sel) || !slotOpen(i) || L[i] === sel) return;
@@ -99,6 +139,9 @@ function hang(i) {
   renderHooks(i); renderShelf(); renderNote();
 }
 $('#armory').addEventListener('click', e => {
+  const u = e.target.closest('[data-usecls]'); if (u) { useClass(u.dataset.usecls); return; }
+  // Klasse antippen: zeigt sie; eine freie Klasse wird gleich gewählt
+  const cb = e.target.closest('[data-cls]'); if (cb) { pick('cls:' + cb.dataset.cls); useClass(cb.dataset.cls); return; }
   const t = e.target.closest('[data-tree]'); if (t) { openTree(t.dataset.tree, () => { if (!$('#armory').hidden) renderArmory(); }); return; }
   const h = e.target.closest('[data-hang]'); if (h) { hang(+h.dataset.hang); return; }
   const k = e.target.closest('[data-sock], [data-runes]');

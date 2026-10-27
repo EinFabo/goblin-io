@@ -1,6 +1,7 @@
 import { TAU } from '../core/util.js';
 import { PROC, mk } from './proc.js';
 import { SPR, blit } from './sprites.js';
+import { drawArrow, drawBow, drawClub, drawOrb, drawStaff } from './gear.js';
 
 // ---------- Icons ----------
 export const ICON = {};
@@ -183,6 +184,35 @@ export function icon(id) {
       case 'rage':
         g.beginPath(); for (let i = 0; i < 16; i++) { const a = i * TAU / 16, r = i % 2 ? 12 : 26; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); } g.closePath(); st('#ff6a3d');
         g.beginPath(); g.arc(0, 0, 9, 0, TAU); st('#ffd84a', '#0a0f06', 2);
+        break;
+      // Klassenwaffen und Klassen-Bewegungen (Phase 9)
+      case 'bow':
+        g.save(); g.rotate(-Math.PI / 4); drawBow(g); g.restore();
+        g.save(); g.rotate(-Math.PI / 4); g.translate(4, 0); g.scale(.9, .9); g.rotate(-Math.PI / 2); drawArrow(g); g.restore();
+        if (evo) for (const [x, y] of [[-18, -14], [-6, -22], [8, -26]]) { g.save(); g.translate(x, y + 30); g.rotate(Math.PI / 2); g.scale(.45, .45); drawArrow(g); g.restore(); }
+        break;
+      case 'staff':
+        if (evo) for (let i = 0; i < 5; i++) { const a = i * TAU / 5 - Math.PI / 2; g.save(); g.translate(Math.cos(a) * 22, Math.sin(a) * 22); g.scale(.45, .45); drawOrb(g); g.restore(); }
+        g.save(); g.rotate(Math.PI / 6); drawStaff(g); g.restore();
+        break;
+      case 'club':
+        if (evo) { g.beginPath(); g.ellipse(0, 18, 26, 8, 0, 0, TAU); g.strokeStyle = 'rgba(232,200,138,.8)'; g.lineWidth = 3; g.stroke(); }
+        g.save(); g.rotate(Math.PI / 5); drawClub(g); g.restore();
+        break;
+      case 'flip':
+        g.beginPath(); g.arc(0, 4, 20, Math.PI * 1.05, Math.PI * 1.95); g.strokeStyle = '#bff0ff'; g.lineWidth = 4; g.stroke();
+        g.beginPath(); g.moveTo(22, 2); g.lineTo(18, -12); g.lineTo(30, -6); g.closePath(); st('#7fd8ff');
+        g.save(); g.translate(-6, 16); g.scale(.5, .5); drawArrow(g); g.restore();
+        break;
+      case 'blink':
+        g.setLineDash([4, 5]); g.beginPath(); g.moveTo(-26, 8); g.lineTo(14, 8); g.strokeStyle = '#c9a8ff'; g.lineWidth = 3; g.stroke(); g.setLineDash([]);
+        g.save(); g.translate(16, 0); g.scale(.9, .9); drawOrb(g); g.restore();
+        g.beginPath(); g.arc(-22, 8, 7, 0, TAU); g.strokeStyle = 'rgba(200,170,255,.7)'; g.lineWidth = 2; g.stroke();
+        break;
+      case 'charge':
+        g.strokeStyle = '#ffd27a'; g.lineWidth = 4;
+        for (const [y, l] of [[-12, 14], [0, 20], [12, 14]]) { g.beginPath(); g.moveTo(-26, y); g.lineTo(-26 + l, y); g.stroke(); }
+        g.save(); g.translate(8, 0); g.rotate(Math.PI / 2); g.scale(.8, .8); drawClub(g); g.restore();
         break;
       case 'dash':
         g.strokeStyle = '#bff0ff'; g.lineWidth = 4;

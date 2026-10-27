@@ -1,5 +1,6 @@
+import { CLASS_MAX_LV, classUnlocked } from '../data/classes.js';
 import { ANIMS, goblinSvg } from '../gen/goblin.js';
-import { save } from '../core/save.js';
+import { save, stageCleared } from '../core/save.js';
 import { DAGGER_TINT } from '../data/cosmetics.js';
 import { DRAWN, MIRROR } from '../gen/svg.js';
 import { MAGE_ANIMS, castOffsets, mageSvg } from '../gen/mages.js';
@@ -174,7 +175,12 @@ async function loadGoblinRun() {
 // Goblin aus dem Generator: gob.<anim>.<richtung>.<n> für alle 8 Richtungen.
 // Rechte Richtungen zeigen auf dasselbe Bild und werden beim Zeichnen gespiegelt. Alte Namen (idle_down_1 …) zeigen auf die neuen Bilder.
 // Aussehen aus dem Spielstand (Garderobe); ein späterer Aufruf gewinnt, falls zwei gleichzeitig laufen
-export const goblinLook = () => ({ skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat });
+// Klasse (Phase 9): Ausstattung und Klassenwaffe; Klassen-Level 20 macht sie golden
+// (gesperrte Klasse – alter oder fremder Stand – spielt und sieht aus wie der Goblin, s. newRun)
+export function goblinLook() {
+  const cls = classUnlocked(save.cls, stageCleared) ? save.cls : 'gob';
+  return { skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat, cls, gold: !!(save.classes[cls] && save.classes[cls].lv >= CLASS_MAX_LV) };
+}
 let gobToken = 0;
 export async function loadGoblin(look = goblinLook()) {
   const me = ++gobToken;

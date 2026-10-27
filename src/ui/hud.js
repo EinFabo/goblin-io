@@ -11,6 +11,7 @@ import { on } from '../core/events.js';
 import { save } from '../core/save.js';
 import { RUNES, parseRune, tierInfo } from '../data/runes.js';
 import { socketsOf } from '../game/runes.js';
+import { DASH_KIND, SPRINT_KIND, classOf } from '../data/classes.js';
 
 // ---------- HUD ----------
 export const hudCache = {};
@@ -91,8 +92,13 @@ export function setupAbilButtons() {
     b.querySelector('.rdots').innerHTML = socketsOf(save, s.id).map(parseRune).filter(Boolean).map(r => `<i style="--rc:${RUNES[r.id].col};--rt:${tierInfo(r.tier).color}"></i>`).join('');
     for (const k of ['p', 'r', 'o', 'l', 'n']) delete hudCache['#ab' + i + 'Btn' + k];
   });
-  // Rolle/Sprint: neuer Lauf ohne Pop und Klick vom Stand des letzten
-  for (const id of ['#dashBtn', '#sprintBtn']) for (const k of ['p', 'r', 'n']) delete hudCache[id + k];
+  // Rolle/Sprint: neuer Lauf ohne Pop und Klick vom Stand des letzten; Bild und Name je Klasse (Salto, Teleport, Sturmangriff)
+  const C = classOf(run.cls);
+  for (const [id, K] of [['#dashBtn', DASH_KIND[C.dash]], ['#sprintBtn', SPRINT_KIND[C.sprint]]]) {
+    const b = $(id); b.querySelector('img').src = icon(K.icon); b.querySelector('.lbl').textContent = K.name;
+    b.setAttribute('aria-label', id === '#sprintBtn' ? K.name + ' (gedrückt halten)' : K.name);
+    for (const k of ['p', 'r', 'n']) delete hudCache[id + k];
+  }
 }
 const ABIL_COL = { rage: '#ff5a3c', mech: '#e0a83a', trap: '#c9a26a', smoke: '#b8b8c8', catapult: '#a08a6a', hook: '#8fd0ff', shroom: '#7be04a', shield: '#dfe6ea', rats: '#d9a066', call: '#6fc23a', totem: '#ffd84a', timebomb: '#8fe6ff', bigbang: '#ff9a2e', charm: '#ffd84a', oilcask: '#6a5a8a', burrow: '#a8865a', cannon: '#c9973a', decoy: '#e2c46a', turret: '#ff9a2e', spin: '#dfe6ea', grudge: '#ff7a3c', scrapmag: '#e5484d', bees: '#ffd84a', brew: '#9cf06a' };
 export function slotHtml(ic, lv, evo, auto = false, mega = false) { return `<div class="slot${evo ? ' evo' : ''}${auto ? ' auto' : ''}${mega ? ' mega' : ''}"><img src="${ic}" alt=""><i>${mega ? '★★' : evo ? '★' : lv}</i></div>`; }

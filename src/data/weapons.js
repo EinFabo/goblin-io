@@ -62,6 +62,17 @@ export const WEAPONS = {
   mine: { name: 'Goblin-Minen', evo: 'Minenfeld', with: 'bag',
     info: ['Legt Minen, die hochgehen, wenn ein Gegner drauftritt.', '+30 % Schaden', '+1 Mine', 'Größere Explosion', '+1 Mine, legt schneller'],
     evoInfo: 'Ein ganzes Minenfeld, jede Explosion schleudert Splitter umher.' },
+  // ---------- Klassenwaffen (Phase 9, 2026-10-27): Startwaffe ihrer Klasse, nicht im Level-Up-Angebot und ohne eigene Karte
+  // (die Dolch-Karte gilt für alle Startwaffen). Entwicklung mit einem Passiv, das auch eine andere Waffe nutzt.
+  bow: { name: 'Kurzbogen', evo: 'Pfeilhagel', with: 'oil', auto: 3, cls: 'bow',
+    info: ['Schießt Pfeile, die einen Gegner durchbohren. Weite Reichweite.', '+1 Pfeil', '+40 % Schaden', '+1 Pfeil, durchbohrt mehr', '+1 Pfeil, schießt schneller'],
+    evoInfo: 'Pfeilsalven durchschlagen alles, dazu regnet es regelmäßig Pfeile auf die Horde.' },
+  staff: { name: 'Zauberstab', evo: 'Arkansturm', with: 'book', auto: 3, cls: 'mage',
+    info: ['Schießt zielsuchende Magie-Kugeln.', '+1 Kugel', '+35 % Schaden', '+1 Kugel, durchbohrt einen Gegner', '+1 Kugel, zaubert schneller'],
+    evoInfo: 'Ein Ring aus Magie-Kugeln schwärmt aus und jagt jeden Gegner.' },
+  club: { name: 'Keule', evo: 'Erdspalter', with: 'armor', auto: 3, cls: 'war',
+    info: ['Schwingt eine Keule im Halbkreis und stößt Gegner zurück.', '+30 % Schaden', 'Größerer Schwung', 'Schlägt rundherum, +20 % Schaden', '+15 % Schaden, schlägt schneller'],
+    evoInfo: 'Riesige Rundum-Schläge, jeder dritte spaltet den Boden mit einer Druckwelle.' },
 };
 export const PASSIVES = {
   whet: { name: 'Wetzstein', info: '+12 % Schaden' },
@@ -112,4 +123,10 @@ export const BOONS = {
   hp: { name: 'Dicker Bauch', info: '+8 % Leben, heilt so viel', icon: 'heart', v: .08 },
 };
 // Welche Waffe entwickelt sich mit diesem Passiv?
-export const weaponOf = pid => Object.keys(WEAPONS).find(k => WEAPONS[k].with === pid);
+// own: eigene Waffen-ids – eine eigene Waffe mit diesem Passiv geht vor (Klassenwaffen teilen sich Passive mit anderen)
+export const weaponOf = (pid, own) => (own && own.find(k => WEAPONS[k].with === pid)) || Object.keys(WEAPONS).find(k => WEAPONS[k].with === pid && !WEAPONS[k].cls);
+// Waffen fürs Level-Up-Angebot, die Karten und den Entwicklungs-Baum (ohne Klassenwaffen)
+export const POOL_WEAPONS = Object.keys(WEAPONS).filter(k => !WEAPONS[k].cls);
+export const CLASS_WEAPONS = Object.keys(WEAPONS).filter(k => WEAPONS[k].cls);
+// Kartenstufe einer Waffe: Klassenwaffen nutzen die Dolch-Karte
+export const cardIdOf = id => (WEAPONS[id] && WEAPONS[id].cls ? 'dagger' : id);

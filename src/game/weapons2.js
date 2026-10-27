@@ -177,7 +177,65 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       let mines = 0; for (let i = run.wfx.length - 1; i >= 0; i--) if (run.wfx[i].k === 'mine' && ++mines > 14) run.wfx[i].life = 0;
       sfx.throw(); break;
     }
+    // ---------- Klassenwaffen (Phase 9) ----------
+    case 'bow': {
+      if (w.evo) {
+        // Pfeilregen alle 2,4 s auf bis zu sechs Gegner (fällt nach 0,35 s)
+        w.t2 -= dt * rate;
+        if (w.t2 <= 0) {
+          w.t2 = 2.4 * P.cdMult; const c = randomEnemyInView(20);
+          for (let i = 0; i < 6 && c.length; i++) { const e = c.splice((rnd() * c.length) | 0, 1)[0]; run.wfx.push({ k: 'arrows', x: e.x, y: e.y, t: 0, dur: .35, rad: 55 * P.area, dmg: 26 * dm * aoe() }); }
+        }
+      }
+      w.t -= dt * rate; if (w.t > 0) break;
+      const t = nearest(640), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
+      if (w.evo) { w.t = .55 * P.cdMult; for (let i = 0; i < 5; i++) shoot('arrow', a + (i - 2) * .1, 22, 99, 820 * P.proj, .9, { r: 11 }); }
+      else {
+        w.t = [.8, .8, .75, .75, .6][L] * P.cdMult;
+        const n = [1, 2, 2, 3, 4][L], dmg = [14, 14, 19, 19, 21][L], pierce = [1, 1, 1, 2, 2][L];
+        for (let i = 0; i < n; i++) shoot('arrow', a + (i - (n - 1) / 2) * .09, dmg, pierce, 760 * P.proj, .9, { r: 10 });
+      }
+      sfx.throw(); break;
+    }
+    case 'staff': {
+      w.t -= dt * rate; if (w.t > 0) break;
+      const c = randomEnemyInView(20);
+      if (w.evo) {
+        w.t = .7 * P.cdMult; w.rot += .4;
+        for (let i = 0; i < 6; i++) shoot('orb', w.rot + i * TAU / 6, 20, 1, 380 * P.proj, 2.2, { target: c.length ? pick(c) : null, sc: 1.3 });
+      } else {
+        w.t = [.95, .95, .9, .9, .75][L] * P.cdMult;
+        const n = [1, 2, 2, 3, 4][L], dmg = [15, 15, 20, 20, 22][L], pierce = [0, 0, 0, 1, 1][L];
+        const t = nearest(560), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
+        for (let i = 0; i < n; i++) shoot('orb', a + (i - (n - 1) / 2) * .5, dmg, pierce, 400 * P.proj, 1.8, { target: c.length ? c[i % c.length] : t, sc: 1 });
+      }
+      sfx.cast(); break;
+    }
+    case 'club': {
+      w.t -= dt * rate; if (w.t > 0) break;
+      const t = nearest(220), a = t ? Math.atan2(t.y - P.y, t.x - P.x) : Math.atan2(P.aimY, P.aimX);
+      if (w.evo) {
+        w.t = .8 * P.cdMult; w.n = (w.n || 0) + 1;
+        swing(a, 150 * P.area, 45 * dm, 300, true);
+        if (w.n % 3 === 0) later(.12, () => wave(P.x, P.y, 210 * P.area, 30 * dm * aoe(), 260, '#c9a35a'));
+      } else {
+        w.t = [.9, .9, .85, .85, .7][L] * P.cdMult;
+        swing(a, [95, 95, 110, 115, 120][L] * P.area, [20, 26, 26, 31, 36][L] * dm, 200, L >= 3);
+      }
+      w.swing = { a, at: run.time, R: (w.evo ? 150 : [95, 95, 110, 115, 120][L]) * P.area, full: w.evo || L >= 3 };
+      sfx.whoosh(); break;
+    }
   }
+}
+// Keulenschlag: Halbkreis (oder rundherum) um den Goblin, Rückstoß nach außen
+function swing(a, R, dmg, kb, full) {
+  const ca = Math.cos(a), sa = Math.sin(a);
+  query(P.x, P.y, R, e => {
+    const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
+    if (!full && (dx * ca + dy * sa) / d < -.2) return;   // hinter dem Goblin: kein Treffer
+    hurt(e, dmg, kb, dx / d, dy / d, '#e8c88a');
+  });
+  run.shake = Math.max(run.shake, 2);
 }
 
 // ---------- Dauerhafte Effekte ----------
@@ -208,6 +266,10 @@ export function updWfx(dt) {
         if (f.evo) for (let i = 0; i < 6; i++) shootRaw('shard', i * TAU / 6 + rand(-.2, .2), 14 * f.dm, 1, 420 * P.proj, .6, { x: f.x, y: f.y, sc: 1 });
       }
     } else if (f.k === 'beam') { if (f.t >= f.dur) f.done = true; }
+    else if (f.k === 'arrows') {
+      // Pfeilregen (Pfeilhagel): trifft beim Aufschlag alles im Kreis
+      if (f.t >= f.dur) { f.done = true; query(f.x, f.y, f.rad, e => hurt(e, f.dmg, 40, 0, 0, '#e8d6a0')); for (let i = 0; i < 6; i++) part(f.x + (Math.random() - .5) * f.rad * 1.4, f.y + (Math.random() - .5) * f.rad, 0, -30, .35, '#c9a35a', 3); }
+    }
     else if (f.k === 'eclipse') {
       // Mega Sonnenfinsternis: vier Strahlen kreisen um die Mitte
       f.a += 2.2 * dt; f.x = P.x; f.y = P.y - 8;   // die Strahlen hängen am Goblin

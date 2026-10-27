@@ -425,8 +425,42 @@ const trace = async peek => p.evaluate(async peek => {
 }, peek);
 evo.same = (await trace(false)) === (await trace(true));
 await p.evaluate(() => { GOBLIN.run.paused = true; GOBLIN.go('menu'); });
-if (!evo.hub.open || evo.hub.groups !== 10 || !evo.same) errs.push('Entwicklungs-Baum: ' + JSON.stringify(evo));
+if (!evo.hub.open || evo.hub.groups !== 11 || !evo.same) errs.push('Entwicklungs-Baum: ' + JSON.stringify(evo));
 console.log('Entwicklungs-Baum mit Vorschau:', JSON.stringify(evo));
+// Goblin-Klassen (Phase 9): Wahl in der Rüstkammer, je Klasse 30 s mit Zeichnen, Startwaffe, Knopf, Leertasten-
+// Bewegung (Salto, Teleport, Rolle) und Shift (Sturmangriff walzt kleine Gegner um); gesperrte Klasse spielt als Goblin
+const cls = {};
+await p.evaluate(() => { const G = GOBLIN; for (let s = 1; s <= 8; s++) G.save.stages[s] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 1, kills: 0, fast: 0 })) }; G.go('menu', '#armory'); });
+await p.waitForTimeout(300);
+for (const c of ['bow', 'mage', 'war', 'gob']) {
+  await p.click(`[data-cls="${c}"]`); await p.waitForTimeout(400);
+  cls[c] = await p.evaluate(async c => {
+    const G = GOBLIN, picked = G.save.cls; G.go('run', { si: 2, li: 1, seed: 31 });
+    const run = G.run, x0 = G.P.x; run.paused = true;
+    const out = { picked, weapon: run.weapons[0].id, btn: document.querySelector('#dashBtn .lbl').textContent, dash: 0, rams: 0, moved: 0 };
+    for (let until = 10; until <= 30; until += 10) {
+      while (run.time < until && !run.over) {
+        G.keys.ShiftLeft = true; G.keys.KeyD = Math.sin(run.time) > 0; G.keys.KeyW = Math.cos(run.time * .7) > 0;
+        if (Math.floor(run.time * 60) % 40 === 0) { const x = G.P.x, y = G.P.y; G.doDash(); out.dash++; if (Math.hypot(G.P.x - x, G.P.y - y) > 100) out.moved++; }
+        G.update(1 / 60); G.P.hp = G.P.maxHp;
+        if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); }
+      }
+      run.paused = false; await new Promise(r => setTimeout(r, 80)); run.paused = true;
+    }
+    G.keys.ShiftLeft = G.keys.KeyD = G.keys.KeyW = false;
+    out.rams = run.enemies.filter(e => e.ramT).length; out.kills = run.kills; out.x0 = x0;
+    run.paused = false; G.go('menu', '#armory'); return out;
+  }, c);
+  await p.waitForTimeout(200);
+}
+const want = { bow: ['bow', 'Salto'], mage: ['staff', 'Teleport'], war: ['club', 'Rolle'], gob: ['dagger', 'Rolle'] };
+for (const [c, [w, btn]] of Object.entries(want)) if (cls[c].picked !== c || cls[c].weapon !== w || cls[c].btn !== btn || !cls[c].kills) errs.push('Klasse ' + c + ': ' + JSON.stringify(cls[c]));
+if (!cls.mage.moved) errs.push('Teleport springt nicht: ' + JSON.stringify(cls.mage));
+if (!cls.war.rams) errs.push('Sturmangriff rammt nicht: ' + JSON.stringify(cls.war));
+// gesperrt (alter Stand): Bogen gewählt, Welt 2 nie geschafft → Goblin mit Dolch
+cls.locked = await p.evaluate(() => { const G = GOBLIN; G.save.cls = 'bow'; G.save.stages = {}; G.go('run', { si: 0, seed: 3 }); const w = G.run.weapons[0].id; G.run.paused = true; G.go('menu'); return w; });
+if (cls.locked !== 'dagger') errs.push('gesperrte Klasse: ' + cls.locked);
+console.log('Klassen:', JSON.stringify(cls));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

@@ -10,7 +10,7 @@ import { onProjHit, stepWeapon2 } from './weapons2.js';
 
 // ---------- Waffen ----------
 // Zielsuchende Geschosse: Wendigkeit in rad/s
-const HOMING = { fireball: 6, rocket: 8, shade: 3, soul: 7, spark: 9 };
+const HOMING = { fireball: 6, rocket: 8, shade: 3, soul: 7, spark: 9, orb: 5 };
 export function shoot(k, a, dmg, pierce, spd, life, extra = {}) { shootRaw(k, a, dmg * shotMul, pierce, spd, life, extra); }
 // ohne den Schadensfaktor der gerade schießenden Waffe (dmg schon fertig); Splitterkristall: mehr Durchbohren
 export function shootRaw(k, a, dmg, pierce, spd, life, extra = {}) {

@@ -3,6 +3,7 @@ import { TAU } from '../core/util.js';
 import { P, onScreen, run } from '../game/state.js';
 import { ctx, drawImgC, drawSpr } from './canvas.js';
 import { mk } from './proc.js';
+import { drawArrow, drawOrb } from './gear.js';
 
 // Kleine Bilder einmal malen (keine SVGs nötig)
 let IMG = null;
@@ -26,6 +27,8 @@ function imgs() {
       g.beginPath(); g.ellipse(0, 0, 17, 12, 0, 0, TAU); g.fillStyle = '#3b4148'; g.fill(); g.strokeStyle = '#0a0f06'; g.lineWidth = 2.5; g.stroke();
       g.beginPath(); g.ellipse(0, -3, 11, 7, 0, 0, TAU); g.fillStyle = '#59616a'; g.fill();
     }),
+    arrow: mk(64, 24, g => { g.translate(32, 12); g.scale(1.05, 1.05); drawArrow(g); }),
+    orb: mk(48, 48, g => { g.translate(24, 24); drawOrb(g); }),
     shard: mk(32, 32, g => { g.translate(16, 16); g.beginPath(); g.moveTo(12, 0); g.lineTo(-6, 6); g.lineTo(-10, -3); g.closePath(); g.fillStyle = '#d8dde2'; g.fill(); g.strokeStyle = '#1b2228'; g.lineWidth = 2; g.stroke(); }),
   };
   return IMG;
@@ -39,6 +42,8 @@ export function drawProj2(p) {
     case 'star': drawImgC(I.star, p.x, p.y, 22 * p.sc, p.t * 20); return true;
     case 'xbolt': drawImgC(I.xbolt, p.x, p.y, 40 * p.sc, p.a); return true;
     case 'shard': drawImgC(I.shard, p.x, p.y, 16, p.a); return true;
+    case 'arrow': drawImgC(I.arrow, p.x, p.y, 34, p.a); return true;
+    case 'orb': drawImgC(I.orb, p.x, p.y, 30 * p.sc * (1 + .08 * Math.sin(p.t * 20)), 0); return true;
     case 'shade': drawSpr('p.shade.' + fr(p.t), p.x, p.y, 1.1 * p.sc, p.a); return true;
     case 'rock': drawSpr('p.rock.' + fr(p.t, 10), p.x, p.y, .9 * p.sc, p.t * 8); return true;
     case 'soul': drawSpr('p.soul.' + fr(p.t), p.x, p.y, .9 * p.sc, p.a); return true;
@@ -80,7 +85,22 @@ export function drawWfxTop(t) {
       for (let i = 0; i < 4; i++) drawBeam(f.x, f.y, f.a + i * TAU / 4, 460 * P.area, 50 * P.area, fade);
     }
   }
+  for (const f of run.wfx) if (f.k === 'arrows') {
+    // Pfeilregen: drei Pfeile fallen schräg auf den Kreis
+    const p = f.t / f.dur;
+    for (let i = 0; i < 3; i++) drawImgC(imgs().arrow, f.x + (i - 1) * f.rad * .45 - (1 - p) * 60, f.y + (i % 2) * 10 - (1 - p) * 260, 30, Math.PI / 2 - .25);
+    ctx.strokeStyle = `rgba(232,214,160,${.5 * (1 - p)})`; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(f.x, f.y, f.rad, f.rad * .7, 0, 0, TAU); ctx.stroke();
+  }
   for (const w of run.weapons) {
+    if (w.id === 'club' && w.swing) {
+      // Keulen-Schwung: heller Bogen, der kurz nachleuchtet
+      const s = w.swing, k = (run.time - s.at) / .2;
+      if (k >= 0 && k < 1) {
+        const span = s.full ? Math.PI * 2 : Math.PI * 1.1, a0 = s.a - span / 2 + (s.full ? 0 : span * k * .3);
+        ctx.save(); ctx.globalAlpha = 1 - k; ctx.strokeStyle = w.evo ? '#ffd27a' : '#f2ead6'; ctx.lineWidth = 10 * (1 - k * .5);
+        ctx.beginPath(); ctx.ellipse(P.x, P.y - 8, s.R * (.8 + .2 * k), s.R * (.8 + .2 * k) * .75, 0, a0, a0 + span * Math.min(1, k * 2.5 + .2)); ctx.stroke(); ctx.restore();
+      }
+    }
     if (w.id === 'lance' && w.evo) drawBeam(P.x, P.y - 8, w.a, 420 * P.area, 44 * P.area, .85 + .15 * Math.sin(t * 20));
     if (w.id === 'spark' && w.evo) for (const [bx, by] of w.blades) {
       const g = ctx.createRadialGradient(bx, by, 2, bx, by, 34); g.addColorStop(0, 'rgba(230,210,255,.9)'); g.addColorStop(1, 'rgba(150,90,255,0)');

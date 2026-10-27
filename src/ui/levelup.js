@@ -36,14 +36,14 @@ export function cardHtml(c, i) {
     ic = icon(c.id); t = D.name; d = D.info; pips = pipHtml(lv, lv + 1);
     tag = lv ? '' : '<span class="tagx new">Neu</span>';
     // Passt das Passiv zu einer eigenen Waffe? Nicht passende Passive verbauen Plätze
-    const wid = weaponOf(c.id), own = run.weapons.find(w => w.id === wid);
+    const wid = weaponOf(c.id, run.weapons.map(w => w.id)), own = run.weapons.find(w => w.id === wid);
     if (own && own.evo) hint = WEAPONS[wid].evo + ' schon entwickelt';
     else if (own) { hint = 'Entwickelt ' + WEAPONS[wid].name + ' ✓'; hintCls = 'good'; }
     else if (run.weapons.length >= MAX_W) { hint = 'Passt zu keiner deiner Waffen'; if (!lv) hintCls = 'warn'; }
     else if (wid) hint = 'Entwickelt ' + WEAPONS[wid].name + ' (fehlt dir noch)';
   } else if (c.k === 'swap') {
     // Umschmieden: from wird zu id, Stufe bleibt
-    const D = PASSIVES[c.id], lv = run.passives[c.from] || 1, wid = weaponOf(c.id);
+    const D = PASSIVES[c.id], lv = run.passives[c.from] || 1, wid = weaponOf(c.id, run.weapons.map(w => w.id));
     ic = icon(c.id); t = D.name; d = `Statt ${PASSIVES[c.from].name}, Stufe ${lv} bleibt. ${D.info}`; pips = pipHtml(lv, 0); cls += ' swap';
     tag = '<span class="tagx">Umschmieden</span>'; from = `<img class="from" src="${icon(c.from)}" alt="">`;
     if (wid) { hint = 'Macht ' + WEAPONS[wid].evo + ' möglich'; hintCls = 'good'; }

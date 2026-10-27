@@ -1,14 +1,14 @@
 // ---------- Level-Up-Angebot (Regeln aus PLAN 7.2) ----------
 // Rein: kennt weder DOM noch Lauf. S = { weapons, passives, banned, rej, pity, lock }
 // rnd() liefert Zahlen in [0, 1). Jede Karte bekommt ein "why", warum sie im Angebot ist.
-import { BOONS, PASSIVES, WEAPONS } from '../data/weapons.js';
+import { BOONS, PASSIVES, POOL_WEAPONS, WEAPONS } from '../data/weapons.js';
 
 export const MAX_W = 6, MAX_P = 6;
 export const PITY_STEP = .5, PITY_MAX = 4, OWN_MULT = 2.5;
 const BASE = { newW: 4, newP: 3 };
 // Mit 20 statt 10 Waffen/Passiven (2026-10-14) bekommt jede neue Karte nur ihren Anteil am alten Gewicht:
 // so kommen eigene Gegenstände (und damit Entwicklungen) so oft wie vorher
-const NEW_W = BASE.newW * 10 / Object.keys(WEAPONS).length, NEW_P = BASE.newP * 10 / Object.keys(PASSIVES).length;
+const NEW_W = BASE.newW * 10 / POOL_WEAPONS.length, NEW_P = BASE.newP * 10 / Object.keys(PASSIVES).length;
 
 // Bannen und Sperren gelten für den Gegenstand, nicht für die Kartenart
 export const itemKey = c => c.k === 'evo' ? 'e:' + c.id : c.k === 'swap' ? 's:' + c.id : c.k === 'boon' ? 'b:' + c.id : c.k === 'newW' || c.k === 'upW' ? 'w:' + c.id : c.k === 'newP' || c.k === 'upP' ? 'p:' + c.id : c.k;
@@ -54,7 +54,7 @@ export function candidates(S) {
     if (!w.evo && w.lv >= 5 && S.passives[WEAPONS[w.id].with]) pool.push({ k: 'evo', id: w.id, wgt: 0 });
     else if (w.lv < 5 && !WEAPONS[w.id].auto && !S.banned.has('w:' + w.id)) pool.push({ k: 'upW', id: w.id, wgt: BASE.newW * OWN_MULT });   // auto-Waffen steigen von selbst
   }
-  if (S.weapons.length < MAX_W) for (const id in WEAPONS) if (!owned.has(id) && !S.banned.has('w:' + id)) pool.push({ k: 'newW', id, wgt: NEW_W });
+  if (S.weapons.length < MAX_W) for (const id of POOL_WEAPONS) if (!owned.has(id) && !S.banned.has('w:' + id)) pool.push({ k: 'newW', id, wgt: NEW_W });
   const pc = Object.keys(S.passives).length;
   for (const id in PASSIVES) {
     if (S.banned.has('p:' + id)) continue;

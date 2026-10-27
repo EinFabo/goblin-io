@@ -13,6 +13,7 @@ import { noteNewHats } from './worldmap.js';
 import { CHESTS, GEMS, cardName } from '../data/cards.js';
 import { burstAt, centerOf, countUp, flyReward } from './rewardfx.js';
 import { chestSvg } from './cardart.js';
+import { CLASSES, CLASS_PERKS } from '../data/classes.js';
 import { playChest } from './chest-open.js';
 import { cosmTile } from './cosmart.js';
 import { COSM } from '../data/cosmetics.js';
@@ -33,6 +34,7 @@ export function showResults(r) {
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +
     (r.trophy ? `<p class="vchest trophy">${cosmTile(r.trophy)}<span>Trophäe: <b>${COSM[r.trophy].name}</b><br><small>in der Garderobe (Profil)</small></span></p>` : '') +
     (r.chest ? `<p class="vchest">${chestSvg(r.chest.type)}<span>Siegtruhe: <b>${CHESTS[r.chest.type].name}</b><br><small>${r.chest.shelf ? 'liegt im Truhenregal (Laden)' : 'Regal voll – sie ist sofort aufgegangen'}</small></span>${r.chest.shelf ? '' : '<button class="btn small" id="vchestBtn">Ansehen</button>'}</p>` : '') +
+    clsXpHtml(r.cls) +
     r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}${a.star ? ` · <em>${a.st >= STAR_MAX ? 'Legende!' : 'Neuer Stern!'}</em> ${'★'.repeat(a.st)}` : ''}</b></p>`).join('');
   $('#nextBtn').hidden = !r.next;
   if (r.next) $('#nextBtn').textContent = STAGES[r.next.si].endless ? 'Endlose Nacht' : r.next.si !== run.si ? `Welt ${r.next.si + 1}` : `Weiter: ${levelLabel(r.next.si, r.next.li)}`;
@@ -50,6 +52,12 @@ export function showResults(r) {
 // Tippen überspringt die Folge.
 let seqT = [], seqDone = null;
 const at = (ms, fn) => seqT.push(setTimeout(fn, ms));   // alle Zeitgeber der Folge, hideResults räumt sie ab
+// Klassen-XP (Phase 9): Zeile wie bei den Fähigkeiten, neue Boni beim Aufstieg
+function clsXpHtml(c) {
+  if (!c || !c.xp) return '';
+  const C = CLASSES[c.id], perks = c.up ? CLASS_PERKS.filter(p => p.lv > c.from && p.lv <= c.lv).map(p => p.txt) : [];
+  return `<p class="abxp${c.up ? ' up' : ''}"><img src="${icon(C.weapon)}" alt=""><span>${C.name}</span><b>+${c.xp} XP${c.up ? ` · <em>Klassen-Level ${c.lv}!</em>${perks.length ? ' ' + perks.join(', ') : ''}` : ''}</b></p>`;
+}
 function hatSequence(r) {
   const hats = [...document.querySelectorAll('#overHats .hats i')];
   seqT.forEach(clearTimeout); seqT = [];
@@ -78,7 +86,7 @@ function hatSequence(r) {
     // Juwelen der neuen Hüte fliegen zur Juwelen-Zeile
     const gem = $('#ovGems');
     if (gem && r.newHats) hats.slice(r.hats - r.newHats, r.hats).forEach((h, k) => at(150 + k * 120, () => flyReward(h, 'gems', GEMS.hat, gem)));
-    if (r.abil.some(a => a.up || a.star)) at(450, () => sfx.abilUp());
+    if (r.abil.some(a => a.up || a.star) || (r.cls && r.cls.up)) at(450, () => sfx.abilUp());
   };
   at(t, () => seqDone && seqDone());
 }

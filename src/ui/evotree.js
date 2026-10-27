@@ -4,7 +4,7 @@
 // Offen aus Level-Up (Auge an den Karten), Pause und Werkstatt.
 import { sfx } from '../core/audio.js';
 import { $ } from '../core/util.js';
-import { MEGAS, PASSIVES, WEAPONS, megaOf, weaponOf } from '../data/weapons.js';
+import { CLASS_WEAPONS, MEGAS, PASSIVES, WEAPONS, megaOf, weaponOf } from '../data/weapons.js';
 import { previewFrame, previewOn, previewStart, previewStop } from '../game/preview.js';
 import { run } from '../game/state.js';
 import { withCanvas } from '../render/canvas.js';
@@ -40,6 +40,11 @@ function groupHtml(m) {
   const [a, b] = MEGAS[m].of, row = w => `${node('w', w)}<span class="op">+</span>${node('p', WEAPONS[w].with)}<span class="op">→</span>${node('e', w)}`;
   return `<div class="evogrp${nodeCls('m', m)}" style="--mc:${MEGAS[m].col}"><div class="egrid">${row(a)}${row(b)}<span class="brk"></span>${node('m', m)}</div><div class="mname">${MEGAS[m].name}</div></div>`;
 }
+// Klassenwaffen (Phase 9): Entwicklung ohne Mega-Partner
+function clsGroupHtml() {
+  const row = w => `${node('w', w)}<span class="op">+</span>${node('p', WEAPONS[w].with)}<span class="op">→</span>${node('e', w)}`;
+  return `<div class="evogrp" style="--mc:#c9a35a"><div class="egrid cls">${CLASS_WEAPONS.map(row).join('')}</div><div class="mname">Klassenwaffen</div></div>`;
+}
 // Im Lauf: Gruppen mit eigenen Waffen zuerst
 function order() {
   const ids = Object.keys(MEGAS);
@@ -54,7 +59,7 @@ function capHtml(k, id) {
     return cap(icon(id), D.name, 'Waffe', D.info[0], `${live ? `Stufe ${w ? w.lv : 0}/5 · ` : ''}Mit ${PASSIVES[D.with].name} auf Stufe 5 → <b>${D.evo}</b>`, 'Vorschau: Stufe 5');
   }
   if (k === 'p') {
-    const D = PASSIVES[id], wid = weaponOf(id);
+    const D = PASSIVES[id], wid = weaponOf(id, live ? run.weapons.map(w => w.id) : null);
     return cap(icon(id), D.name, 'Passiv', D.info, wid ? `Entwickelt ${WEAPONS[wid].name} zu <b>${WEAPONS[wid].evo}</b>` : '', wid ? 'Vorschau: ' + WEAPONS[wid].evo : '');
   }
   if (k === 'e') {
@@ -83,7 +88,9 @@ export function openTree(focus, isLive = false) {
   live = isLive && !!run && !run.over;
   if (!focus) { const w = live && run.weapons.find(x => !x.evo) || live && run.weapons[0]; focus = 'e:' + (w ? w.id : 'dagger'); }
   sel = focus;
-  $('#evoList').innerHTML = order().map(groupHtml).join('');
+  // Klassenwaffen vorn, wenn man im Lauf eine hat
+  const cg = clsGroupHtml(), hasCls = live && run.weapons.some(w => WEAPONS[w.id].cls);
+  $('#evoList').innerHTML = (hasCls ? cg : '') + order().map(groupHtml).join('') + (hasCls ? '' : cg);
   $('#evoTree').hidden = false;
   select(focus, true);
   const b = $('#evoList .en.sel'); if (b) b.scrollIntoView({ block: 'nearest' });

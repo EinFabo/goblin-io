@@ -28,7 +28,8 @@ let cur = null;
 function showCard(id) {
   cur = id;
   const st = cardState(save, id), r = CARD_RARITY[id], cost = upgradeCost(id, st.lv), max = st.lv >= CARD_MAX;
-  const info = isWeapon(id) ? WEAPONS[id].info[0] : PASSIVES[id].info + ' pro Stufe im Lauf';
+  // Die Dolch-Karte gilt auch für die Startwaffen der Klassen (Phase 9)
+  const info = isWeapon(id) ? WEAPONS[id].info[0] + (id === 'dagger' ? ' Gilt auch für Bogen, Zauberstab und Keule der Klassen.' : '') : PASSIVES[id].info + ' pro Stufe im Lauf';
   const now = cardPerks(id, st.lv), next = max ? [] : cardPerks(id, st.lv + 1);
   const ok = cost && st.n >= cost.cards, gold = cost && save.wallet.gold >= cost.gold;
   $('#cardPanel').innerHTML = `<div class="phead"><h2>${cardName(id)}</h2><button class="iconbtn" data-close aria-label="Schließen">✕</button></div>

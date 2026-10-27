@@ -1,7 +1,7 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { mulberry32, newSeed, seedRun } from '../core/rng.js';
-import { abilState, gainAbilXp, gainAccountXp, levelDone, persist, recordLevel, save, talent } from '../core/save.js';
+import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, persist, recordLevel, save, stageCleared, talent } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp, bonusReward } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
@@ -15,7 +15,8 @@ import { updEProj, updTele } from './hazards.js';
 import { pullable, updItems } from './items.js';
 import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
-import { BOONS } from '../data/weapons.js';
+import { BOONS, cardIdOf } from '../data/weapons.js';
+import { CLASSES, DASH_KIND, SPRINT_KIND, classOf, classUnlocked, hasPerk } from '../data/classes.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
@@ -41,6 +42,8 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
     stam: 100, stamMax: 100, stamDelay: 0, exhaust: false, sprinting: false, leg: 0,
     mechT: 0, mechMax: 12, gunT: 0, rocketT: 0, stepT: 0, gunA: 0, gunFlash: 0, abilReadyShown: [false, false],
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0, iceT: 0, ivx: 0, ivy: 0 };
+  // Klasse (Phase 9): gesperrte Klasse (alter oder fremder Stand) → Goblin
+  r.cls = classUnlocked(save.cls, i => stageCleared(i)) ? save.cls : 'gob'; r.clsLv = clsState(r.cls).lv;
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
   ensureDaily(save);
   // Kartenstufen für diesen Lauf (9.3)
@@ -52,8 +55,9 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   addEvents(0);
   grid.clear();
   recalc(); P.hp = P.maxHp; P.stam = P.stamMax;
-  addWeapon('dagger');
-  if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ' unten: Rolle, Sprint und deine Fähigkeiten.' : '<b>Tipp</b> WASD laufen · Leertaste Rolle · Shift Sprint · Q und E Fähigkeiten');
+  const C = classOf(r.cls), dn = DASH_KIND[C.dash].name, sn = SPRINT_KIND[C.sprint].name;
+  addWeapon(C.weapon, hasPerk(r.clsLv, 'start2'));
+  if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ` unten: ${dn}, ${sn} und deine Fähigkeiten.` : `<b>Tipp</b> WASD laufen · Leertaste ${dn} · Shift ${sn} · Q und E Fähigkeiten`);
   emit('runStart', run);
 }
 // Feste Momente aus dem Wellen-Skript in die Zeitleiste (Endlos: je Runde erneut)
@@ -65,17 +69,19 @@ export function recalc() {
   // Passive: Stufen im Lauf × Kartenstufe (+10 % Wirkung je Stufe)
   const pl = id => (run.passives[id] || 0) * passiveCardMul(run.cards[id] || 1), sh = talent;
   const bn = id => (1 + BOONS[id].v) ** (run.boons[id] || 0);   // Dauerboni, wenn alles ausgebaut ist (multiplikativ)
-  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg');
-  P.cdMult = Math.pow(.92, pl('book'));
+  // Klasse (Phase 9): Leben, Tempo, Abklingzeit; Klassen-Level: kleine Boni
+  const C = classOf(run.cls), cl = k => hasPerk(run.clsLv || 1, k);
+  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1);
+  P.cdMult = Math.pow(.92, pl('book')) * C.cd;
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
-  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp');
+  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1);
   if (old) P.hp += Math.max(0, P.maxHp - old);
   P.regen = .4 * pl('herbs');
-  P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd'));
+  P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd')) * C.speed;
   P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .06 * sh('mag'));
-  P.xpMult = 1 + .03 * sh('xp');
+  P.xpMult = (1 + .03 * sh('xp')) * (cl('xp') ? 1.1 : 1);
   P.proj = 1 + .12 * pl('oil');
   P.crit = .08 + .06 * pl('powder');
   // zweite Reihe (2026-10-14)
@@ -92,14 +98,15 @@ export function recalc() {
   // Sprint-Baum: Ausdauer, Erholung, Tempo, Leichtfüßig, Windschatten
   const sp = run.abMods.sprint;
   P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow);
-  P.stamRegen = 26 * (1 + .08 * sp.r.cd); P.sprintMul = 1.55 * (1 + .04 * sp.r.area);
+  P.stamRegen = 26 * (1 + .08 * sp.r.cd); P.sprintMul = 1.55 * (1 + .04 * sp.r.area) * (C.sprint === 'charge' ? 1.1 : 1);   // Sturmangriff etwas schneller
   P.stamDrain = 34 * (1 - .08 * sp.s1); P.sprintMag = 1 + .15 * sp.s3; P.secondWind = sp.a; P.tireless = sp.m;
 }
 // Kartenstufe 5: startet auf Waffenstufe 2; Stufe 10: greift 15 % schneller an.
 // Der Start auf Stufe 2 nur mit eigener Karte: legendäre Karten beginnen sonst schon auf Kartenstufe 5
-export function addWeapon(id) {
-  const c = run.cards[id] || 1, owned = !!save.cards[id];
-  run.weapons.push({ id, lv: owned && c >= CARD_START_LV2 ? 2 : 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [], card: weaponCardMul(c), fast: c >= CARD_FAST ? 1.15 : 1 });
+// Klassenwaffen nutzen die Dolch-Karte; lv2: Klassen-Level 5 (Startwaffe auf Stufe 2)
+export function addWeapon(id, lv2 = false) {
+  const cid = cardIdOf(id), c = run.cards[cid] || 1, owned = !!save.cards[cid];
+  run.weapons.push({ id, lv: lv2 || (owned && c >= CARD_START_LV2) ? 2 : 1, evo: false, t: .3, t2: 0, a: 0, rot: 0, blades: [], card: weaponCardMul(c), fast: c >= CARD_FAST ? 1.15 : 1 });
 }
 export function hint(html) { run.hints.push(html); }
 // Level-Up, dessen Zeitlupe läuft (Karten noch nicht offen), wird zum Bonus-Level, wenn das Level endet.
@@ -219,6 +226,10 @@ export function endRun(win) {
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
   const nx = rec.first && boss && nextLevel(run.si, run.li);
   if (nx) unlocked.push(STAGES[nx.si].endless ? STAGES[nx.si].name : 'Welt ' + (nx.si + 1));
+  // Klassen-XP (Phase 9): so viel wie Konto-XP, für die Klasse dieses Laufs
+  const clsLv0 = clsState(run.cls).lv, clsUp = gainClassXp(run.cls, xp), cls = { id: run.cls, xp, lv: clsState(run.cls).lv, up: clsUp, from: clsLv0 };
+  // Neue Klasse frei (Boss der Welt besiegt)
+  if (rec.first && boss) for (const id in CLASSES) if (CLASSES[id].unlock && CLASSES[id].unlock.stage === run.si + 1) unlocked.push(CLASSES[id].name);
   // Fähigkeiten-XP durch Benutzen
   const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const st0 = abilState(id).st || 0, lvUp = gainAbilXp(id, x), a = abilState(id); return { id, xp: x, lv: a.lv, up: lvUp, st: a.st || 0, star: (a.st || 0) - st0 }; });
   save.wallet.gold += run.gold + bonus;
@@ -241,7 +252,7 @@ export function endRun(win) {
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, cont: run.cont || 0, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil };
+  run.result = { win, cont: run.cont || 0, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil, cls };
   emit('runEnd', run.result);
 }
 

@@ -181,3 +181,24 @@ test('Alles ausgebaut: Dauerboni und ein Eintopf statt Eintopf und Gold', () => 
   const rep = replaceCard(S, o2.slice(), i, r);
   assert.equal(rep[i].k, 'boon'); assert.equal(new Set(rep.map(itemKey)).size, 3);
 });
+
+test('Klassenwaffen kommen nie ins Angebot, haben keine Karte und teilen sich Passive', async () => {
+  const { CARD_IDS } = await import('../src/data/cards.js');
+  const { CLASS_WEAPONS, weaponOf } = await import('../src/data/weapons.js');
+  assert.deepEqual(CLASS_WEAPONS, ['bow', 'staff', 'club']);
+  for (const id of CLASS_WEAPONS) assert.ok(!CARD_IDS.includes(id));
+  const S = { ...newOfferState(), weapons: [{ id: 'bow', lv: 1, evo: false }], passives: {} };
+  for (const c of candidates(S)) assert.ok(!(c.k === 'newW' && CLASS_WEAPONS.includes(c.id)));
+  // Bogen hat noch eine Stufe offen: steigt von selbst (auto), also keine Aufwertungs-Karte
+  assert.ok(!candidates(S).some(c => c.id === 'bow'));
+  assert.equal(weaponOf('oil'), 'saw'); assert.equal(weaponOf('oil', ['bow']), 'bow'); assert.equal(weaponOf('oil', ['dagger']), 'saw');
+});
+
+test('Klassen-Boni nach Klassen-Level', async () => {
+  const { hasPerk, CLASSES, classUnlocked } = await import('../src/data/classes.js');
+  assert.ok(!hasPerk(2, 'hp') && hasPerk(3, 'hp') && hasPerk(5, 'start2') && !hasPerk(11, 'charge') && hasPerk(12, 'charge'));
+  assert.ok(classUnlocked('gob', () => false));
+  assert.ok(!classUnlocked('bow', () => false) && classUnlocked('bow', i => i === 1));
+  assert.ok(!classUnlocked('war', i => i < 5) && classUnlocked('war', i => i === 5));
+  for (const id in CLASSES) assert.ok(WEAPONS[CLASSES[id].weapon], id);
+});

@@ -5,6 +5,8 @@ import { ENDLESS, LEVELS, LEVEL_KIND, WORLDS, levelLabel } from '../data/levels.
 import { STAGES } from '../data/stages.js';
 import { HAT_TXT, hatSvg, hatsHtml } from './hats.js';
 import { countUp } from './rewardfx.js';
+import { CLASSES, CLASS_IDS, classUnlocked } from '../data/classes.js';
+import { icon } from '../render/icons.js';
 
 // ---------- Weltkarte (PLAN 6.1a) ----------
 // Eine Karte pro Welt: Pfad mit 5 Level-Punkten (der letzten Welt hängt Endlos als 6. Punkt an).
@@ -110,6 +112,12 @@ function renderNodes() {
       ${done && !n.endless ? '<span class="flag"></span>' : ''}${!n.endless && levelInfo(n.si, n.li).nm ? `<span class="nmdone" title="Im Albtraum geschafft">${SKULL_SM}</span>` : ''}${!n.endless && open ? hatsHtml(hats) : ''}</button>`;
   }).join('');
 }
+// Gewählte Klasse (Phase 9) mit Wechsel-Knopf zur Rüstkammer, sobald mehr als eine frei ist
+function clsHtml() {
+  if (CLASS_IDS.filter(id => classUnlocked(id, stageCleared)).length < 2) return '';
+  const C = CLASSES[classUnlocked(save.cls, stageCleared) ? save.cls : 'gob'];
+  return `<p class="clsline"><img src="${icon(C.weapon)}" alt="">Klasse: <b>${C.name}</b><button class="btn small ghost" data-clsgo>Wechseln</button></p>`;
+}
 // Markierung umsetzen, ohne die Punkte neu aufzubauen (sonst spielt ihre Einblend-Animation erneut)
 function markSel() { document.querySelectorAll('#mapNodes .mnode').forEach((b, i) => b.classList.toggle('sel', i === M.gob.sel)); }
 function renderNote(show = true) {
@@ -120,7 +128,7 @@ function renderNote(show = true) {
   if (n.endless) {
     const best = stageBest(n.si);
     note.innerHTML = `<div class="nh"><span class="lbl">∞</span><h3>${st.name}</h3></div><p>${st.sub}</p>
-      <p class="rec">${best ? 'Rekord: ' + fmtTime(best) : 'Noch nicht gespielt'}</p>${open ? '<button class="btn primary go" data-go>Los!</button>' : '<p class="lock">Besiege zuerst den letzten Boss.</p>'}`;
+      <p class="rec">${best ? 'Rekord: ' + fmtTime(best) : 'Noch nicht gespielt'}</p>${open ? clsHtml() : ''}${open ? '<button class="btn primary go" data-go>Los!</button>' : '<p class="lock">Besiege zuerst den letzten Boss.</p>'}`;
     return;
   }
   const K = LEVEL_KIND[n.li], boss = n.li === LEVELS - 1, info = levelInfo(n.si, n.li);
@@ -131,7 +139,7 @@ function renderNote(show = true) {
   const why = HAT_TXT.map((t, i) => `<li class="${got(i) ? 'on' : ''}">${t}</li>`).join('');
   note.innerHTML = `<div class="nh"><span class="lbl">${levelLabel(n.si, n.li)}</span><h3>${name}</h3>${hatsHtml(info.hats)}</div><p>${sub}</p>
     <ul class="why">${why}</ul>${rec ? `<p class="rec">${rec}</p>` : ''}
-    ${open && stageCleared(n.si) ? nmHtml() : ''}
+    ${open && stageCleared(n.si) ? nmHtml() : ''}${open ? clsHtml() : ''}
     ${open ? `<button class="btn primary go" data-go>Los!</button>` : `<p class="lock">${!stageUnlocked(n.si) ? `Besiege zuerst den Boss von Welt ${M.wi}.` : `Schaffe zuerst ${levelLabel(n.si, n.li - 1)}.`}</p>`}`;
 }
 
@@ -214,6 +222,7 @@ $('#lvNote').addEventListener('click', e => {
   audioInit(); sfx.pickCard(); start(n.si, n.li, nmOn(n.si));
 });
 $('#lvNote').addEventListener('click', e => {
+  if (e.target.closest('[data-clsgo]')) { sfx.click(); const t = document.querySelector('.tab[data-tab="#armory"]'); if (t) t.click(); return; }
   if (!e.target.closest('[data-nm]')) return;
   save.map.nm = !save.map.nm; persist(); sfx.click();
   $('#menu').classList.toggle('nightmare', nmOn(worldSi()));

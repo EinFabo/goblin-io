@@ -8,6 +8,7 @@ import { save, stageCleared } from '../core/save.js';
 import { trailCol } from '../data/cosmetics.js';
 import { ABILITIES, MOVE_IDS, SLOT2_ACCT, STAR_COLS, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
 import { COMBOS, COMBO_GEMS, COMBO_T, comboOf } from '../data/combos.js';
+import { classOf, hasPerk } from '../data/classes.js';
 import { hurt } from './combat.js';
 import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
 import { runeMods } from './runes.js';
@@ -184,9 +185,11 @@ export function updAbilities(dt) {
 // ---------- Rolle und Sprint (immer dabei, eigene Bäume, PLAN 8.4) ----------
 // Rolle hat Ladungen (Zweite/Dritte Ladung); die Abklingzeit lädt eine Ladung nach der anderen nach.
 export const dashCdOf = () => 2.4 * (1 - .06 * M('dash').r.pow);
+// Klassen (Phase 9): Salto/Teleport statt Rolle, Sturmangriff statt Sprint; Klassen-Level 12: +1 Ladung
 function initMoves() {
-  const d = M('dash');
-  P.dashMax = d.m ? 3 : d.a ? 2 : 1; P.dashN = P.dashMax; P.dashCd = 0; P.perfectR = 1 + .15 * d.s1;
+  const d = M('dash'), C = classOf(run.cls);
+  P.dashKind = C.dash; P.sprintKind = C.sprint;
+  P.dashMax = (d.m ? 3 : d.a ? 2 : 1) + (hasPerk(run.clsLv || 1, 'charge') ? 1 : 0); P.dashN = P.dashMax; P.dashCd = 0; P.perfectR = 1 + .15 * d.s1;
   P.hasteT = 0; P.haste = 0; P.ambushT = 0; P.sprintT = 0; P.goldGuard = 0; P.rollHit = null;
 }
 // Kurz schneller laufen (Schwung, Schattenschritt); der stärkere Schub gewinnt
@@ -201,8 +204,8 @@ function updMoves(dt) {
     if (P.rollHit.has(e) || e.obj) return; P.rollHit.add(e);
     const dd = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, 10 * d.s2 * P.dmgMult, 420, (e.x - P.x) / dd, (e.y - P.y) / dd, '#e6d7a8');
   });
-  // Rammbock: kleine Gegner, in die man sprintet
-  if (P.sprinting && s.b) query(P.x, P.y, pR() + 8, e => {
+  // Rammbock: kleine Gegner, in die man sprintet (Sturmangriff des Kriegers: immer)
+  if (P.sprinting && (s.b || P.sprintKind === 'charge')) query(P.x, P.y, pR() + 8, e => {
     if (e.boss || e.elite || e.miniboss || e.obj || e.ramT > run.time) return; e.ramT = run.time + .6;
     const dd = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, (20 + P.lv * 2) * P.dmgMult, 520, (e.x - P.x) / dd, (e.y - P.y) / dd, '#ffd84a');
     run.shake = Math.max(run.shake, 3); sfx.stomp();
@@ -218,6 +221,19 @@ export function doDash() {
   P.dashT = .18; P.inv = Math.max(P.inv, .3 + .06 * d.r.area);
   P.dvx = P.aimX * sp; P.dvy = P.aimY * sp;
   P.rollT = ROLL_T; P.perfect = false; P.trailT = 0; P.rollHit = d.s2 ? new Set() : null;
+  if (P.dashKind === 'flip') {
+    // Salto (Bogen-Goblin): weg vom nächsten Gegner, dabei fünf Pfeile auf ihn
+    const t = nearest(320), a = t ? Math.atan2(P.y - t.y, P.x - t.x) : Math.atan2(P.aimY, P.aimX), back = a + Math.PI;
+    P.dashT = .22; P.dvx = Math.cos(a) * sp * .85; P.dvy = Math.sin(a) * sp * .85;
+    for (let i = 0; i < 5; i++) shootRaw('arrow', back + (i - 2) * .16, (10 + P.lv * .8) * P.dmgMult, 1, 760 * P.proj, .7, { r: 10 });
+    sfx.throw();
+  } else if (P.dashKind === 'blink') {
+    // Teleport (Magier-Goblin): sofort ein Stück in Laufrichtung; das kurze dashT hält die Unverwundbarkeit und die perfekte Rolle
+    const go = 200 * (1 + .08 * d.r.cd);
+    for (let i = 0; i < 10; i++) part(P.x + frand(-12, 12), P.y + frand(-30, 10), frand(-40, 40), frand(-80, -20), .4, '#c9a8ff', frand(3, 6));
+    P.x += P.aimX * go; P.y += P.aimY * go; P.dashT = .12; P.dvx = 0; P.dvy = 0; P.rollT = 0;
+    ring(P.x, P.y - 8, 6, 60, .3, 'rgba(200,170,255,.9)', 5);
+  }
   if (d.s3) haste(1.2 + .18, .1 * d.s3);
   // Krähenfüße bleiben am Startpunkt liegen
   if (d.b) run.abfx.push({ k: 'caltrop', x: P.x, y: P.y + 10, r: 48, t: 0, dur: 2.5, tick: 0, dmg: (8 + P.lv) * P.dmgMult, seed: Math.random() * 100 });
