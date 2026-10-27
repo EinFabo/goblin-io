@@ -239,7 +239,7 @@ export function bossAI(b, dt, dx, dy, d) {
   } else if (main) {
     const ph = phase(b);
     b.fightT += dt; b.phT += dt; b.inv -= dt; b.iceCd -= dt; b.blkT -= dt;
-    // Wut nach 120 s Kampf; Malvorns letzte Phase schon nach 60 s in der Phase
+    // Wut nach RAGE_AT Sekunden Kampf; Malvorns letzte Phase schon nach 60 s in der Phase
     if (!b.rage && (b.fightT >= RAGE_AT || (ph.rageIn && b.phT >= ph.rageIn))) enrage(b);
     if (b.ice <= 0 && b.iceT > 0) { b.iceT -= dt; if (b.iceT <= 0 && ph.shield) raiseShield(b); }
     updBurn(dt, b); updRise(b, dt); updPortals(dt); updPillars(b, dt, tempo(b)); updSchools(b, dt);

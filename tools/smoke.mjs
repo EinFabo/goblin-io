@@ -72,8 +72,8 @@ async function fightBoss(si) {
         if (bb && !run.cut && bb.rise !== null && bb.rise !== undefined) S.mech.add('BUG:rise');
       }
       const b = run.boss;
-      // Wut-Timer: kurz vor 120 s Kampf vorspulen, dann muss die Leiste glühen
-      if (b && !b.rage && b.ph === 1 && !run.cut) b.fightT = 119.9;
+      // Wut-Timer: kurz vor RAGE_AT (data/bosses.js, 180 s) vorspulen, dann muss die Leiste glühen
+      if (b && !b.rage && b.ph === 1 && !run.cut) b.fightT = 179.9;
       if (b && b.rage && document.querySelector('#bossBar').classList.contains('rage')) S.rage = true;
       if (b && !run.cut) {
         const ves = (b.vessels || []).filter(v => !v.dead);
