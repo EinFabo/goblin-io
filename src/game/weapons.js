@@ -221,7 +221,7 @@ export function updPProj(dt) {
       if (p.hit.has(e)) return;
       p.hit.add(e);
       if (p.k === 'spear') { hurt(e, p.dmg, 90, Math.cos(p.a), Math.sin(p.a), '#9fe6ff'); e.slowT = 2.2; animFx('e_frostbolt_hit_', 5, e.x, e.y, .9, 22); }
-      else { hurt(e, p.dmg, p.kb ?? (p.k === 'bullet' ? 25 : 70), Math.cos(p.a), Math.sin(p.a)); onProjHit(p, e); }
+      else { hurt(e, p.big && isBig(e) ? p.dmg * p.big : p.dmg, p.kb ?? (p.k === 'bullet' ? 25 : 70), Math.cos(p.a), Math.sin(p.a)); onProjHit(p, e); }   // big: Faktor gegen Elite/Bosse (Schockwelle der Keule)
       p.pierce--;
       if (p.pierce < 0) { p.life = -1; return false; }
     });

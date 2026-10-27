@@ -219,13 +219,13 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       if (w.evo) {
         w.t = .7 * P.cdMult; w.n = (w.n || 0) + 1;
         swing(a, 160 * P.area, 66 * dm, 200, true);
-        shoot('quake', a, 26, 99, 480 * P.proj, .6, { r: 26, sc: 1.4, kb: 60 });
+        shoot('quake', a, 26, 99, 480 * P.proj, .75, { r: 26, sc: 1.4, kb: 60, big: 1.6 });
         if (w.n % 3 === 0) later(.12, () => wave(P.x, P.y, 220 * P.area, 36 * dm * aoe(), 220, '#c9a35a'));
       } else {
         w.t = [.85, .85, .8, .8, .65][L] * P.cdMult;
         const dmg = [24, 31, 31, 39, 48][L];
         swing(a, [100, 100, 115, 125, 130][L] * P.area, dmg * dm, 120, L >= 3);
-        shoot('quake', a, dmg * .4, 99, 440 * P.proj, .5, { r: 20, sc: 1, kb: 40 });
+        shoot('quake', a, dmg * .4, 99, 440 * P.proj, .65, { r: 20, sc: 1, kb: 40, big: 1.6 });
       }
       w.swing = { a, at: run.time, R: (w.evo ? 160 : [100, 100, 115, 125, 130][L]) * P.area, full: w.evo || L >= 3 };
       sfx.whoosh(); break;
