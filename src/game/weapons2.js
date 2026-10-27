@@ -232,13 +232,13 @@ export function stepWeapon2(w, L, dm, dt, rate) {
     }
   }
 }
-// Keulenschlag: Halbkreis (oder rundherum) um den Goblin, Rückstoß nach außen; Elite und Bosse +40 % (Nahkampf-Ausgleich)
+// Keulenschlag: Halbkreis (oder rundherum) um den Goblin, Rückstoß nach außen; Elite und Bosse +60 % (Nahkampf-Ausgleich)
 function swing(a, R, dmg, kb, full) {
   const ca = Math.cos(a), sa = Math.sin(a);
   query(P.x, P.y, R, e => {
     const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
     if (!full && (dx * ca + dy * sa) / d < -.2) return;   // hinter dem Goblin: kein Treffer
-    hurt(e, isBig(e) ? dmg * 1.4 : dmg, kb, dx / d, dy / d, '#e8c88a');
+    hurt(e, isBig(e) ? dmg * 1.6 : dmg, kb, dx / d, dy / d, '#e8c88a');
   });
   run.shake = Math.max(run.shake, 2);
 }
