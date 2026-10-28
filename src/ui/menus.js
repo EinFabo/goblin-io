@@ -14,7 +14,7 @@ import { anyUpgrade, renderWorkshop, workshopHooks } from './workshop.js';
 import { renderWardrobe, wardrobeChanged } from './wardrobe.js';
 import { profileHooks } from './profile.js';
 import { achChanged, achNews, renderAch } from './achievements.js';
-import { questNews, questsChanged, renderQuests, scrollPass } from './quests.js';
+import { questNews, questsChanged, questsStart, renderQuests, scrollPass } from './quests.js';
 import { shownWallet } from './rewardfx.js';
 import { closeTree } from './evotree.js';
 
@@ -71,6 +71,7 @@ wardrobeChanged(renderTopbar);
 profileHooks({ ward: renderWardrobe, ach: renderAch });
 achChanged(renderTopbar);
 questsChanged(renderTopbar);
+questsStart((si, li, nm, opts) => startStage(si, li, nm, opts));
 armoryChanged(renderTopbar);
 workshopHooks(renderTopbar, () => renderShop());
 setInterval(() => { if (document.body.classList.contains('hub')) $('#storeDot').hidden = !storeHasNews(); }, 5000);

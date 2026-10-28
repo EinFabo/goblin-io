@@ -1236,3 +1236,13 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 .nmdot.on{background:#c0393e;color:#fff}
 .nmdot.lk{opacity:.35;cursor:default}
 .mnode .nmdone b{position:absolute;right:-3px;bottom:-4px;font-size:10px;color:#fff;text-shadow:0 1px 0 #000,0 0 2px #000}
+/* Tägliche Herausforderung (Phase 12) */
+.chal{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:14px;border:3px solid var(--edge);background:linear-gradient(135deg,#3a1a4a,var(--moss-3));box-shadow:0 4px 0 var(--edge)}
+.chal .chead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}.chal .chead b{font-family:var(--font-display);font-weight:400;font-size:20px}.chal .chead span{color:#ff9a8a;font-weight:800}
+.chal .cabil{display:flex;flex-wrap:wrap;gap:10px}.chal .cabil span{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:20px;background:rgba(10,15,6,.45);font-weight:800}
+.chal .cabil img{width:34px;height:34px}
+.chal .cmut{margin:0;padding-left:18px;font-size:14px;line-height:1.5}.chal .cmut b{color:#ffb0e0}
+.chal .cfoot{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.chal .cfoot .rw{display:flex;align-items:center;gap:4px;font-weight:900;margin-left:auto}
+.chal .cfoot .btn{min-width:120px}
+.wanted .btn{margin-top:4px;color:var(--edge)}
+#quests .subtabs{flex-wrap:wrap}

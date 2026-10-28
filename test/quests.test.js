@@ -106,3 +106,35 @@ test('Spielstand v7: Quests werden geprüft, alte Stände leer', () => {
   assert.deepEqual(t.bounty.list.map(b => b.t), ['boss', 'school'], 'ohne Totenköpfe oder mit unbekannter Fähigkeit fällt weg'); assert.deepEqual(t.bounty.done, [false, true]);
   assert.ok(WEEKLY_POOL.every(q => q.n.length === 3));
 });
+
+test('Tägliche Herausforderung: freies Level, zwei Fähigkeiten, 1–2 Mutatoren, Bestwert, erster Sieg belohnt', async () => {
+  const { ensureChallenge, finishChallenge } = await import('../src/game/quests.js');
+  const { MUTATORS } = await import('../src/data/mutators.js');
+  const s = defaults(), day = '2026-10-28';
+  won(s, 2); s.stages[3] = { cleared: false, lv: [{ hats: 1 }, { hats: 0 }, { hats: 0 }, { hats: 0 }, { hats: 0 }] };
+  const C = ensureChallenge(s, day), d = C.def;
+  assert.ok(d.si <= 2 && (d.si < 2 || d.li <= 1), 'nur freie Level');
+  assert.equal(d.abil.length, 2); assert.notEqual(d.abil[0], d.abil[1]);
+  assert.ok(d.mut.length >= 1 && d.mut.length <= 2 && d.mut.every(m => MUTATORS[m]));
+  const t = defaults(); won(t, 2); t.stages[3] = s.stages[3]; assert.deepEqual(ensureChallenge(t, day).def, d, 'gleich für gleichen Stand');
+  const R = { mode: 'challenge', day, win: true, cont: false, time: 140, kills: 300 };
+  assert.equal(finishChallenge(s, { ...R, mode: null }, day), null);
+  assert.equal(finishChallenge(s, { ...R, win: false }, day), null);
+  const g0 = s.wallet.gold, a = finishChallenge(s, R, day);
+  assert.ok(a.reward && s.wallet.gold > g0 && C.done); assert.equal(s.pass.pts, 40);
+  const b = finishChallenge(s, { ...R, time: 120, kills: 350 }, day);
+  assert.ok(b.better && !b.reward, 'Bestwert besser, Belohnung nur einmal');
+  assert.ok(!finishChallenge(s, { ...R, time: 160, kills: 100 }, day).better);
+  assert.equal(finishChallenge(s, { ...R, day: '2026-10-27' }, day), null, 'Lauf von gestern zählt nicht');
+});
+
+test('Kopfgeld mit Mutator: Bedingung und Start-Level', async () => {
+  const { bountyStart } = await import('../src/game/quests.js');
+  const R = { win: true, boss: true, si: 2, endless: false, cont: false, cnt: {}, bossHits: 3, time: 300, abil: [], nm: 0, healed: 9, cls: 'gob', mut: ['dark'] };
+  assert.ok(bountyMet({ t: 'boss', si: 2, c: 'mut', mut: 'dark' }, R)); assert.ok(!bountyMet({ t: 'boss', si: 2, c: 'mut', mut: 'glass' }, R));
+  assert.deepEqual(bountyStart({ t: 'boss', si: 2, c: 'mut', mut: 'dark' }), { si: 2, li: 4, mut: ['dark'] });
+  assert.deepEqual(bountyStart({ t: 'level', si: 1, c: 'mut', mut: 'swarm' }), { si: 1, li: 0, mut: ['swarm'] });
+  assert.equal(bountyStart({ t: 'boss', si: 2, c: 'nohit' }), null);
+  const t = normalize({ bounty: { day: 'd', list: [{ t: 'boss', si: 1, sk: 2, c: 'mut', mut: 'dark' }, { t: 'boss', si: 1, sk: 2, c: 'mut', mut: 'weg' }], done: [false, false] } });
+  assert.equal(t.bounty.list.length, 1);
+});

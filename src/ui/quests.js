@@ -6,9 +6,14 @@ import { $, fmtClock } from '../core/util.js';
 import { DAILY_BONUS } from '../data/achievements.js';
 import { CHESTS } from '../data/cards.js';
 import { COSM } from '../data/cosmetics.js';
-import { PASS_BONUS, PASS_BONUS_STEP, PASS_PTS, PASS_STAGES, PASS_STEP, PASS_TITLE, WEEKLY_BONUS, seasonSet } from '../data/quests.js';
+import { PASS_BONUS, PASS_BONUS_STEP, PASS_PTS, PASS_STAGES, PASS_STEP, PASS_TITLE, WEEKLY_BONUS, challengeReward, seasonSet } from '../data/quests.js';
 import { claimDaily, claimDailyBonus, dailyOpen, dailyTasks, ensureDaily } from '../game/progress.js';
-import { bountyOpen, bountyReward, bountyText, claimPass, claimWeekly, claimWeeklyBonus, daysLeftSeason, daysLeftWeek, ensureBounty,
+import { MUTATORS } from '../data/mutators.js';
+import { ABILITIES } from '../data/abilities.js';
+import { STAGES } from '../data/stages.js';
+import { levelLabel } from '../data/levels.js';
+import { icon } from '../render/icons.js';
+import { bountyOpen, bountyReward, bountyStart, bountyText, challengeIsBoss, ensureChallenge, claimPass, claimWeekly, claimWeeklyBonus, daysLeftSeason, daysLeftWeek, ensureBounty,
   passBonusReady, passList, passOpen, passStage, weeklyOpen, weeklyTasks } from '../game/quests.js';
 import { dayKey, msToMidnight } from '../game/shop.js';
 import { chestSvg, runeSvg } from './cardart.js';
@@ -17,7 +22,9 @@ import { openChest } from './store.js';
 import { playChest } from './chest-open.js';
 import { burstAt, flashScreen, flyReward } from './rewardfx.js';
 
-let sub = 'day', onChange = () => {};
+let sub = 'day', onChange = () => {}, start = () => {};
+// Lauf starten (ui/menus.js startStage; Kreis-Import vermeiden)
+export function questsStart(fn) { start = fn; }
 export function questsChanged(fn) { onChange = fn; }
 // Roter Punkt am Tab: irgendwo etwas abzuholen
 export const questNews = () => dailyOpen(save) || weeklyOpen(save) || passOpen(save);
@@ -40,7 +47,7 @@ export function renderQuests() {
   $('#qDayDot').hidden = !dailyOpen(save); $('#qWeekDot').hidden = !weeklyOpen(save); $('#qPassDot').hidden = !passOpen(save);
   const p = save.pass, stage = passStage(p.pts);
   $('#qPassMini').innerHTML = `<b>Pass Stufe ${stage}</b><div class="tbar2"><i style="width:${stage >= PASS_STAGES ? 100 : ((p.pts % PASS_STEP) / PASS_STEP * 100).toFixed(0)}%"></i><span>${fmtN(p.pts)} Punkte</span></div>`;
-  $('#questView').innerHTML = sub === 'day' ? dayHtml() : sub === 'week' ? weekHtml() : sub === 'bounty' ? bountyHtml() : passHtml();
+  $('#questView').innerHTML = sub === 'day' ? dayHtml() : sub === 'week' ? weekHtml() : sub === 'bounty' ? bountyHtml() : sub === 'chal' ? chalHtml() : passHtml();
   shownDay = dayKey();
 }
 function dayHtml() {
@@ -61,7 +68,19 @@ function bountyHtml() {
   const B = ensureBounty(save);
   return `<h3 class="sect">Kopfgeld-Brett <small id="qClock">neu in ${fmtClock(msToMidnight() / 1000)}</small></h3><p class="qhint">Ein Lauf erfüllt den Steckbrief, die Belohnung kommt gleich (Truhen ins Regal). Mit Weitermachen zählt er nicht. Je Steckbrief +${PASS_PTS.bounty} Pass-Punkte.</p>
     <div class="bounties">${B.list.map((b, i) => { const t = bountyText(b); return `<div class="wanted${B.done[i] ? ' got' : ''}"><div class="wtop">GESUCHT</div><div class="skulls">${SKULL.repeat(b.sk)}</div>
-      <p class="goal">${t.goal}</p>${t.cond ? `<p class="cond">${t.cond}</p>` : ''}<div class="rw">${rewardHtml(bountyReward(b))}</div>${B.done[i] ? '<div class="stamp">Erledigt</div>' : ''}</div>`; }).join('')}</div>`;
+      <p class="goal">${t.goal}</p>${t.cond ? `<p class="cond">${t.cond}</p>` : ''}<div class="rw">${rewardHtml(bountyReward(b))}</div>${!B.done[i] && bountyStart(b) ? `<button class="btn primary small" data-bgo="${i}">Los!</button>` : ''}${B.done[i] ? '<div class="stamp">Erledigt</div>' : ''}</div>`; }).join('')}</div>`;
+}
+// Tägliche Herausforderung (Phase 12): ein festes Level mit 2 Fähigkeiten und 1–2 Mutatoren, beliebig viele Versuche
+function chalHtml() {
+  const C = ensureChallenge(save), d = C.def; if (!d) return '';
+  const boss = challengeIsBoss(d), best = C.best ? (boss ? `${Math.floor(C.best / 60)}:${String(C.best % 60).padStart(2, '0')}` : `${C.best} Kills`) : '–';
+  return `<h3 class="sect">Tägliche Herausforderung <small id="qClock">neu in ${fmtClock(msToMidnight() / 1000)}</small></h3>
+    <p class="qhint">Feste Fähigkeiten und Mutatoren nur für diesen Lauf, beliebig viele Versuche. Bestwert: ${boss ? 'schnellster Sieg' : 'meiste Kills bei einem Sieg'}. Erster Sieg des Tages: Belohnung und +${PASS_PTS.challenge} Pass-Punkte.</p>
+    <div class="chal${C.done ? ' got' : ''}"><div class="chead"><b>${levelLabel(d.si, d.li)} · ${STAGES[d.si].name}</b>${boss ? `<span>Boss: ${STAGES[d.si].boss.name}</span>` : ''}</div>
+      <div class="cabil">${d.abil.map(a => `<span><img src="${icon(a)}" alt="">${ABILITIES[a].name}</span>`).join('')}</div>
+      <ul class="cmut">${d.mut.map(m => `<li><b>${MUTATORS[m].name}</b> – ${MUTATORS[m].desc}</li>`).join('')}</ul>
+      <div class="cfoot"><span>Bestwert heute: <b>${best}</b></span><span class="rw">${C.done ? '✓ Belohnung abgeholt' : `${rewardHtml({ gold: challengeReward(d.si).gold })} + ${rewardHtml({ runes: true })}`}</span>
+      <button class="btn primary" data-chgo>Los!</button></div></div>`;
 }
 function passHtml() {
   const p = save.pass, list = passList(save), set = seasonSet(p.season), d = daysLeftSeason(), bonus = passBonusReady(p);
@@ -90,6 +109,8 @@ $('#quests').addEventListener('click', e => {
   else if (b.dataset.weekly !== undefined) r = claimWeekly(save, +b.dataset.weekly);
   else if (b.dataset.wbonus !== undefined) r = claimWeeklyBonus(save);
   else if (b.dataset.pass !== undefined) r = claimPass(save, b.dataset.pass === 'bonus' ? 'bonus' : +b.dataset.pass);
+  else if (b.dataset.chgo !== undefined) { const d = ensureChallenge(save).def; persist(); sfx.pickCard(); start(d.si, d.li, 0, { mut: d.mut, abil: d.abil, mode: 'challenge' }); return; }
+  else if (b.dataset.bgo !== undefined) { const s = bountyStart(ensureBounty(save).list[+b.dataset.bgo]); if (!s) return; persist(); sfx.pickCard(); start(s.si, s.li, 0, { mut: s.mut, mode: 'bounty' }); return; }
   else return;
   if (!r) { sfx.buzz(); renderQuests(); return; }   // z. B. Mitternacht vorbei
   show(b, r);

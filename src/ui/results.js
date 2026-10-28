@@ -38,6 +38,7 @@ export function showResults(r) {
     (r.trophy ? `<p class="vchest trophy">${cosmTile(r.trophy)}<span>Trophäe: <b>${COSM[r.trophy].name}</b><br><small>in der Garderobe (Profil)</small></span></p>` : '') +
     (r.chest ? `<p class="vchest">${chestSvg(r.chest.type)}<span>Siegtruhe: <b>${CHESTS[r.chest.type].name}</b><br><small>${r.chest.shelf ? 'liegt im Truhenregal (Laden)' : 'Regal voll – sie ist sofort aufgegangen'}</small></span>${r.chest.shelf ? '' : '<button class="btn small" id="vchestBtn">Ansehen</button>'}</p>` : '') +
     clsXpHtml(r.cls) +
+    (r.challenge ? `<p class="vchest bounty"><span>Herausforderung geschafft! Bestwert: <b>${r.challenge.boss ? fmtTime(r.challenge.v) : r.challenge.v + ' Kills'}</b>${r.challenge.better ? ' (neu!)' : ''}</span>${r.challenge.reward ? `<span class="rw">${rewardHtml({ gold: r.challenge.reward.gold })}</span>` : ''}</p>` : '') +
     (r.bounty || []).map(x => { const t = bountyText(x.b); return `<p class="vchest bounty"><span>Kopfgeld erfüllt: <b>${t.goal}</b>${t.cond ? ` (${t.cond})` : ''}</span><span class="rw">${rewardHtml(x.reward)}</span></p>`; }).join('') +
     r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}${a.star ? ` · <em>${a.st >= STAR_MAX ? 'Legende!' : 'Neuer Stern!'}</em> ${'★'.repeat(a.st)}` : ''}</b></p>`).join('');
   $('#nextBtn').hidden = !r.next;
