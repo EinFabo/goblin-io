@@ -8,12 +8,17 @@ export const TILE_CACHE = [];
 export function stageTile(i) {
   if (TILE_CACHE[i]) return TILE_CACHE[i];
   const st = STAGES[i];
-  const c = mk(574, 431, g => {
-    if (GRASS_IMG) g.drawImage(GRASS_IMG, 0, 0, 574, 431); else { g.fillStyle = '#5fae3a'; g.fillRect(0, 0, 574, 431); }
-    if (st.tint) { g.globalCompositeOperation = 'multiply'; g.globalAlpha = st.tint[1]; g.fillStyle = st.tint[0]; g.fillRect(0, 0, 574, 431); }
-    // Farbton der Welt (Mischmodus „color“: Helligkeit des Grases bleibt, nur die Farbe wechselt)
-    if (st.hue) { g.globalCompositeOperation = 'color'; g.globalAlpha = st.hue[1]; g.fillStyle = st.hue[0]; g.fillRect(0, 0, 574, 431); }
-    if (st.dark) { g.globalCompositeOperation = 'source-over'; g.globalAlpha = st.dark; g.fillStyle = '#0a0f1a'; g.fillRect(0, 0, 574, 431); }
+  const base = BASE[st.deco];
+  const c = mk(TW, TH, g => {
+    // Phase 13: eigener Boden je Welt; Wiese, Spiegelhain und Nacht bleiben Gras (getönt wie bisher)
+    if (base) base(g, mulberry32(i * 104729 + 7));
+    else {
+      if (GRASS_IMG) g.drawImage(GRASS_IMG, 0, 0, TW, TH); else { g.fillStyle = '#5fae3a'; g.fillRect(0, 0, TW, TH); }
+      if (st.tint) { g.globalCompositeOperation = 'multiply'; g.globalAlpha = st.tint[1]; g.fillStyle = st.tint[0]; g.fillRect(0, 0, TW, TH); }
+      // Farbton der Welt (Mischmodus „color“: Helligkeit des Grases bleibt, nur die Farbe wechselt)
+      if (st.hue) { g.globalCompositeOperation = 'color'; g.globalAlpha = st.hue[1]; g.fillStyle = st.hue[0]; g.fillRect(0, 0, TW, TH); }
+    }
+    if (st.dark) { g.globalCompositeOperation = 'source-over'; g.globalAlpha = st.dark; g.fillStyle = '#0a0f1a'; g.fillRect(0, 0, TW, TH); }
     g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1;
     if (DECO[st.deco]) paintDeco(g, DECO[st.deco], i);
   });
@@ -25,7 +30,8 @@ export function drawGround(si, x, y, w, h) { const tc = stageTile(si); if (!tc.p
 // ---------- Boden-Deko je Welt (PLAN 6.1) ----------
 // Wird einmal in die Kachel gemalt; jedes Teil auch versetzt um eine Kachelbreite/-höhe, damit die Nähte nicht schneiden.
 // Einträge: [Anzahl, Maler(g, x, y, r = Zufall 0–1)]
-const TW = 574, TH = 431, OL = '#1d2b14';
+// Kachel 576×432 (= 8×6 Platten à 72), damit Plattenböden nahtlos kacheln
+const TW = 576, TH = 432, OL = '#1d2b14';
 function paintDeco(g, list, seed) {
   const R = mulberry32(seed * 7919 + 13);
   for (const [n, fn] of list) for (let i = 0; i < n; i++) {
@@ -51,4 +57,76 @@ const DECO = {
   tower: [[6, (g, r) => { g.strokeStyle = `rgba(200,150,255,${.35 + r * .3})`; g.lineWidth = 2; g.beginPath(); g.ellipse(0, 0, 22, 14, 0, 0, 7); g.stroke(); for (let k = 0; k < 5; k++) { const a = k * 1.2566; g.fillStyle = 'rgba(220,190,255,.7)'; g.fillRect(Math.cos(a) * 15 - 1.5, Math.sin(a) * 9 - 3, 3, 6); } }],
     [4, (g, r) => { const c = ['#7a2a2a', '#2a4a7a', '#4a6a2a', '#6a4a8a']; for (let k = 0; k < 3; k++) { g.fillStyle = c[(k + Math.floor(r * 4)) % 4]; g.strokeStyle = OL; g.lineWidth = 1.5; g.beginPath(); g.roundRect(-9 + k, -k * 5, 18, 5, 1); g.fill(); g.stroke(); } }]],
   night: [[18, (g, r) => { g.fillStyle = `rgba(200,210,255,${.4 + r * .4})`; g.beginPath(); g.arc(0, 0, 1 + r, 0, 7); g.fill(); }], [5, (g, r) => stone(g, 5 + r * 5, '#4a5070')]],
+};
+
+// ---------- Böden je Welt (Phase 13) ----------
+// Licht von oben links: helle Kante oben/links, Schatten unten/rechts. Alles nahtlos (Teile werden um die Kachel versetzt mitgemalt).
+const wrap = (g, x, y, fn) => { for (const ox of [0, -TW, TW]) for (const oy of [0, -TH, TH]) { g.save(); g.translate(x + ox, y + oy); fn(); g.restore(); } };
+function speckle(g, R, n, cols, r0, r1, a = 1) {
+  for (let i = 0; i < n; i++) {
+    const x = R() * TW, y = R() * TH, rx = r0 + R() * (r1 - r0), ry = rx * (.45 + R() * .3), c = cols[Math.floor(R() * cols.length)];
+    wrap(g, x, y, () => blob(g, rx, ry, c, a));
+  }
+}
+// Platten im Raster (Turm): je Platte leicht andere Farbe, Fase oben links hell, unten rechts dunkel.
+// Versetzte Reihen brauchen eine gerade Reihenzahl (TH / s), sonst stoßen an der Kachelnaht zwei gleiche Reihen aneinander
+function slabs(g, R, s, cols, light, dark) {
+  const nx = TW / s, tone = Array.from({ length: TH / s * nx }, () => cols[Math.floor(R() * cols.length)]);
+  for (let row = 0; row < TH / s; row++) for (let col = 0; col < nx + 1; col++) {
+    const x = col * s - (row % 2 ? s / 2 : 0), y = row * s;
+    g.fillStyle = tone[row * nx + col % nx]; g.fillRect(x, y, s, s);   // Spalte nx ist Spalte 0 der Nachbarkachel: gleiche Farbe
+    g.fillStyle = light; g.fillRect(x, y, s, 3); g.fillRect(x, y, 3, s);
+    g.fillStyle = dark; g.fillRect(x, y + s - 3, s, 3); g.fillRect(x + s - 3, y, 3, s);
+  }
+}
+// Risse mit Glut oder Schatten
+function cracks(g, R, n, col, w, glow) {
+  for (let i = 0; i < n; i++) {
+    const x = R() * TW, y = R() * TH, a = R() * 6.3, pts = [[0, 0]];
+    for (let k = 1; k < 5; k++) pts.push([Math.cos(a) * k * 14 + (R() - .5) * 12, Math.sin(a) * k * 14 + (R() - .5) * 12]);
+    wrap(g, x, y, () => {
+      g.lineJoin = 'round'; g.lineCap = 'round';
+      const line = () => { g.beginPath(); pts.forEach(([px, py], k) => k ? g.lineTo(px, py) : g.moveTo(px, py)); };
+      if (glow) { line(); g.strokeStyle = glow; g.lineWidth = w * 3; g.globalAlpha = .35; g.stroke(); g.globalAlpha = 1; }
+      line(); g.strokeStyle = col; g.lineWidth = w; g.stroke();
+    });
+  }
+}
+const BASE = {
+  snow(g, R) {
+    g.fillStyle = '#cdd9e5'; g.fillRect(0, 0, TW, TH);
+    speckle(g, R, 40, ['#d3dee9', '#c6d3e0'], 30, 70, .7);   // sanfte Wellen, wenig Kontrast (Deko-Schneehaufen liegen darüber)
+    speckle(g, R, 18, ['#b4c4d6'], 14, 30, .35);             // Mulden (Schatten)
+    speckle(g, R, 90, ['#f4f9ff'], 1, 2.5, .8);              // Glitzer
+  },
+  swamp(g, R) {
+    g.fillStyle = '#4e5a2c'; g.fillRect(0, 0, TW, TH);
+    speckle(g, R, 80, ['#56632f', '#465226', '#5d6a34'], 18, 50, .8);
+    for (let i = 0; i < 9; i++) {   // Pfützen mit hellem Rand oben links
+      const x = R() * TW, y = R() * TH, rx = 22 + R() * 30, ry = rx * .5;
+      wrap(g, x, y, () => { blob(g, rx + 3, ry + 3, '#36401c', .8); blob(g, rx, ry, '#2f4a40', .9); g.translate(-rx * .3, -ry * .35); blob(g, rx * .35, ry * .18, '#7fae9a', .45); });
+    }
+  },
+  graves(g, R) {
+    g.fillStyle = '#5b5348'; g.fillRect(0, 0, TW, TH);
+    speckle(g, R, 70, ['#655c4f', '#51493f', '#6b6254'], 16, 44, .8);
+    speckle(g, R, 26, ['#4f6040', '#5a6b46'], 14, 34, .75);   // Grasflecken
+    speckle(g, R, 90, ['#8a8072', '#3e372f'], 1.5, 3, .9);     // Kiesel
+  },
+  cliffs(g, R) {
+    g.fillStyle = '#6f7178'; g.fillRect(0, 0, TW, TH);
+    speckle(g, R, 60, ['#787a82', '#666870', '#7f828a'], 20, 54, .85);
+    cracks(g, R, 22, 'rgba(30,30,36,.55)', 2, null);
+    speckle(g, R, 70, ['#9a9ca4', '#4e5058'], 1.5, 3, .9);
+  },
+  chasm(g, R) {
+    g.fillStyle = '#3d2c24'; g.fillRect(0, 0, TW, TH);
+    speckle(g, R, 70, ['#46332a', '#35261f', '#4d3a2e'], 18, 48, .85);
+    cracks(g, R, 10, '#b8501e', 2, '#8a3a14');             // Glutrisse, gedämpft (Orange-Rot heißt sonst „Gefahr“)
+    speckle(g, R, 60, ['#6a5040', '#251a14'], 1.5, 3, .9);
+  },
+  tower(g, R) {
+    slabs(g, R, 72, ['#5a5068', '#544a62', '#605670', '#4e4560'], 'rgba(230,220,255,.16)', 'rgba(10,6,20,.35)');
+    speckle(g, R, 20, ['#3a3248'], 6, 16, .35);             // Abnutzung
+  },
 };

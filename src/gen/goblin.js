@@ -1,7 +1,7 @@
 // Goblin-Generator: 8 Blickrichtungen, Ebenen für Kosmetik, alle Animationen.
 // Kopf, Ohren, Gesicht und Hut sind Punkte im Figur-Raum (x, y, z), die je Richtung
 // um die Hochachse gedreht werden (siehe turn). down/left/up entsprechen den alten Sprites.
-import { DRAWN, MIRROR, NOSTROKE, circ, ell, f, group, line, path, poly, rect, star, svgDoc, turn } from './svg.js';
+import { DRAWN, MIRROR, NOSTROKE, circ, ell, f, group, line, path, poly, rect, sf, shadeOn, star, svgDoc, turn } from './svg.js';
 
 // ---------- Kosmetik (PLAN 9.7, Namen und Quellen in data/cosmetics.js) ----------
 export const SKINS = {
@@ -24,7 +24,14 @@ export const HATS = {
 };
 export const DEFAULT_LOOK = { skin: 'green', outfit: 'vest', hat: 'zipfel', cls: 'gob', gold: false };
 
-export const ANIMS = { idle: 4, walk: 6, sprint: 6, roll: 6, hurt: 2, victory: 6, death: 6 };
+export const ANIMS = { idle: 6, walk: 8, sprint: 6, roll: 6, hurt: 2, victory: 6, death: 6, blink: 1 };
+// Bildnummer (1-basiert) aus Zeit bzw. Schrittzähler; Takt wie bis 3.0.x (Ruhe 0,8 s, Schritt-Zyklus = 6 Schritt-Einheiten)
+export const idleFrame = t => (Math.floor(t * 7.5) % ANIMS.idle) + 1;
+export const walkFrame = step => (Math.floor(step * ANIMS.walk / 6) % ANIMS.walk) + 1;
+// Blinzeln: jeder vierte Durchlauf zeigt statt Ruhebild 1 das Blinzel-Bild (gleiche Pose, alle 3,2 s), nicht gleich beim Start
+export const blinking = t => t > 1 && Math.floor(t * 7.5) % (ANIMS.idle * 4) === 0;
+// Ruhe: sechs verschiedene Posen (halber Schritt versetzt, sonst wären je zwei gleich), Hände schwingen leicht mit
+const idle6 = () => Array.from({ length: 6 }, (_, i) => Math.sin(2 * Math.PI * (i + .5) / 6)).map(s => ({ b: 1.2 * s, earWig: -s, handL: .8 * s, handR: -.8 * s }));
 
 const EYE = '#f4f06a';
 const RAD = Math.PI / 180;
@@ -42,9 +49,12 @@ export function poses(anim) {
   const cyc = n => Array.from({ length: n }, (_, i) => Math.sin(2 * Math.PI * i / n));
   switch (anim) {
     case 'idle':
-      return [0, 1.2, 0, -1.2].map((b, i) => pose({ b, earWig: [0, -1, 0, 1][i] }));
+      // Phase 13: 6 statt 4 Bilder, Hände schwingen leicht mit
+      return idle6().map(o => pose(o));
+    case 'blink':
+      return [pose({ ...idle6()[0], eyes: 'closed' })];   // wie Ruhebild 1, s. blinking
     case 'walk':
-      return cyc(6).map(s => pose({ b: 3 - 1.732 * Math.abs(s), fwdL: -7 * s, fwdR: 7 * s, handL: 7 * s, handR: -7 * s }));
+      return cyc(8).map(s => pose({ b: 3 - 1.732 * Math.abs(s), fwdL: -7 * s, fwdR: 7 * s, handL: 7 * s, handR: -7 * s }));
     case 'sprint':
       // Oberkörper nach vorn, lange Schritte, Ohren nach hinten, Arme pumpen
       return cyc(6).map(s => pose({
@@ -92,7 +102,7 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
   // Füße: Vorwärts-Schritt erscheint vorne als y-Verschiebung, seitlich als x-Verschiebung
   const feet = [-1, 1].map(s => {
     const a = s < 0 ? p.fwdL : p.fwdR, [x, d] = T(8 * s, 0);
-    return { d: d + a * c, el: ell(x - k * a, 17 + c * .43 * a - (s < 0 ? p.liftL : p.liftR), 6, 4.5, O.boot) };
+    return { d: d + a * c, el: ell(x - k * a, 17 + c * .43 * a - (s < 0 ? p.liftL : p.liftR), 6, 4.5, sf(O.boot)) };
   }).sort((a, b) => a.d - b.d).map(o => o.el);
 
   // Hände
@@ -100,7 +110,7 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
     const h = s < 0 ? p.handL : p.handR, [x, d] = T(16 * s, 0);
     const lift = s < 0 ? p.handLiftL : p.handLiftR;
     const hx = x - k * (h + 2) + (lift > 8 ? 6 * s * ac : 0), hy = 6 + c * .43 * h - lift;
-    const el = [circ(hx, hy, 5, S.skin)];
+    const el = [circ(hx, hy, 5, sf(S.skin))];
     // Klassen (Phase 9): Bogen, Stab oder Keule immer in der rechten Hand; sonst der Dolch beim Jubeln
     const item = s > 0 && clsItem(look.cls, hx, hy, look.gold, S.skin);
     if (!item && s > 0 && p.dagger) el.unshift(dagger(hx, hy));
@@ -116,7 +126,7 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
 
   // Körper (Outfit-Ebene)
   const bw = 18 + 4 * ac + (look.cls === 'war' ? 3 : 0);   // Krieger etwas breiter
-  const body = [rect(-bw / 2, -2, bw, 20, 6, O.body), rect(-bw / 2 + 1, 9, bw - 2, 4, 0, O.belt, NOSTROKE)];
+  const body = [rect(-bw / 2, -2, bw, 20, 6, sf(O.body)), rect(-bw / 2 + 1, 9, bw - 2, 4, 0, O.belt, NOSTROKE)];
   // Outfit-Details auf der Vorderseite (wandern mit der Drehung zur Seite)
   if (c > -0.2) {
     const [mx] = T(0, 9), w = 1 - .5 * ak;
@@ -125,9 +135,11 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
     if (O.plate) { body.push(rect(mx - 6 * w, 0, 12 * w, 7, 3, O.plate, ' stroke-width="1.2"')); for (const s of [-1, 1]) body.push(circ(mx + s * 7 * w, 5, 1.2, '#5a6068', NOSTROKE)); }
     if (O.patch) { const [px] = T(-4, 9); body.push(rect(px - 3, 2, 6, 5, 1, O.patch, ' stroke-width="1"')); }
   }
+  // Phase 13: Kopfschatten oben auf dem Körper, Glanzkante an der Lichtseite
+  if (shadeOn()) body.push(ell(0, 4, bw / 2 - 2, 2.6, '#1c1430', ' fill-opacity=".28"' + NOSTROKE), rect(-bw / 2 + 2, 2, 1.6, 9, .8, '#fffbe8', ' fill-opacity=".35"' + NOSTROKE));
   // Klassen-Ausstattung am Körper: Robe (Magier), Fellkragen (Krieger), Köcher (Bogen, s. back)
-  if (look.cls === 'mage') body.push(path(`M${f(-bw / 2)} 11 L${f(-bw / 2 - 3)} 21 Q0 24 ${f(bw / 2 + 3)} 21 L${f(bw / 2)} 11Z`, '#4a3a8a'), line(-bw / 2 - 2, 19, bw / 2 + 2, 19, ' stroke="#ffd84a" stroke-width="1.4"'));
-  if (look.cls === 'war') for (const sd of [-1, 1]) { const [sx, sdp] = T(13 * sd, 0); if (sdp > -12) body.push(ell(sx, 4, 6.5, 5, '#8a6a44'), path(`M${f(sx - 6)} 6 l2 3 l2 -2 l2 3 l2 -2 l2 3`, 'none', ' stroke="#5a4428" stroke-width="1"')); }
+  if (look.cls === 'mage') body.push(path(`M${f(-bw / 2)} 11 L${f(-bw / 2 - 3)} 21 Q0 24 ${f(bw / 2 + 3)} 21 L${f(bw / 2)} 11Z`, sf('#4a3a8a')), line(-bw / 2 - 2, 19, bw / 2 + 2, 19, ' stroke="#ffd84a" stroke-width="1.4"'));
+  if (look.cls === 'war') for (const sd of [-1, 1]) { const [sx, sdp] = T(13 * sd, 0); if (sdp > -12) body.push(ell(sx, 4, 6.5, 5, sf('#8a6a44')), path(`M${f(sx - 6)} 6 l2 3 l2 -2 l2 3 l2 -2 l2 3`, 'none', ' stroke="#5a4428" stroke-width="1"')); }
   const back = [];
   if (look.cls === 'bow') {
     // Köcher auf dem Rücken: von vorn der Gurt quer über die Brust, von hinten der Köcher mit Pfeilen über der Schulter
@@ -146,16 +158,17 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
     const d = (T(14 * s, 0)[1] + T(15 * s, 0)[1]) / 2;
     const ox = d < -1 ? 4 * ak : 0, oy = d < -1 ? -3 * ak : 0;
     const pts = [[14 * s, -19, 0], [(37 - 6 * eb) * s, -27 + 5 * eb + p.earWig, zt], [15 * s, -7, 0]].map(([x, y, z]) => [T(x, z)[0] + ox, y + oy]);
-    const el = poly(pts, d < -1 ? S.dark : S.skin);
+    const el = poly(pts, sf(d < -1 ? S.dark : S.skin));
     (d > 3 ? earsFront : earsBack).push({ d, el });
   }
   const byDepth = a => a.sort((x, y) => x.d - y.d).map(o => o.el);
 
   // Kopf
-  const head = [ell(0, -13, 16 + 2 * ac, 16, S.skin)];
+  const head = [ell(0, -13, 16 + 2 * ac, 16, sf(S.skin))];
 
   // Hut (Ebene "hat")
   const hat = hatShape(H, p.hatHop, { k, c, ak, ac, T });
+  if (shadeOn()) hat.push(ell(-7, -23 + p.hatHop, 4.5, 2.2, '#fffbe8', ` fill-opacity=".4" transform="rotate(-30 -7 ${f(-23 + p.hatHop)})"` + NOSTROKE));
 
   // Gesicht: nur was zur Kamera zeigt
   const face = [];
@@ -221,7 +234,7 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
 
 // Hutformen. Kappe/Kuppel liegt auf dem Kopf (Mitte y -13, Radius ~16), alles Weitere darüber.
 function hatShape(H, hy, { k, c, ak, ac, T }) {
-  const out = [], rx = 16 + 2 * ac, front = c > -0.1, col = H.col;
+  const out = [], rx = 16 + 2 * ac, front = c > -0.1, col = sf(H.col);
   // Kappe wie bei der Zipfelmütze (vorn als Kuppel bis zur Stirn, hinten den Kopf bedeckend)
   const cap = (fill, top = 21) => front
     ? path(`M${f(-rx)} ${f(-13 + hy)} A${f(rx)} ${f(15 + 2 * ac)} 0 0 1 ${f(rx)} ${f(-13 + hy)} Q0 ${f(-top + hy)} ${f(-rx)} ${f(-13 + hy)}Z`, fill)
@@ -262,7 +275,7 @@ function hatShape(H, hy, { k, c, ak, ac, T }) {
         const [hx, hd] = T(15 * s, 0);
         if (hd < -6 && ak < .5) continue;
         const o = Math.sign(hx || s);
-        out.push(path(`M${f(hx)} ${f(-24 + hy)} Q${f(hx + 12 * o)} ${f(-26 + hy)} ${f(hx + 14 * o)} ${f(-40 + hy)} Q${f(hx + 6 * o)} ${f(-31 + hy)} ${f(hx - 2 * o)} ${f(-30 + hy)}Z`, H.trim));
+        out.push(path(`M${f(hx)} ${f(-24 + hy)} Q${f(hx + 12 * o)} ${f(-26 + hy)} ${f(hx + 14 * o)} ${f(-40 + hy)} Q${f(hx + 6 * o)} ${f(-31 + hy)} ${f(hx - 2 * o)} ${f(-30 + hy)}Z`, sf(H.trim)));
       }
       break;
     }
@@ -289,10 +302,10 @@ function hatShape(H, hy, { k, c, ak, ac, T }) {
 
 // Klassenwaffe in der Hand (gold: Klassen-Level 20)
 function clsItem(cls, hx, hy, gold, skin) {
-  const hand = circ(0, 0, 5, skin), wood = gold ? '#f4c430' : '#8a5a32', t = ` transform="translate(${f(hx)} ${f(hy)})"`;
+  const hand = circ(0, 0, 5, sf(skin)), wood = gold ? '#f4c430' : '#8a5a32', t = ` transform="translate(${f(hx)} ${f(hy)})"`;
   if (cls === 'bow') return group([path('M3 -17 Q13 0 3 17', 'none', ' stroke-width="5"'), path('M3 -17 Q13 0 3 17', 'none', ` stroke="${wood}" stroke-width="2.6"`), line(3, -17, 3, 17, ' stroke="#f2ead6" stroke-width=".9"'), hand], t);
   if (cls === 'mage') return group([line(1, 12, 3, -22, ' stroke-width="4.6"'), line(1, 12, 3, -22, ` stroke="${gold ? '#f4c430' : '#6b4424'}" stroke-width="2.4"`), poly([[3, -31], [7, -24], [3, -18], [-1, -24]], '#a77bff', ' stroke-width="1.4"'), circ(3, -24, 7, '#b48cff', ' fill-opacity=".3"' + NOSTROKE), hand], t);
-  if (cls === 'war') return group([line(0, 8, 5, -10, ' stroke-width="5.4"'), line(0, 8, 5, -10, ' stroke="#5a3a22" stroke-width="3"'), path('M1 -7 Q-3 -26 9 -30 Q20 -23 10 -6Z', gold ? '#f4c430' : '#a8763e', ' stroke-width="1.8"'), circ(6, -20, 1.6, '#c9d1d8', ' stroke-width=".7"'), circ(11, -13, 1.6, '#c9d1d8', ' stroke-width=".7"'), hand], t);
+  if (cls === 'war') return group([line(0, 8, 5, -10, ' stroke-width="5.4"'), line(0, 8, 5, -10, ' stroke="#5a3a22" stroke-width="3"'), path('M1 -7 Q-3 -26 9 -30 Q20 -23 10 -6Z', sf(gold ? '#f4c430' : '#a8763e'), ' stroke-width="1.8"'), circ(6, -20, 1.6, '#c9d1d8', ' stroke-width=".7"'), circ(11, -13, 1.6, '#c9d1d8', ' stroke-width=".7"'), hand], t);
   return null;
 }
 function dagger(hx, hy) {

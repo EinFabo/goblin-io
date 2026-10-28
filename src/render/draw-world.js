@@ -1,4 +1,5 @@
 import { frand } from '../core/rng.js';
+import { idleFrame, walkFrame } from '../gen/goblin.js';
 import { joy } from '../core/input.js';
 import { DIR8, TAU, clamp } from '../core/util.js';
 import { CCOL, ECOL, SCHOOL_COL, ETYPES } from '../data/enemies.js';
@@ -12,7 +13,7 @@ import { ROLL_T, curPlayerSpr } from '../game/player.js';
 import { P, hasMut, onScreen, run } from '../game/state.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawImgC, drawSpr } from './canvas.js';
 import { iconCanvas } from './icons.js';
-import { PROC } from './proc.js';
+import { PROC, mk } from './proc.js';
 import { drawGround } from './tiles.js';
 import { ABIL_OBJ, drawAbilGround, drawAbilObj, drawAbilTop, drawBrewAura, drawBurrow } from './draw-abilities.js';
 import { potionGiant } from '../game/abilities.js';
@@ -21,7 +22,42 @@ import { drawProj2, drawWfxGround, drawWfxTop } from './draw-weapons2.js';
 import { MECH_PAINT, TRAIL } from '../data/cosmetics.js';
 
 // Gegner-Geschosse: Schein und Bild je Art (Bilder aus gen/fx.js)
-const PGLOW = { fire: 'rgba(255,50,30,.22)', void: 'rgba(170,80,255,.28)', frost: 'rgba(80,180,255,.25)', toxic: 'rgba(120,230,60,.28)', storm: 'rgba(255,230,80,.28)', necro: 'rgba(120,255,110,.25)', earth: 'rgba(150,110,60,.3)', light: 'rgba(255,240,170,.3)' };
+// Phase 13: Vignette und Licht als kleines Bild (¼ Auflösung, Verläufe vertragen das Hochskalieren), neu nur bei anderer Fenstergröße
+let VIG = null;
+function vignette() {
+  const w = Math.max(16, Math.round(W / 4)), h = Math.max(16, Math.round(H / 4));
+  if (VIG && VIG.width === w && VIG.height === h) return VIG;
+  VIG = mk(w, h, g => {
+    const r = Math.hypot(w, h) / 2, v = g.createRadialGradient(w / 2, h / 2, r * .55, w / 2, h / 2, r);
+    v.addColorStop(0, 'rgba(8,6,16,0)'); v.addColorStop(1, 'rgba(8,6,16,.32)');
+    g.fillStyle = v; g.fillRect(0, 0, w, h);
+    const l = g.createRadialGradient(w * .15, -h * .1, 0, w * .15, -h * .1, r * 1.1);
+    l.addColorStop(0, 'rgba(255,236,190,.12)'); l.addColorStop(1, 'rgba(255,236,190,0)');
+    g.fillStyle = l; g.fillRect(0, 0, w, h);
+  });
+  return VIG;
+}
+// Phase 13: Geschosse mit glühendem Kern und Schweif (Leuchtbild je Element einmal gemalt, dann nur noch drawImage)
+const PGLOW = { fire: '#ff5a1e', void: '#b26bff', frost: '#5fc0ff', toxic: '#7be04a', storm: '#ffe04a', necro: '#7bff6a', earth: '#b8905a', light: '#fff0a0' };
+const GLOW = {};
+function glowImg(k) {
+  const col = PGLOW[k] || PGLOW.frost;
+  return GLOW[k] || (GLOW[k] = mk(64, 64, g => {
+    const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, '#ffffffd0'); gr.addColorStop(.22, col + 'c0'); gr.addColorStop(.55, col + '40'); gr.addColorStop(1, col + '00');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  }));
+}
+// Leuchten unter dem Geschoss und zwei verblassende Kopien entlang der Flugbahn (3 drawImage je Geschoss)
+export function glowTail(k, x, y, vx, vy, r, alpha = 1) {
+  const img = glowImg(k), w = (r + 8) * 2.4;
+  for (let i = 2; i >= 0; i--) {
+    const s = w * (1 - i * .2);
+    ctx.globalAlpha = alpha * (i ? .42 - i * .12 : .9);
+    ctx.drawImage(img, x - vx * .03 * i - s / 2, y - vy * .03 * i - s / 2, s, s);
+  }
+  ctx.globalAlpha = 1;
+}
 const PFX = { void: 'shade', toxic: 'glob', storm: 'spark', necro: 'soul', earth: 'rock', light: 'lance' };
 const CALL_LOOK = { sc: .62 };   // Krieger vom Goblin-Ruf: etwas größer als die Bande
 const CHIEF_LOOK = { sc: .95 };  // Häuptling (Meister des Goblin-Rufs)
@@ -134,8 +170,9 @@ function drawRun(now) {
   for (const p of run.pproj) {
     if (drawProj2(p)) continue;
     if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a, daggerTint());
-    else if (p.k === 'spear') drawSpr('e_frostbolt_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.25, p.a);
-    else if (p.k === 'fireball') drawSpr('f_fireball_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.3, p.a);
+    else if (!onScreen(p.x, p.y, 100)) continue;
+    else if (p.k === 'spear') glowTail('frost', p.x, p.y, p.vx, p.vy, 4, .7), drawSpr('e_frostbolt_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.25, p.a);
+    else if (p.k === 'fireball') glowTail('fire', p.x, p.y, p.vx, p.vy, 6, .8), drawSpr('f_fireball_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.3, p.a);
     else if (p.k === 'boomer') drawImgC(PROC.bone, p.x, p.y, 40 * p.sc, p.t * 16);
     else if (p.k === 'saw') drawImgC(PROC.saw, p.x, p.y, 44 * p.sc, p.t * 22);
     else if (p.k === 'bullet') { ctx.strokeStyle = '#fff2a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * .025, p.y - p.vy * .025); ctx.stroke(); }
@@ -170,9 +207,8 @@ function drawRun(now) {
       drawSpr('p.glob.' + ((Math.floor(p.t * 12) % 4) + 1), p.x, p.y - p.h, 1.3, Math.atan2(p.ty - p.sy - Math.cos(p.t / p.dur * Math.PI) * 110, p.tx - p.sx));
       continue;
     }
+    glowTail(p.kind, p.x, p.y, p.vx, p.vy, p.r, p.fake ? .45 : 1);
     if (p.fake) ctx.globalAlpha = .45;
-    ctx.fillStyle = PGLOW[p.kind] || PGLOW.frost;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.r + 8, 0, TAU); ctx.fill();
     const fr = (Math.floor(p.t * 12) % 4) + 1;
     if (p.kind === 'fire') drawSpr('f_fireball_' + fr, p.x, p.y, p.sc, p.a);
     else if (PFX[p.kind]) drawSpr(`p.${PFX[p.kind]}.${fr}`, p.x, p.y, p.sc * 1.2, p.a);
@@ -214,6 +250,7 @@ function drawRun(now) {
   ctx.globalAlpha = 1;
   // Bildschirm-Ebene
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.drawImage(vignette(), 0, 0, W, H);   // Phase 13: warmes Licht von oben links, dunkle Ränder
   if (hasMut('dark')) {
     // Mutator Dunkelheit: nur ein Lichtkreis um den Goblin
     const gx = W / 2 + (P.x - camX) * zm, gy = H / 2 + (P.y - 8 - camY) * zm, r = 230 * zm;
@@ -335,7 +372,7 @@ export function drawCharge(e, t) {
 export function drawAlly(al, w) {
   const sc = w && w.sc ? w.sc : .55;
   ctx.fillStyle = 'rgba(111,194,58,.3)'; ctx.beginPath(); ctx.ellipse(al.x, al.y + 14, 14, 5, 0, 0, TAU); ctx.fill();
-  const spr = al.moving ? `gob.walk.${al.face}.${(Math.floor(al.at * 12) % 6) + 1}` : `gob.idle.${al.face}.${(Math.floor(run.time * 5) % 4) + 1}`;
+  const spr = al.moving ? `gob.walk.${al.face}.${walkFrame(al.at * 12)}` : `gob.idle.${al.face}.${idleFrame(run.time)}`;
   drawSpr(spr, al.x, al.y - 4, sc, 0, P.rageT > 0 ? 'rage' : null);
   if (al.slash > 0) {
     ctx.strokeStyle = `rgba(255,255,255,${al.slash / .15})`; ctx.lineWidth = 3;
@@ -393,7 +430,7 @@ export function drawMech() {
     ctx.fillStyle = '#3d4148'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.roundRect(fx - 11, fy - 3, 22, 8, 3); ctx.fill(); ctx.stroke();
   }
   const by = y - 24 - bob;
-  drawSpr(P.moving ? 'walk_down_' + ((Math.floor(P.anim * 8) % 6) + 1) : 'idle_down_' + ((Math.floor(P.anim * 5) % 4) + 1), x, by - 26, .72, 0, P.rageT > 0 ? 'rage' : null, P.inv > 0 && Math.floor(performance.now() / 50) % 2 ? .6 : 1);
+  drawSpr(P.moving ? 'walk_down_' + walkFrame(P.anim * 8) : 'idle_down_' + idleFrame(P.anim), x, by - 26, .72, 0, P.rageT > 0 ? 'rage' : null, P.inv > 0 && Math.floor(performance.now() / 50) % 2 ? .6 : 1);
   const side = Math.cos(P.gunA) >= 0 ? 1 : -1;
   ctx.fillStyle = '#4a4f57'; ctx.strokeStyle = '#0a0f06'; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.roundRect(x - side * 30 - 9, by - 26, 18, 14, 3); ctx.fill(); ctx.stroke();

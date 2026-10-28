@@ -1,4 +1,5 @@
 import { frand } from '../core/rng.js';
+import { blinking, idleFrame, walkFrame } from '../gen/goblin.js';
 import { joy, keys, sprintHeld } from '../core/input.js';
 import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
@@ -101,6 +102,6 @@ export function curPlayerSpr() {
   if (P.rollT > 0) return `gob.roll.${d}.${Math.min(6, 1 + Math.floor((1 - P.rollT / ROLL_T) * 6))}`;
   if (P.hitT > 0) return `gob.hurt.${d}.${P.hitT > .12 ? 1 : 2}`;
   if (P.sprinting) return `gob.sprint.${d}.${(Math.floor(P.step) % 6) + 1}`;
-  if (P.moving) return `gob.walk.${d}.${(Math.floor(P.step) % 6) + 1}`;
-  return `gob.idle.${d}.${(Math.floor(P.anim * 5) % 4) + 1}`;
+  if (P.moving) return `gob.walk.${d}.${walkFrame(P.step)}`;
+  return blinking(P.anim) ? `gob.blink.${d}.1` : `gob.idle.${d}.${idleFrame(P.anim)}`;
 }

@@ -1,6 +1,6 @@
 // Diener-Generator: Skelett, Geist, Steingolem, Ratte. 8 Richtungen (5 gezeichnet + 3 gespiegelt), idle/walk.
 // Werden später von Nekromanten, Lich, Geomanten und der Fähigkeit "Rattenflut" gebraucht.
-import { DRAWN, MIRROR, NOSTROKE, OUTLINE, circ, ell, f, group, kit, path, svgDoc } from './svg.js';
+import { DRAWN, MIRROR, NOSTROKE, OUTLINE, circ, ell, f, group, kit, path, sf, svgDoc } from './svg.js';
 
 const RAD = Math.PI / 180;
 export const MINION_KINDS = ['skeleton', 'ghost', 'golem', 'rat'];
@@ -78,7 +78,7 @@ function golem(K, p) {
     const n = T.length, p0 = T[(i - 1 + n) % n], p1 = T[i], p2 = T[(i + 1) % n], p3 = T[(i + 2) % n];
     dd += ` C${f(p1[0] + (p2[0] - p0[0]) / 6)} ${f(p1[1] + (p2[1] - p0[1]) / 6)} ${f(p2[0] - (p3[0] - p1[0]) / 6)} ${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])} ${f(p2[1])}`;
   }
-  K.add(1, 0, path(dd + 'Z', C.stone));
+  K.add(1, 0, path(dd + 'Z', sf(C.stone)));
   if (K.c > 0.3) {
     const x = K.x(0, 10);
     K.add(1, .2, path(`M${f(x - 6)} ${f(-8 + b)} L${f(x - 2)} ${f(-3 + b)} L${f(x - 4)} ${f(3 + b)}`, 'none', ' stroke-width="1.3"'));
@@ -91,7 +91,7 @@ function golem(K, p) {
   // Arme: Schulter und schwere Faust, schwingen gegenläufig
   for (const s of [-1, 1]) {
     const h = -s * p.step * .8, d = K.dep(15 * s, 0);
-    const el = ell(K.x(15 * s, 0), -10 + b, 6, 6, C.stone) + ell(K.x(17 * s, 0) - k * h, 5 + c * .43 * h + b, 6.5, 6, C.stoneS);
+    const el = ell(K.x(15 * s, 0), -10 + b, 6, 6, sf(C.stone)) + ell(K.x(17 * s, 0) - k * h, 5 + c * .43 * h + b, 6.5, 6, sf(C.stoneS));
     K.add(d < -3 ? 0 : 4, d, el);
   }
 }

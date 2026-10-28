@@ -230,7 +230,7 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 .lvbox{width:min(900px,100%);display:flex;flex-direction:column;align-items:center;gap:14px}
 .lvbox h2{font-size:clamp(34px,8vw,52px);color:var(--gold);margin:0;-webkit-text-stroke:2px var(--edge);paint-order:stroke fill}
 .lvbox h2 .lvchest{display:block;width:clamp(64px,12vw,96px);height:auto;margin:0 auto 2px;overflow:visible;filter:drop-shadow(0 0 8px #ffd84a) drop-shadow(0 0 22px rgba(255,200,60,.6));animation:rcPop .4s cubic-bezier(.3,1.6,.5,1) both}
-.lvbox h2 .lvchest .lid{transform-box:fill-box;transform-origin:50% 100%;transform:translateY(-45%) rotate(-22deg)}
+.lvbox h2 .lvchest .lid{transform-box:fill-box;transform-origin:50% 100%;transform:translateY(calc(-45% * var(--lk,1))) rotate(-22deg)}
 .cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;width:100%}
 .card{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:16px 14px 18px;border-radius:16px;
   border:3px solid var(--edge);background:var(--moss-2);box-shadow:0 6px 0 var(--edge),inset 0 0 0 2px var(--moss-3);animation:pop .25s backwards}
@@ -579,6 +579,17 @@ body.hub .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px);padding-b
 .ccard{--rc:#c9c9c0;position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:20px 6px 8px;border-radius:12px;border:3px solid var(--edge);
   background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 28%,var(--moss-3)),var(--moss-3) 55%);box-shadow:0 4px 0 var(--edge),inset 0 0 0 2px color-mix(in srgb,var(--rc) 70%,transparent)}
 .ccard img{width:56px;height:56px}
+/* Phase 13: Rahmen je Seltenheit, Folienglanz ab Episch (bei reduzierter Bewegung steht der Glanz still) */
+.ccard.r-rare{box-shadow:0 4px 0 var(--edge),inset 0 0 0 2px var(--rc),inset 0 0 0 4px rgba(10,15,6,.5)}
+.ccard.r-epic,.ccard.r-legendary{box-shadow:0 4px 0 var(--edge),inset 0 0 0 2px var(--rc),inset 0 0 0 4px rgba(10,15,6,.5),inset 0 0 18px color-mix(in srgb,var(--rc) 45%,transparent)}
+.ccard.r-legendary{border-color:#6a4a08;background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 40%,var(--moss-3)),var(--moss-3) 60%)}
+.ccard .foil{position:absolute;inset:0;border-radius:9px;overflow:hidden;pointer-events:none}
+/* Glanzstreifen per transform (läuft auf dem Compositor, kein Neuzeichnen der Karte je Bild) */
+.ccard .foil::after{content:'';position:absolute;top:0;bottom:0;left:-50%;width:50%;will-change:transform;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.26) 45%,rgba(255,225,255,.16) 55%,transparent);animation:foil 3.4s linear infinite}
+.ccard.r-legendary .foil::after{animation-duration:2.6s}
+@keyframes foil{from{transform:translateX(0)}60%,to{transform:translateX(300%)}}
+@media (prefers-reduced-motion:reduce){.ccard .foil{display:none}}
 .ccard b{font-family:var(--font-display);font-weight:400;font-size:14px;text-align:center;line-height:1.1}
 .ccard small{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
 .ccard .clv{position:absolute;top:-2px;left:50%;transform:translate(-50%,-30%);background:var(--rc);color:#1a1408;font-weight:900;font-size:11px;padding:1px 8px;border-radius:7px;border:2px solid var(--edge);white-space:nowrap}
@@ -587,7 +598,8 @@ body.hub .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px);padding-b
 .cbar.ready i{background:var(--leaf)}.cbar.max i{background:var(--gold)}
 .cbar span{position:absolute;inset:0;text-align:center;font-size:10px;line-height:11px;font-weight:900;text-shadow:0 1px 0 #000}
 .ccard.up{animation:cardUp 1.6s ease-in-out infinite}
-@keyframes cardUp{50%{box-shadow:0 4px 0 var(--edge),inset 0 0 0 2px var(--rc),0 0 16px rgba(111,194,58,.8)}}
+/* Puls über filter statt box-shadow: die Seltenheits-Rahmen haben verschieden lange Schatten-Listen, die sich nicht mischen lassen */
+@keyframes cardUp{50%{filter:drop-shadow(0 0 8px rgba(111,194,58,.9))}}
 .cardbtn:hover .ccard{filter:brightness(1.12)}
 .cardpanel{width:min(620px,calc(100vw - 32px));box-sizing:border-box}
 .cdetail{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:start}
@@ -670,9 +682,9 @@ body.hub .screen{padding-top:calc(env(safe-area-inset-top,0px) + 78px);padding-b
 .co-chest .lid{transform-box:fill-box;transform-origin:50% 100%;transition:transform .45s cubic-bezier(.3,1.6,.5,1)}
 /* Beim Wackeln hebt sich der Deckel kurz: das Licht dahinter scheint durch den Spalt */
 .co-chest.wob .lid{animation:coPeek .38s ease-in-out}
-@keyframes coPeek{45%{transform:translateY(-12%) rotate(-3deg)}}
+@keyframes coPeek{45%{transform:translateY(calc(-12% * var(--lk,1))) rotate(-3deg)}}
 .co-chest.squash{transform:translateX(-50%) scale(1.12,.84);transition:transform .12s ease-in}
-.co-chest.open .lid{transform:translateY(-55%) rotate(-26deg)}
+.co-chest.open .lid{transform:translateY(calc(-55% * var(--lk,1))) rotate(-26deg)}
 .co-chest.gone{opacity:0;transform:translateX(-50%) scale(.8)}
 .co-flash{position:absolute;inset:-40%;background:radial-gradient(circle at 50% 66%,#fff,color-mix(in srgb,var(--tc) 60%,transparent) 22%,transparent 55%);opacity:0;animation:coFlash .7s ease-out;pointer-events:none;z-index:0}
 @keyframes coFlash{0%{opacity:1}100%{opacity:0}}
@@ -1055,7 +1067,7 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 #runChest .rc-glow{position:absolute;left:50%;top:42%;width:190%;aspect-ratio:1;translate:-50% -50%;background:radial-gradient(closest-side,var(--rcol),color-mix(in srgb,var(--rcol) 30%,transparent) 45%,transparent);transform:scale(.25);transition:transform .35s cubic-bezier(.3,1.5,.5,1)}
 #runChest.open .rc-glow{transform:scale(1)}
 #runChest .lid{transform-box:fill-box;transform-origin:50% 100%;transition:transform .35s cubic-bezier(.3,1.6,.5,1)}
-#runChest.open .lid{transform:translateY(-55%) rotate(-26deg)}
+#runChest.open .lid{transform:translateY(calc(-55% * var(--lk,1))) rotate(-26deg)}
 #runChest .rc-reels{position:absolute;left:12px;right:12px;top:calc(34% + min(20vmin,118px));display:flex;justify-content:center;gap:clamp(10px,3vw,26px)}
 #runChest .rc-reel{display:flex;flex-direction:column;align-items:center;gap:6px;width:calc(var(--rs) + 40px);opacity:0;animation:rcFade .2s .4s both}
 #runChest .rc-win{width:var(--rs);height:var(--rs);overflow:hidden;border-radius:12px;border:3px solid var(--edge);background:linear-gradient(#2b2416,#15120b);box-shadow:inset 0 0 12px #000,0 0 0 2px var(--rcol)}

@@ -26,6 +26,8 @@ export function addNum(x, y, v, c, crit, dmg = false) {
 }
 export function part(x, y, vx, vy, life, c, s) { if (run.parts.length > 600) return; run.parts.push({ x, y, vx, vy, t: 0, life, c, s }); }
 export function puff(x, y, sc = 1, col = null) { for (let i = 0; i < 7; i++) part(x + frand(-10, 10) * sc, y + frand(-12, 8) * sc, frand(-40, 40), frand(-60, -10), frand(.35, .6), col || (i % 2 ? 'rgba(170,140,220,.75)' : 'rgba(230,230,230,.75)'), frand(5, 9) * sc); }
+// Treffer-Funken (Phase 13) in der Farbe des Treffers, nur Optik (frand)
+export function sparks(x, y, col, n = 3) { for (let i = 0; i < n; i++) { const a = frand(0, Math.PI * 2), v = frand(60, 150); part(x, y, Math.cos(a) * v, Math.sin(a) * v - 30, frand(.15, .28), col, frand(2, 3.5)); } }
 export function animFx(pre, n, x, y, sc = 1, fps = 18, rot = 0) { run.fx.push({ k: 'anim', pre, n, x, y, sc, fps, rot, t: 0 }); }
 // fn nach t Sekunden Spielzeit (steht in Pause, Hitstop und Zeitlupe mit still); merkt sich die Schadensquelle (Runen)
 export function later(t, fn) { run.fx.push({ k: 'later', t: 0, dur: t, fn, src: abSrc }); }

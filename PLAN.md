@@ -202,6 +202,17 @@ Jede Ebene ist ein eigenes `<g id="…">`. Kosmetik tauscht entweder die Palette
 | Level-Up | goldener Lichtstrahl von oben, Karten fliegen einzeln ein |
 | Musik | eigene Schleife pro Stage, Boss-Musik mit Intro |
 
+### 4.5 Stilregeln (Phase 13, Fabi hat 2026-10-28 Stil „B voll“ gewählt)
+
+| Regel | Umsetzung |
+|---|---|
+| Licht | von oben links. Gespiegelte Richtungen (rechts, unten rechts, oben rechts) sind im Spiel gespiegelte Bilder und haben das Licht damit rechts – bewusst, eigene Bilder je Richtung kosten zu viel Bildspeicher |
+| Töne je Fläche | Glanz (Grundfarbe 38 % zu warmem Weiß `#fff8e8`), Grund, Schatten (34 % zu kühlem Violett `#1c1430`), am Rand dünnes Randlicht – als `radialGradient` (Mitte 32 %/26 %) |
+| Werkzeug | `sf(farbe)` in `src/gen/svg.js` statt der Farbe; `svgDoc` sucht die benutzten Verläufe im fertigen Bild und schreibt sie in `<defs>` (kein globaler Zustand). `kit().blobE` (ab Radius 4,5) und `kit().smooth` schattieren selbst; kleine Teile (Augen, Knöpfe, Steine) bleiben flach |
+| Glanz und Schatten | Glanzfleck auf Hut, Glanzkante am Körper, Kopfschatten oben auf dem Körper (halbtransparent, ohne Kontur) |
+| Kontur | bleibt 1,6 (Stil C mit 2,4 wurde nicht gewählt); Innenlinien 1–1,2 |
+| Vergleich | `setShade(false)` zeichnet flach wie bis 3.0.x (nur für Vorher/Nachher-Bilder) |
+
 ---
 
 ## 5. Magierschulen und Gegner
@@ -1256,12 +1267,12 @@ Fabi hat gewählt: Wiedergeburt + Seelenbaum, Albtraum-Stufen 2–10, Tägliche 
 
 ### Phase 13 – Design-Overhaul: gleicher Stil, mehr Tiefe (Wunsch Fabi, 2026-10-14)
 Fabi hat gewählt: Vektor-Cartoon bleibt, aber mit Schattierung, Glanz, Randlicht, mehr Details und Bildern; Umfang: Figuren, Effekte, Welten, Menüs/Icons. Nach Phase 10–12, damit die neuen Inhalte gleich im neuen Stil entstehen.
-- [ ] **Stilregeln** als neuer Abschnitt 4.5: Licht von oben links, drei Töne (Grund, Schatten, Glanz) + Randlicht, Außenkontur 2,4 / Innenlinien 1,2, SVG-Verläufe in `svgDoc`/`kit()` (`src/gen/svg.js`).
-- [ ] **Referenzbild zuerst:** Goblin vorher/nachher (`node tools/gen/dump.mjs build/sprites --png`), 2–3 Varianten als Auswahl mit Vorschau an Fabi.
-- [ ] **Goblin, Gegner, Bosse** (`goblin.js`, `mages.js`, `minions.js`): Schattierung, mehr Bilder (idle 6, walk 8), Blinzeln; Silhouetten-Regel aus Abschnitt 2 einhalten.
-- [ ] **Effekte** (`fx.js`, `proc.js`, `draw-weapons2.js`): glühender Kern und Schweif, Treffer-Funken je Element, Sterbe-Auflösen.
-- [ ] **Welten** (`render/tiles.js`): eigener Boden je Welt (Erde, Stein, Schnee, Lava, Sumpf …), Deko-Objekte, Vignette und Licht. Kein gemeinsamer Atlas.
-- [ ] **Menüs und Icons** (`icons.js`, `cardart.js`): einheitliches Licht, jeder Truhentyp mit eigener Silhouette, Kartenrahmen je Seltenheit, Folienglanz ab Episch.
+- [x] **Stilregeln** als neuer Abschnitt 4.5: Licht von oben links, drei Töne + Randlicht über SVG-Verläufe (`sf()` in `src/gen/svg.js`). Abweichung: Kontur bleibt 1,6 (Fabi wählte B). – erledigt 2026-10-28
+- [x] **Referenzbild zuerst:** Goblin flach / A dezent / B voll / C kräftig in 7 Ansichten und 3 Klassen; Fabi hat B gewählt. – erledigt 2026-10-28
+- [x] **Goblin, Gegner, Bosse** (`goblin.js`, `mages.js`, `minions.js`): Schattierung über `sf()` (Haut, Ohren, Körper, Hut, Hände, Füße, Klassen-Teile; Magier-Robe, Hüte, Köpfe; Golem), Glanz auf Hut und Körper, Kopfschatten. Goblin: Ruhe 6 statt 4 Bilder, Laufen 8 statt 6 (`idleFrame`/`walkFrame`, gleicher Takt), Blinzeln jedes vierte Ruhe-Durchlauf (`blinking`). Abweichung: Magier und Diener behalten ihre Bildzahl (Speicher). – erledigt 2026-10-28
+- [x] **Effekte**: Geschosse mit glühendem Kern und Schweif (Leuchtbild je Element einmal gemalt, `glowTail` in `render/draw-world.js`, auch Feuerball und Eisspeer), Treffer-Funken in der Trefferfarbe (`sparks` in `game/fx.js`, höchstens bis zur halben Teilchen-Grenze), Sterbe-Auflösen gab es schon. – erledigt 2026-10-28
+- [x] **Welten** (`render/tiles.js`): eigener Boden für Schnee, Sumpf (Pfützen), Knochenacker (Erde, Grasflecken), Sturmklippen (Fels, Risse), Felsenschlund (Basalt, gedämpfte Glutrisse) und Turm (versetzte Steinplatten); Wiese, Spiegelhain und Nacht bleiben getöntes Gras. Kachel 576×432. Vignette mit warmem Licht von oben links (¼-Auflösung, einmal je Fenstergröße). – erledigt 2026-10-28
+- [x] **Menüs und Icons**: einheitliches Licht auf allen Icons (`shadeIcon`), eigene Deckel je Truhe (Holz flach mit Brettern, Eisen gewölbt mit Nieten, Gold hoch mit Juwel, Magier spitz wie ein Zauberhut), Kartenrahmen je Seltenheit, Folienglanz ab Episch (per transform, steht bei reduzierter Bewegung). – erledigt 2026-10-28
 - [ ] **Budget:** `npm run perf` vor/nach jedem Bereich, Bildspeicher ≤ 250 MB; Screenshots Desktop + Handy.
 
 ### Phase 14 – Multiplayer: Koop zu zweit (Wunsch Fabi, 2026-10-14, bewusst ganz am Ende)

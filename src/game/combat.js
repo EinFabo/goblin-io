@@ -7,7 +7,7 @@ import { hitDamage, endlessCap } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
-import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js';
+import { addItem, addNum, animFx, dissolve, dropGem, later, puff, sparks } from './fx.js';
 import { addEvents } from './run.js';
 import { P, abSrc, aoeId, hasMut, heal, isBig, pR, run } from './state.js';
 import { banner } from '../ui/hud.js';
@@ -35,8 +35,10 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
     if (tgt.aoeId === aoeId) return;
     tgt.aoeId = aoeId;
   }
-  const hpBefore = tgt.hp;
+  const hpBefore = tgt.hp, fresh = !(e.flash > 0);   // Funken nur beim ersten Treffer im Aufblitzen (Flächen treffen sonst vielfach)
   tgt.hp -= d; e.flash = .09;
+  // Funken höchstens bis zur halben Teilchen-Grenze, damit Sterbe-Wolken und Boss-Effekte nicht verdrängt werden
+  if (d > 0 && fresh && run.parts.length < 300) sparks(e.x, e.y - 14 * e.sc, crit ? '#ffd84a' : col || '#fff2c0', crit ? 4 : 2);
   if (P.leech && d > 0 && P.hp > 0) leech(Math.min(d, Math.max(0, hpBefore)));
   if (e.tb !== undefined && e.freezeT > 0) e.tb += d;   // Zeitbombe sammelt Schaden
   if (kb && !e.boss && !rule.blocked) { const m = e.elite ? .25 : e.traits && e.traits.includes('heavy') ? .2 : 1; e.kx += kx * kb * m; e.ky += ky * kb * m; }

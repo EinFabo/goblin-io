@@ -369,7 +369,14 @@ export function icon(id) {
         break;
     }
   });
+  shadeIcon(c);
   ICON[id] = c.toDataURL(); ICON[id + '#c'] = c;
   return ICON[id];
+}
+// Phase 13: einheitliches Licht für alle Icons – oben links etwas heller, unten rechts kühler Schatten (nur auf dem Gemalten)
+function shadeIcon(c) {
+  const g = c.getContext('2d'), gr = g.createLinearGradient(c.width * .15, c.height * .1, c.width * .85, c.height * .95);
+  gr.addColorStop(0, 'rgba(255,248,232,.22)'); gr.addColorStop(.45, 'rgba(255,248,232,0)'); gr.addColorStop(.55, 'rgba(28,20,48,0)'); gr.addColorStop(1, 'rgba(28,20,48,.24)');
+  g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = gr; g.fillRect(0, 0, c.width, c.height); g.restore();
 }
 export const iconCanvas = id => { icon(id); return ICON[id + '#c']; };

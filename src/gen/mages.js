@@ -2,7 +2,7 @@
 // Körper und Posen kommen aus dem alten mages.py (Feuer- und Frostmagier). Für die Schrägansichten
 // werden die Posen der Nachbarrichtungen gemittelt. Köpfe sind Pseudo-3D-Teile (siehe Kit), daher passen
 // sie automatisch in jede Richtung.
-import { DRAWN, MIRROR, NOSTROKE, OUTLINE, circ, ell, f, group, kit, line, path, poly, rect, star, svgDoc } from './svg.js';
+import { DRAWN, MIRROR, NOSTROKE, OUTLINE, circ, ell, f, group, kit, line, path, poly, rect, sf, star, svgDoc } from './svg.js';
 
 const RAD = Math.PI / 180;
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -209,14 +209,14 @@ const HEADS = {
 function hoodTip(K, base, apex, w, col, l = 3, d = -40) {
   const bx = K.x(base[0], base[2]), ax = K.x(apex[0], apex[2]), my = (base[1] + apex[1]) / 2;
   const mx = K.x((base[0] + apex[0]) / 2, (base[2] + apex[2]) / 2);
-  K.add(l, d, path(`M${f(bx - w)} ${f(base[1])} Q${f(mx - w * .5)} ${f(my)} ${f(ax)} ${f(apex[1])} Q${f(mx + w * .7)} ${f(my + 2)} ${f(bx + w)} ${f(base[1])} Z`, col));
+  K.add(l, d, path(`M${f(bx - w)} ${f(base[1])} Q${f(mx - w * .5)} ${f(my)} ${f(ax)} ${f(apex[1])} Q${f(mx + w * .7)} ${f(my + 2)} ${f(bx + w)} ${f(base[1])} Z`, sf(col)));
 }
 
 // Spitzhut (Feuer): Krempe, gebogene Spitze, Band und Stern
 function hatPointed(K, col, trim, starOn) {
   K.blobE(3, 0, -24, 0, 21, 5.5, 21, col);
   const tx = K.x(7, -14), cx1 = K.x(-3, -6);
-  K.add(3, .1, path(`M-12 -25 C-10 -34 ${f(cx1)} -42 ${f(tx)} -48 C${f(tx - 3)} -40 9 -32 12 -25 Z`, col));
+  K.add(3, .1, path(`M-12 -25 C-10 -34 ${f(cx1)} -42 ${f(tx)} -48 C${f(tx - 3)} -40 9 -32 12 -25 Z`, sf(col)));
   K.add(3, .2, path('M-12 -25 Q0 -22 12 -25 L11.3 -28.6 Q0 -25.8 -11.3 -28.6 Z', trim));
   if (starOn && K.face(0, 6, 0)) K.add(3, .3, poly(star(K.x(.5, 6), -34.5, 3.2, 1.3, 5), trim));
 }
@@ -225,13 +225,13 @@ function hatPointed(K, col, trim, starOn) {
 function feet(K, S, p) {
   return [-1, 1].map(s => {
     const a = s < 0 ? p.fwdL : p.fwdR, lift = s < 0 ? p.liftL : p.liftR;
-    return { d: K.dep(6 * s, 0) + a * K.c, el: ell(K.x(6 * s, 0) - 2 * K.k - K.k * a, 17 + K.c * .43 * a - lift, 5 + .5 * K.ak, 3.8, S.boot) };
+    return { d: K.dep(6 * s, 0) + a * K.c, el: ell(K.x(6 * s, 0) - 2 * K.k - K.k * a, 17 + K.c * .43 * a - lift, 5 + .5 * K.ak, 3.8, sf(S.boot)) };
   }).sort((a, b) => a.d - b.d).map(o => o.el);
 }
 function robe(K, S, b, lean, school) {
   const tw = 7 + 2 * K.ac, bw = 11 + 3 * K.ac, tx = lean * K.k, back = K.c < -0.3;
   const o = [
-    path(`M${f(-tw + tx)} ${f(-4 + b)} L${f(tw + tx)} ${f(-4 + b)} L${f(bw)} ${f(14 + b)} Q0 ${f(18 + b)} ${f(-bw)} ${f(14 + b)} Z`, S.robe),
+    path(`M${f(-tw + tx)} ${f(-4 + b)} L${f(tw + tx)} ${f(-4 + b)} L${f(bw)} ${f(14 + b)} Q0 ${f(18 + b)} ${f(-bw)} ${f(14 + b)} Z`, sf(S.robe)),
     path(`M${f(-bw + .8)} ${f(11 + b)} Q0 ${f(15 + b)} ${f(bw - .8)} ${f(11 + b)} L${f(bw)} ${f(14 + b)} Q0 ${f(18 + b)} ${f(-bw)} ${f(14 + b)} Z`, S.trim),
   ];
   if (school === 'necro') {
@@ -251,10 +251,10 @@ function robe(K, S, b, lean, school) {
 }
 function shoulders(K, S, b, col) {
   // Schulterplatten / Felsbrocken auf den Schultern (Erde, Meister)
-  return [-1, 1].map(s => ({ d: K.dep(11 * s, 0), el: ell(K.x(11 * s, 0), -2 + b, Math.hypot(5.5 * K.c, 5.5 * K.k), 4.5, col) }))
+  return [-1, 1].map(s => ({ d: K.dep(11 * s, 0), el: ell(K.x(11 * s, 0), -2 + b, Math.hypot(5.5 * K.c, 5.5 * K.k), 4.5, sf(col)) }))
     .sort((a, b2) => a.d - b2.d).map(o => o.el);
 }
-function hand(S, x, y) { return [ell(x, y - 1.5, 4.6, 4.8, S.robe), circ(x, y + 1.5, 3.4, S.skin || S.bone || S.mask || '#f3c79a')]; }
+function hand(S, x, y) { return [ell(x, y - 1.5, 4.6, 4.8, sf(S.robe)), circ(x, y + 1.5, 3.4, sf(S.skin || S.bone || S.mask || '#f3c79a'))]; }
 
 // ---------- Stab und Spitze ----------
 function staffPts(hx, hy, ang, top, bot) {

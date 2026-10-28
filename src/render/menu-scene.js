@@ -1,4 +1,5 @@
 import { $, TAU, face8 } from '../core/util.js';
+import { idleFrame } from '../gen/goblin.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawSpr } from './canvas.js';
 import { drawGround } from './tiles.js';
 import { SPR, blit, blitPart } from './sprites.js';
@@ -12,7 +13,7 @@ export function renderMenuScene(t) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   if (!SPR.idle_down_1) { ctx.fillStyle = '#141c0e'; ctx.fillRect(0, 0, cv.width, cv.height); return; }
-  if (!el('#menu').hidden) { renderMapScene(t, dt); avatars(SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)]); return; }
+  if (!el('#menu').hidden) { renderMapScene(t, dt); avatars(SPR['idle_down_' + idleFrame(t)]); return; }
   const z = ZOOM * DPR * 1.1, cx = Math.sin(t * .05) * 200, cy = t * 12;
   ctx.setTransform(z, 0, 0, z, cv.width / 2 - cx * z, cv.height / 2 - cy * z);
   const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
@@ -30,7 +31,7 @@ export function renderMenuScene(t) {
   }
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = 'rgba(10,15,6,.25)'; ctx.fillRect(0, 0, W, H);
-  avatars(SPR['idle_down_' + ((Math.floor(t * 5) % 4) + 1)]);
+  avatars(SPR['idle_down_' + idleFrame(t)]);
 }
 // Elemente und Zeichenflächen einmal holen; die Goblins neu malen nur, wenn ihr Bild wechselt (alle 200 ms)
 const els = {}, ctxs = {}, shown = {};
