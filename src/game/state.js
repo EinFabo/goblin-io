@@ -49,14 +49,19 @@ export function nearest(maxD = 1e9, from = P, ok = null) {
   return best;
 }
 export function randomEnemyInView(margin = 0) {
-  const hw = W / 2 / ZOOM - margin, hh = H / 2 / ZOOM - margin, c = [];
-  for (const e of run.enemies) if (!e.dead && !(e.spawnT > 0) && Math.abs(e.x - P.x) < hw && Math.abs(e.y - P.y) < hh) c.push(e);
+  const hw = viewHW() - margin, hh = viewHH() - margin, v = viewC(), c = [];
+  for (const e of run.enemies) if (!e.dead && !(e.spawnT > 0) && Math.abs(e.x - v.x) < hw && Math.abs(e.y - v.y) < hh) c.push(e);
   return c;
 }
 // Große Gegner (Boss, Teile des Bosses, Elite, Mini-Boss): für Schadens-Regeln von Fähigkeiten und Passiven
 export const isBig = e => !!(e.boss || e.link || e.elite || e.miniboss);
-export const viewR = () => Math.hypot(W / 2 / ZOOM, H / 2 / ZOOM);
-export const onScreen = (x, y, m = 0) => Math.abs(x - P.x) < W / 2 / ZOOM + m && Math.abs(y - P.y) < H / 2 / ZOOM + m;
+// Logik-Sicht (Phase 14): halbe Breite/Höhe in Welt-Einheiten und Mitte. Allein aus dem Fenster wie bisher; im Koop fest
+// (run.fixedView) und um die Mitte beider Goblins (run.vc), damit beide Rechner gleich rechnen.
+export const viewHW = () => (run && run.fixedView ? run.fixedView[0] : W / 2 / ZOOM);
+export const viewHH = () => (run && run.fixedView ? run.fixedView[1] : H / 2 / ZOOM);
+export const viewC = () => (run && run.vc) || P;
+export const viewR = () => Math.hypot(viewHW(), viewHH());
+export const onScreen = (x, y, m = 0) => { const c = viewC(); return Math.abs(x - c.x) < viewHW() + m && Math.abs(y - c.y) < viewHH() + m; };
 export { xpNeed } from './balance.js';
 export const pR = () => P.mechT > 0 ? 26 : 16;
 // Unsichtbar für die Gegner: Rauchbombe oder eingegraben (Maulwurfsgang); sie suchen dann bei run.decoy

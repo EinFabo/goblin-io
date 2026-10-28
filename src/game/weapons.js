@@ -3,8 +3,7 @@ import { sfx } from '../core/audio.js';
 import { TAU, angDiff, clamp, face8 } from '../core/util.js';
 import { hurt } from './combat.js';
 import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
-import { P, abSrc, isBig, nearest, query, randomEnemyInView, run, setSrc } from './state.js';
-import { H, W, ZOOM } from '../render/canvas.js';
+import { P, abSrc, isBig, nearest, query, randomEnemyInView, run, setSrc, viewHH, viewHW } from './state.js';
 import { smokeAtkSlow } from '../data/abilities.js';
 import { onProjHit, stepWeapon2 } from './weapons2.js';
 
@@ -180,7 +179,7 @@ export function stepAlly(al, i, n, dmg, spd, rate, dt, bigMul = 1) {
   if (Math.hypot(al.x - P.x, al.y - P.y) > 520) { al.px = al.x = P.x + rand(-30, 30); al.py = al.y = P.y + rand(-30, 30); puff(al.x, al.y, .5); }
 }
 export function updPProj(dt) {
-  const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
+  const hw = viewHW(), hh = viewHH();
   for (const p of run.pproj) {
     setSrc(p.src);   // Geschosse von Fähigkeiten (Mech, Schild, Wirbelaxt …) tragen deren Runen
     p.t += dt; p.life -= dt;

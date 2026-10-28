@@ -13,9 +13,8 @@ import { soulRank } from './souls.js';
 import { hurt } from './combat.js';
 import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
 import { runeMods } from './runes.js';
-import { H, W, ZOOM } from '../render/canvas.js';
 import { TAU } from '../core/util.js';
-import { P, abSrc, hasMut, heal, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc } from './state.js';
+import { P, abSrc, hasMut, heal, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc, viewHH, viewHW } from './state.js';
 import { shootRaw, stepAlly } from './weapons.js';
 import { recalc } from './run.js';
 import { banner } from '../ui/hud.js';
@@ -443,7 +442,7 @@ export function reflect(p) {
 
 // ---------- Rattenflut ----------
 function releaseRats(m) {
-  const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM, dir = RNG.game.chance(.5) ? 1 : -1, rats = [];
+  const hw = viewHW(), hh = viewHH(), dir = RNG.game.chance(.5) ? 1 : -1, rats = [];
   for (let i = 0; i < (m.a ? 60 : 40); i++) rats.push({ x: P.x - dir * (hw + 30 + rand(0, 260)), y: P.y + rand(-hh, hh), sp: rand(380, 480), hit: new Map(), a: frand(0, 6) });   // a: nur Lauf-Animation
   run.abfx.push({ k: 'rats', dir, rats, t: 0, dur: 3.2, r: 16 * m.area, dmg: (30 + P.lv * 2) * P.dmgMult * m.pow, pest: m.b,
     bites: 1 + m.s1, loot: m.s2 ? 30 + 20 * m.s2 : 0, plague: m.s3 ? (4 + P.lv * .5) * m.s3 * P.dmgMult : 0, sick: [], sickT: 0, back: m.m });

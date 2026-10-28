@@ -2,7 +2,6 @@ import { RNG, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { DIR8, TAU, face8 } from '../core/util.js';
 import { ETYPES, SCHOOL_COL } from '../data/enemies.js';
-import { H, W, ZOOM } from '../render/canvas.js';
 import { MAGE_OFF, U } from '../render/sprites.js';
 import { STAGE_LEN } from '../data/stages.js';
 import { nmHp, nmMinis } from '../data/nightmare.js';
@@ -14,7 +13,7 @@ import { damagePlayer, hurt } from './combat.js';
 import { addItem, animFx, part, puff, ring } from './fx.js';
 import { hint, startClear } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
-import { P, hasMut, onScreen, pR, query, run, viewR, hidden } from './state.js';
+import { P, hasMut, onScreen, pR, query, run, viewHH, viewHW, viewR, hidden } from './state.js';
 import { banner } from '../ui/hud.js';
 
 export { eShot } from './casts.js';
@@ -123,7 +122,7 @@ function levelClear() {
 // Schwarm-Formen. Jeder sechste Gegner ist "extra", falls angegeben.
 function swarm({ type, extra, count = 30, shape = 'ring', side }) {
   const n = Math.round(count * (1 + run.loop * .25)), kind = i => i % 6 === 0 && extra ? extra : type;
-  const hw = W / 2 / ZOOM, hh = H / 2 / ZOOM;
+  const hw = viewHW(), hh = viewHH();
   // Linie außerhalb des Bildschirms auf Seite s (0 rechts, 1 unten, 2 links, 3 oben), läuft dann herein
   const wall = (s, m, k0) => {
     for (let i = 0; i < m; i++) {
