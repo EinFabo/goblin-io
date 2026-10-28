@@ -209,7 +209,10 @@ Jede Ebene ist ein eigenes `<g id="…">`. Kosmetik tauscht entweder die Palette
 | Licht | von oben links. Gespiegelte Richtungen (rechts, unten rechts, oben rechts) sind im Spiel gespiegelte Bilder und haben das Licht damit rechts – bewusst, eigene Bilder je Richtung kosten zu viel Bildspeicher |
 | Töne je Fläche | Glanz (Grundfarbe 38 % zu warmem Weiß `#fff8e8`), Grund, Schatten (34 % zu kühlem Violett `#1c1430`), am Rand dünnes Randlicht – als `radialGradient` (Mitte 32 %/26 %) |
 | Werkzeug | `sf(farbe)` in `src/gen/svg.js` statt der Farbe; `svgDoc` sucht die benutzten Verläufe im fertigen Bild und schreibt sie in `<defs>` (kein globaler Zustand). `kit().blobE` (ab Radius 4,5) und `kit().smooth` schattieren selbst; kleine Teile (Augen, Knöpfe, Steine) bleiben flach |
-| Glanz und Schatten | Glanzfleck auf Hut, Glanzkante am Körper, Kopfschatten oben auf dem Körper (halbtransparent, ohne Kontur) |
+| Glanz und Schatten | Glanzkante am Körper (nur über dem Gürtel), Kopfschatten oben auf dem Körper (halbtransparent, ohne Kontur). Kein fester Glanzfleck auf Hüten – der lag je nach Hutform über der Kontur |
+| Gedrehte Posen | Rolle (Kugel) und Umfallen drehen die Figur; `svgDoc(…, { rot })` dreht die Verläufe zurück, das Licht bleibt oben links |
+| Geschosse | bleiben ohne Verlauf: sie werden im Spiel gedreht (Flugrichtung, Drall), ein eingebauter Verlauf würde mitdrehen. Tiefe kommt vom Glühen (`glowTail`) |
+| Böden | große Flecken laufen weich aus (`soft` in `render/tiles.js`), nur Kiesel und Glitzer sind harte Punkte; Deko-Haufen mit Schatten unten rechts |
 | Kontur | bleibt 1,6 (Stil C mit 2,4 wurde nicht gewählt); Innenlinien 1–1,2 |
 | Vergleich | `setShade(false)` zeichnet flach wie bis 3.0.x (nur für Vorher/Nachher-Bilder) |
 
@@ -1266,14 +1269,14 @@ Fabi hat gewählt: Wiedergeburt + Seelenbaum, Albtraum-Stufen 2–10, Tägliche 
   - Geprüft: lint, 147 Tests, smoke (Abschnitt Phase 12), Sim gleiche Seeds gleich (auch mit Mutatoren und Zyklus), perf wie 3.0.6 (Bilder 111 MB), Deploy auf goblin.node-wave.org. Code-Review (high): 10 Funde behoben.
 
 ### Phase 13 – Design-Overhaul: gleicher Stil, mehr Tiefe (Wunsch Fabi, 2026-10-14)
-Fabi hat gewählt: Vektor-Cartoon bleibt, aber mit Schattierung, Glanz, Randlicht, mehr Details und Bildern; Umfang: Figuren, Effekte, Welten, Menüs/Icons. Nach Phase 10–12, damit die neuen Inhalte gleich im neuen Stil entstehen.
+Fabi hat gewählt: Vektor-Cartoon bleibt, aber mit Schattierung, Glanz, Randlicht, mehr Details und Bildern; Umfang: Figuren, Effekte, Welten, Menüs/Icons. Nach Phase 10–12, damit die neuen Inhalte gleich im neuen Stil entstehen. – erledigt 2026-10-28 (Stil „B voll“)
 - [x] **Stilregeln** als neuer Abschnitt 4.5: Licht von oben links, drei Töne + Randlicht über SVG-Verläufe (`sf()` in `src/gen/svg.js`). Abweichung: Kontur bleibt 1,6 (Fabi wählte B). – erledigt 2026-10-28
 - [x] **Referenzbild zuerst:** Goblin flach / A dezent / B voll / C kräftig in 7 Ansichten und 3 Klassen; Fabi hat B gewählt. – erledigt 2026-10-28
 - [x] **Goblin, Gegner, Bosse** (`goblin.js`, `mages.js`, `minions.js`): Schattierung über `sf()` (Haut, Ohren, Körper, Hut, Hände, Füße, Klassen-Teile; Magier-Robe, Hüte, Köpfe; Golem), Glanz auf Hut und Körper, Kopfschatten. Goblin: Ruhe 6 statt 4 Bilder, Laufen 8 statt 6 (`idleFrame`/`walkFrame`, gleicher Takt), Blinzeln jedes vierte Ruhe-Durchlauf (`blinking`). Abweichung: Magier und Diener behalten ihre Bildzahl (Speicher). – erledigt 2026-10-28
 - [x] **Effekte**: Geschosse mit glühendem Kern und Schweif (Leuchtbild je Element einmal gemalt, `glowTail` in `render/draw-world.js`, auch Feuerball und Eisspeer), Treffer-Funken in der Trefferfarbe (`sparks` in `game/fx.js`, höchstens bis zur halben Teilchen-Grenze), Sterbe-Auflösen gab es schon. – erledigt 2026-10-28
 - [x] **Welten** (`render/tiles.js`): eigener Boden für Schnee, Sumpf (Pfützen), Knochenacker (Erde, Grasflecken), Sturmklippen (Fels, Risse), Felsenschlund (Basalt, gedämpfte Glutrisse) und Turm (versetzte Steinplatten); Wiese, Spiegelhain und Nacht bleiben getöntes Gras. Kachel 576×432. Vignette mit warmem Licht von oben links (¼-Auflösung, einmal je Fenstergröße). – erledigt 2026-10-28
 - [x] **Menüs und Icons**: einheitliches Licht auf allen Icons (`shadeIcon`), eigene Deckel je Truhe (Holz flach mit Brettern, Eisen gewölbt mit Nieten, Gold hoch mit Juwel, Magier spitz wie ein Zauberhut), Kartenrahmen je Seltenheit, Folienglanz ab Episch (per transform, steht bei reduzierter Bewegung). – erledigt 2026-10-28
-- [ ] **Budget:** `npm run perf` vor/nach jedem Bereich, Bildspeicher ≤ 250 MB; Screenshots Desktop + Handy.
+- [x] **Budget:** Bildspeicher 111 → 112 MB. Die Verläufe kosteten beim Rastern am gedrosselten Handy ~1,4 s Ladezeit; dafür lädt der Goblin jetzt in zwei Teilen (`loadGoblin` in `render/sprites.js`): vor dem Hub nur Ruhe/Laufen/Blinzeln, Sprint/Rolle/Treffer/Sieg/Tod danach über die Hintergrund-Schlange mit Vorrang, jeder Laufstart wartet darauf (`goblinDone`). Ergebnis `npm run perf`: Handy Ladezeit 8,9 → 7,1 s, Hub-Bildrate wie vorher; PC 3,0 → 1,5 s ohne Ruckler. Boden einer Welt wird beim Laufstart gemalt, nicht im ersten Bild. Screenshots Desktop + Handy, Nahaufnahmen aller Hüte, Klassen, Animationen, Magier und Diener geprüft (Wunsch Fabi 2026-10-28: auf saubere Übergänge und Ebenen achten). Zwei Code-Reviews (high): 19 Funde behoben. – erledigt 2026-10-28
 
 ### Phase 14 – Multiplayer: Koop zu zweit (Wunsch Fabi, 2026-10-14, bewusst ganz am Ende)
 - [ ] **Lockstep:** Die Sim ist mit gleichen Seeds deterministisch → nur Eingaben je Tick austauschen, Puffer 3–4 Ticks, Zustands-Hash alle 60 Ticks gegen Desync. Vorher Determinismus-Test mit zwei Eingabeströmen.

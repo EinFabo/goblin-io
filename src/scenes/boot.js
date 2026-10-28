@@ -3,7 +3,7 @@ import { save, stageUnlocked } from '../core/save.js';
 import { $ } from '../core/util.js';
 import { icon } from '../render/icons.js';
 import { renderLoading } from '../render/loading-scene.js';
-import { loadAssets, loadStagesLater, preloadAllMages } from '../render/sprites.js';
+import { goblinRest, loadAssets, loadStagesLater, preloadAllMages } from '../render/sprites.js';
 import { applySettings } from '../ui/settings.js';
 
 // Für Bot und Tests: lädt beim ersten Abfragen alle übrigen Magier (im Spiel nie, sonst ruckelt das Menü)
@@ -33,7 +33,7 @@ defineScene('boot', {
     applySettings();
     $('#loading').hidden = true;
     go('menu');
-    bgLoaded = loadStagesLater(stageUnlocked, save.map.si);
+    bgLoaded = goblinRest().then(() => loadStagesLater(stageUnlocked, save.map.si));   // erst die restlichen Goblin-Bilder
   },
   render(now) { renderLoading(now / 1000); },
 });

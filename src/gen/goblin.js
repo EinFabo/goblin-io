@@ -135,8 +135,8 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
     if (O.plate) { body.push(rect(mx - 6 * w, 0, 12 * w, 7, 3, O.plate, ' stroke-width="1.2"')); for (const s of [-1, 1]) body.push(circ(mx + s * 7 * w, 5, 1.2, '#5a6068', NOSTROKE)); }
     if (O.patch) { const [px] = T(-4, 9); body.push(rect(px - 3, 2, 6, 5, 1, O.patch, ' stroke-width="1"')); }
   }
-  // Phase 13: Kopfschatten oben auf dem Körper, Glanzkante an der Lichtseite
-  if (shadeOn()) body.push(ell(0, 4, bw / 2 - 2, 2.6, '#1c1430', ' fill-opacity=".28"' + NOSTROKE), rect(-bw / 2 + 2, 2, 1.6, 9, .8, '#fffbe8', ' fill-opacity=".35"' + NOSTROKE));
+  // Phase 13: Kopfschatten oben auf dem Körper, Glanzkante an der Lichtseite (nur über dem Gürtel)
+  if (shadeOn()) body.push(ell(0, 4, bw / 2 - 2, 2.6, '#1c1430', ' fill-opacity=".28"' + NOSTROKE), rect(-bw / 2 + 2, 1, 1.6, 7, .8, '#fffbe8', ' fill-opacity=".35"' + NOSTROKE));
   // Klassen-Ausstattung am Körper: Robe (Magier), Fellkragen (Krieger), Köcher (Bogen, s. back)
   if (look.cls === 'mage') body.push(path(`M${f(-bw / 2)} 11 L${f(-bw / 2 - 3)} 21 Q0 24 ${f(bw / 2 + 3)} 21 L${f(bw / 2)} 11Z`, sf('#4a3a8a')), line(-bw / 2 - 2, 19, bw / 2 + 2, 19, ' stroke="#ffd84a" stroke-width="1.4"'));
   if (look.cls === 'war') for (const sd of [-1, 1]) { const [sx, sdp] = T(13 * sd, 0); if (sdp > -12) body.push(ell(sx, 4, 6.5, 5, sf('#8a6a44')), path(`M${f(sx - 6)} 6 l2 3 l2 -2 l2 3 l2 -2 l2 3`, 'none', ' stroke="#5a4428" stroke-width="1"')); }
@@ -168,7 +168,6 @@ export function drawGoblin(thDeg, p, look = DEFAULT_LOOK) {
 
   // Hut (Ebene "hat")
   const hat = hatShape(H, p.hatHop, { k, c, ak, ac, T });
-  if (shadeOn()) hat.push(ell(-7, -23 + p.hatHop, 4.5, 2.2, '#fffbe8', ` fill-opacity=".4" transform="rotate(-30 -7 ${f(-23 + p.hatHop)})"` + NOSTROKE));
 
   // Gesicht: nur was zur Kamera zeigt
   const face = [];
@@ -319,12 +318,12 @@ function dagger(hx, hy) {
 
 // Hut auf der Kugel (Kopf oben bei y -9): Kappe in Hutfarbe plus das Kennzeichen der Form
 function ballHat(H) {
-  const cap = path('M-12 -3 A15 15 0 0 1 12 -3 Q0 1 -12 -3Z', H.col), c = H.col;
+  const c = sf(H.col), cap = path('M-12 -3 A15 15 0 0 1 12 -3 Q0 1 -12 -3Z', c);
   switch (H.shape) {
     case 'chef': return [rect(-11, -10, 22, 7, 2, c), circ(-6, -13, 5, c), circ(6, -13, 5, c), circ(0, -16, 5.5, c)];
     case 'pot': return [rect(-12, -14, 24, 11, 2, c), rect(-14, -5, 28, 3, 1, '#6d747c')];
     case 'pirate': return [cap, path('M-19 -2 Q0 4 19 -2 Q8 -9 0 -7 Q-8 -9 -19 -2Z', c)];
-    case 'viking': return [cap, path('M-11 -4 Q-20 -6 -20 -16 Q-15 -9 -9 -9Z', H.trim), path('M11 -4 Q20 -6 20 -16 Q15 -9 9 -9Z', H.trim)];
+    case 'viking': return [cap, path('M-11 -4 Q-20 -6 -20 -16 Q-15 -9 -9 -9Z', sf(H.trim)), path('M11 -4 Q20 -6 20 -16 Q15 -9 9 -9Z', sf(H.trim))];
     case 'wizard': return [ell(0, -3, 19, 4, c), poly([[-9, -4], [4, -24], [9, -4]], c)];
     case 'crown': return [poly([[-11, -2], [-11, -9], [-7, -5], [-3, -12], [0, -6], [3, -12], [7, -5], [11, -9], [11, -2]], c)];
     default: return [cap, poly([[2, -8], [13, -19], [10, -5]], c)];
@@ -332,10 +331,10 @@ function ballHat(H) {
 }
 function ball(angle, S, O, H) {
   return [group([
-    poly([[-6, -8], [-20, -20], [-11, 0]], S.dark),
-    poly([[7, -7], [23, -15], [12, 3]], S.skin),
-    circ(0, 6, 15, S.skin),
-    path('M-14.5 9.5 A15 15 0 0 0 14.5 9.5 Q0 14 -14.5 9.5Z', O.body),
+    poly([[-6, -8], [-20, -20], [-11, 0]], sf(S.dark)),
+    poly([[7, -7], [23, -15], [12, 3]], sf(S.skin)),
+    circ(0, 6, 15, sf(S.skin)),
+    path('M-14.5 9.5 A15 15 0 0 0 14.5 9.5 Q0 14 -14.5 9.5Z', sf(O.body)),
     ...ballHat(H),
     path('M-9 4 Q-6 6.5 -3 4', 'none', ' stroke-width="2"'),
     ell(-3, 9, 3, 2.2, S.dark),
@@ -346,5 +345,8 @@ function ball(angle, S, O, H) {
 // dir: eine der 8 Richtungen; rechte Richtungen sind gespiegelt
 export function goblinSvg(dir, anim, i, look = DEFAULT_LOOK) {
   const base = MIRROR[dir] || dir;
-  return svgDoc(drawGoblin(DRAWN[base], poses(anim)[i], look), { flip: !!MIRROR[dir] });
+  const p = poses(anim)[i];
+  // Kugel (Rolle) und Umfallen drehen die ganze Figur: Licht zurückdrehen (gespiegelte Bilder spiegeln es wie im Spiel mit)
+  const rot = p.ball !== null ? p.ball : p.rot;
+  return svgDoc(drawGoblin(DRAWN[base], p, look), { flip: !!MIRROR[dir], rot });
 }

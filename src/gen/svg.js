@@ -34,23 +34,24 @@ const mix = (a, b, t) => '#' + hex2(a).map((v, i) => Math.round(v + (hex2(b)[i] 
 // Schatten werden kühl (zum dunklen Violett), Glanz warm-hell
 export const shadow = (c, t) => mix(c, '#1c1430', t), light = (c, t) => mix(c, '#fff8e8', t);
 export const sf = col => (!SHADE || typeof col !== 'string' || !/^#[0-9a-f]{6}$/i.test(col) ? col : `url(#sh${col.slice(1).toLowerCase()})`);
-function gradDefs(inner) {
+// rot: die ganze Figur ist um rot Grad gedreht (Rolle, Umfallen) – die Verläufe drehen zurück, damit das Licht oben links bleibt
+function gradDefs(inner, rot = 0) {
   const ids = new Set(inner.match(/url\(#sh[0-9a-f]{6}\)/g));
   if (!ids.size) return '';
   const out = [...ids].map(u => {
     const c = '#' + u.slice(7, 13);
-    return `<radialGradient id="sh${c.slice(1)}" cx=".32" cy=".26" r=".95"><stop offset="0" stop-color="${light(c, .38)}"/><stop offset=".42" stop-color="${c}"/>`
+    return `<radialGradient id="sh${c.slice(1)}" cx=".32" cy=".26" r=".95"${rot ? ` gradientTransform="rotate(${f(-rot)} .5 .5)"` : ''}><stop offset="0" stop-color="${light(c, .38)}"/><stop offset=".42" stop-color="${c}"/>`
       + `<stop offset=".86" stop-color="${shadow(c, .34)}"/><stop offset="1" stop-color="${light(shadow(c, .34), .28)}"/></radialGradient>`;
   }).join('');
   return `<defs>${out}</defs>`;
 }
 
 // 96×96-Dokument, gezeichnet um (0,0) mit Mittelpunkt bei (48,52) wie die alten Sprites
-export function svgDoc(body, { flip = false, vb = [-48, -52, 96, 96] } = {}) {
+export function svgDoc(body, { flip = false, vb = [-48, -52, 96, 96], rot = 0 } = {}) {
   const [x, y, w, h] = vb;
   const t = ` transform="translate(${-x} ${-y})${flip ? ' scale(-1 1)' : ''}"`;
   const inner = Array.isArray(body) ? body.join('') : body;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` + gradDefs(inner)
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` + gradDefs(inner, rot)
     + `<g stroke="${OUTLINE}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"${t}>`
     + inner + '</g></svg>';
 }

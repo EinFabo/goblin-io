@@ -6,6 +6,7 @@ import { TALENT, TALENTS, talentCost } from '../data/talents.js';
 import { accountXpNeed } from '../game/balance.js';
 import { icon } from '../render/icons.js';
 import { ensureStage, rushing } from '../render/sprites.js';
+import { stageTile } from '../render/tiles.js';
 import { armoryChanged, cleanLoadout, renderArmory } from './armory.js';
 import { renderProfile } from './profile.js';
 import { mapKey, onStart, renderMap } from './worldmap.js';
@@ -26,6 +27,7 @@ export async function startStage(si, li = 0, nm = false, opts = {}) {
   const t = setTimeout(() => { $('#loadMsg').textContent = 'Lade Magier …'; $('#loading').classList.add('solo'); $('#loading').hidden = false; }, 120);
   cleanLoadout();
   await rushing(ensureStage(si));
+  stageTile(si);   // Boden der Welt jetzt malen, nicht im ersten Bild des Laufs
   clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
   go('run', { si, li, nm, ...opts });
 }

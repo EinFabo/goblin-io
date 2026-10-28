@@ -26,7 +26,7 @@ export const svgUrl = s => 'data:image/svg+xml;charset=utf-8,' + encodeURICompon
 // Kein gemeinsamer Atlas mehr: aus großen Atlas-Seiten (1024²/2048²) rechnet Chrome jede Zeichnung sofort
 // auf dem Haupt-Thread ab – gemessen 20–100 ms je Frame statt 1–7 ms, das Ruckeln in 3.0.1. Einzeln
 // zugeschnitten braucht sogar weniger Speicher (kein verschenkter Platz auf den Seiten).
-// Gruppen: 'gob' und 'gobtint' werden beim Umziehen des Goblins komplett verworfen.
+// Gruppen: 'gob'/'gobtint' (Hub-Bilder des Goblins) und 'gobrun'/'gobruntint' (Lauf-Bilder) werden beim Umziehen verworfen.
 export const PAGES = {};   // Flächen je Gruppe (Speicher-Zählung, Verwerfen)
 function alloc(group, w, h) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -106,9 +106,10 @@ export async function rushing(pr) { rush++; nextLoad(); try { return await pr; }
 // (mk), sonst erzeugt eine ganze Welt ihre ~2 000 SVGs in einem Rutsch. Liefert [Bild, SVG].
 let loading = 0, restT = 0;
 const waiting = [];
-function loadQueued(mk) {
+// first: vor die übrigen Aufträge (Goblin-Lauf-Bilder sollen nicht hinter den Magiern einer anderen Welt warten)
+function loadQueued(mk, first = false) {
   return new Promise(res => {
-    waiting.push(() => { loading++; const svg = mk(); loadImg(svgUrl(svg)).then(im => { loading--; res([im, svg]); nextLoad(); }); });
+    waiting[first ? 'unshift' : 'push'](() => { loading++; const svg = mk(); loadImg(svgUrl(svg)).then(im => { loading--; res([im, svg]); nextLoad(); }); });
     nextLoad();
   });
 }
@@ -143,7 +144,7 @@ export async function loadAssets(onStep = () => {}) {
       for (const [name, i] of Object.entries(SPRMAP)) SPR[name] = fixed[i];
     }],
     ['Feuerbälle werden geknetet …', 2, () => loadFx()],
-    ['Goblin übt Rollen …', 5, () => loadGoblin()],
+    ['Goblin übt Rollen …', 3, () => loadGoblin(goblinLook(), true)],
     ['Wiese wird gemäht …', 1, async () => { GRASS_IMG = await loadImg(GRASS); makeProc(); }],
     ['Magier ziehen ihre Roben an …', 3, () => Promise.all([loadMenuMages(), loadMinions(['rat'])])],   // Ratten: Icon „Rattenflut“
   ];
@@ -168,7 +169,7 @@ async function loadGoblinRun() {
   const jobs = [];
   for (let i = 0; i < ANIMS.sprint; i++) jobs.push([i, goblinSvg('left', 'sprint', i, goblinLook())]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[1]))));
-  jobs.forEach(([i, svg], j) => { SPR[`gob.sprint.right.${i + 1}`] = raster(imgs[j], svg, true, 0, 'gob'); });
+  jobs.forEach(([i, svg], j) => { SPR[`gob.sprint.right.${i + 1}`] = raster(imgs[j], svg, true, 0, 'gobrun'); });
   await loadUnit('fire', 'walk');
 }
 
@@ -181,21 +182,53 @@ export function goblinLook() {
   const cls = activeCls();
   return { skin: save.look.skin, outfit: save.look.outfit, hat: save.look.hat, cls, gold: hasPerk(clsState(cls).lv, 'master') };
 }
-let gobToken = 0;
-export async function loadGoblin(look = goblinLook()) {
+let gobToken = 0, gobFull = Promise.resolve(true), gobGo = null;
+// Phase 13: Erst was der Hub zeigt (Ruhe, Laufen, Blinzeln), dann der Rest (Sprint, Rolle, Treffer, Sieg, Tod).
+// Liefert das Versprechen für den Hub-Teil (reicht für Icons und Vorschau). Der Rest lädt über die Hintergrund-Schlange mit Vorrang;
+// lazy (nur beim Start) wartet er, bis goblinRest() ihn anstößt (nach dem Hub-Aufbau, sonst bremst er die übrigen Ladeschritte),
+// sonst eilt er (auch auf dem Ergebnis-Bildschirm, wo der Hintergrund ruht). goblinDone() wartet vor jedem Lauf darauf.
+const HUB_ANIMS = ['idle', 'walk', 'blink'], RUN_ANIMS = Object.keys(ANIMS).filter(a => !HUB_ANIMS.includes(a));
+export function goblinRest() { if (gobGo) { gobGo(); gobGo = null; } return gobFull; }
+// bis das aktuelle Aussehen komplett ist – auch wenn währenddessen ein neues angestoßen wurde
+export async function goblinDone() { let p; do { p = goblinRest(); await p; } while (p !== gobFull); }
+export function loadGoblin(look = goblinLook(), lazy = false) {
   const me = ++gobToken;
+  const hub = loadGoblinHub(me, look);
+  const gate = lazy ? new Promise(r => { gobGo = r; }) : (gobGo = null, true);
+  gobFull = hub.then(ok => ok && Promise.resolve(gate).then(() => (lazy ? loadGoblinRest(me, look) : rushing(loadGoblinRest(me, look)))));
+  return hub;
+}
+async function loadGoblinHub(me, look) {
   const jobs = [];
-  for (const [anim, n] of Object.entries(ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < n; i++) jobs.push([anim, dir, i, goblinSvg(dir, anim, i, look)]);
+  for (const anim of HUB_ANIMS) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < ANIMS[anim]; i++) jobs.push([anim, dir, i, goblinSvg(dir, anim, i, look)]);
   const imgs = await Promise.all(jobs.map(j => loadImg(svgUrl(j[3]))));
-  if (me !== gobToken) return;
+  if (me !== gobToken) return false;
   // alte Goblin-Bilder freigeben (Flächen; die Tönungen hängen an den Einträgen), sonst wächst der Speicher mit jedem Umziehen
   PAGES.gob = []; PAGES.gobtint = [];
-  jobs.forEach(([anim, dir, i, svg], j) => {
-    SPR[`gob.${anim}.${dir}.${i + 1}`] = raster(imgs[j], svg, false, 0, 'gob');
-    const m = mirrorOf(dir);
-    if (m) SPR[`gob.${anim}.${m}.${i + 1}`] = { ...SPR[`gob.${anim}.${dir}.${i + 1}`], flip: true };
-  });
+  jobs.forEach(([anim, dir, i, svg], j) => setGoblin(anim, dir, i, raster(imgs[j], svg, false, 0, 'gob')));
   for (const anim of ['idle', 'walk']) for (const dir of ['down', 'left', 'up', 'right']) for (let i = 1; i <= ANIMS[anim]; i++) SPR[`${anim}_${dir}_${i}`] = SPR[`gob.${anim}.${dir}.${i}`];
+  return true;
+}
+// Der Rest über die Hintergrund-Schlange (höchstens 3 SVGs gleichzeitig, Rastern in Häppchen). Überholte Aufträge
+// (inzwischen anderes Aussehen) erzeugen nur ein leeres Mini-SVG statt des Goblins.
+const NO_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>';
+async function loadGoblinRest(me, look) {
+  const jobs = [];
+  for (const anim of RUN_ANIMS) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < ANIMS[anim]; i++) jobs.push([anim, dir, i]);
+  const res = await Promise.all(jobs.map(([anim, dir, i]) => loadQueued(() => (me === gobToken ? goblinSvg(dir, anim, i, look) : NO_SVG), true)));
+  if (me !== gobToken) return false;
+  let fresh = true;
+  await sliced(res.map(([im, svg], k) => () => {
+    if (me !== gobToken) return;
+    if (fresh) { PAGES.gobrun = []; PAGES.gobruntint = []; fresh = false; }   // alte Lauf-Bilder erst jetzt verwerfen: bis hierher sind sie noch im Einsatz
+    setGoblin(...jobs[k], raster(im, svg, false, 0, 'gobrun'));
+  }));
+  return me === gobToken;
+}
+function setGoblin(anim, dir, i, e) {
+  SPR[`gob.${anim}.${dir}.${i + 1}`] = e;
+  const m = mirrorOf(dir);
+  if (m) SPR[`gob.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
 }
 export const TINTS = {
   gold: ['#ffc928', .42], shadow: ['#3b1466', .5], ember: ['#a3140c', .38], rage: ['#ff2a1a', .42],
@@ -211,7 +244,7 @@ export function tinted(e, tint) {
   const tc = e.tc || (e.tc = {});
   let t = tc[tint];
   if (!t) {
-    const [p, sx, sy] = alloc(e.group === 'gob' ? 'gobtint' : 'tint', e.sw, e.sh), g = p.g;
+    const [p, sx, sy] = alloc(e.group === 'gob' || e.group === 'gobrun' ? e.group + 'tint' : 'tint', e.sw, e.sh), g = p.g;
     g.drawImage(e.c, e.sx, e.sy, e.sw, e.sh, sx, sy, e.sw, e.sh);
     const [col, a] = TINTS[tint] || [tint, .85];
     g.save(); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = a; g.fillStyle = col; g.fillRect(sx, sy, e.sw, e.sh); g.restore();
@@ -275,7 +308,7 @@ function stageNeeds(si) {
 export const stageMageKeys = si => [...stageNeeds(si).mages];
 export function ensureStage(si) {
   const n = stageNeeds(si);
-  return Promise.all([...[...n.mages].map(loadVariant), loadMinions([...n.minions])]);
+  return Promise.all([...[...n.mages].map(loadVariant), loadMinions([...n.minions]), goblinDone()]);
 }
 // Menü: je ein Bossbild für die Weltkarte; die laufenden Demo-Magier (Hintergrund der anderen Tabs)
 // kommen erst mit loadStagesLater

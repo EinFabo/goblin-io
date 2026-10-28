@@ -45,7 +45,8 @@ const flower = (g, c) => { for (let k = 0; k < 5; k++) { const a = k * 1.2566; g
 const mush = (g, s, cap = '#d6402e') => { g.fillStyle = '#efe4c4'; g.strokeStyle = OL; g.lineWidth = 1.5; g.fillRect(-s * .25, -s * .6, s * .5, s * .8); g.strokeRect(-s * .25, -s * .6, s * .5, s * .8); g.fillStyle = cap; g.beginPath(); g.moveTo(-s, -s * .5); g.quadraticCurveTo(0, -s * 1.7, s, -s * .5); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#fff'; g.beginPath(); g.arc(-s * .35, -s * .9, s * .15, 0, 7); g.arc(s * .3, -s * .8, s * .12, 0, 7); g.fill(); };
 const DECO = {
   meadow: [[14, (g, r) => flower(g, r < .5 ? '#ffffff' : '#c99bff')], [6, (g, r) => stone(g, 5 + r * 5)]],
-  snow: [[9, (g, r) => blob(g, 26 + r * 30, 12 + r * 10, '#f2f8ff', .85)], [6, (g, r) => { g.fillStyle = '#bfe9ff'; g.strokeStyle = OL; g.lineWidth = 1.5; const s = 5 + r * 6; g.beginPath(); g.moveTo(0, -s * 1.6); g.lineTo(s * .5, 0); g.lineTo(0, s * .4); g.lineTo(-s * .5, 0); g.closePath(); g.fill(); g.stroke(); }], [5, (g, r) => stone(g, 5 + r * 4, '#9aa8b4')]],
+  // Schneehaufen mit weichem Schatten unten rechts und hellem Rand oben links (Phase 13)
+  snow: [[9, (g, r) => { const w = 26 + r * 30, h = 12 + r * 10; g.translate(5, 4); soft(g, w * 1.25, h * 1.35, '#9fb4ca', .55); g.translate(-5, -4); blob(g, w, h, '#eef5fc', .95); g.translate(-w * .2, -h * .25); blob(g, w * .6, h * .45, '#ffffff', .8); }], [6, (g, r) => { g.fillStyle = '#bfe9ff'; g.strokeStyle = OL; g.lineWidth = 1.5; const s = 5 + r * 6; g.beginPath(); g.moveTo(0, -s * 1.6); g.lineTo(s * .5, 0); g.lineTo(0, s * .4); g.lineTo(-s * .5, 0); g.closePath(); g.fill(); g.stroke(); }], [5, (g, r) => stone(g, 5 + r * 4, '#9aa8b4')]],
   swamp: [[7, (g, r) => { blob(g, 30 + r * 26, 13 + r * 8, '#3e5a2a', .75); blob(g, 20 + r * 16, 8 + r * 5, '#5d7a2e', .6); for (let k = 0; k < 3; k++) { g.strokeStyle = 'rgba(200,255,140,.6)'; g.lineWidth = 1.5; g.beginPath(); g.arc(-10 + k * 9, -2 + (k % 2) * 3, 2 + k, 0, 7); g.stroke(); } }], [8, (g, r) => mush(g, 5 + r * 5, r < .5 ? '#d6402e' : '#a0703a')]],
   graves: [[6, (g, r) => { const w = 12 + r * 6; g.fillStyle = '#8f8a96'; g.strokeStyle = OL; g.lineWidth = 2; g.beginPath(); g.moveTo(-w / 2, 6); g.lineTo(-w / 2, -14); g.quadraticCurveTo(0, -24, w / 2, -14); g.lineTo(w / 2, 6); g.closePath(); g.fill(); g.stroke(); g.strokeStyle = '#5a5662'; g.beginPath(); g.moveTo(0, -14); g.lineTo(0, -2); g.moveTo(-4, -9); g.lineTo(4, -9); g.stroke(); g.translate(0, 8); blob(g, w * .8, 4, '#3a3540', .5); }],
     [8, (g, r) => { g.rotate(r * 6); g.fillStyle = '#ece4cf'; g.strokeStyle = OL; g.lineWidth = 1.5; g.beginPath(); g.roundRect(-8, -2, 16, 4, 2); g.fill(); g.stroke(); for (const sx of [-8, 8]) { g.beginPath(); g.arc(sx, -2, 2.5, 0, 7); g.arc(sx, 2, 2.5, 0, 7); g.fill(); } }]],
@@ -61,12 +62,32 @@ const DECO = {
 
 // ---------- Böden je Welt (Phase 13) ----------
 // Licht von oben links: helle Kante oben/links, Schatten unten/rechts. Alles nahtlos (Teile werden um die Kachel versetzt mitgemalt).
-const wrap = (g, x, y, fn) => { for (const ox of [0, -TW, TW]) for (const oy of [0, -TH, TH]) { g.save(); g.translate(x + ox, y + oy); fn(); g.restore(); } };
+// r: Reichweite des Teils um (x, y) – Kopien, die die Kachel nicht berühren, werden übersprungen
+const wrap = (g, x, y, fn, r = 80) => {
+  for (const ox of [0, -TW, TW]) for (const oy of [0, -TH, TH]) {
+    const cx = x + ox, cy = y + oy;
+    if (cx + r < 0 || cx - r > TW || cy + r < 0 || cy - r > TH) continue;
+    g.save(); g.translate(cx, cy); fn(); g.restore();
+  }
+};
+// Flecken: große (ab 18) laufen weich aus, damit der Boden fleckig statt gepunktet wirkt; kleinere Spuren, Kiesel und Glitzer bleiben hart.
+// Der Verlauf liegt um den Ursprung und gilt in der Verschiebung beim Füllen – je Fleck einmal gebaut, für alle Kopien
 function speckle(g, R, n, cols, r0, r1, a = 1) {
   for (let i = 0; i < n; i++) {
     const x = R() * TW, y = R() * TH, rx = r0 + R() * (r1 - r0), ry = rx * (.45 + R() * .3), c = cols[Math.floor(R() * cols.length)];
-    wrap(g, x, y, () => blob(g, rx, ry, c, a));
+    const gr = rx > 18 && softGrad(g, rx, c);
+    wrap(g, x, y, () => (gr ? soft(g, rx, ry, gr, a) : blob(g, rx, ry, c, a)), rx);
   }
+}
+function softGrad(g, rx, c) {
+  const gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+  gr.addColorStop(0, c); gr.addColorStop(.55, c); gr.addColorStop(1, c + '00');
+  return gr;
+}
+// fill: Farbe (Verlauf wird gebaut) oder fertiger Verlauf aus softGrad
+function soft(g, rx, ry, fill, a) {
+  g.save(); g.scale(1, ry / rx); g.globalAlpha = a; g.fillStyle = typeof fill === 'string' ? softGrad(g, rx, fill) : fill;
+  g.beginPath(); g.arc(0, 0, rx, 0, Math.PI * 2); g.fill(); g.restore();
 }
 // Platten im Raster (Turm): je Platte leicht andere Farbe, Fase oben links hell, unten rechts dunkel.
 // Versetzte Reihen brauchen eine gerade Reihenzahl (TH / s), sonst stoßen an der Kachelnaht zwei gleiche Reihen aneinander
@@ -101,7 +122,7 @@ const BASE = {
   },
   swamp(g, R) {
     g.fillStyle = '#4e5a2c'; g.fillRect(0, 0, TW, TH);
-    speckle(g, R, 80, ['#56632f', '#465226', '#5d6a34'], 18, 50, .8);
+    speckle(g, R, 120, ['#56632f', '#465226', '#5d6a34'], 22, 60, .8);
     for (let i = 0; i < 9; i++) {   // Pfützen mit hellem Rand oben links
       const x = R() * TW, y = R() * TH, rx = 22 + R() * 30, ry = rx * .5;
       wrap(g, x, y, () => { blob(g, rx + 3, ry + 3, '#36401c', .8); blob(g, rx, ry, '#2f4a40', .9); g.translate(-rx * .3, -ry * .35); blob(g, rx * .35, ry * .18, '#7fae9a', .45); });
@@ -109,20 +130,20 @@ const BASE = {
   },
   graves(g, R) {
     g.fillStyle = '#5b5348'; g.fillRect(0, 0, TW, TH);
-    speckle(g, R, 70, ['#655c4f', '#51493f', '#6b6254'], 16, 44, .8);
-    speckle(g, R, 26, ['#4f6040', '#5a6b46'], 14, 34, .75);   // Grasflecken
+    speckle(g, R, 110, ['#655c4f', '#51493f', '#6b6254'], 20, 56, .8);
+    speckle(g, R, 34, ['#4f6040', '#5a6b46'], 16, 40, .75);   // Grasflecken
     speckle(g, R, 90, ['#8a8072', '#3e372f'], 1.5, 3, .9);     // Kiesel
   },
   cliffs(g, R) {
     g.fillStyle = '#6f7178'; g.fillRect(0, 0, TW, TH);
-    speckle(g, R, 60, ['#787a82', '#666870', '#7f828a'], 20, 54, .85);
+    speckle(g, R, 100, ['#787a82', '#666870', '#7f828a'], 24, 64, .85);
     cracks(g, R, 22, 'rgba(30,30,36,.55)', 2, null);
     speckle(g, R, 70, ['#9a9ca4', '#4e5058'], 1.5, 3, .9);
   },
   chasm(g, R) {
     g.fillStyle = '#3d2c24'; g.fillRect(0, 0, TW, TH);
-    speckle(g, R, 70, ['#46332a', '#35261f', '#4d3a2e'], 18, 48, .85);
-    cracks(g, R, 10, '#b8501e', 2, '#8a3a14');             // Glutrisse, gedämpft (Orange-Rot heißt sonst „Gefahr“)
+    speckle(g, R, 110, ['#46332a', '#35261f', '#4d3a2e'], 22, 58, .85);
+    cracks(g, R, 14, 'rgba(20,10,6,.55)', 2, null);        // Felsrisse (die glühenden Spalten kommen aus der Deko)
     speckle(g, R, 60, ['#6a5040', '#251a14'], 1.5, 3, .9);
   },
   tower(g, R) {
