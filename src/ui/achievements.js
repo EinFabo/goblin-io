@@ -1,31 +1,18 @@
 import { sfx } from '../core/audio.js';
 import { persist, save } from '../core/save.js';
-import { $, fmtClock } from '../core/util.js';
-import { ACH, ACHIEVEMENTS, DAILY_BONUS, TIERS } from '../data/achievements.js';
-import { CHESTS } from '../data/cards.js';
+import { $ } from '../core/util.js';
+import { ACH, ACHIEVEMENTS, TIERS } from '../data/achievements.js';
 import { COSM } from '../data/cosmetics.js';
-import { achState, claimAch, claimDaily, claimDailyBonus, claimableCount, dailyOpen, dailyTasks, titles } from '../game/progress.js';
-import { dayKey, msToMidnight } from '../game/shop.js';
-import { chestSvg } from './cardart.js';
-import { openChest } from './store.js';
+import { achState, claimAch, claimableCount, titles } from '../game/progress.js';
 import { burstAt, flashScreen, flyReward } from './rewardfx.js';
 
-// ---------- Erfolge-Reiter im Profil: Tagesaufgaben, Titel, Erfolge (PLAN 9.8) ----------
+// ---------- Erfolge-Reiter im Profil: Titel, Erfolge (PLAN 9.8); die Tagesaufgaben stehen seit Phase 11 im Aufgaben-Tab ----------
 let onChange = () => {};
 export function achChanged(fn) { onChange = fn; }
-export const achNews = () => claimableCount(save) > 0 || dailyOpen(save);
+export const achNews = () => claimableCount(save) > 0;
 const fmtN = n => Math.floor(n).toLocaleString('de-DE');
-const reward = r => r.gold ? `<span class="coin"></span>${r.gold}` : r.gems ? `<span class="gem"></span>${r.gems}` : `${chestSvg(r.chest)}<span>${CHESTS[r.chest].name}</span>`;
 
 export function renderAch() {
-  shownDay = dayKey();
-  const tasks = dailyTasks(save, shownDay), all = tasks.every(t => t.claimed);
-  const daily = `<h3 class="sect">Tagesaufgaben <small>neu in ${fmtClock(msToMidnight() / 1000)}</small></h3><div class="tasks">${tasks.map((t, i) => `
-    <div class="task${t.claimed ? ' got' : t.done ? ' done' : ''}"><div class="tt"><b>${t.text}</b><div class="tbar2"><i style="width:${(t.prog / t.n * 100).toFixed(0)}%"></i><span>${fmtN(t.prog)} / ${fmtN(t.n)}</span></div></div>
-      <div class="rw">${reward(t.reward)}</div>
-      ${t.claimed ? '<span class="ok">✓</span>' : `<button class="btn ${t.done ? 'primary' : 'ghost'} small" data-daily="${i}" ${t.done ? '' : 'disabled'}>Abholen</button>`}</div>`).join('')}
-    <div class="task bonus${save.daily.bonus ? ' got' : all ? ' done' : ''}"><div class="tt"><b>Alle drei geschafft</b></div><div class="rw">${reward(DAILY_BONUS)}</div>
-      ${save.daily.bonus ? '<span class="ok">✓</span>' : `<button class="btn ${all ? 'primary' : 'ghost'} small" data-dbonus ${all ? '' : 'disabled'}>Abholen</button>`}</div></div>`;
   const ts = titles(save);
   const title = `<div class="titlepick"><span>Titel</span><select id="titleSel" ${ts.length ? '' : 'disabled'}><option value="">– keiner –</option>${ts.map(t => `<option ${t === save.profile.title ? 'selected' : ''}>${t}</option>`).join('')}</select><small>${ts.length ? 'Steht unter deinem Namen.' : 'Titel gibt es für Gold-Erfolge.'}</small></div>`;
   // offene zuerst, dann nach Fortschritt
@@ -38,18 +25,12 @@ export function renderAch() {
       <div class="tt"><b>${a.name}</b><span>${a.desc.replace('{n}', fmt(goal))}</span>${extra}<div class="tbar2"><i style="width:${(prog * 100).toFixed(0)}%"></i><span>${max ? 'Alles geschafft' : `${fmt(Math.min(s.v, goal))} / ${fmt(goal)}`}</span></div></div>
       ${s.can ? `<button class="btn primary small" data-ach="${a.id}"><span class="gem"></span>${TIERS.slice(s.claimed, s.tier).reduce((n, T) => n + T.gems, 0)}</button>` : ''}</div>`;
   }).join('')}</div>`;
-  $('#achView').innerHTML = daily + title + ach;
+  $('#achView').innerHTML = title + ach;
 }
 
 $('#achView').addEventListener('click', e => {
-  const b = e.target.closest('button'); if (!b) return;
-  if (b.dataset.daily !== undefined) {
-    const r = claimDaily(save, +b.dataset.daily); if (!r) { sfx.buzz(); renderAch(); return; }   // z. B. Mitternacht vorbei
-    persist(); sfx.chest();
-    flyReward(b, 'gold', r.gold || 0); flyReward(b, 'gems', r.gems || 0);
-    if (r.chest) openChest(r.chest);
-  } else if (b.dataset.dbonus !== undefined) { const r = claimDailyBonus(save); if (!r) { sfx.buzz(); renderAch(); return; } persist(); sfx.chest(); flyReward(b, 'gems', r.gems); }
-  else if (b.dataset.ach) {
+  const b = e.target.closest('button[data-ach]'); if (!b) return;
+  {
     const r = claimAch(save, b.dataset.ach); if (!r) { sfx.buzz(); return; }
     persist(); if (r.cosm) sfx.master(); else sfx.lvl();
     // Medaille: Lichtstrahlen und Funken, dann fliegen die Juwelen zum Zähler; Gold-Stufe mit Titel: goldener Blitz
@@ -60,16 +41,6 @@ $('#achView').addEventListener('click', e => {
     renderAch(); onChange();
     // neu gewonnene Medaille springt an ihrem (neu sortierten) Platz
     const c = $(`#achView [data-aid="${b.dataset.ach}"]`); if (c) c.classList.add('claimed');
-    return;
   }
-  else return;
-  renderAch(); onChange();
 });
-// Countdown und Tageswechsel auffrischen, solange der Reiter offen ist
-let shownDay = '';
-setInterval(() => {
-  if ($('#achView').hidden || $('#profile').hidden) return;
-  if (dayKey() !== shownDay) { renderAch(); return; }
-  const el = $('#achView .sect small'); if (el) el.textContent = 'neu in ' + fmtClock(msToMidnight() / 1000);
-}, 1000);
 $('#achView').addEventListener('change', e => { if (e.target.id !== 'titleSel') return; save.profile.title = e.target.value; persist(); sfx.click(); onChange(); });

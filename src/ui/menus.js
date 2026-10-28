@@ -14,6 +14,7 @@ import { anyUpgrade, renderWorkshop, workshopHooks } from './workshop.js';
 import { renderWardrobe, wardrobeChanged } from './wardrobe.js';
 import { profileHooks } from './profile.js';
 import { achChanged, achNews, renderAch } from './achievements.js';
+import { questNews, questsChanged, renderQuests, scrollPass } from './quests.js';
 import { shownWallet } from './rewardfx.js';
 import { closeTree } from './evotree.js';
 
@@ -27,7 +28,7 @@ export async function startStage(si, li = 0, nm = false) {
   clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
   go('run', { si, li, nm });
 }
-const TABS = ['#store', '#shop', '#menu', '#armory', '#profile'];
+const TABS = ['#store', '#shop', '#menu', '#armory', '#quests', '#profile'];
 const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#evoTree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen', '#runeBag', '#cont', '#comboBook'];
 let curTab = null;
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
@@ -50,6 +51,7 @@ export function showScreen(id) {
   if (id === '#store') renderStore();
   if (id === '#armory') renderArmory();
   if (id === '#profile') renderProfile();
+  if (id === '#quests') { renderQuests(); scrollPass(); }
 }
 export function renderTopbar() {
   const p = save.profile, need = accountXpNeed(p.level);
@@ -61,12 +63,13 @@ export function renderTopbar() {
   $('#topGold').textContent = w.gold.toLocaleString('de-DE');
   $('#topGems').textContent = w.gems.toLocaleString('de-DE');
   // Hinweis-Punkte: Truhe bereit / Karte aufwertbar
-  $('#storeDot').hidden = !storeHasNews(); $('#shopDot').hidden = !anyUpgrade(); $('#achDot').hidden = $('#profDot').hidden = !achNews();
+  $('#storeDot').hidden = !storeHasNews(); $('#shopDot').hidden = !anyUpgrade(); $('#achDot').hidden = $('#profDot').hidden = !achNews(); $('#questDot').hidden = !questNews();
 }
 storeChanged(renderTopbar);
 wardrobeChanged(renderTopbar);
 profileHooks({ ward: renderWardrobe, ach: renderAch });
 achChanged(renderTopbar);
+questsChanged(renderTopbar);
 workshopHooks(renderTopbar, () => renderShop());
 setInterval(() => { if (document.body.classList.contains('hub')) $('#storeDot').hidden = !storeHasNews(); }, 5000);
 $('#tabbar').addEventListener('click', e => {

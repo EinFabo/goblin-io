@@ -4,6 +4,9 @@ import { CLASSES, CLASS_IDS, CLASS_MAX_LV, CLASS_PERKS, DASH_KIND, SPRINT_KIND, 
 import { WEAPONS } from '../data/weapons.js';
 import { loadGoblin } from '../render/sprites.js';
 import { dropGoblinIcons } from '../render/icons.js';
+import { AQ_TIERS, PASS_PTS } from '../data/quests.js';
+import { aqFrame, aqState, claimAq } from '../game/quests.js';
+import { burstAt } from './rewardfx.js';
 import { $ } from '../core/util.js';
 import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, ROLES, SLOT2_ACCT, SLOT_KEYS, STAR_COLS, STAR_MAX, STAR_NAMES, STAR_XP, abilXpNeed, spentPoints, treeDef, unlockText, xpPerUse } from '../data/abilities.js';
 import { openCombos } from './combobook.js';
@@ -94,7 +97,8 @@ function renderShelf() {
   if (byLv) ids = [...ids].sort((a, b) => (canEquip(b) - canEquip(a)) || (st(b).lv + (st(b).st || 0) * 100) - (st(a).lv + (st(a).st || 0) * 100));
   $('#armShelf').innerHTML = (role === 'all' ? moves : '') + ids.map(id => {
     const ok = canEquip(id), slot = save.loadout.indexOf(id);
-    return `<button class="token${ok ? '' : ' locked'}${id === sel ? ' on' : ''}" data-pick="${id}" role="option" aria-selected="${id === sel}">
+    const qf = aqFrame(save, id), qc = ok && aqState(save, id).can;   // Fähigkeiten-Quest: Silber-/Goldrahmen, Stern = Stufe abholbar
+    return `<button class="token${ok ? '' : ' locked'}${id === sel ? ' on' : ''}${qf ? ' qf' : ''}" ${qf ? `style="--qf:${qf}"` : ''} data-pick="${id}" role="option" aria-selected="${id === sel}">${qc ? '<span class="aqn" title="Quest-Stufe abholen">★</span>' : ''}
       <span class="disc"><img src="${icon(id)}" alt=""></span><span class="n">${ABILITIES[id].name}</span>
       ${ok ? `<span class="tlv">${st(id).lv}</span>` : ''}${slot >= 0 ? `<span class="eq">${SLOT_KEYS[slot]}</span>` : ''}${ok && freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}${isNew(id) ? '<span class="newtag">Neu</span>' : ''}${stars(id)}</button>`;
   }).join('');
@@ -117,6 +121,14 @@ function renderNote() {
   h += `<div class="bar${starBar ? ' starbar' : ''}" style="--sc:${STAR_COLS[Math.min(n, STAR_MAX - 1)]}"><i style="width:${pct.toFixed(0)}%"></i></div><p class="xp">Level ${s.lv}${xpTxt}${n ? ` · +${n * 3} % Kraft` : ''}</p>`;
   const hang = i => move || !slotOpen(i) ? '' : `<button class="btn ${slot === i ? 'ghost' : 'primary'}" data-hang="${i}" ${slot === i ? 'disabled' : ''}>${slot === i ? `Hängt an ${SLOT_KEYS[i]}` : `An ${SLOT_KEYS[i]} hängen`}</button>`;
   h += `<div class="acts">${hang(0)}${hang(1)}<button class="btn" data-tree="${id}">Skill Tree${free > 0 ? ` (${free} frei)` : ''}</button></div>`;
+  // Fähigkeiten-Quest (Phase 11): Bronze/Silber/Gold, eine Stufe je Abholen
+  if (!move) {
+    const q = aqState(save, id), all = q.claimed >= 3;
+    h += `<div class="aquest"><div class="aqh"><span>Quest</span>${AQ_TIERS.map((T, i) => `<i style="--mc:${T.col}" class="${i < q.claimed ? 'on' : i < q.tier ? 'ready' : ''}" title="${T.name}"></i>`).join('')}</div>
+      ${all ? '<p class="xp">Alle drei Stufen geschafft: Titel „Meister der ' + A.name + '“.</p>' : `<p class="aqt">${q.text}</p><div class="bar"><i style="width:${Math.min(100, q.v / q.goal * 100).toFixed(0)}%"></i></div>
+      <p class="xp">${Math.floor(q.v).toLocaleString('de-DE')} / ${q.goal.toLocaleString('de-DE')} · ${['Bronze: passende Rune', 'Silber: Runenkiste und Silberrahmen', 'Gold: legendäre Rune, Titel und Goldrahmen'][q.claimed]} · +${PASS_PTS.aq} Pass-Punkte</p>`}
+      ${q.can ? `<button class="btn primary small" data-aq="${id}">${AQ_TIERS[q.claimed].name} abholen</button>` : ''}</div>`;
+  }
   // Runen-Sockel (Phase 10): Klick öffnet die Runen-Tasche für diesen Sockel
   if (!move) {
     const socks = socketsOf(save, id);
@@ -140,6 +152,13 @@ function hang(i) {
   renderHooks(i); renderShelf(); renderNote();
 }
 $('#armory').addEventListener('click', e => {
+  const aq = e.target.closest('[data-aq]');
+  if (aq) {
+    const r = claimAq(save, aq.dataset.aq); if (!r) { sfx.buzz(); return; }
+    persist(); sfx.lvl();
+    const rc = aq.getBoundingClientRect(); burstAt(rc.left + rc.width / 2, rc.top, [AQ_TIERS[r.tier].col, '#ffffff'], 24);
+    renderShelf(); renderNote(); return;
+  }
   const u = e.target.closest('[data-usecls]'); if (u) { useClass(u.dataset.usecls); return; }
   // Klasse antippen: zeigt sie; eine freie Klasse wird gleich gewählt
   const cb = e.target.closest('[data-cls]'); if (cb) { pick('cls:' + cb.dataset.cls); useClass(cb.dataset.cls); return; }

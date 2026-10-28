@@ -12,6 +12,7 @@ import { save } from '../core/save.js';
 import { RUNES, parseRune, tierInfo } from '../data/runes.js';
 import { socketsOf } from '../game/runes.js';
 import { DASH_KIND, SPRINT_KIND, classOf } from '../data/classes.js';
+import { aqFrame } from '../game/quests.js';
 
 // ---------- HUD ----------
 export const hudCache = {};
@@ -88,6 +89,7 @@ export function setupAbilButtons() {
     const A = ABILITIES[s.id];
     b.querySelector('img').src = icon(s.id); b.querySelector('.lbl').textContent = A.short; b.setAttribute('aria-label', A.name);
     b.style.setProperty('--c', ABIL_COL[s.id] || '#e0a83a');
+    const qf = aqFrame(save, s.id); b.classList.toggle('qf', !!qf); b.style.setProperty('--qf', qf || 'transparent');   // Quest-Rahmen (Phase 11)
     // Runen (Phase 10): ein Punkt je gesockelter Rune in ihrer Farbe, Rand in der Seltenheit
     b.querySelector('.rdots').innerHTML = socketsOf(save, s.id).map(parseRune).filter(Boolean).map(r => `<i style="--rc:${RUNES[r.id].col};--rt:${tierInfo(r.tier).color}"></i>`).join('');
     for (const k of ['p', 'r', 'o', 'l', 'n']) delete hudCache['#ab' + i + 'Btn' + k];

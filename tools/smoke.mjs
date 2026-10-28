@@ -465,6 +465,31 @@ if (!cls.war.rams || cls.gob.rams) errs.push('Sturmangriff rammt nicht: ' + JSON
 cls.locked = await p.evaluate(() => { const G = GOBLIN; G.save.cls = 'bow'; G.save.stages = {}; G.go('run', { si: 0, seed: 3 }); const w = G.run.weapons[0].id; G.run.paused = true; G.go('menu'); return w; });
 if (cls.locked !== 'dagger') errs.push('gesperrte Klasse: ' + cls.locked);
 console.log('Klassen:', JSON.stringify(cls));
+// Aufgaben-Tab (Phase 11): Täglich/Woche/Pass abholen, Kopfgeld durch einen gewonnenen Lauf, Fähigkeiten-Quest in der Rüstkammer
+const q = {};
+await p.evaluate(() => { const G = GOBLIN, S = G.save; for (let s = 1; s <= 4; s++) S.stages[s] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 1, kills: 0, fast: 0 })) }; S.cls = 'gob'; G.go('menu', '#quests'); });
+await p.waitForTimeout(300);
+await p.evaluate(() => { const S = GOBLIN.save; S.stats.kills += 1e6; for (const k of ['levels', 'perfect', 'abil', 'gold', 'rolls', 'bosses', 'evo', 'elites', 'hat3', 'mega', 'combo', 'nmwin', 'clswin']) S.stats.c[k] = (S.stats.c[k] || 0) + 1e5; S.stats.chests += 1e5; S.stats.c['ab.trap.kills'] = 300; });
+for (const [sub, sel] of [['day', '[data-daily="0"]'], ['week', '[data-weekly="0"]']]) {
+  await p.click(`[data-qsub="${sub}"]`); await p.waitForTimeout(200);
+  await p.click(sel); await p.waitForTimeout(400);
+  if (await p.evaluate(() => !document.querySelector('#chestOpen').hidden)) { await p.evaluate(() => { document.querySelector('#chestOpen').hidden = true; }); }
+}
+await p.click('[data-qsub="pass"]'); await p.waitForTimeout(200); await p.click('[data-pass="1"]'); await p.waitForTimeout(300);
+await p.click('[data-qsub="bounty"]'); await p.waitForTimeout(200);
+q.tab = await p.evaluate(() => { const S = GOBLIN.save; return { daily: S.daily.claimed[0], weekly: S.weekly.claimed[0], pass: S.pass.claimed.includes(1), pts: S.pass.pts, wanted: document.querySelectorAll('#questView .wanted').length }; });
+q.run = await p.evaluate(async () => {
+  const G = GOBLIN, S = G.save, d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  S.bounty = { day, list: [{ t: 'level', si: 0, c: null, sk: 1 }], done: [false] };
+  G.go('run', { si: 0, seed: 4 }); G.run.paused = true; G.endRun(true);
+  await new Promise(r => setTimeout(r, 400));
+  const r = G.run.result; G.go('menu'); return { got: (r.bounty || []).length, done: S.bounty.done[0], shown: document.querySelector('#over').textContent.includes('Kopfgeld erfüllt') };
+});
+await p.evaluate(() => GOBLIN.go('menu', '#armory')); await p.waitForTimeout(300);
+await p.click('[data-pick="trap"]'); await p.waitForTimeout(200); await p.click('[data-aq="trap"]'); await p.waitForTimeout(300);
+q.aq = await p.evaluate(() => GOBLIN.save.aq.trap || 0);
+if (!q.tab.daily || !q.tab.weekly || !q.tab.pass || q.tab.wanted !== 3 || q.run.got !== 1 || !q.run.done || q.aq !== 1) errs.push('Aufgaben: ' + JSON.stringify(q));
+console.log('Aufgaben (Täglich, Woche, Pass, Kopfgeld, Fähigkeiten-Quest):', JSON.stringify(q));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');
