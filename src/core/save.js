@@ -15,6 +15,7 @@ import { CLASS_MAX_LV, classUnlocked, classXpNeed, isClass } from '../data/class
 import { BOUNTY_COND, BOUNTY_N, PASS_STAGES, WEEKLY_N, WEEKLY_POOL } from '../data/quests.js';
 import { NM_MAX } from '../data/nightmare.js';
 import { MUTATORS } from '../data/mutators.js';
+import { SOUL_NODES } from '../data/souls.js';
 import { STAGES } from '../data/stages.js';
 import { AFFIXES } from '../data/affixes.js';
 
@@ -79,6 +80,10 @@ export function defaults() {
     aq: {},
     // Phase 12: Tägliche Herausforderung (Tag, Festlegung { si, li, abil, mut }, Bestwert, geschafft)
     challenge: { day: '', def: null, best: 0, done: false },
+    // Wiedergeburt (Phase 12): Zyklus, verdiente Seelen, Seelenbaum { Knoten: Rang }, beste Ausbeute, Hüte/Level früherer Zyklen
+    rebirth: { n: 0, souls: 0, spent: {}, best: 0, hats: 0, levels: 0 },
+    // Klassen, die über Welten frei waren, bleiben nach der Wiedergeburt frei
+    clsKeep: [],
   };
 }
 
@@ -144,7 +149,7 @@ export function normalize(raw) {
     ach: {},
     daily: { day: '', base: {}, claimed: [false, false, false], bonus: false },
   };
-  out.runes = normRunes(r.runes, out.abilities);
+  out.runes = normRunes(r.runes, out.abilities, !!obj(obj(r.rebirth).spent).m_sock);   // dritter Sockel: Seelenbaum (Phase 12)
   out.combos = Array.isArray(r.combos) ? [...new Set(r.combos.filter(k => COMBOS[k]))] : [];
   out.cls = isClass(r.cls) ? r.cls : 'gob';
   out.classes = {};
@@ -268,6 +273,10 @@ function normQuests(r, out) {
   const defOk = ints(cd.si, 0, STAGES.length - 1) && !STAGES[cd.si].endless && ints(cd.li, 0, LEVELS - 1) && Array.isArray(cd.abil) && cd.abil.length === 2 && cd.abil.every(a => ABILITIES[a])
     && Array.isArray(cd.mut) && cd.mut.length >= 1 && cd.mut.length <= 2 && cd.mut.every(m => MUTATORS[m]);
   out.challenge = { day: typeof ch.day === 'string' && defOk ? ch.day : '', def: defOk ? { si: cd.si, li: cd.li, abil: [...cd.abil], mut: [...cd.mut] } : null, best: num(ch.best) | 0, done: defOk && bool(ch.done, false) };
+  const rb = obj(r.rebirth), sp = {};
+  for (const [k, v] of Object.entries(obj(rb.spent))) if (SOUL_NODES[k]) { const n = num(v, 0, 0, SOUL_NODES[k].max) | 0; if (n) sp[k] = n; }
+  out.rebirth = { n: num(rb.n, 0, 0, 999) | 0, souls: num(rb.souls) | 0, spent: sp, best: num(rb.best) | 0, hats: num(rb.hats) | 0, levels: num(rb.levels) | 0 };
+  out.clsKeep = Array.isArray(r.clsKeep) ? [...new Set(r.clsKeep.filter(isClass))] : [];
   out.aq = {}; for (const [k, v] of Object.entries(obj(r.aq))) if (ABILITIES[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.aq[k] = n; }
 }
 
@@ -354,7 +363,8 @@ export function gainAccountXp(n) {
 }
 
 // Gespielte Klasse: die gewählte, falls frei, sonst der Goblin (alter oder fremder Stand). Lauf, Aussehen und Hub nutzen nur das.
-export const activeCls = () => (classUnlocked(save.cls, stageCleared) ? save.cls : 'gob');
+export const classFree = id => save.clsKeep.includes(id) || classUnlocked(id, stageCleared);   // auch nach der Wiedergeburt
+export const activeCls = () => (classFree(save.cls) ? save.cls : 'gob');
 // Klassen-Level (Phase 9): Stand ohne Eintrag Level 1; gibt die neuen Level zurück
 export const clsState = id => save.classes[id] || { lv: 1, xp: 0 };
 export function gainClassXp(id, n) {

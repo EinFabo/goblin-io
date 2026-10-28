@@ -3,7 +3,7 @@ import { persist, save } from '../core/save.js';
 import { $, restart } from '../core/util.js';
 import { ABILITIES } from '../data/abilities.js';
 import { FUSE_N, RUNES, RUNE_IDS, RUNE_TIERS, SOCKET_LV, parseRune, runeDesc, runeFits, runeKey, tierInfo } from '../data/runes.js';
-import { bagCount, canFuse, fuse, socket, socketOpen, socketWhy, socketsOf, unsocket } from '../game/runes.js';
+import { bagCount, canFuse, fuse, socket, socketIdx, socketOpen, socketWhy, socketsOf, unsocket } from '../game/runes.js';
 import { runeSvg } from './cardart.js';
 
 // ---------- Runen-Tasche (PLAN Phase 10) ----------
@@ -31,7 +31,7 @@ function bagKeys() {
 function render() {
   const A = ABILITIES[abil], socks = socketsOf(save, abil);
   $('#runeTitle').textContent = 'Runen · ' + A.name;
-  $('#runeSocks').innerHTML = [0, 1].map(i => {
+  $('#runeSocks').innerHTML = socketIdx(save).map(i => {
     const open = socketOpen(save, abil, i), k = socks[i];
     return `<button class="rsock${i === slot ? ' on' : ''}${open ? '' : ' locked'}" data-slot="${i}" ${open ? '' : 'aria-disabled="true"'} aria-label="Sockel ${i + 1}">
       ${k ? runeSvg(k) : '<span class="hole"></span>'}<small>${open ? `Sockel ${i + 1}` : `ab Level ${SOCKET_LV[i]}`}</small></button>`;

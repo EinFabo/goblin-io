@@ -12,8 +12,9 @@ export const SCHOOL_NAME = { fire: 'Feuer', frost: 'Frost', storm: 'Sturm', toxi
 // cosm: Kosmetik bei Gold. fmt: Anzeige des Werts.
 const c = key => s => (s.stats.c[key] || 0);
 const hours = v => (v / 3600).toFixed(v < 36000 ? 1 : 0).replace('.', ',') + ' h';
-const hatsTotal = s => Object.values(s.stages).reduce((n, st) => n + (st.lv || []).reduce((m, l) => m + l.hats, 0), 0);
-const levelsDone = s => Object.values(s.stages).reduce((n, st) => n + (st.lv || []).filter(l => l.hats > 0).length, 0);
+// Hüte und geschaffte Level früherer Zyklen (Wiedergeburt, Phase 12) zählen mit
+const hatsTotal = s => Object.values(s.stages).reduce((n, st) => n + (st.lv || []).reduce((m, l) => m + l.hats, 0), 0) + ((s.rebirth && s.rebirth.hats) || 0);
+const levelsDone = s => Object.values(s.stages).reduce((n, st) => n + (st.lv || []).filter(l => l.hats > 0).length, 0) + ((s.rebirth && s.rebirth.levels) || 0);
 export const ACHIEVEMENTS = [
   { id: 'kills', name: 'Magierschreck', desc: 'Besiege {n} Magier', v: s => s.stats.kills, goals: [1000, 10000, 100000], title: 'Magierschreck' },
   { id: 'runs', name: 'Dauerläufer', desc: 'Spiele {n} Läufe', v: s => s.stats.runs, goals: [10, 100, 500] },

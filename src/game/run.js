@@ -17,6 +17,9 @@ import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
 import { BOONS, cardIdOf } from '../data/weapons.js';
 import { NM_MAX, nmGems, nmGold, nmXp } from '../data/nightmare.js';
+import { cycleReward } from '../data/souls.js';
+import { cycle, pityMul, soulRank } from './souls.js';
+import { addRunes, rollRuneBag } from './runes.js';
 import { CLASSES, DASH_KIND, SPRINT_KIND, classOf, hasPerk } from '../data/classes.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
@@ -39,7 +42,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   const r = {
     si, li: st.li, st, seed, nm: st.endless ? 0 : Math.max(0, Math.min(NM_MAX, nm === true ? 1 : nm | 0)), mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, boons: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
-    rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
+    rerolls: 2 + talent('reroll') + soulRank(save, 'w_reroll'), bans: 1 + talent('ban') + soulRank(save, 'w_ban'), locks: 1, cardN: talent('xp') >= 10 || soulRank(save, 'crown') ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
   const p = { x: 0, y: 0, vx: 0, vy: 0, face: 'down', moving: false, anim: 0, inv: 0, dashT: 0, dashCd: 0, dvx: 0, dvy: 0, aimX: 1, aimY: 0,
     hp: 0, maxHp: 0, lv: 1, xp: 0, need: xpNeed(1), rageT: 0, smokeT: 0, burrowT: 0, spinT: 0, spinSlow: 1, brew: null, shieldT: 0, shieldHp: 0, shieldMax: 1, shieldShard: 0, mechArmor: .3, mechPow: 1, mechRocket: 1.4, slowT: 0, trail: [], trailT: 0,
@@ -48,6 +51,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0, iceT: 0, ivx: 0, ivy: 0 };
   // Klasse (Phase 9): gesperrte Klasse (alter oder fremder Stand) → Goblin
   r.cls = activeCls(); r.clsLv = clsState(r.cls).lv;
+  r.cycle = cycle(save);   // Wiedergeburt: Zyklus (Gegner stärker, mehr Gold und XP)
   r.mut = [...(opts.mut || [])]; r.forceAbil = opts.abil || null; r.mode = opts.mode || null; r.day = dayKey();
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
   ensureDaily(save);
@@ -61,7 +65,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   grid.clear();
   recalc(); P.hp = P.maxHp; P.stam = P.stamMax; r.healed = 0; r.bossHits = 0;   // Kopfgeld: Heilung (state.js heal) und Treffer im Bosskampf
   const C = classOf(r.cls), dn = DASH_KIND[C.dash].name, sn = SPRINT_KIND[C.sprint].name;
-  addWeapon(C.weapon, hasPerk(r.clsLv, 'start2'));
+  addWeapon(C.weapon, hasPerk(r.clsLv, 'start2') || soulRank(save, 'w_start') > 0);
   if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ` unten: ${dn}, ${sn} und deine Fähigkeiten.` : `<b>Tipp</b> WASD laufen · Leertaste ${dn} · Shift ${sn} · Q und E Fähigkeiten`);
   emit('runStart', run);
 }
@@ -77,19 +81,19 @@ export function recalc() {
   // Klasse (Phase 9): Leben, Tempo, Abklingzeit; Klassen-Level: kleine Boni
   const C = classOf(run.cls), cl = k => hasPerk(run.clsLv || 1, k);
   const glass = hasMut('glass');   // Mutator Glaskanone
-  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1) * (glass ? 2 : 1);
-  P.cdMult = Math.pow(.92, pl('book')) * C.cd;
+  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1) * (glass ? 2 : 1) * (1 + .05 * soulRank(save, 'w_dmg'));
+  P.cdMult = Math.pow(.92, pl('book')) * C.cd * (1 - .04 * soulRank(save, 'm_cd'));
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
-  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1) * (glass ? .5 : 1);
+  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1) * (glass ? .5 : 1) * (1 + .05 * soulRank(save, 'w_hp'));
   if (old) P.hp += Math.max(0, P.maxHp - old);
   P.regen = .4 * pl('herbs');
   P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd')) * C.speed;
-  P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .06 * sh('mag'));
+  P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .06 * sh('mag')) * (1 + .15 * soulRank(save, 'c_mag'));
   P.xpMult = (1 + .03 * sh('xp')) * (cl('xp') ? 1.1 : 1);
   P.proj = 1 + .12 * pl('oil');
-  P.crit = .08 + .06 * pl('powder');
+  P.crit = .08 + .06 * pl('powder') + .03 * soulRank(save, 'w_crit');
   // zweite Reihe (2026-10-14)
   P.flatArmor = pl('helmet');
   P.atkSpd = (1 + .07 * pl('horn')) * bn('spd');
@@ -100,10 +104,10 @@ export function recalc() {
   P.leech = .004 * pl('fang');
   P.aoeMult = 1 + .1 * pl('ember');
   P.xpMult *= 1 + .08 * pl('clover');
-  P.goldMult = (1 + .15 * pl('bag')) * (hasMut('gold') ? 2 : 1);
+  P.goldMult = (1 + .15 * pl('bag')) * (hasMut('gold') ? 2 : 1) * (1 + .1 * soulRank(save, 'c_gold')) * cycleReward(run.cycle);
   // Sprint-Baum: Ausdauer, Erholung, Tempo, Leichtfüßig, Windschatten
   const sp = run.abMods.sprint;
-  P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow);
+  P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow) * (1 + .15 * soulRank(save, 'm_stam'));
   P.stamRegen = 26 * (1 + .08 * sp.r.cd); P.sprintMul = 1.55 * (1 + .04 * sp.r.area) * (C.sprint === 'charge' ? 1.1 : 1);   // Sturmangriff etwas schneller
   P.stamDrain = 34 * (1 - .08 * sp.s1); P.sprintMag = 1 + .15 * sp.s3; P.secondWind = sp.a; P.tireless = sp.m;
 }
@@ -227,7 +231,7 @@ export function endRun(win) {
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
   const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm, noBest: cont });
-  const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * nmXp(run.nm)), up = gainAccountXp(xp);
+  const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * nmXp(run.nm) * cycleReward(run.cycle) * (1 + .05 * soulRank(save, 'c_xp'))), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
   const nx = rec.first && boss && nextLevel(run.si, run.li);
@@ -237,10 +241,11 @@ export function endRun(win) {
   // Neue Klasse frei (Boss der Welt besiegt)
   if (rec.first && boss) for (const id in CLASSES) if (CLASSES[id].unlock && CLASSES[id].unlock.stage === run.si + 1) unlocked.push(CLASSES[id].name);
   // Fähigkeiten-XP durch Benutzen
-  const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const st0 = abilState(id).st || 0, lvUp = gainAbilXp(id, x), a = abilState(id); return { id, xp: x, lv: a.lv, up: lvUp, st: a.st || 0, star: (a.st || 0) - st0 }; });
+  const axp = 1 + .1 * soulRank(save, 'm_axp');   // Seelenbaum „Seelenfluss“
+  const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x * axp)]).filter(([, x]) => x > 0).map(([id, x]) => { const st0 = abilState(id).st || 0, lvUp = gainAbilXp(id, x), a = abilState(id); return { id, xp: x, lv: a.lv, up: lvUp, st: a.st || 0, star: (a.st || 0) - st0 }; });
   save.wallet.gold += run.gold + bonus;
   // Juwelen (9.2): neue Hüte, Konto-Level, Boss-Erstsieg
-  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? nmGems(run.nm) : 0) + (br ? br.gems : 0);
+  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? nmGems(run.nm) : 0) + (win && boss && soulRank(save, 'c_gems') ? 3 : 0) + (br ? br.gems : 0);
   save.wallet.gems += gems;
   // Siegtruhe nach jedem Boss-Level; ist das Regal voll, geht sie sofort auf
   // Boss-Trophäe (9.7, steht beim Boss in data/stages.js): beim ersten Sieg
@@ -249,7 +254,9 @@ export function endRun(win) {
   if (win && boss) {
     const type = victoryChest(run.si, run.nm);
     if (addToShelf(save, type)) chest = { type, shelf: true };
-    else { const res = rollChest(type, mulberry32(newSeed()), save.pity); grantChest(save, res); chest = { type, shelf: false, res }; }
+    else { const res = rollChest(type, mulberry32(newSeed()), save.pity, pityMul(save)); grantChest(save, res); chest = { type, shelf: false, res }; }
+    // Seelenbaum „Runenfund“: eine seltene Rune dazu
+    if (soulRank(save, 'c_rune')) { const bag = rollRuneBag(mulberry32(newSeed())), k = bag[bag.length - 1]; addRunes(save, [k]); chest.rune = k; }
   }
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   s.bestKills = Math.max(s.bestKills, run.kills); s.bestLevel = Math.max(s.bestLevel, P.lv);

@@ -1,8 +1,8 @@
 // ---------- Albtraum-Stufen 1–10 (Phase 12, Wunsch Fabi 2026-10-14; je Welt freigeschaltet, Entscheidung 2026-10-28) ----------
 // Stufe 0 = normal. Stufe t einer Welt ist frei, sobald ihr Boss auf Stufe t−1 besiegt ist (Stufe 1: Boss normal besiegt).
 export const NM_MAX = 10;
-export const nmHp = t => (t > 0 ? 1.8 + .25 * (t - 1) : 1);          // Leben der Gegner und Bosse
-export const nmDmg = t => (t > 0 ? 1 + .1 * (t - 1) : 1);            // Schaden an den Goblin
+export const nmHp = t => (t > 0 ? 1.8 + .15 * (t - 1) : 1);          // Leben der Gegner und Bosse (Stufe 10: +215 %)
+export const nmDmg = t => (t > 0 ? 1 + .06 * (t - 1) : 1);           // Schaden an den Goblin (Stufe 10: +54 %)
 export const nmAffix = t => (t >= 4 ? 1 : 0);                        // eine Elite-Eigenschaft mehr
 export const nmMinis = t => (t >= 7 ? 2 : 1);                        // Mini-Bosse je Ereignis
 export const nmRageAt = (t, base) => (t >= 9 ? Math.min(base, 120) : base);   // früherer Wut-Timer beim Boss

@@ -1246,3 +1246,24 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 .chal .cfoot .btn{min-width:120px}
 .wanted .btn{margin-top:4px;color:var(--edge)}
 #quests .subtabs{flex-wrap:wrap}
+/* Altar der Seelen (Phase 12) */
+#lvNote .altar{display:flex;align-items:center;gap:8px;margin:8px 0 0;padding:6px 8px;border-radius:8px;background:rgba(90,60,150,.15);color:#4a2a8a;font-weight:800;font-size:13px}
+#lvNote .altar .btn{margin-left:auto}
+#lvNote .altar.lk{color:#7a6a9a;font-weight:600}
+#menu.cycle .wtitle{box-shadow:0 0 0 3px #8a6aff,0 4px 0 var(--edge)}
+.soulpanel{box-sizing:border-box;width:min(920px,calc(100vw - 24px));background:linear-gradient(#24163a,#140c22)}
+.soulpanel .phead h2{color:#d8c8ff}
+.shead{display:flex;flex-wrap:wrap;gap:16px;margin:4px 0 10px;font-size:14px;color:#c8b8f0}.shead b{color:#fff}
+.srebirth{padding:10px 12px;border-radius:12px;border:2px solid #8a6aff;background:rgba(138,106,255,.12);margin-bottom:12px;font-size:14px}
+.srebirth p{margin:0 0 8px}.slock{color:#a898c8;font-size:14px}
+.btn.danger{background:#c0393e;color:#fff}
+.scrown{display:flex;justify-content:center;margin-bottom:10px}.scrown .snode{max-width:260px}
+.sbranches{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.sbranch h4{margin:0 0 6px;text-align:center;font-family:var(--font-display);font-weight:400;font-size:18px;color:#d8c8ff}
+.snode{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;margin-bottom:8px;padding:8px 10px;border-radius:10px;border:2px solid #3a2a5a;background:#1e1430;color:#e8e0ff;text-align:left;cursor:pointer}
+.snode b{font-size:14px}.snode small{font-size:12px;color:#b0a0d0;padding-right:44px}
+.snode .sr{position:absolute;top:6px;right:8px;font-weight:900;font-size:12px;color:#c8b8f0}
+.snode .sc{position:absolute;bottom:6px;right:8px;font-weight:900;font-size:12px;color:#ffd84a}
+.snode.can{border-color:#b48cff;box-shadow:0 0 10px rgba(180,140,255,.4)}
+.snode.have{background:#2c1e48}.snode.max{border-color:#ffd84a}
+@media (max-width:640px){.sbranches{grid-template-columns:1fr}}

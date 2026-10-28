@@ -4,8 +4,8 @@ import { NM_MAX, nmAffix, nmCap, nmChestSteps, nmDmg, nmHp, nmMinis, nmRageAt } 
 import { victoryChest } from '../src/data/cards.js';
 
 test('Albtraum-Stufen: Werte wie im Plan', () => {
-  assert.equal(nmHp(0), 1); assert.equal(nmHp(1), 1.8); assert.equal(nmHp(10), 1.8 + .25 * 9);
-  assert.equal(nmDmg(1), 1); assert.ok(Math.abs(nmDmg(5) - 1.4) < 1e-9);
+  assert.equal(nmHp(0), 1); assert.equal(nmHp(1), 1.8); assert.ok(Math.abs(nmHp(10) - (1.8 + .15 * 9)) < 1e-9);
+  assert.equal(nmDmg(1), 1); assert.ok(Math.abs(nmDmg(5) - 1.24) < 1e-9);
   assert.equal(nmAffix(3), 0); assert.equal(nmAffix(4), 1);
   assert.equal(nmMinis(6), 1); assert.equal(nmMinis(7), 2);
   assert.equal(nmRageAt(8, 180), 180); assert.equal(nmRageAt(9, 180), 120);

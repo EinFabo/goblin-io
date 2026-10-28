@@ -9,7 +9,8 @@ const POOL = Object.fromEntries(RARITIES.map(r => [r, CARD_IDS.filter(id => CARD
 const avail = r => { let i = RARITIES.indexOf(r); while (i > 0 && !POOL[RARITIES[i]].length) i--; return RARITIES[i]; };
 
 // Inhalt würfeln. pity = { epic, leg } (Truhen seit der letzten epischen/legendären Karte), wird angepasst
-export function rollChest(type, r, pity = { epic: 0, leg: 0 }) {
+// pf: Faktor auf die Pity-Grenzen (Seelenbaum „Glücksbringer“ 0,8 = 20 % früher)
+export function rollChest(type, r, pity = { epic: 0, leg: 0 }, pf = 1) {
   const C = CHESTS[type], count = [0, 0, 0, 0];
   for (let i = 0; i < C.cards; i++) {
     let x = r() * 100, k = 0;
@@ -22,8 +23,8 @@ export function rollChest(type, r, pity = { epic: 0, leg: 0 }) {
     pity.epic++; pity.leg++;
     // Eine Karte der niedrigsten vorhandenen Seltenheit wird hochgestuft (nie unter 0)
     const lift = to => { const j = count.findIndex((n, i) => i < to && n > 0); if (j >= 0) { count[j]--; count[to]++; } };
-    if (pity.leg >= PITY_LEG && !count[3]) lift(3);
-    if (pity.epic >= PITY_EPIC && !count[2] && !count[3]) lift(2);
+    if (pity.leg >= Math.ceil(PITY_LEG * pf) && !count[3]) lift(3);
+    if (pity.epic >= Math.ceil(PITY_EPIC * pf) && !count[2] && !count[3]) lift(2);
     if (count[3]) pity.leg = 0;
     if (count[2] || count[3]) pity.epic = 0;
   }

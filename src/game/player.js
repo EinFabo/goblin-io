@@ -72,6 +72,8 @@ export function updPlayer(dt) {
   P.vx = (P.x - ox) / Math.max(dt, 1e-4); P.vy = (P.y - oy) / Math.max(dt, 1e-4);
   P.inv -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
   if (P.hp < P.maxHp * LOW_HP) run.lowT += dt;
+  // Seelenflammen nach der Wiedergeburt (nur Optik)
+  if (run.cycle && Math.random() < dt * (4 + 2 * run.cycle)) part(P.x + (Math.random() - .5) * 26, P.y + 10 - Math.random() * 30, (Math.random() - .5) * 20, -50 - Math.random() * 30, .6, Math.random() < .5 ? 'rgba(180,140,255,.85)' : 'rgba(120,220,255,.8)', 3 + Math.random() * 3);
   if (P.regen && P.hp < P.maxHp) heal(P.regen * dt);
   if (!hidden()) query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {

@@ -30,7 +30,7 @@ export async function startStage(si, li = 0, nm = false, opts = {}) {
   go('run', { si, li, nm, ...opts });
 }
 const TABS = ['#store', '#shop', '#menu', '#armory', '#quests', '#profile'];
-const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#evoTree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen', '#runeBag', '#cont', '#comboBook'];
+const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#evoTree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen', '#runeBag', '#cont', '#comboBook', '#soulTree'];
 let curTab = null;
 export function hideOverlays() { for (const o of OVERLAYS) $(o).hidden = true; }
 export function showScreen(id) {

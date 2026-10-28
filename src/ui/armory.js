@@ -1,6 +1,6 @@
 import { sfx } from '../core/audio.js';
-import { activeCls, clsState, persist, save, stageCleared } from '../core/save.js';
-import { CLASSES, CLASS_IDS, CLASS_MAX_LV, CLASS_PERKS, DASH_KIND, SPRINT_KIND, classUnlockText, classUnlocked, classXpNeed } from '../data/classes.js';
+import { activeCls, classFree, clsState, persist, save } from '../core/save.js';
+import { CLASSES, CLASS_IDS, CLASS_MAX_LV, CLASS_PERKS, DASH_KIND, SPRINT_KIND, classUnlockText, classXpNeed } from '../data/classes.js';
 import { WEAPONS } from '../data/weapons.js';
 import { loadGoblin } from '../render/sprites.js';
 import { dropGoblinIcons } from '../render/icons.js';
@@ -17,7 +17,7 @@ import { openTree } from './tree.js';
 import { openRunes } from './runes.js';
 import { runeSvg } from './cardart.js';
 import { SOCKET_LV } from '../data/runes.js';
-import { socketOpen, socketsOf } from '../game/runes.js';
+import { socketIdx, socketOpen, socketsOf } from '../game/runes.js';
 
 // ---------- Rüstkammer: zwei Haken für die Fähigkeiten, Brett mit allen Fähigkeiten, Zettel mit Details ----------
 // Die Auswahl bleibt gespeichert (save.loadout); Stages starten direkt damit.
@@ -49,7 +49,7 @@ let reload = 0, onChange = () => {};
 // Hub-Leiste auffrischen (Pass-Punkte aus Fähigkeiten-Quests → roter Punkt am Aufgaben-Tab)
 export function armoryChanged(fn) { onChange = fn; }
 const clsSel = () => (sel && sel.startsWith('cls:') ? sel.slice(4) : null);
-const clsOk = id => classUnlocked(id, stageCleared);
+const clsOk = id => classFree(id);   // über Welten oder aus einem früheren Zyklus (Wiedergeburt)
 const pct = v => (v > 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + ' %';
 function renderClasses() {
   $('#armCls').innerHTML = CLASS_IDS.map(id => {
@@ -134,7 +134,7 @@ function renderNote() {
   // Runen-Sockel (Phase 10): Klick öffnet die Runen-Tasche für diesen Sockel
   if (!move) {
     const socks = socketsOf(save, id);
-    h += `<div class="asocks"><span>Runen</span>${[0, 1].map(i => { const open = socketOpen(save, id, i), k = socks[i];
+    h += `<div class="asocks"><span>Runen</span>${socketIdx(save).map(i => { const open = socketOpen(save, id, i), k = socks[i];
       return `<button class="asock${open ? '' : ' locked'}" data-sock="${i}" aria-label="Runen-Sockel ${i + 1}" title="${open ? (k ? 'Rune tauschen' : 'Rune einsetzen') : 'ab Level ' + SOCKET_LV[i]}">${k ? runeSvg(k) : open ? '<span class="hole"></span>' : `<small>Lv ${SOCKET_LV[i]}</small>`}</button>`; }).join('')}
       <button class="btn small" data-runes>Runen-Tasche</button></div>`;
   }

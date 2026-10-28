@@ -1,13 +1,15 @@
 import { audioInit, sfx } from '../core/audio.js';
 import { NM_MAX, nmCap, nmInfo } from '../data/nightmare.js';
-import { activeCls, levelDone, levelInfo, stageInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
+import { activeCls, classFree, levelDone, levelInfo, stageInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
 import { $, fmtTime } from '../core/util.js';
 import { ENDLESS, LEVELS, LEVEL_KIND, WORLDS, levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
 import { HAT_TXT, hatSvg, hatsHtml } from './hats.js';
 import { countUp } from './rewardfx.js';
-import { CLASSES, CLASS_IDS, classUnlocked } from '../data/classes.js';
+import { CLASSES, CLASS_IDS } from '../data/classes.js';
 import { icon } from '../render/icons.js';
+import { cycle, rebirthOpen, soulsFor } from '../game/souls.js';
+import { openAltar } from './soultree.js';
 
 // ---------- Weltkarte (PLAN 6.1a) ----------
 // Eine Karte pro Welt: Pfad mit 5 Level-Punkten (der letzten Welt hängt Endlos als 6. Punkt an).
@@ -95,7 +97,8 @@ function build() {
   layout();
   const si = worldSi(), st = STAGES[si], open = stageUnlocked(si);
   const hats = M.nodes.filter(n => !n.endless).reduce((a, n) => a + levelInfo(n.si, n.li).hats, 0);
-  $('#wNum').textContent = 'Welt ' + (M.wi + 1);
+  $('#wNum').textContent = 'Welt ' + (M.wi + 1) + (cycle(save) ? ' · Zyklus ' + cycle(save) : '');   // Wiedergeburt
+  $('#menu').classList.toggle('cycle', cycle(save) > 0);
   $('#wName').textContent = st.name;
   $('#wHats').innerHTML = open ? `<i class="hat1">${hatSvg}</i><b>${hats} / ${LEVELS * 3}</b>` : '<b>Gesperrt</b>';
   $('#wPrev').disabled = M.wi === 0; $('#wNext').disabled = M.wi === WORLDS.length - 1;
@@ -115,9 +118,15 @@ function renderNodes() {
 }
 // Gewählte Klasse (Phase 9) mit Wechsel-Knopf zur Rüstkammer, sobald mehr als eine frei ist
 function clsHtml() {
-  if (CLASS_IDS.filter(id => classUnlocked(id, stageCleared)).length < 2) return '';
+  if (CLASS_IDS.filter(classFree).length < 2) return '';
   const C = CLASSES[activeCls()];
   return `<p class="clsline"><img src="${icon(C.weapon)}" alt="">Klasse: <b>${C.name}</b><button class="btn small ghost" data-clsgo>Wechseln</button></p>`;
+}
+// Altar der Seelen (Phase 12) am Zettel der Endlosen Nacht: Wiedergeburt und Seelenbaum
+function altarHtml() {
+  const n = cycle(save), open = rebirthOpen(save);
+  if (!open && !n) return '<p class="altar lk">✦ Altar der Seelen: frei nach dem Boss von Welt 8 und einer vollen Runde (4:00) Endlose Nacht.</p>';
+  return `<div class="altar"><span>✦ Altar der Seelen${n ? ` · Zyklus ${n}` : ''}${open ? ` · +${soulsFor(save)} Seelen bereit` : ''}</span><button class="btn small" data-altar>Öffnen</button></div>`;
 }
 // Markierung umsetzen, ohne die Punkte neu aufzubauen (sonst spielt ihre Einblend-Animation erneut)
 function markSel() { document.querySelectorAll('#mapNodes .mnode').forEach((b, i) => b.classList.toggle('sel', i === M.gob.sel)); }
@@ -129,7 +138,7 @@ function renderNote(show = true) {
   if (n.endless) {
     const best = stageBest(n.si);
     note.innerHTML = `<div class="nh"><span class="lbl">∞</span><h3>${st.name}</h3></div><p>${st.sub}</p>
-      <p class="rec">${best ? 'Rekord: ' + fmtTime(best) : 'Noch nicht gespielt'}</p>${open ? clsHtml() : ''}${open ? '<button class="btn primary go" data-go>Los!</button>' : '<p class="lock">Besiege zuerst den letzten Boss.</p>'}`;
+      <p class="rec">${best ? 'Rekord: ' + fmtTime(best) : 'Noch nicht gespielt'}</p>${open ? clsHtml() : ''}${altarHtml()}${open ? '<button class="btn primary go" data-go>Los!</button>' : '<p class="lock">Besiege zuerst den letzten Boss.</p>'}`;
     return;
   }
   const K = LEVEL_KIND[n.li], boss = n.li === LEVELS - 1, info = levelInfo(n.si, n.li);
@@ -225,6 +234,7 @@ $('#lvNote').addEventListener('click', e => {
   audioInit(); sfx.pickCard(); start(n.si, n.li, nmOn(n.si));
 });
 $('#lvNote').addEventListener('click', e => {
+  if (e.target.closest('[data-altar]')) { openAltar(() => { renderMap(); }); return; }
   if (e.target.closest('[data-clsgo]')) { sfx.click(); const t = document.querySelector('.tab[data-tab="#armory"]'); if (t) t.click(); return; }
   const b = e.target.closest('[data-nm]'); if (!b) return;
   // Totenkopf-Punkt: diese Stufe; der Schalter: aus bzw. höchste freie Stufe; gleiche Stufe nochmal: aus

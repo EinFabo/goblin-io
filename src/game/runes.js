@@ -6,13 +6,16 @@ import { CHEST_RUNES, FUSE_N, RUNES, RUNE_BAG, RUNE_IDS, RUNE_TIERS, SOCKET_LV, 
 
 const BAG_MAX = 9999;
 const lvOf = (abilities, id) => (abilities && abilities[id] && abilities[id].lv) || 1;
-export const socketOpen = (save, id, i) => lvOf(save.abilities, id) >= SOCKET_LV[i];
+// Dritter Sockel nur mit dem Seelenbaum-Knoten „Dritter Sockel“ (Phase 12)
+export const sock3 = save => !!(save.rebirth && save.rebirth.spent && save.rebirth.spent.m_sock);
+export const socketIdx = save => (sock3(save) ? [0, 1, 2] : [0, 1]);
+export const socketOpen = (save, id, i) => (i < 2 || sock3(save)) && lvOf(save.abilities, id) >= SOCKET_LV[i];
 export const bagCount = (save, key) => save.runes.bag[key] || 0;
 export const socketsOf = (save, id) => save.runes.sock[id] || [null, null];
 
 // Spielstand reparieren: unbekannte Runen weg, gesperrte oder unpassende Sockel zurück in die Tasche,
 // je Fähigkeit jede Runenart nur einmal
-export function normRunes(raw, abilities) {
+export function normRunes(raw, abilities, third = false) {
   const r = raw && typeof raw === 'object' ? raw : {}, out = { bag: {}, sock: {} };
   const add = (k, n) => { out.bag[k] = Math.min(BAG_MAX, (out.bag[k] || 0) + n); };
   for (const [k, v] of Object.entries(r.bag && typeof r.bag === 'object' ? r.bag : {})) {
@@ -21,13 +24,13 @@ export function normRunes(raw, abilities) {
   }
   for (const [id, a] of Object.entries(r.sock && typeof r.sock === 'object' ? r.sock : {})) {
     if (!Array.isArray(a)) continue;
-    const s = [null, null], seen = new Set();
+    const s = third ? [null, null, null] : [null, null], seen = new Set();
     for (let i = 0; i < SOCKET_LV.length; i++) {
       const p = parseRune(a[i]); if (!p) continue;
-      if (ABILITIES[id] && lvOf(abilities, id) >= SOCKET_LV[i] && runeFits(p.id, id) && !seen.has(p.id)) { s[i] = a[i]; seen.add(p.id); }
+      if (ABILITIES[id] && i < s.length && lvOf(abilities, id) >= SOCKET_LV[i] && runeFits(p.id, id) && !seen.has(p.id)) { s[i] = a[i]; seen.add(p.id); }
       else add(a[i], 1);
     }
-    if (s[0] || s[1]) out.sock[id] = s;
+    if (s.some(Boolean)) out.sock[id] = s;
   }
   return out;
 }

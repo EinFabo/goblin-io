@@ -16,6 +16,7 @@ import { addToShelf, grantChest, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
 import { addRunes, rollRuneBag } from './runes.js';
 import { dayKey } from './shop.js';
+import { pityMul } from './souls.js';
 import { val } from './progress.js';
 
 // ---------- Kalender ----------
@@ -37,7 +38,7 @@ export function giveReward(save, r, { shelf = false } = {}) {
   if (r.runes) { out.runes = r.runes === true ? rollRuneBag(rng) : r.runes; addRunes(save, out.runes); }
   if (r.cosm) out.cosmNew = grantCosmetic(save, r.cosm);
   if (r.title) save.pass.champ = true;
-  if (r.chest && !(shelf && addToShelf(save, r.chest))) { out.chestRes = rollChest(r.chest, rng, save.pity); grantChest(save, out.chestRes); }
+  if (r.chest && !(shelf && addToShelf(save, r.chest))) { out.chestRes = rollChest(r.chest, rng, save.pity, pityMul(save)); grantChest(save, out.chestRes); }
   return out;
 }
 
@@ -117,7 +118,7 @@ export function ensureBounty(save, day = dayKey()) {
   const worlds = openWorlds(save), schools = [...new Set(worlds.flatMap(si => schoolsOf(si)))];
   const cleared = i => !!(save.stages[i + 1] && save.stages[i + 1].cleared);
   const abil = ABILITY_IDS.filter(id => save.keep.includes(id) || abilityUnlocked(id, save.profile.level, cleared));
-  const cls = CLASS_IDS.filter(id => id !== 'gob' && classUnlocked(id, cleared));
+  const cls = CLASS_IDS.filter(id => id !== 'gob' && (save.clsKeep.includes(id) || classUnlocked(id, cleared)));
   const list = [];
   for (let i = 0; i < BOUNTY_N; i++) {
     const kinds = ['boss', 'level', 'school', ...(worlds.length >= 3 ? ['affix'] : [])], t = pick(kinds), b = { t };

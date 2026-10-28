@@ -25,7 +25,7 @@ export const RUNES = {
 };
 export const RUNE_IDS = Object.keys(RUNES);
 export const RUNE_TIERS = 4;
-export const SOCKET_LV = [10, 20];          // Fähigkeits-Level für Sockel 1 und 2 (3. Sockel: Seelenbaum, Phase 12)
+export const SOCKET_LV = [10, 20, 25];      // Fähigkeits-Level für Sockel 1, 2 und 3 (der dritte nur mit dem Seelenbaum-Knoten, Phase 12)
 export const FUSE_N = 3;                    // so viele gleiche ergeben eine der nächsten Stufe
 const pc = (v, d = 0) => `${(v * 100).toFixed(d).replace('.', ',')}\u00a0%`;   // geschütztes Leerzeichen: „15 %“ bricht nicht um
 

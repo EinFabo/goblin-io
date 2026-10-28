@@ -9,6 +9,7 @@ import { trailCol } from '../data/cosmetics.js';
 import { ABILITIES, MOVE_IDS, SLOT2_ACCT, STAR_COLS, abilMods, abilityUnlocked, xpPerUse } from '../data/abilities.js';
 import { COMBOS, COMBO_GEMS, COMBO_T, comboOf } from '../data/combos.js';
 import { classOf, hasPerk } from '../data/classes.js';
+import { soulRank } from './souls.js';
 import { hurt } from './combat.js';
 import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
 import { runeMods } from './runes.js';
@@ -52,6 +53,8 @@ export function initAbilities() {
   for (const id of MOVE_IDS) run.abMods[id] = abilMods(save.abilities[id]);
   // max: Aufladungen (Doppelhaken), stock: gespeicherte volle Ladungen außer der laufenden
   run.abil = lo.map((id, i) => id && (run.forceAbil || (slotOpen(i) && canEquip(id))) ? { id, ch: ABILITIES[id].charge === 'once' ? (M(id).a ? 2 : 1) : 0, need: needOf(id), max: id === 'hook' && M(id).m ? 2 : 1, stock: 0 } : null);
+  // Seelenbaum „Vorladung“: Fähigkeiten starten mit 25 % Ladung
+  if (soulRank(save, 'm_charge')) for (const s of run.abil) if (s && ABILITIES[s.id].charge !== 'once') s.ch = s.need * .25;
   run.abfx = []; run.tmpAllies = []; run.trapRolls = 0; run.rageExt = 0; run.lastAbil = null;
   initMoves();
 }

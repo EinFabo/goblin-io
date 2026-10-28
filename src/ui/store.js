@@ -3,6 +3,7 @@ import { mulberry32, newSeed } from '../core/rng.js';
 import { persist, save } from '../core/save.js';
 import { $, fmtClock, restart } from '../core/util.js';
 import { CARD_MAX, CHESTS, CHEST_IDS, PITY_EPIC, PITY_LEG, RARITIES, RARITY, SHELF, cardName, skipGems } from '../data/cards.js';
+import { pityMul } from '../game/souls.js';
 import { cardState, chestLeft, chestReady, freeChests, grantCards, grantChest, rollChest, skipUnlock, startUnlock, takeFromShelf, unlocking } from '../game/chests.js';
 import { GOLD_PACKS, canPay, dailyOffers, msToMidnight, pay, shopToday } from '../game/shop.js';
 import { cardHtml, chestSvg } from './cardart.js';
@@ -26,7 +27,7 @@ export function renderStore() {
 }
 // Truhe würfeln, gutschreiben, Animation zeigen
 export function openChest(type) {
-  const res = rollChest(type, mulberry32(newSeed()), save.pity);
+  const res = rollChest(type, mulberry32(newSeed()), save.pity, pityMul(save));
   grantChest(save, res); persist();
   playChest(res, () => { renderStore(); onChange(); });
 }
