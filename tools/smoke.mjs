@@ -469,8 +469,11 @@ console.log('Klassen:', JSON.stringify(cls));
 const q = {};
 await p.evaluate(() => { const G = GOBLIN, S = G.save; for (let s = 1; s <= 4; s++) S.stages[s] = { cleared: true, stars: 0, best: 0, nightmare: false, lv: Array.from({ length: 5 }, () => ({ hats: 1, kills: 0, fast: 0 })) }; S.cls = 'gob'; G.go('menu', '#quests'); });
 await p.waitForTimeout(300);
-await p.evaluate(() => { const S = GOBLIN.save; S.stats.kills += 1e6; for (const k of ['levels', 'perfect', 'abil', 'gold', 'rolls', 'bosses', 'evo', 'elites', 'hat3', 'mega', 'combo', 'nmwin', 'clswin']) S.stats.c[k] = (S.stats.c[k] || 0) + 1e5; S.stats.chests += 1e5; S.stats.c['ab.trap.kills'] = 300; });
-for (const [sub, sel] of [['day', '[data-daily="0"]'], ['week', '[data-weekly="0"]']]) {
+// Zähler hoch (nach dem ersten Öffnen: Tag und Woche haben ihren Startstand), dann neu zeichnen
+await p.evaluate(() => { const S = GOBLIN.save; S.stats.kills += 1e6; for (const k of ['levels', 'perfect', 'abil', 'gold', 'rolls', 'bosses', 'evo', 'elites', 'hat3', 'mega', 'combo', 'nmwin', 'clswin']) S.stats.c[k] = (S.stats.c[k] || 0) + 1e5; S.stats.chests += 1e5; S.stats.c['ab.trap.kills'] = 300;
+  S.daily.claimed = [false, false, false]; S.daily.bonus = false; GOBLIN.go('menu', '#menu'); GOBLIN.go('menu', '#quests'); });
+await p.waitForTimeout(300);
+for (const [sub, sel] of [['week', '[data-weekly="0"]'], ['day', '[data-daily="0"]']]) {
   await p.click(`[data-qsub="${sub}"]`); await p.waitForTimeout(200);
   await p.click(sel); await p.waitForTimeout(400);
   if (await p.evaluate(() => !document.querySelector('#chestOpen').hidden)) { await p.evaluate(() => { document.querySelector('#chestOpen').hidden = true; }); }
