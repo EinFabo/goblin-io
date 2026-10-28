@@ -5,11 +5,13 @@ import { hashSeed, mulberry32, newSeed } from '../core/rng.js';
 import { ABILITIES, ABILITY_IDS, abilityUnlocked } from '../data/abilities.js';
 import { CLASSES, CLASS_IDS, classUnlocked } from '../data/classes.js';
 import { AQ_GOALS, AQ_GOAL_OF, AQ_TIERS, BOUNTY_COND, BOUNTY_N, BOUNTY_REWARD, BOUNTY_SKULL, PASS_BONUS, PASS_BONUS_STEP, PASS_PTS, PASS_STAGES, PASS_STEP, PASS_TITLE, QUEST_EPOCH,
-  SEASON_WEEKS, WEEKLY_BONUS, WEEKLY_N, WEEKLY_POOL, aqKey, aqText, bountyTime, passReward } from '../data/quests.js';
+  SEASON_WEEKS, WEEKLY_BONUS, WEEKLY_N, WEEKLY_POOL, aqKey, aqText, bountyTime, challengeReward, passReward } from '../data/quests.js';
 import { RUNE_IDS, runeFits, runeKey } from '../data/runes.js';
 import { SCHOOL_NAME } from '../data/achievements.js';
 import { STAGES } from '../data/stages.js';
 import { AFFIXES } from '../data/affixes.js';
+import { MUTATORS, MUT_IDS } from '../data/mutators.js';
+import { LEVELS } from '../data/levels.js';
 import { addToShelf, grantChest, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
 import { addRunes, rollRuneBag } from './runes.js';
@@ -122,8 +124,9 @@ export function ensureBounty(save, day = dayKey()) {
     if (t === 'boss' || t === 'level') b.si = pick(worlds);
     if (t === 'school') { b.school = pick(schools); b.n = pick([40, 60, 80]); }
     if (t === 'affix') { b.affix = pick(Object.keys(AFFIXES)); b.n = pick([1, 2]); }
-    const conds = ['abil', 'noheal', ...(t === 'boss' ? ['nohit', 'time'] : []), ...(b.si !== undefined && save.stages[b.si + 1] && save.stages[b.si + 1].cleared ? ['nm'] : []), ...(cls.length ? ['cls'] : [])];
+    const conds = ['abil', 'noheal', ...(t === 'boss' ? ['nohit', 'time'] : []), ...(b.si !== undefined && save.stages[b.si + 1] && save.stages[b.si + 1].cleared ? ['nm'] : []), ...(cls.length ? ['cls'] : []), ...(b.si !== undefined ? ['mut', 'mut'] : [])];
     b.c = r() < .25 ? null : pick(conds);
+    if (b.c === 'mut') b.mut = pick(MUT_IDS);   // Mutator: der Steckbrief startet das Level selbst („Los!“)
     if (b.c === 'abil') b.abil = pick(abil);
     if (b.c === 'cls') b.cls = pick(cls);
     if (b.c === 'time') b.T = bountyTime(b.si);
@@ -144,7 +147,7 @@ export function bountyText(b) {
   const goal = b.t === 'boss' ? `Besiege ${STAGES[b.si].boss.name} (Welt ${b.si + 1})` : b.t === 'level' ? `Schaffe ein Level in Welt ${b.si + 1}`
     : b.t === 'school' ? `Besiege in einem Lauf ${b.n} ${SCHOOL_NAME[b.school]}magier` : `Besiege in einem Lauf ${b.n} Elite-Magier mit „${AFFIXES[b.affix].name}“`;
   const cond = !b.c ? '' : b.c === 'nohit' ? 'ohne Treffer im Bosskampf' : b.c === 'time' ? `in unter ${fmtT(b.T)}` : b.c === 'abil' ? `mit ${ABILITIES[b.abil].name} ausgerüstet`
-    : b.c === 'nm' ? 'im Albtraum' : b.c === 'noheal' ? 'ohne Heilung' : `als ${CLASSES[b.cls].name}`;
+    : b.c === 'nm' ? 'im Albtraum' : b.c === 'noheal' ? 'ohne Heilung' : b.c === 'mut' ? `mit Mutator „${MUTATORS[b.mut].name}“` : `als ${CLASSES[b.cls].name}`;
   return { goal, cond };
 }
 export const bountyReward = b => BOUNTY_REWARD[b.sk - 1];
@@ -158,7 +161,7 @@ export function bountyMet(b, R) {
   else ok = (R.cnt['af.' + b.affix] || 0) >= b.n;
   if (!ok || !b.c) return ok;
   return b.c === 'nohit' ? R.bossHits === 0 : b.c === 'time' ? R.time < b.T : b.c === 'abil' ? R.abil.includes(b.abil)
-    : b.c === 'nm' ? R.nm : b.c === 'noheal' ? R.healed < 1 : R.cls === b.cls;
+    : b.c === 'nm' ? R.nm > 0 : b.c === 'noheal' ? R.healed < 1 : b.c === 'mut' ? (R.mut || []).includes(b.mut) : R.cls === b.cls;
 }
 // Am Laufende (endRun): offene Steckbriefe von heute prüfen, Belohnung gleich gutschreiben (Truhen ins Regal)
 export function checkBounties(save, R, day = dayKey()) {
@@ -169,6 +172,36 @@ export function checkBounties(save, R, day = dayKey()) {
     got.push({ b, reward: giveReward(save, bountyReward(b), { shelf: true }) });
   });
   return got;
+}
+
+// Steckbrief mit Mutator: welches Level „Los!“ startet (Boss-Level bzw. das erste der Welt)
+export const bountyStart = b => (b.c === 'mut' && b.si !== undefined ? { si: b.si, li: b.t === 'boss' ? LEVELS - 1 : 0, mut: [b.mut] } : null);
+
+// ---------- Tägliche Herausforderung (Phase 12) ----------
+// Beim ersten Ansehen des Tages festgelegt (nur freie Level, nur freie Fähigkeiten); Seed = Datum
+const levelOpen = (save, si, li) => (si === 0 || !!(save.stages[si] && save.stages[si].cleared)) && (li === 0 || !!(save.stages[si + 1] && save.stages[si + 1].lv && save.stages[si + 1].lv[li - 1] && save.stages[si + 1].lv[li - 1].hats > 0));
+export function ensureChallenge(save, day = dayKey()) {
+  if (save.challenge.day === day && save.challenge.def) return save.challenge;
+  const r = mulberry32(hashSeed('goblin-challenge-' + day)), pick = a => a.splice((r() * a.length) | 0, 1)[0];
+  const lvls = []; STAGES.forEach((st, si) => { if (!st.endless) for (let li = 0; li < LEVELS; li++) if (levelOpen(save, si, li)) lvls.push([si, li]); });
+  const cleared = i => !!(save.stages[i + 1] && save.stages[i + 1].cleared);
+  const abil = ABILITY_IDS.filter(id => save.keep.includes(id) || abilityUnlocked(id, save.profile.level, cleared)), muts = [...MUT_IDS];
+  const [si, li] = pick(lvls);
+  const def = { si, li, abil: [pick(abil), pick(abil)], mut: r() < .5 ? [pick(muts)] : [pick(muts), pick(muts)] };
+  save.challenge = { day, def, best: 0, done: false };
+  return save.challenge;
+}
+// Bestwert: Boss-Level die Zeit (kleiner ist besser), sonst die Kills
+export const challengeIsBoss = def => def.li === LEVELS - 1;
+// Am Laufende (endRun, nur Läufe der Herausforderung von heute): Bestwert, erster Sieg gibt die Belohnung
+export function finishChallenge(save, R, day = dayKey()) {
+  const C = save.challenge;
+  if (R.mode !== 'challenge' || C.day !== day || !C.def || R.day !== day || !R.win || R.cont) return null;
+  const v = challengeIsBoss(C.def) ? Math.floor(R.time) : R.kills, better = !C.best || (challengeIsBoss(C.def) ? v < C.best : v > C.best);
+  if (better) C.best = v;
+  let reward = null;
+  if (!C.done) { C.done = true; addPassPts(save, PASS_PTS.challenge, day); reward = giveReward(save, challengeReward(C.def.si)); }
+  return { v, better, reward, boss: challengeIsBoss(C.def) };
 }
 
 // ---------- Fähigkeiten-Quests ----------

@@ -32,7 +32,7 @@ export const SEASON_WEEKS = 4;
 export const PASS_STAGES = 30, PASS_STEP = 100, PASS_BONUS_STEP = 150;
 export const PASS_BONUS = { chest: 'iron' };
 // Punkte je Quelle
-export const PASS_PTS = { daily: 20, dailyAll: 30, weekly: 60, bounty: 30, aq: 40 };
+export const PASS_PTS = { daily: 20, dailyAll: 30, weekly: 60, bounty: 30, aq: 40, challenge: 40 };
 // Saison-Kosmetik: 4 Sets im Wechsel; Stufe 10 Roll-Spur, 20 Dolch, 30 Maschine (+ Titel). Farben in data/cosmetics.js
 export const SEASON_SETS = [
   { name: 'Frost', trail: 'frost', dagger: 'ice', mech: 'frost' },
@@ -60,10 +60,14 @@ export function passReward(s, season) {
 // ohne Heilung, als Klasse X. Schwierigkeit = Totenköpfe (1–3) aus Ziel + Bedingung, danach die Belohnung.
 export const BOUNTY_N = 3;
 export const BOUNTY_SKULL = { boss: 2, level: 1, school: 1, affix: 2 };
-export const BOUNTY_COND = { nohit: 2, time: 1, abil: 0, nm: 1, noheal: 1, cls: 0 };
+export const BOUNTY_COND = { nohit: 2, time: 1, abil: 0, nm: 1, noheal: 1, cls: 0, mut: 1 };   // mut: mit Mutator (Phase 12)
 export const BOUNTY_REWARD = [{ gold: 200 }, { gems: 25 }, { chest: 'iron' }];   // nach Totenköpfen 1/2/3
 // Zeitgrenze im Boss-Level (Sekunden ab Levelstart), etwas unter dem Schnitt des Bots
 export const bountyTime = si => 180 + 5 * si;
+
+// ---------- Tägliche Herausforderung (Phase 12): ein Level, 2 feste Fähigkeiten, 1–2 Mutatoren, beliebig viele Versuche ----------
+// Erster Sieg des Tages: Gold (mehr in späteren Welten), Runenkiste, Pass-Punkte
+export const challengeReward = si => ({ gold: 300 + 60 * si, runes: true });
 
 // ---------- Fähigkeiten-Quests: je Fähigkeit 3 Stufen ----------
 // kills: Gegner, die die Fähigkeit (oder ihre Helfer) besiegt; use: Einsätze (Fähigkeiten ohne eigenen Schaden).

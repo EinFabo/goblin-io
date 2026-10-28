@@ -9,7 +9,7 @@ import { SPAWN_T, tipPos } from '../game/enemies.js';
 import { part } from '../game/fx.js';
 import { gemTier } from '../game/items.js';
 import { ROLL_T, curPlayerSpr } from '../game/player.js';
-import { P, onScreen, run } from '../game/state.js';
+import { P, hasMut, onScreen, run } from '../game/state.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawImgC, drawSpr } from './canvas.js';
 import { iconCanvas } from './icons.js';
 import { PROC } from './proc.js';
@@ -214,6 +214,13 @@ function drawRun(now) {
   ctx.globalAlpha = 1;
   // Bildschirm-Ebene
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  if (hasMut('dark')) {
+    // Mutator Dunkelheit: nur ein Lichtkreis um den Goblin
+    const gx = W / 2 + (P.x - camX) * zm, gy = H / 2 + (P.y - 8 - camY) * zm, r = 230 * zm;
+    const g = ctx.createRadialGradient(gx, gy, r * .45, gx, gy, r);
+    g.addColorStop(0, 'rgba(4,6,12,0)'); g.addColorStop(1, 'rgba(4,6,12,.94)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
   if (run.storm > 0) drawStorm(t, zm, W / 2 + (P.x - camX) * zm, H / 2 + (P.y - 8 - camY) * zm);
   if (run.wind) drawWind(t);
   if (P.hp / P.maxHp < .3 || run.hurtT > 0) {

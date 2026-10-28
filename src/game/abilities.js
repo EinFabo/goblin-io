@@ -14,7 +14,7 @@ import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, pa
 import { runeMods } from './runes.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { TAU } from '../core/util.js';
-import { P, abSrc, heal, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc } from './state.js';
+import { P, abSrc, hasMut, heal, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc } from './state.js';
 import { shootRaw, stepAlly } from './weapons.js';
 import { recalc } from './run.js';
 import { banner } from '../ui/hud.js';
@@ -40,7 +40,8 @@ export const canEquip = id => save.keep.includes(id) || abilityUnlocked(id, save
 
 export function initAbilities() {
   run.abMods = {}; run.abXp = {}; run.runes = {};
-  for (const id of save.loadout) {
+  const lo = run.forceAbil || save.loadout;   // Herausforderung: feste Fähigkeiten nur für diesen Lauf
+  for (const id of lo) {
     if (!id) continue;
     const m = run.abMods[id] = abilMods(save.abilities[id]), rn = runeMods(save, id);
     // Runen (Phase 10): Wucht und Weite wirken wie Baum-Punkte auf Kraft und Fläche/Dauer
@@ -50,7 +51,7 @@ export function initAbilities() {
   // Rolle und Sprint sind immer dabei und haben eigene Bäume
   for (const id of MOVE_IDS) run.abMods[id] = abilMods(save.abilities[id]);
   // max: Aufladungen (Doppelhaken), stock: gespeicherte volle Ladungen außer der laufenden
-  run.abil = save.loadout.map((id, i) => id && slotOpen(i) && canEquip(id) ? { id, ch: ABILITIES[id].charge === 'once' ? (M(id).a ? 2 : 1) : 0, need: needOf(id), max: id === 'hook' && M(id).m ? 2 : 1, stock: 0 } : null);
+  run.abil = lo.map((id, i) => id && (run.forceAbil || (slotOpen(i) && canEquip(id))) ? { id, ch: ABILITIES[id].charge === 'once' ? (M(id).a ? 2 : 1) : 0, need: needOf(id), max: id === 'hook' && M(id).m ? 2 : 1, stock: 0 } : null);
   run.abfx = []; run.tmpAllies = []; run.trapRolls = 0; run.rageExt = 0; run.lastAbil = null;
   initMoves();
 }
@@ -66,7 +67,7 @@ export const abilCount = s => s.stock + (s.ch >= s.need ? 1 : 0);
 // Umgekehrt startet die Maschine nicht mitten in Rolle oder Hakenflug, und ein laufender Schild endet,
 // wenn man einsteigt (der Panzer ersetzt ihn).
 // id: Fähigkeit oder 'dash'/'sprint'. Gibt den Grund zurück, '' = frei.
-export const lockOf = id => id === 'mech' ? (P.dashT > 0 ? 'Mitten im Sprung' : '') : P.mechT > 0 ? 'In der Maschine' : '';
+export const lockOf = id => id === 'dash' && hasMut('fragile') ? 'Zerbrechlich' : id === 'mech' ? (P.dashT > 0 ? 'Mitten im Sprung' : '') : P.mechT > 0 ? 'In der Maschine' : '';
 function lockedBuzz(why) {
   if (run.time - (run.lockBuzz ?? -1) < .4) return;
   run.lockBuzz = run.time; addNum(P.x, P.y - 52, why, '#c9c2b0', false); sfx.buzz();

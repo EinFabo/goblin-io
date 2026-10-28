@@ -14,6 +14,7 @@ import { COMBOS } from '../data/combos.js';
 import { CLASS_MAX_LV, classUnlocked, classXpNeed, isClass } from '../data/classes.js';
 import { BOUNTY_COND, BOUNTY_N, PASS_STAGES, WEEKLY_N, WEEKLY_POOL } from '../data/quests.js';
 import { NM_MAX } from '../data/nightmare.js';
+import { MUTATORS } from '../data/mutators.js';
 import { STAGES } from '../data/stages.js';
 import { AFFIXES } from '../data/affixes.js';
 
@@ -76,6 +77,8 @@ export function defaults() {
     pass: { season: -1, pts: 0, claimed: [], bonus: 0, champ: false },
     bounty: { day: '', list: [], done: [] },
     aq: {},
+    // Phase 12: Tägliche Herausforderung (Tag, Festlegung { si, li, abil, mut }, Bestwert, geschafft)
+    challenge: { day: '', def: null, best: 0, done: false },
   };
 }
 
@@ -261,6 +264,10 @@ function normQuests(r, out) {
     bonus: num(p.bonus) | 0, champ: bool(p.champ, false) };
   const bl = arr(b.list).map((x, i) => [obj(x), arr(b.done)[i] === true]).filter(([x]) => bountyValid(x)).slice(0, BOUNTY_N);
   out.bounty = { day: typeof b.day === 'string' ? b.day : '', list: bl.map(([x]) => x), done: bl.map(([, d]) => d) };
+  const ch = obj(r.challenge), cd = obj(ch.def), ints = (v, a, b) => Number.isInteger(v) && v >= a && v <= b;
+  const defOk = ints(cd.si, 0, STAGES.length - 1) && !STAGES[cd.si].endless && ints(cd.li, 0, LEVELS - 1) && Array.isArray(cd.abil) && cd.abil.length === 2 && cd.abil.every(a => ABILITIES[a])
+    && Array.isArray(cd.mut) && cd.mut.length >= 1 && cd.mut.length <= 2 && cd.mut.every(m => MUTATORS[m]);
+  out.challenge = { day: typeof ch.day === 'string' && defOk ? ch.day : '', def: defOk ? { si: cd.si, li: cd.li, abil: [...cd.abil], mut: [...cd.mut] } : null, best: num(ch.best) | 0, done: defOk && bool(ch.done, false) };
   out.aq = {}; for (const [k, v] of Object.entries(obj(r.aq))) if (ABILITIES[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.aq[k] = n; }
 }
 
@@ -278,6 +285,7 @@ function bountyValid(x) {
   if (x.c === 'cls') return isClass(x.cls);
   if (x.c === 'time') return typeof x.T === 'number' && x.T > 0 && x.t === 'boss';
   if (x.c === 'nohit') return x.t === 'boss';
+  if (x.c === 'mut') return !!MUTATORS[x.mut] && x.si !== undefined;
   return true;
 }
 

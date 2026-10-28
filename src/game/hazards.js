@@ -6,7 +6,7 @@ import { animFx, boltFx, explode, part, ring } from './fx.js';
 import { bulwark, perfectRoll, reflect } from './abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { portalWarp, spinHaz } from './boss.js';
-import { P, onScreen, pR, query, run, setSrc } from './state.js';
+import { P, hasMut, onScreen, pR, query, run, setSrc } from './state.js';
 
 // Einschlag-Animation je Geschossart
 const HIT_FX = { fire: 'f_fireball_hit_', frost: 'e_frostbolt_hit_', void: 'p.shade_hit.', toxic: 'p.glob_hit.', storm: 'p.spark_hit.', necro: 'p.soul_hit.', earth: 'p.rock_hit.', light: 'p.lance_hit.' };
@@ -69,7 +69,8 @@ export function updEProj(dt) {
       }
       continue;
     }
-    p.x += p.vx * dt; p.y += p.vy * dt;
+    const pm = hasMut('bullets') ? 1.25 : 1;   // Mutator Kugelhagel
+    p.x += p.vx * dt * pm; p.y += p.vy * dt * pm;
     if (p.warp && run.portals.length) portalWarp(p);   // Spiegelmeister: durch das Spiegeltor
     if (run.arena && Math.hypot(p.x - run.arena.x, p.y - run.arena.y) > run.arena.r + 40) p.life = 0;
     const dx = p.x - P.x, dy = p.y - (P.y - 6), rr = p.r + pR() * .85;

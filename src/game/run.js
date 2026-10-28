@@ -22,20 +22,22 @@ import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
 import { count, ensureDaily, mergeRun } from './progress.js';
-import { checkBounties } from './quests.js';
-import { P, buildGrid, grid, query, run, setRun, setSrc, xpNeed } from './state.js';
+import { checkBounties, finishChallenge } from './quests.js';
+import { dayKey } from './shop.js';
+import { P, buildGrid, grid, hasMut, query, run, setRun, setSrc, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 import { updWfx } from './weapons2.js';
 import { updMegas } from './mega.js';
 
 // Neuer Lauf: nur Spielzustand. Bildschirm, HUD und Musik macht die Szene "run".
 // si = Welt (Stage), li = Level in der Welt (0–4, das letzte ist das Boss-Level)
-// nm: Albtraum-Modus (6.1), nur in Welten, deren Boss schon besiegt ist
-export function newRun(si, seed = newSeed(), li = 0, nm = false) {
+// nm: Albtraum-Stufe 0–10 (6.1, Phase 12), nur in Welten, deren Boss schon besiegt ist
+// opts (Phase 12): mut = Mutatoren, abil = feste Fähigkeiten für diesen Lauf (Herausforderung), mode = 'challenge' | 'bounty'
+export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   const st = levelStage(si, li);
   seedRun(seed);
   const r = {
-    si, li: st.li, st, seed, nm: st.endless ? 0 : Math.max(0, Math.min(NM_MAX, nm === true ? 1 : nm | 0)),   // Albtraum-Stufe 0–10 mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
+    si, li: st.li, st, seed, nm: st.endless ? 0 : Math.max(0, Math.min(NM_MAX, nm === true ? 1 : nm | 0)), mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, boons: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
@@ -46,6 +48,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
     step: 0, rollT: 0, hitT: 0, exSlowT: 0, perfect: false, endAnim: 0, iceT: 0, ivx: 0, ivy: 0 };
   // Klasse (Phase 9): gesperrte Klasse (alter oder fremder Stand) → Goblin
   r.cls = activeCls(); r.clsLv = clsState(r.cls).lv;
+  r.mut = [...(opts.mut || [])]; r.forceAbil = opts.abil || null; r.mode = opts.mode || null; r.day = dayKey();
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
   ensureDaily(save);
   // Kartenstufen für diesen Lauf (9.3)
@@ -73,12 +76,13 @@ export function recalc() {
   const bn = id => (1 + BOONS[id].v) ** (run.boons[id] || 0);   // Dauerboni, wenn alles ausgebaut ist (multiplikativ)
   // Klasse (Phase 9): Leben, Tempo, Abklingzeit; Klassen-Level: kleine Boni
   const C = classOf(run.cls), cl = k => hasPerk(run.clsLv || 1, k);
-  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1);
+  const glass = hasMut('glass');   // Mutator Glaskanone
+  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1) * (glass ? 2 : 1);
   P.cdMult = Math.pow(.92, pl('book')) * C.cd;
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
-  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1);
+  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1) * (glass ? .5 : 1);
   if (old) P.hp += Math.max(0, P.maxHp - old);
   P.regen = .4 * pl('herbs');
   P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd')) * C.speed;
@@ -96,7 +100,7 @@ export function recalc() {
   P.leech = .004 * pl('fang');
   P.aoeMult = 1 + .1 * pl('ember');
   P.xpMult *= 1 + .08 * pl('clover');
-  P.goldMult = 1 + .15 * pl('bag');
+  P.goldMult = (1 + .15 * pl('bag')) * (hasMut('gold') ? 2 : 1);
   // Sprint-Baum: Ausdauer, Erholung, Tempo, Leichtfüßig, Windschatten
   const sp = run.abMods.sprint;
   P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow);
@@ -254,11 +258,13 @@ export function endRun(win) {
   if (win && !run.st.endless) { if (run.nm) count(run, 'nmwin'); if (hats === 3) count(run, 'hat3'); if (run.cls !== 'gob') count(run, 'clswin'); }
   mergeRun(save, run, win);
   const bounty = checkBounties(save, { win, boss, si: run.si, endless: !!run.st.endless, cont: cont, cnt: run.cnt, bossHits: run.bossHits || 0, time: run.time,
-    abil: run.abil.filter(Boolean).map(s => s.id), nm: run.nm, healed: run.healed || 0, cls: run.cls });
-  const next = win ? nextLevel(run.si, run.li) : null;
+    abil: run.abil.filter(Boolean).map(s => s.id), nm: run.nm, healed: run.healed || 0, cls: run.cls, mut: run.mut });
+  // Tägliche Herausforderung (Phase 12): Bestwert und Belohnung für den ersten Sieg des Tages
+  const challenge = finishChallenge(save, { mode: run.mode, day: run.day, win, cont, time: run.time, kills: run.kills });
+  const next = win && !run.mode ? nextLevel(run.si, run.li) : null;   // Herausforderung/Kopfgeld: kein „Weiter“
   if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, cont: run.cont || 0, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil, cls, bounty };
+  run.result = { win, cont: run.cont || 0, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil, cls, bounty, challenge };
   emit('runEnd', run.result);
 }
 

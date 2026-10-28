@@ -9,7 +9,7 @@ import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js';
 import { addEvents } from './run.js';
-import { P, abSrc, aoeId, heal, isBig, run } from './state.js';
+import { P, abSrc, aoeId, hasMut, heal, isBig, pR, run } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
@@ -66,6 +66,11 @@ export function kill(e, xpMul = 1) {
   // Phase 11: Kopfgeld (Elite mit Eigenschaft) und Fähigkeiten-Quests (Kills durch die Fähigkeit oder ihre Helfer)
   if (e.affixes && e.elite && !e.miniboss) for (const a of e.affixes) count(run, 'af.' + a);
   if (abSrc) count(run, 'ab.' + abSrc + '.kills');
+  // Mutator Explosive Tode: kleine Explosion, die nur den Goblin trifft (keine Kettenreaktion unter Gegnern)
+  if (hasMut('boom') && !e.boss && !e.obj && !e.bomber) {
+    animFx('f_fireball_hit_', 5, e.x, e.y, 3.5);
+    if (Math.hypot(P.x - e.x, P.y - e.y) < 55 + pR()) damagePlayer(8 * run.st.dmg * (1 + run.time / 400), 'bomb');
+  }
   dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);
   if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);

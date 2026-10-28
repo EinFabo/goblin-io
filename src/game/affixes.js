@@ -3,7 +3,7 @@ import { RNG, frand } from '../core/rng.js';
 import { ETYPES } from '../data/enemies.js';
 import { addHaz } from './hazards.js';
 import { part, ring } from './fx.js';
-import { run } from './state.js';
+import { hasMut, run } from './state.js';
 
 import { AFFIXES } from '../data/affixes.js';
 import { nmAffix } from '../data/nightmare.js';
@@ -16,6 +16,7 @@ export function rollAffixes(e, n) {
   if (n === undefined) n = affixCount();
   const pool = Object.keys(AFFIXES), out = [];
   while (out.length < n) { const a = RNG.spawn.pick(pool); if (!out.includes(a)) out.push(a); }
+  if (hasMut('vamp') && !out.includes('vampiric')) out.push('vampiric');   // Mutator Vampire
   e.affixes = out;
   if (hasAffix(e, 'fast')) e.spd *= 1.5;
   if (hasAffix(e, 'shielder')) { e.plateT = 2; e.plates = 0; }

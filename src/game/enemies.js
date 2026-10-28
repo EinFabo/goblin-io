@@ -13,7 +13,7 @@ import { damagePlayer, hurt } from './combat.js';
 import { addItem, animFx, part, puff, ring } from './fx.js';
 import { hint, startClear } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
-import { P, onScreen, pR, query, run, viewR, hidden } from './state.js';
+import { P, hasMut, onScreen, pR, query, run, viewR, hidden } from './state.js';
 import { banner } from '../ui/hud.js';
 
 export { eShot } from './casts.js';
@@ -48,6 +48,10 @@ export function spawnEnemy(type, opt = {}) {
   if (opt.mini) { e.sc *= .65; e.r *= .7; e.hp *= .3; e.xp = Math.ceil(e.xp / 3); e.mini = true; }
   if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; rollAffixes(e, opt.affixes); }
   if (opt.miniboss) { e.miniboss = true; e.hp *= opt.hpMul ?? 5; e.sc *= 1.3; e.r *= 1.3; e.xp = 40; e.spd *= .9; }
+  // Mutatoren (Phase 12): Riesen, Goldrausch, Schnelle Magier
+  if (hasMut('giants') && !e.boss) { e.sc *= 1.35; e.r *= 1.3; e.hp *= 2; e.spd *= .85; }
+  if (hasMut('gold')) e.hp *= 1.3;
+  if (hasMut('fast')) e.spd *= 1.3;
   e.maxHp = e.hp;
   // Sichtbare Spawns kommen durch ein Portal (0,4 s, solange nicht angreifbar)
   if ((opt.x !== undefined && opt.portal !== false) || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (onScreen(x, y)) sfx.portal(); }
@@ -88,6 +92,7 @@ export function doEvent(ev) {
     const mix = (phaseAt(localT()) || {}).mix || {};
     const types = Object.keys(mix).filter(k => ETYPES[k].role === 'mage');
     const el = spawnEnemy(ev.type || RNG.spawn.pick(types.length ? types : ['fire_mage']), { elite: true, affixes: ev.affixes });
+    if (hasMut('elites')) spawnEnemy(el.type, { elite: true, affixes: ev.affixes });   // Mutator Doppelte Elites
     banner(el.affixes.length ? 'Elite: ' + affixNames(el) + '!' : 'Elite-Magier!', '');
   } else if (ev.event === 'miniboss') {
     // Mini-Boss (6.3): Meister der Schule mit 2 Elite-Eigenschaften und eigener Leiste oben
@@ -148,7 +153,7 @@ export function spawnTick(dt) {
   if (run.boss) return;
   const t = localT(), w = phaseAt(t, true);
   if (!w) return;   // Ruhepause
-  const f = (t - w.at) / w.dur, rate = (w.rate[0] + (w.rate[1] - w.rate[0]) * f + run.loop * 2) * run.st.rate;
+  const f = (t - w.at) / w.dur, rate = (w.rate[0] + (w.rate[1] - w.rate[0]) * f + run.loop * 2) * run.st.rate * (hasMut('swarm') ? 1.5 : 1);   // Mutator Schwarm
   const cap = Math.min(280, 70 + t * .9 + run.loop * 60);
   run.spawnAcc += rate * dt;
   while (run.spawnAcc >= 1) {

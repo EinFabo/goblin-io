@@ -21,12 +21,13 @@ import { closeTree } from './evotree.js';
 // ---------- Hub (PLAN 10.1): Leiste oben, Tabs unten ----------
 // Stage starten; fehlen noch Magier-Bilder, kurz "Lade …" zeigen
 // nm: Albtraum-Modus
-export async function startStage(si, li = 0, nm = false) {
+// opts (Phase 12): { mut, abil, mode } für Herausforderung und Kopfgeld
+export async function startStage(si, li = 0, nm = false, opts = {}) {
   const t = setTimeout(() => { $('#loadMsg').textContent = 'Lade Magier …'; $('#loading').classList.add('solo'); $('#loading').hidden = false; }, 120);
   cleanLoadout();
   await rushing(ensureStage(si));
   clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
-  go('run', { si, li, nm });
+  go('run', { si, li, nm, ...opts });
 }
 const TABS = ['#store', '#shop', '#menu', '#armory', '#quests', '#profile'];
 const OVERLAYS = ['#levelup', '#pause', '#over', '#tree', '#evoTree', '#options', '#howto', '#cardInfo', '#oddsInfo', '#chestOpen', '#runeBag', '#cont', '#comboBook'];

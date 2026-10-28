@@ -3,7 +3,8 @@ import { Music } from '../core/music.js';
 import { defineScene, go } from '../core/scenes.js';
 import { $ } from '../core/util.js';
 import { levelLabel } from '../data/levels.js';
-import { lvToBonus, newRun, update } from '../game/run.js';
+import { MUTATORS, mutNames } from '../data/mutators.js';
+import { hint, lvToBonus, newRun, update } from '../game/run.js';
 import { run } from '../game/state.js';
 import { renderRun } from '../render/draw-world.js';
 import { pauseBackground } from '../render/sprites.js';
@@ -17,14 +18,16 @@ let offs = [];
 function endCine() { document.body.classList.remove('cine'); $('#bossCard').hidden = true; }
 
 defineScene('run', {
-  enter({ si, li = 0, seed, nm = false }) {
+  // mut/abil/mode (Phase 12): Mutatoren, feste Fähigkeiten und Art des Laufs (Herausforderung, Kopfgeld)
+  enter({ si, li = 0, seed, nm = false, mut, abil, mode }) {
     pauseBackground(true);   // im Lauf kein Hintergrund-Laden
-    newRun(si, seed, li, nm);
+    newRun(si, seed, li, nm, { mut, abil, mode });
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();
     $('#stageTxt').textContent = (run.nm ? `☠${run.nm} ` : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`);
     refreshSlots(); setupAbilButtons();
-    banner((run.nm ? `Albtraum ${run.nm} · ` : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`), run.nm ? 'danger' : '');
+    banner((run.mode === 'challenge' ? 'Herausforderung · ' : '') + (run.nm ? `Albtraum ${run.nm} · ` : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`), run.nm || run.mut.length ? 'danger' : '');
+    if (run.mut.length) { $('#stageTxt').textContent += ' · ' + mutNames(run.mut); hint('<b>Mutatoren</b> ' + run.mut.map(k => `${MUTATORS[k].name}: ${MUTATORS[k].desc}`).join(' · ')); }
     Music.boss = false; Music.theme = null; Music.hold = false; Music.world = run.st.music || null; Music.part = Music.cur = 0; Music.step = 0; Music.start();
     offs = [
       on('runEnd', r => go('results', r)),

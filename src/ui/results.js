@@ -106,7 +106,7 @@ function showMiss(r, hats) {
 }
 $('#over').addEventListener('pointerdown', e => { if (seqDone && !e.target.closest('button')) seqDone(); });
 export function hideResults() { clearTimeout(showT); seqT.forEach(clearTimeout); seqT = []; seqDone = null; $('#over').hidden = true; }
-$('#againBtn').addEventListener('click', () => startStage(run.si, run.li, run.nm));
+$('#againBtn').addEventListener('click', () => startStage(run.si, run.li, run.nm, { mut: run.mut, abil: run.forceAbil, mode: run.mode }));   // gleiche Herausforderung/Steckbrief
 // Albtraum bleibt an, solange das nächste Level in einer geschafften Welt liegt
 $('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li, stageCleared(n.si) ? run.nm : 0); });
 $('#menuBtn').addEventListener('click', () => go('menu'));
