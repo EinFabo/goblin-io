@@ -267,7 +267,7 @@ export function endRun(win) {
   const bounty = checkBounties(save, { win, boss, si: run.si, endless: !!run.st.endless, cont: cont, cnt: run.cnt, bossHits: run.bossHits || 0, time: run.time,
     abil: run.abil.filter(Boolean).map(s => s.id), nm: run.nm, healed: run.healed || 0, cls: run.cls, mut: run.mut });
   // Tägliche Herausforderung (Phase 12): Bestwert und Belohnung für den ersten Sieg des Tages
-  const challenge = finishChallenge(save, { mode: run.mode, day: run.day, win, cont, time: run.time, kills: run.kills });
+  const challenge = finishChallenge(save, { mode: run.mode, day: run.day, win, cont, time: run.time, kills: run.kills, si: run.si, li: run.li, mut: run.mut, abil: run.forceAbil || [] });
   const next = win && !run.mode ? nextLevel(run.si, run.li) : null;   // Herausforderung/Kopfgeld: kein „Weiter“
   if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();

@@ -15,7 +15,7 @@ import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
 import { ETYPES } from '../data/enemies.js';
 import { nmDmg } from '../data/nightmare.js';
-import { cycleHp } from '../data/souls.js';
+import { cycleDmg } from '../data/souls.js';
 
 // ---------- Schaden ----------
 // xpMul: tötet dieser Treffer, gibt der Gegner so viel mehr Erfahrung (Kristallregen)
@@ -80,7 +80,7 @@ export function kill(e, xpMul = 1) {
   if (e.bomber && !e.boomed) bomberBoom(e, false);
   deathRules(e);
   const ck = P.brew && P.brew.gold > 0 ? 3 : 1;   // Goldtrank (Hexenkessel): dreifache Münzen
-  if (e.miniboss) { for (let i = 0; i < 12 * ck; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'mini'); healPity(e); }
+  if (e.miniboss) { for (let i = 0; i < 12 * ck; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); if (!e.noChest) addItem('chest', e.x, e.y, 'mini'); healPity(e); }   // der zweite Mini-Boss (Albtraum 7+) trägt keine Truhe
   else if (e.elite) { for (let i = 0; i < 8 * ck; i++) addItem('coin', e.x, e.y); for (let i = 0; i < 3; i++) addItem('gear', e.x, e.y); addItem('chest', e.x, e.y, 'elite'); healPity(e); }
   else if (!e.boss) {
     const r = RNG.loot.next();
@@ -116,7 +116,7 @@ export function damagePlayer(d, src = 'contact', by = null) {
   if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
   // Schattenmantel: ausweichen
   if (P.dodge && rnd() < P.dodge) { P.inv = .3; addNum(P.x, P.y - 40, 'Ausgewichen', '#d9c8ff', false); return; }
-  d = hitDamage(d, P.maxHp, src, run.st.endless ? endlessCap(run.time) : 1) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult() * nmDmg(run.nm) * cycleHp(run.cycle);   // Albtraum-Stufe, Zyklus der Wiedergeburt
+  d = hitDamage(d, P.maxHp, src, run.st.endless ? endlessCap(run.time) : 1) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult() * nmDmg(run.nm) * cycleDmg(run.cycle);   // Albtraum-Stufe, Zyklus der Wiedergeburt
   if (P.flatArmor) d = Math.max(d * .4, d - P.flatArmor);   // Eisenhelm, nie unter 40 %
   d = shieldAbsorb(d);
   if (d <= 0) { P.inv = .5; return; }

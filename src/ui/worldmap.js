@@ -172,7 +172,7 @@ function nmHtml(si) {
   const t = nmOn(si), cap = nmCapOf(si);
   const dots = Array.from({ length: NM_MAX }, (_, i) => i + 1).map(k => `<button class="nmdot${k <= t ? ' on' : ''}${k > cap ? ' lk' : ''}" data-nm="${k}" ${k > cap ? 'disabled' : ''} aria-label="Albtraum Stufe ${k}${k > cap ? ', gesperrt' : ''}">${k}</button>`).join('');
   return `<div class="nmrow"><button class="nmtog${t ? ' on' : ''}" data-nm="0" aria-pressed="${!!t}">${SKULL_SM} Albtraum${t ? ' ' + t : ': aus'}</button><div class="nmdots">${dots}</div></div>
-    ${t ? `<p class="nminfo">${nmInfo(t)}</p>` : cap < NM_MAX ? `<p class="nminfo">Stufe ${cap + 1} wird frei, wenn du den Boss dieser Welt auf Stufe ${cap} besiegst.</p>` : ''}`;
+    ${t ? `<p class="nminfo">${nmInfo(t)}${cap < NM_MAX ? ` Stufe ${cap + 1} wird frei, wenn du den Boss dieser Welt auf Stufe ${cap} besiegst.` : ''}</p>` : ''}`;
 }
 // Goblin zu Punkt i schicken (nur über freie Wegstücke)
 function goTo(i) {

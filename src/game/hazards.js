@@ -54,6 +54,7 @@ export function updTele(dt) {
 }
 
 export function updEProj(dt) {
+  const pm = hasMut('bullets') ? 1.25 : 1;   // Mutator Kugelhagel
   for (const p of run.eproj) {
     p.t += dt; p.life -= dt;
     if (p.lob) {
@@ -69,7 +70,6 @@ export function updEProj(dt) {
       }
       continue;
     }
-    const pm = hasMut('bullets') ? 1.25 : 1;   // Mutator Kugelhagel
     p.x += p.vx * dt * pm; p.y += p.vy * dt * pm;
     if (p.warp && run.portals.length) portalWarp(p);   // Spiegelmeister: durch das Spiegeltor
     if (run.arena && Math.hypot(p.x - run.arena.x, p.y - run.arena.y) > run.arena.r + 40) p.life = 0;

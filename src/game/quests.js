@@ -176,20 +176,27 @@ export function checkBounties(save, R, day = dayKey()) {
 }
 
 // Steckbrief mit Mutator: welches Level „Los!“ startet (Boss-Level bzw. das erste der Welt)
-export const bountyStart = b => (b.c === 'mut' && b.si !== undefined ? { si: b.si, li: b.t === 'boss' ? LEVELS - 1 : 0, mut: [b.mut] } : null);
+// save: nur wenn das Level (noch) frei ist – sonst ließe sich über den Steckbrief ein gesperrter Boss spielen
+export const bountyStart = (b, save) => {
+  if (b.c !== 'mut' || b.si === undefined) return null;
+  const li = b.t === 'boss' ? LEVELS - 1 : 0;
+  return !save || levelOpen(save, b.si, li) ? { si: b.si, li, mut: [b.mut] } : null;
+};
 
 // ---------- Tägliche Herausforderung (Phase 12) ----------
 // Beim ersten Ansehen des Tages festgelegt (nur freie Level, nur freie Fähigkeiten); Seed = Datum
 const levelOpen = (save, si, li) => (si === 0 || !!(save.stages[si] && save.stages[si].cleared)) && (li === 0 || !!(save.stages[si + 1] && save.stages[si + 1].lv && save.stages[si + 1].lv[li - 1] && save.stages[si + 1].lv[li - 1].hats > 0));
 export function ensureChallenge(save, day = dayKey()) {
-  if (save.challenge.day === day && save.challenge.def) return save.challenge;
+  if (save.challenge.day === day && save.challenge.def && levelOpen(save, save.challenge.def.si, save.challenge.def.li)) return save.challenge;
+  // nach einer Wiedergeburt kann das Level wieder gesperrt sein: neu festlegen (Bestwert und Abholen bleiben für heute)
+  const keep = save.challenge.day === day ? { best: save.challenge.best, done: save.challenge.done } : { best: 0, done: false };
   const r = mulberry32(hashSeed('goblin-challenge-' + day)), pick = a => a.splice((r() * a.length) | 0, 1)[0];
   const lvls = []; STAGES.forEach((st, si) => { if (!st.endless) for (let li = 0; li < LEVELS; li++) if (levelOpen(save, si, li)) lvls.push([si, li]); });
   const cleared = i => !!(save.stages[i + 1] && save.stages[i + 1].cleared);
   const abil = ABILITY_IDS.filter(id => save.keep.includes(id) || abilityUnlocked(id, save.profile.level, cleared)), muts = [...MUT_IDS];
   const [si, li] = pick(lvls);
   const def = { si, li, abil: [pick(abil), pick(abil)], mut: r() < .5 ? [pick(muts)] : [pick(muts), pick(muts)] };
-  save.challenge = { day, def, best: 0, done: false };
+  save.challenge = { day, def, ...keep };
   return save.challenge;
 }
 // Bestwert: Boss-Level die Zeit (kleiner ist besser), sonst die Kills
@@ -198,6 +205,8 @@ export const challengeIsBoss = def => def.li === LEVELS - 1;
 export function finishChallenge(save, R, day = dayKey()) {
   const C = save.challenge;
   if (R.mode !== 'challenge' || C.day !== day || !C.def || R.day !== day || !R.win || R.cont) return null;
+  // „Nochmal“ nach Mitternacht spielt die alte Herausforderung: zählt nur, wenn Level, Mutatoren und Fähigkeiten zur heutigen passen
+  const d = C.def; if (R.si !== d.si || R.li !== d.li || (R.mut || []).join() !== d.mut.join() || (R.abil || []).join() !== d.abil.join()) return null;
   const v = challengeIsBoss(C.def) ? Math.floor(R.time) : R.kills, better = !C.best || (challengeIsBoss(C.def) ? v < C.best : v > C.best);
   if (better) C.best = v;
   let reward = null;

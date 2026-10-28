@@ -11,12 +11,13 @@ export const soulRank = (save, id) => (save && save.rebirth && save.rebirth.spen
 export const cycle = save => (save && save.rebirth && save.rebirth.n) || 0;
 
 // Altar frei: Boss von Welt 8 besiegt und eine volle Runde Endlose Nacht überlebt
-export const rebirthOpen = save => cleared(save)(LAST_WORLD) && (save.stats.c.endless || 0) >= STAGE_LEN;
+// (die Endlose Nacht zählt je Zyklus: save.rebirth.night)
+export const rebirthOpen = save => cleared(save)(LAST_WORLD) && (save.rebirth.night || 0) >= STAGE_LEN;
 // Seelen für die nächste Wiedergeburt
 export function soulsFor(save) {
   let worlds = 0, nm = 0;
   for (let i = 0; i <= LAST_WORLD; i++) if (cleared(save)(i)) { worlds++; nm += save.stages[i + 1].nmMax || 0; }
-  return worlds * SOULS_WORLD + nm * SOULS_NM + Math.floor((save.stats.c.endless || 0) / 60);
+  return worlds * SOULS_WORLD + nm * SOULS_NM + Math.floor((save.rebirth.night || 0) / 60);
 }
 // Ausgegeben, gesamt verdient, frei
 const costTo = (id, r) => SOUL_NODES[id].cost.slice(0, r).reduce((a, b) => a + b, 0);
@@ -49,7 +50,7 @@ export function rebirth(save) {
   for (const id of ABILITY_IDS) { const u = ABILITIES[id].unlock; if (u && u.stage && c(u.stage - 1) && !save.keep.includes(id)) save.keep.push(id); }
   for (const id of CLASS_IDS) if (classUnlocked(id, c) && !save.clsKeep.includes(id)) save.clsKeep.push(id);
   for (const s of Object.values(save.stages)) for (const l of s.lv || []) { R.hats += l.hats || 0; if (l.hats > 0) R.levels++; }
-  R.n++; R.souls += gain; R.best = Math.max(R.best, gain);
+  R.n++; R.souls += gain; R.best = Math.max(R.best, gain); R.night = 0;
   save.stages = {}; save.map = { si: 0, li: 0, fresh: false, nm: 0 };
   return { gain, n: R.n };
 }

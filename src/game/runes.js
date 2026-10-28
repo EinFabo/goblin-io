@@ -47,8 +47,8 @@ export function socketWhy(save, id, i, key) {
   if (!socketOpen(save, id, i)) return `Sockel ${i + 1} ab Level ${SOCKET_LV[i]}`;
   if (!runeFits(p.id, id)) return 'Passt nicht zu dieser Fähigkeit';
   if (bagCount(save, key) < 1) return 'Nicht in der Tasche';
-  const other = socketsOf(save, id)[1 - i], o = parseRune(other);
-  if (o && o.id === p.id) return 'Diese Runenart steckt schon';
+  // jede Runenart nur einmal je Fähigkeit (alle anderen Sockel, auch der dritte)
+  if (socketsOf(save, id).some((k, j) => j !== i && parseRune(k) && parseRune(k).id === p.id)) return 'Diese Runenart steckt schon';
   return '';
 }
 // Einsetzen; eine Rune, die im Sockel steckt, geht zurück in die Tasche
@@ -63,7 +63,7 @@ export function unsocket(save, id, i) {
   const s = [...socketsOf(save, id)];
   if (!s[i]) return false;
   addRunes(save, [s[i]]); s[i] = null;
-  if (s[0] || s[1]) save.runes.sock[id] = s; else delete save.runes.sock[id];
+  if (s.some(Boolean)) save.runes.sock[id] = s; else delete save.runes.sock[id];
   return true;
 }
 // 3 gleiche → eine der nächsten Stufe. Gibt den neuen Schlüssel zurück

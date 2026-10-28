@@ -87,4 +87,4 @@ export const FREE_MAX = 2;                    // höchstens 2 gespeichert
 export const skipGems = ms => Math.max(1, Math.ceil(ms / (6 * MIN)));
 
 // ---------- Juwelen (9.2) ----------
-export const GEMS = { hat: 4, acctLevel: 10, bossFirst: w => 20 + 10 * w, nightmare: 5 };
+export const GEMS = { hat: 4, acctLevel: 10, bossFirst: w => 20 + 10 * w };   // Albtraum: data/nightmare.js nmGems

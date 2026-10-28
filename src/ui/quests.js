@@ -2,7 +2,7 @@
 // Die Tagesaufgaben sind aus dem Profil hierher gezogen; Logik in game/progress.js und game/quests.js.
 import { sfx } from '../core/audio.js';
 import { persist, save } from '../core/save.js';
-import { $, fmtClock } from '../core/util.js';
+import { $, fmtClock, fmtTime } from '../core/util.js';
 import { DAILY_BONUS } from '../data/achievements.js';
 import { CHESTS } from '../data/cards.js';
 import { COSM } from '../data/cosmetics.js';
@@ -68,12 +68,12 @@ function bountyHtml() {
   const B = ensureBounty(save);
   return `<h3 class="sect">Kopfgeld-Brett <small id="qClock">neu in ${fmtClock(msToMidnight() / 1000)}</small></h3><p class="qhint">Ein Lauf erfüllt den Steckbrief, die Belohnung kommt gleich (Truhen ins Regal). Mit Weitermachen zählt er nicht. Je Steckbrief +${PASS_PTS.bounty} Pass-Punkte.</p>
     <div class="bounties">${B.list.map((b, i) => { const t = bountyText(b); return `<div class="wanted${B.done[i] ? ' got' : ''}"><div class="wtop">GESUCHT</div><div class="skulls">${SKULL.repeat(b.sk)}</div>
-      <p class="goal">${t.goal}</p>${t.cond ? `<p class="cond">${t.cond}</p>` : ''}<div class="rw">${rewardHtml(bountyReward(b))}</div>${!B.done[i] && bountyStart(b) ? `<button class="btn primary small" data-bgo="${i}">Los!</button>` : ''}${B.done[i] ? '<div class="stamp">Erledigt</div>' : ''}</div>`; }).join('')}</div>`;
+      <p class="goal">${t.goal}</p>${t.cond ? `<p class="cond">${t.cond}</p>` : ''}<div class="rw">${rewardHtml(bountyReward(b))}</div>${!B.done[i] && bountyStart(b, save) ? `<button class="btn primary small" data-bgo="${i}">Los!</button>` : ''}${B.done[i] ? '<div class="stamp">Erledigt</div>' : ''}</div>`; }).join('')}</div>`;
 }
 // Tägliche Herausforderung (Phase 12): ein festes Level mit 2 Fähigkeiten und 1–2 Mutatoren, beliebig viele Versuche
 function chalHtml() {
   const C = ensureChallenge(save), d = C.def; if (!d) return '';
-  const boss = challengeIsBoss(d), best = C.best ? (boss ? `${Math.floor(C.best / 60)}:${String(C.best % 60).padStart(2, '0')}` : `${C.best} Kills`) : '–';
+  const boss = challengeIsBoss(d), best = C.best ? (boss ? fmtTime(C.best) : `${C.best} Kills`) : '–';
   return `<h3 class="sect">Tägliche Herausforderung <small id="qClock">neu in ${fmtClock(msToMidnight() / 1000)}</small></h3>
     <p class="qhint">Feste Fähigkeiten und Mutatoren nur für diesen Lauf, beliebig viele Versuche. Bestwert: ${boss ? 'schnellster Sieg' : 'meiste Kills bei einem Sieg'}. Erster Sieg des Tages: Belohnung und +${PASS_PTS.challenge} Pass-Punkte.</p>
     <div class="chal${C.done ? ' got' : ''}"><div class="chead"><b>${levelLabel(d.si, d.li)} · ${STAGES[d.si].name}</b>${boss ? `<span>Boss: ${STAGES[d.si].boss.name}</span>` : ''}</div>
@@ -110,7 +110,7 @@ $('#quests').addEventListener('click', e => {
   else if (b.dataset.wbonus !== undefined) r = claimWeeklyBonus(save);
   else if (b.dataset.pass !== undefined) r = claimPass(save, b.dataset.pass === 'bonus' ? 'bonus' : +b.dataset.pass);
   else if (b.dataset.chgo !== undefined) { const d = ensureChallenge(save).def; persist(); sfx.pickCard(); start(d.si, d.li, 0, { mut: d.mut, abil: d.abil, mode: 'challenge' }); return; }
-  else if (b.dataset.bgo !== undefined) { const s = bountyStart(ensureBounty(save).list[+b.dataset.bgo]); if (!s) return; persist(); sfx.pickCard(); start(s.si, s.li, 0, { mut: s.mut, mode: 'bounty' }); return; }
+  else if (b.dataset.bgo !== undefined) { const s = bountyStart(ensureBounty(save).list[+b.dataset.bgo], save); if (!s) { sfx.buzz(); return; } persist(); sfx.pickCard(); start(s.si, s.li, 0, { mut: s.mut, mode: 'bounty' }); return; }
   else return;
   if (!r) { sfx.buzz(); renderQuests(); return; }   // z. B. Mitternacht vorbei
   show(b, r);

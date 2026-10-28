@@ -117,7 +117,7 @@ test('Tägliche Herausforderung: freies Level, zwei Fähigkeiten, 1–2 Mutatore
   assert.equal(d.abil.length, 2); assert.notEqual(d.abil[0], d.abil[1]);
   assert.ok(d.mut.length >= 1 && d.mut.length <= 2 && d.mut.every(m => MUTATORS[m]));
   const t = defaults(); won(t, 2); t.stages[3] = s.stages[3]; assert.deepEqual(ensureChallenge(t, day).def, d, 'gleich für gleichen Stand');
-  const R = { mode: 'challenge', day, win: true, cont: false, time: 140, kills: 300 };
+  const R = { mode: 'challenge', day, win: true, cont: false, time: 140, kills: 300, si: d.si, li: d.li, mut: d.mut, abil: d.abil };
   assert.equal(finishChallenge(s, { ...R, mode: null }, day), null);
   assert.equal(finishChallenge(s, { ...R, win: false }, day), null);
   const g0 = s.wallet.gold, a = finishChallenge(s, R, day);
@@ -137,4 +137,15 @@ test('Kopfgeld mit Mutator: Bedingung und Start-Level', async () => {
   assert.equal(bountyStart({ t: 'boss', si: 2, c: 'nohit' }), null);
   const t = normalize({ bounty: { day: 'd', list: [{ t: 'boss', si: 1, sk: 2, c: 'mut', mut: 'dark' }, { t: 'boss', si: 1, sk: 2, c: 'mut', mut: 'weg' }], done: [false, false] } });
   assert.equal(t.bounty.list.length, 1);
+});
+
+test('Herausforderung zählt nur mit passendem Lauf; Steckbrief-Los nur für freie Level', async () => {
+  const { ensureChallenge, finishChallenge, bountyStart } = await import('../src/game/quests.js');
+  const s = defaults(), day = '2026-10-28'; won(s, 3);
+  const d = ensureChallenge(s, day).def, R = { mode: 'challenge', day, win: true, cont: false, time: 100, kills: 200, si: d.si, li: d.li, mut: d.mut, abil: d.abil };
+  assert.equal(finishChallenge(s, { ...R, mut: ['glass', 'dark', 'x'] }, day), null, 'alter Lauf über Mitternacht');
+  assert.ok(finishChallenge(s, R, day));
+  const t = defaults(); won(t, 1);
+  assert.equal(bountyStart({ t: 'boss', si: 1, c: 'mut', mut: 'dark' }, t), null, 'Boss von Welt 2 noch gesperrt');
+  assert.ok(bountyStart({ t: 'level', si: 1, c: 'mut', mut: 'dark' }, t));
 });

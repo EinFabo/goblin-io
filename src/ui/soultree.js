@@ -3,7 +3,7 @@
 import { sfx } from '../core/audio.js';
 import { persist, save } from '../core/save.js';
 import { $ } from '../core/util.js';
-import { SOUL_BRANCHES, SOUL_IDS, SOUL_NODES, cycleHp, cycleReward } from '../data/souls.js';
+import { SOUL_BRANCHES, SOUL_IDS, SOUL_NODES, cycleDmg, cycleHp, cycleReward } from '../data/souls.js';
 import { buySoul, cycle, rebirth, rebirthOpen, soulRank, soulWhy, soulsFor, soulsFree } from '../game/souls.js';
 import { burstAt, flashScreen } from './rewardfx.js';
 
@@ -20,7 +20,7 @@ function nodeHtml(id) {
 function render() {
   const n = cycle(save), open = rebirthOpen(save), gain = soulsFor(save);
   const reb = open ? `<div class="srebirth"><p><b>Wiedergeburt:</b> +${gain} Seelen (10 je Welt, 5 je Albtraum-Stufe, Minuten der Endlosen Nacht). Welt-Fortschritt und Albtraum beginnen neu – Karten, Talente, Fähigkeiten, Runen, Kosmetik, Klassen, Gold, Juwelen, Konto- und Klassen-Level bleiben.</p>
-      <p>Zyklus ${n + 1}: Gegner +${pc(cycleHp(n + 1))} Leben und Schaden, Gold und XP +${pc(cycleReward(n + 1))}.</p>
+      <p>Zyklus ${n + 1}: Gegner +${pc(cycleHp(n + 1))} Leben und +${pc(cycleDmg(n + 1))} Schaden, Gold und XP +${pc(cycleReward(n + 1))}.</p>
       <button class="btn ${confirm ? 'danger' : 'primary'}" data-rebirth>${confirm ? 'Wirklich? Noch einmal tippen' : 'Wiedergeburt'}</button></div>`
     : '<p class="slock">Die Wiedergeburt ist frei, sobald der Boss von Welt 8 besiegt ist und du eine volle Runde (4:00) in der Endlosen Nacht überlebt hast.</p>';
   const cols = Object.entries(SOUL_BRANCHES).map(([br, name]) => `<div class="sbranch"><h4>${name}</h4>${SOUL_IDS.filter(id => SOUL_NODES[id].br === br).map(nodeHtml).join('')}</div>`).join('');

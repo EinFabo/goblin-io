@@ -1,9 +1,10 @@
 // ---------- Wiedergeburt und Seelenbaum (Phase 12, Wunsch Fabi 2026-10-14) ----------
 // Nach dem Boss von Welt 8 und einer vollen Runde Endlose Nacht: Welt-Fortschritt beginnt neu (Zyklus n+1), dafür Seelen.
 // Seelen = 10 je geschaffter Welt + 5 je Albtraum-Stufe (Summe der besten Boss-Stufen) + Minuten der besten Endlosen Nacht.
-// Zyklus n: Gegner +20 %·n Leben und Schaden, Gold und XP +25 %·n.
+// Zyklus n: Gegner +15 %·n Leben und +8 %·n Schaden, Gold und XP +25 %·n (Plan: je +20 %; im Bot war Zyklus 2 so nicht mehr schaffbar).
 export const SOULS_WORLD = 10, SOULS_NM = 5;
-export const cycleHp = n => 1 + .2 * (n || 0);
+export const cycleHp = n => 1 + .15 * (n || 0);
+export const cycleDmg = n => 1 + .08 * (n || 0);
 export const cycleReward = n => 1 + .25 * (n || 0);
 
 // Drei Äste + Krönung. cost: Seelen je Rang, req: Knoten, der mindestens einen Rang haben muss

@@ -81,7 +81,7 @@ export function defaults() {
     // Phase 12: Tägliche Herausforderung (Tag, Festlegung { si, li, abil, mut }, Bestwert, geschafft)
     challenge: { day: '', def: null, best: 0, done: false },
     // Wiedergeburt (Phase 12): Zyklus, verdiente Seelen, Seelenbaum { Knoten: Rang }, beste Ausbeute, Hüte/Level früherer Zyklen
-    rebirth: { n: 0, souls: 0, spent: {}, best: 0, hats: 0, levels: 0 },
+    rebirth: { n: 0, souls: 0, spent: {}, best: 0, hats: 0, levels: 0, night: 0 },
     // Klassen, die über Welten frei waren, bleiben nach der Wiedergeburt frei
     clsKeep: [],
   };
@@ -275,7 +275,8 @@ function normQuests(r, out) {
   out.challenge = { day: typeof ch.day === 'string' && defOk ? ch.day : '', def: defOk ? { si: cd.si, li: cd.li, abil: [...cd.abil], mut: [...cd.mut] } : null, best: num(ch.best) | 0, done: defOk && bool(ch.done, false) };
   const rb = obj(r.rebirth), sp = {};
   for (const [k, v] of Object.entries(obj(rb.spent))) if (SOUL_NODES[k]) { const n = num(v, 0, 0, SOUL_NODES[k].max) | 0; if (n) sp[k] = n; }
-  out.rebirth = { n: num(rb.n, 0, 0, 999) | 0, souls: num(rb.souls) | 0, spent: sp, best: num(rb.best) | 0, hats: num(rb.hats) | 0, levels: num(rb.levels) | 0 };
+  out.rebirth = { n: num(rb.n, 0, 0, 999) | 0, souls: num(rb.souls) | 0, spent: sp, best: num(rb.best) | 0, hats: num(rb.hats) | 0, levels: num(rb.levels) | 0,
+    night: num(rb.night, num(rb.n) ? 0 : num(obj(obj(r.stats).c).endless)) | 0 };   // night: beste Endlose Nacht in diesem Zyklus (vor der ersten Wiedergeburt: die beste überhaupt)
   out.clsKeep = Array.isArray(r.clsKeep) ? [...new Set(r.clsKeep.filter(isClass))] : [];
   out.aq = {}; for (const [k, v] of Object.entries(obj(r.aq))) if (ABILITIES[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.aq[k] = n; }
 }

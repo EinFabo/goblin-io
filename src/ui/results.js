@@ -1,5 +1,6 @@
 import { go } from '../core/scenes.js';
-import { stageCleared } from '../core/save.js';
+import { stageCleared, stageInfo } from '../core/save.js';
+import { nmCap } from '../data/nightmare.js';
 import { startStage } from './menus.js';
 import { $, fmtTime } from '../core/util.js';
 import { P, run } from '../game/state.js';
@@ -109,6 +110,6 @@ $('#over').addEventListener('pointerdown', e => { if (seqDone && !e.target.close
 export function hideResults() { clearTimeout(showT); seqT.forEach(clearTimeout); seqT = []; seqDone = null; $('#over').hidden = true; }
 $('#againBtn').addEventListener('click', () => startStage(run.si, run.li, run.nm, { mut: run.mut, abil: run.forceAbil, mode: run.mode }));   // gleiche Herausforderung/Steckbrief
 // Albtraum bleibt an, solange das nächste Level in einer geschafften Welt liegt
-$('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li, stageCleared(n.si) ? run.nm : 0); });
+$('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li, stageCleared(n.si) ? Math.min(run.nm, nmCap((stageInfo(n.si) || {}).nmMax)) : 0); });   // nur bis zur freien Albtraum-Stufe der Welt
 $('#menuBtn').addEventListener('click', () => go('menu'));
 $('#overStats').addEventListener('click', e => { if (e.target.closest('#vchestBtn') && run.result.chest) playChest(run.result.chest.res); });

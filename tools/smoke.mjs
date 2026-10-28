@@ -519,7 +519,7 @@ w.bounty = await p.evaluate(() => {
 await p.click('[data-qsub="bounty"]'); await p.waitForTimeout(300);
 await p.click('[data-bgo="0"]'); await p.waitForTimeout(1500);
 w.bountyRun = await p.evaluate(async () => { const G = GOBLIN, run = G.run; run.paused = true; const r = { mode: run.mode, mut: run.mut.join(), si: run.si, li: run.li }; G.endRun(true); await new Promise(r => setTimeout(r, 300)); r.done = G.save.bounty.done[0]; G.go('menu'); return r; });
-await p.evaluate(() => { const S = GOBLIN.save; S.stats.c.endless = 300; S.rebirth.souls = 50; S.map = { si: 8, li: 0, fresh: false, nm: 0 }; GOBLIN.go('menu', '#menu'); });
+await p.evaluate(() => { const S = GOBLIN.save; S.stats.c.endless = 300; S.rebirth.night = 300; S.rebirth.souls = 50; S.map = { si: 8, li: 0, fresh: false, nm: 0 }; GOBLIN.go('menu', '#menu'); });
 await p.waitForTimeout(1500);
 await p.click('#lvNote [data-altar]'); await p.waitForTimeout(300);
 await p.click('[data-soul="w_dmg"]'); await p.click('[data-rebirth]'); await p.click('[data-rebirth]'); await p.waitForTimeout(400);

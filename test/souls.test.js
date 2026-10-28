@@ -15,7 +15,7 @@ test('Seelenbaum: Daten stimmig (Kosten je Rang, Voraussetzungen vorhanden)', ()
 test('Wiedergeburt: erst nach Welt 8 und einer Runde Endlose Nacht; Seelen; was bleibt und was neu beginnt', () => {
   const s = defaults(); allWon(s);
   assert.ok(!rebirthOpen(s), 'ohne Endlose Nacht nicht');
-  s.stats.c.endless = 300; assert.ok(rebirthOpen(s));
+  s.stats.c.endless = 300; assert.ok(!rebirthOpen(s), 'zählt je Zyklus'); s.rebirth.night = 300; assert.ok(rebirthOpen(s));
   assert.equal(soulsFor(s), 8 * 10 + 6 * 5 + 5);
   s.wallet.gold = 777; s.cards = { dagger: { lv: 4, n: 2 } }; s.profile.level = 30; s.classes = { bow: { lv: 7, xp: 0 } };
   const r = rebirth(s);
@@ -40,4 +40,15 @@ test('Seelenbaum: Kosten, Voraussetzung, Krönung braucht alle Äste, dritter So
   assert.deepEqual(socketIdx(s), [0, 1]); assert.ok(!socketOpen(s, 'trap', 2));
   buySoul(s, 'm_sock'); assert.deepEqual(socketIdx(s), [0, 1, 2]); assert.ok(socketOpen(s, 'trap', 2));
   const poor = defaults(); poor.rebirth.souls = 5; assert.ok(soulWhy(poor, 'w_dmg').includes('Seelen'));
+});
+
+test('Wiedergeburt setzt die Endlose Nacht des Zyklus zurück; dritter Sockel: Ausbauen und Runenart', async () => {
+  const { socket, unsocket } = await import('../src/game/runes.js');
+  const s = defaults(); allWon(s); s.rebirth.night = 600; rebirth(s);
+  assert.equal(s.rebirth.night, 0); assert.ok(!rebirthOpen(s));
+  s.rebirth.souls = 500; buySoul(s, 'm_axp'); buySoul(s, 'm_sock');
+  s.abilities.trap = { lv: 30, xp: 0, pts: {} }; s.runes.bag = { 'fire.1': 1, 'fire.2': 1, 'frost.1': 1 };
+  assert.ok(socket(s, 'trap', 0, 'fire.1')); assert.ok(socket(s, 'trap', 2, 'frost.1'));
+  assert.ok(!socket(s, 'trap', 1, 'fire.2'), 'Feuer steckt schon (Sockel 1)');
+  assert.ok(unsocket(s, 'trap', 0)); assert.deepEqual(s.runes.sock.trap, [null, null, 'frost.1'], 'Rune im dritten Sockel bleibt');
 });

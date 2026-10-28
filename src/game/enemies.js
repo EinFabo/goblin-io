@@ -99,8 +99,8 @@ export function doEvent(ev) {
     // Mini-Boss (6.3): Meister der Schule mit 2 Elite-Eigenschaften und eigener Leiste oben
     const e = spawnEnemy(ev.type, { miniboss: true, hpMul: ev.hp });
     rollAffixes(e, ev.affixes ?? 2); run.mini = e;
-    // Albtraum ab Stufe 7: ein zweiter Mini-Boss (ohne eigene Leiste)
-    for (let k = 1; k < nmMinis(run.nm); k++) rollAffixes(spawnEnemy(ev.type, { miniboss: true, hpMul: ev.hp }), ev.affixes ?? 2);
+    // Albtraum ab Stufe 7: ein zweiter Mini-Boss (ohne eigene Leiste und ohne Truhe)
+    for (let k = 1; k < nmMinis(run.nm); k++) { const m2 = spawnEnemy(ev.type, { miniboss: true, hpMul: ev.hp }); m2.noChest = true; rollAffixes(m2, ev.affixes ?? 2); }
     banner('Mini-Boss: ' + ETYPES[ev.type].name + '!', 'danger'); sfx.warn();
     hint(`<b>${ETYPES[ev.type].name}</b> ${e.affixes.length ? affixNames(e) + ' – ' : ''}er trägt eine Truhe.`);
     return e;
