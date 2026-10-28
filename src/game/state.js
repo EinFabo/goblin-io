@@ -68,5 +68,12 @@ export function clampToArena(o, margin) {
   if (d > A.r - margin && d > 0) { o.x = A.x + dx / d * (A.r - margin); o.y = A.y + dy / d * (A.r - margin); }
   return o;
 }
+// Leben auffüllen (nie über das Maximum); zählt die Heilung für das Kopfgeld „ohne Heilung“ (Phase 11)
+export function heal(h) {
+  const nh = Math.min(P.maxHp, P.hp + h), g = nh - P.hp;   // wie bisher Math.min(P.maxHp, P.hp + h)
+  P.hp = nh;
+  if (g > 0 && run) run.healed = (run.healed || 0) + g;
+  return Math.max(0, g);
+}
 // Eigene Waffen-ids für weaponOf: noch nicht entwickelte zuerst (Klassenwaffen teilen sich Passive mit anderen Waffen)
 export const ownIds = () => [...run.weapons].sort((a, b) => a.evo - b.evo).map(w => w.id);

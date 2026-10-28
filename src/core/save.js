@@ -7,12 +7,14 @@ import { OLD_COST, TALENT, oldShopCost } from '../data/talents.js';
 import { WEAPONS } from '../data/weapons.js';
 import { CARD_MAX, CARD_RARITY, CHESTS, FREE_MAX, RARITY, SHELF } from '../data/cards.js';
 import { COSM, DEFAULT_LOOK_KEYS, SLOTS, START_COSM } from '../data/cosmetics.js';
-import { ACH } from '../data/achievements.js';
+import { ACH, SCHOOL_NAME } from '../data/achievements.js';
 import { LEVELS } from '../data/levels.js';
 import { normRunes } from '../game/runes.js';
 import { COMBOS } from '../data/combos.js';
 import { CLASS_MAX_LV, classUnlocked, classXpNeed, isClass } from '../data/classes.js';
-import { BOUNTY_N, PASS_STAGES, WEEKLY_N, WEEKLY_POOL } from '../data/quests.js';
+import { BOUNTY_COND, BOUNTY_N, PASS_STAGES, WEEKLY_N, WEEKLY_POOL } from '../data/quests.js';
+import { STAGES } from '../data/stages.js';
+import { AFFIXES } from '../data/affixes.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
@@ -246,14 +248,32 @@ export function migrateV4(v4) {
 // Phase 11: Wochenaufgaben, Pass, Kopfgeld, Fähigkeiten-Quests prüfen (alles Unbekannte fällt weg)
 function normQuests(r, out) {
   const w = obj(r.weekly), p = obj(r.pass), b = obj(r.bounty), arr = v => (Array.isArray(v) ? v : []);
-  const tasks = arr(w.tasks).map(obj).filter(t => WEEKLY_POOL.some(q => q.id === t.id)).slice(0, WEEKLY_N).map(t => ({ id: t.id, n: Math.max(1, num(t.n, 1) | 0) }));
+  // Einträge mit ihrem Abgeholt-Haken zusammen filtern, damit der Haken nicht auf die nächste Aufgabe rutscht
+  const wk = arr(w.tasks).map((t, i) => [obj(t), arr(w.claimed)[i] === true]).filter(([t]) => WEEKLY_POOL.some(q => q.id === t.id)).slice(0, WEEKLY_N);
   const base = {}; for (const [k, v] of Object.entries(obj(w.base))) base[k] = num(v);
-  out.weekly = { wk: Number.isInteger(w.wk) ? w.wk : -1, base, tasks, claimed: tasks.map((_, i) => arr(w.claimed)[i] === true), bonus: bool(w.bonus, false) };
+  out.weekly = { wk: Number.isInteger(w.wk) ? w.wk : -1, base, tasks: wk.map(([t]) => ({ id: t.id, n: Math.max(1, num(t.n, 1) | 0) })), claimed: wk.map(([, c]) => c), bonus: bool(w.bonus, false) };
   out.pass = { season: Number.isInteger(p.season) ? p.season : -1, pts: num(p.pts) | 0, claimed: [...new Set(arr(p.claimed).filter(s => Number.isInteger(s) && s >= 1 && s <= PASS_STAGES))],
     bonus: num(p.bonus) | 0, champ: bool(p.champ, false) };
-  const list = arr(b.list).map(obj).filter(x => ['boss', 'level', 'school', 'affix'].includes(x.t)).slice(0, BOUNTY_N);
-  out.bounty = { day: typeof b.day === 'string' ? b.day : '', list, done: list.map((_, i) => arr(b.done)[i] === true) };
+  const bl = arr(b.list).map((x, i) => [obj(x), arr(b.done)[i] === true]).filter(([x]) => bountyValid(x)).slice(0, BOUNTY_N);
+  out.bounty = { day: typeof b.day === 'string' ? b.day : '', list: bl.map(([x]) => x), done: bl.map(([, d]) => d) };
   out.aq = {}; for (const [k, v] of Object.entries(obj(r.aq))) if (ABILITIES[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.aq[k] = n; }
+}
+
+// Steckbrief vollständig und mit bekannten Werten? (sonst würden Text oder Belohnung abstürzen)
+function bountyValid(x) {
+  const int = (v, a, b) => Number.isInteger(v) && v >= a && v <= b;
+  if (!int(x.sk, 1, 3)) return false;
+  if (x.t === 'boss' || x.t === 'level') { if (!int(x.si, 0, STAGES.length - 1) || STAGES[x.si].endless) return false; }
+  else if (x.t === 'school') { if (!SCHOOL_NAME[x.school] || !int(x.n, 1, 999)) return false; }
+  else if (x.t === 'affix') { if (!AFFIXES[x.affix] || !int(x.n, 1, 99)) return false; }
+  else return false;
+  if (x.c === null || x.c === undefined) return true;
+  if (!(x.c in BOUNTY_COND)) return false;
+  if (x.c === 'abil') return !!ABILITIES[x.abil];
+  if (x.c === 'cls') return isClass(x.cls);
+  if (x.c === 'time') return typeof x.T === 'number' && x.T > 0 && x.t === 'boss';
+  if (x.c === 'nohit') return x.t === 'boss';
+  return true;
 }
 
 // v6 → v7 (Phase 11: Quests und Aufgaben-Pass): alles kommt leer über normalize dazu

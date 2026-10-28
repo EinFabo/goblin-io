@@ -4,7 +4,7 @@
 import { hashSeed, mulberry32, newSeed } from '../core/rng.js';
 import { ABILITIES, ABILITY_IDS, abilityUnlocked } from '../data/abilities.js';
 import { CLASSES, CLASS_IDS, classUnlocked } from '../data/classes.js';
-import { AQ_GOALS, AQ_TIERS, BOUNTY_COND, BOUNTY_N, BOUNTY_REWARD, BOUNTY_SKULL, PASS_BONUS, PASS_BONUS_STEP, PASS_PTS, PASS_STAGES, PASS_STEP, PASS_TITLE, QUEST_EPOCH,
+import { AQ_GOALS, AQ_GOAL_OF, AQ_TIERS, BOUNTY_COND, BOUNTY_N, BOUNTY_REWARD, BOUNTY_SKULL, PASS_BONUS, PASS_BONUS_STEP, PASS_PTS, PASS_STAGES, PASS_STEP, PASS_TITLE, QUEST_EPOCH,
   SEASON_WEEKS, WEEKLY_BONUS, WEEKLY_N, WEEKLY_POOL, aqKey, aqText, bountyTime, passReward } from '../data/quests.js';
 import { RUNE_IDS, runeFits, runeKey } from '../data/runes.js';
 import { SCHOOL_NAME } from '../data/achievements.js';
@@ -26,8 +26,8 @@ export const daysLeftWeek = (day = dayKey()) => 7 - (((dayNum(day) - dayNum(QUES
 export const daysLeftSeason = (day = dayKey()) => SEASON_WEEKS * 7 - (((dayNum(day) - dayNum(QUEST_EPOCH)) % (SEASON_WEEKS * 7)) + SEASON_WEEKS * 7) % (SEASON_WEEKS * 7);
 
 // ---------- Belohnungen ----------
-// Gold, Juwelen, Runenkiste, Kosmetik, Titel sofort; Truhen: shelf = ins Regal (sonst gleich öffnen), sonst gibt die UI sie aus.
-// Gibt die Belohnung mit dem, was dabei herauskam, zurück (runes: Schlüssel, cosm: neu, chestRes: sofort geöffnet)
+// Alles wird hier gutgeschrieben: Gold, Juwelen, Runenkiste, Kosmetik, Titel; Truhen mit shelf ins Regal (ist es voll, gehen sie
+// gleich auf), sonst gleich geöffnet. Gibt zurück, was dabei herauskam (runes: Schlüssel, cosmNew, chestRes: geöffnete Truhe für die Animation)
 export function giveReward(save, r, { shelf = false } = {}) {
   const out = { ...r }, rng = mulberry32(newSeed());
   if (r.gold) save.wallet.gold += r.gold;
@@ -35,14 +35,20 @@ export function giveReward(save, r, { shelf = false } = {}) {
   if (r.runes) { out.runes = r.runes === true ? rollRuneBag(rng) : r.runes; addRunes(save, out.runes); }
   if (r.cosm) out.cosmNew = grantCosmetic(save, r.cosm);
   if (r.title) save.pass.champ = true;
-  if (r.chest && shelf && !addToShelf(save, r.chest)) { out.chestRes = rollChest(r.chest, rng, save.pity); grantChest(save, out.chestRes); }
+  if (r.chest && !(shelf && addToShelf(save, r.chest))) { out.chestRes = rollChest(r.chest, rng, save.pity); grantChest(save, out.chestRes); }
   return out;
 }
 
 // ---------- Aufgaben-Pass ----------
+// Neue Saison: was in der alten erreicht, aber nicht abgeholt war, wird nachgeliefert (Truhen ins Regal), dann beginnt alles neu
 export function ensurePass(save, day = dayKey()) {
-  const s = seasonOf(day);
-  if (save.pass.season !== s) save.pass = { season: s, pts: 0, claimed: [], bonus: 0, champ: !!save.pass.champ };
+  const s = seasonOf(day), p = save.pass;
+  if (p.season === s) return p;
+  if (p.season >= 0) {
+    for (let i = 1; i <= passStage(p.pts); i++) if (!p.claimed.includes(i)) giveReward(save, passReward(i, p.season), { shelf: true });
+    for (let n = passBonusReady(p); n > 0; n--) giveReward(save, PASS_BONUS, { shelf: true });
+  }
+  save.pass = { season: s, pts: 0, claimed: [], bonus: 0, champ: !!save.pass.champ };
   return save.pass;
 }
 export function addPassPts(save, n, day = dayKey()) { ensurePass(save, day).pts += n; }
@@ -115,7 +121,7 @@ export function ensureBounty(save, day = dayKey()) {
     const kinds = ['boss', 'level', 'school', ...(worlds.length >= 3 ? ['affix'] : [])], t = pick(kinds), b = { t };
     if (t === 'boss' || t === 'level') b.si = pick(worlds);
     if (t === 'school') { b.school = pick(schools); b.n = pick([40, 60, 80]); }
-    if (t === 'affix') { b.affix = pick(Object.keys(AFFIXES)); b.n = pick([2, 3]); }
+    if (t === 'affix') { b.affix = pick(Object.keys(AFFIXES)); b.n = pick([1, 2]); }
     const conds = ['abil', 'noheal', ...(t === 'boss' ? ['nohit', 'time'] : []), ...(b.si !== undefined && save.stages[b.si + 1] && save.stages[b.si + 1].cleared ? ['nm'] : []), ...(cls.length ? ['cls'] : [])];
     b.c = r() < .25 ? null : pick(conds);
     if (b.c === 'abil') b.abil = pick(abil);
@@ -168,10 +174,9 @@ export function checkBounties(save, R, day = dayKey()) {
 // ---------- Fähigkeiten-Quests ----------
 // Stand einer Fähigkeit: Zähler, erreichte und abgeholte Stufe, nächstes Ziel
 export function aqState(save, id) {
-  const key = aqKey(id), goals = AQ_GOALS[key], v = save.stats.c['ab.' + id + '.' + key] || 0, tier = goals.filter(g => v >= g).length, claimed = save.aq[id] || 0;
+  const key = aqKey(id), goals = AQ_GOAL_OF[id] || AQ_GOALS[key], v = save.stats.c['ab.' + id + '.' + key] || 0, tier = goals.filter(g => v >= g).length, claimed = save.aq[id] || 0;
   return { key, v, tier, claimed, goal: goals[Math.min(claimed, 2)], text: aqText(ABILITIES[id].name, key, goals[Math.min(claimed, 2)]), can: tier > claimed };
 }
-export const aqOpenCount = save => ABILITY_IDS.filter(id => aqState(save, id).can).length;
 // Passende Rune der Stufe t für die Fähigkeit (Seed: Fähigkeit + Stufe, damit es nicht vom Zufall beim Abholen abhängt)
 function aqRune(id, t) {
   const fit = RUNE_IDS.filter(k => runeFits(k, id)), r = mulberry32(hashSeed('goblin-aq-' + id + '-' + t));

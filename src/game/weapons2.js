@@ -8,7 +8,7 @@ import { sfx } from '../core/audio.js';
 import { TAU } from '../core/util.js';
 import { hurt } from './combat.js';
 import { explode, later, part, ring } from './fx.js';
-import { P, isBig, nearest, query, randomEnemyInView, run } from './state.js';
+import { P, heal, isBig, nearest, query, randomEnemyInView, run } from './state.js';
 // Kreis-Import (weapons.js ↔ weapons2.js) ist unbedenklich: beides sind Funktions-Deklarationen
 import { shoot, shootRaw } from './weapons.js';
 
@@ -288,7 +288,7 @@ export function updWfx(dt) {
 // Treffer-Sonderfälle der neuen Geschosse (aus updPProj): Stein springt weiter, Seele heilt
 export function onProjHit(p, e) {
   // Seelen heilen höchstens 4× pro Sekunde (sonst macht ein Schwarm unverwundbar)
-  if (p.k === 'soul' && p.heal && run.time >= (run.soulHealT || 0)) { run.soulHealT = run.time + .25; P.hp = Math.min(P.maxHp, P.hp + p.heal); }
+  if (p.k === 'soul' && p.heal && run.time >= (run.soulHealT || 0)) { run.soulHealT = run.time + .25; heal(p.heal); }
   if (p.k === 'rock' && p.bounce > 0) {
     let nx = null, nd = 260 * 260;
     query(e.x, e.y, 260, o => {

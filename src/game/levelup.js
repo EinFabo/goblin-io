@@ -4,7 +4,7 @@ import { sfx } from '../core/audio.js';
 import { BOONS, PASSIVES, WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
 import { drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
-import { P, run } from './state.js';
+import { P, heal, run } from './state.js';
 import { part, ring } from './fx.js';
 import { TAU } from '../core/util.js';
 import { count } from './progress.js';
@@ -34,7 +34,7 @@ export function choose(offer, i, lockIdx = -1) {
   if (lockIdx >= 0 && lockIdx !== i) run.locks--;
   settleOffer(run.offer, offer, skip ? -1 : i, lockIdx);
   if (i === 'gold') run.gold += SKIP_GOLD;
-  else if (i === 'heal') P.hp = Math.min(P.maxHp, P.hp + P.maxHp * SKIP_HEAL);
+  else if (i === 'heal') heal(P.maxHp * SKIP_HEAL);
   else applyChoice(offer[i]);
 }
 
@@ -89,7 +89,7 @@ export function applyChoice(c, quiet = false) {
   else if (c.k === 'newP' || c.k === 'upP') run.passives[c.id] = (run.passives[c.id] || 0) + 1;
   else if (c.k === 'swap') swapPassive(c.from, c.id, quiet);
   else if (c.k === 'boon') { run.boons[c.id] = (run.boons[c.id] || 0) + 1; count(run, 'boon'); }
-  else if (c.k === 'heal') P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .4);
+  else if (c.k === 'heal') heal(P.maxHp * .4);
   else if (c.k === 'gold') run.gold += 25;
   recalc(); refreshSlots();
 }

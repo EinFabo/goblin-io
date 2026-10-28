@@ -6,14 +6,15 @@ import { $, fmtClock } from '../core/util.js';
 import { DAILY_BONUS } from '../data/achievements.js';
 import { CHESTS } from '../data/cards.js';
 import { COSM } from '../data/cosmetics.js';
-import { PASS_BONUS, PASS_BONUS_STEP, PASS_PTS, PASS_STAGES, PASS_STEP, PASS_TITLE, SEASON_SETS, WEEKLY_BONUS } from '../data/quests.js';
+import { PASS_BONUS, PASS_BONUS_STEP, PASS_PTS, PASS_STAGES, PASS_STEP, PASS_TITLE, WEEKLY_BONUS, seasonSet } from '../data/quests.js';
 import { claimDaily, claimDailyBonus, dailyOpen, dailyTasks, ensureDaily } from '../game/progress.js';
-import { bountyOpen, bountyReward, bountyText, claimPass, claimWeekly, claimWeeklyBonus, daysLeftSeason, daysLeftWeek, ensureBounty, ensurePass,
-  passBonusReady, passList, passOpen, weeklyOpen, weeklyTasks } from '../game/quests.js';
+import { bountyOpen, bountyReward, bountyText, claimPass, claimWeekly, claimWeeklyBonus, daysLeftSeason, daysLeftWeek, ensureBounty,
+  passBonusReady, passList, passOpen, passStage, weeklyOpen, weeklyTasks } from '../game/quests.js';
 import { dayKey, msToMidnight } from '../game/shop.js';
 import { chestSvg, runeSvg } from './cardart.js';
 import { cosmTile } from './cosmart.js';
 import { openChest } from './store.js';
+import { playChest } from './chest-open.js';
 import { burstAt, flashScreen, flyReward } from './rewardfx.js';
 
 let sub = 'day', onChange = () => {};
@@ -34,11 +35,11 @@ const btn = (can, data, got) => (got ? '<span class="ok">✓</span>' : `<button 
 const bar = (prog, n) => `<div class="tbar2"><i style="width:${Math.min(100, prog / n * 100).toFixed(0)}%"></i><span>${fmtN(prog)} / ${fmtN(n)}</span></div>`;
 
 export function renderQuests() {
-  ensureDaily(save); ensurePass(save);
+  ensureDaily(save);   // beginnt auch Woche und Pass-Saison
   document.querySelectorAll('#quests [data-qsub]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.qsub === sub)));
   $('#qDayDot').hidden = !dailyOpen(save); $('#qWeekDot').hidden = !weeklyOpen(save); $('#qPassDot').hidden = !passOpen(save);
-  const p = save.pass, stage = Math.min(PASS_STAGES, Math.floor(p.pts / PASS_STEP));
-  $('#qPassMini').innerHTML = `<b>Pass Stufe ${stage}</b><div class="tbar2"><i style="width:${stage >= PASS_STAGES ? 100 : (p.pts % PASS_STEP)}%"></i><span>${fmtN(p.pts)} Punkte</span></div>`;
+  const p = save.pass, stage = passStage(p.pts);
+  $('#qPassMini').innerHTML = `<b>Pass Stufe ${stage}</b><div class="tbar2"><i style="width:${stage >= PASS_STAGES ? 100 : ((p.pts % PASS_STEP) / PASS_STEP * 100).toFixed(0)}%"></i><span>${fmtN(p.pts)} Punkte</span></div>`;
   $('#questView').innerHTML = sub === 'day' ? dayHtml() : sub === 'week' ? weekHtml() : sub === 'bounty' ? bountyHtml() : passHtml();
   shownDay = dayKey();
 }
@@ -63,7 +64,7 @@ function bountyHtml() {
       <p class="goal">${t.goal}</p>${t.cond ? `<p class="cond">${t.cond}</p>` : ''}<div class="rw">${rewardHtml(bountyReward(b))}</div>${B.done[i] ? '<div class="stamp">Erledigt</div>' : ''}</div>`; }).join('')}</div>`;
 }
 function passHtml() {
-  const p = save.pass, list = passList(save), set = SEASON_SETS[((p.season % 4) + 4) % 4], d = daysLeftSeason(), bonus = passBonusReady(p);
+  const p = save.pass, list = passList(save), set = seasonSet(p.season), d = daysLeftSeason(), bonus = passBonusReady(p);
   return `<h3 class="sect">Aufgaben-Pass · Saison ${p.season + 1}: ${set.name} <small>endet in ${d === 1 ? 'einem Tag' : d + ' Tagen'}</small></h3>
     <p class="qhint">Punkte aus Tagesaufgaben, Wochenaufgaben, Kopfgeld und Fähigkeiten-Quests. Stufe 10, 20, 30: ${set.name}-Kosmetik, Stufe 30 dazu der Titel „${PASS_TITLE}“. Danach alle ${PASS_BONUS_STEP} Punkte eine ${CHESTS[PASS_BONUS.chest].name}.</p>
     <div class="passrow" id="passRow">${list.map(x => `<div class="pstage${x.claimed ? ' got' : x.reached ? ' ready' : ''}${x.s % 10 === 0 ? ' big' : ''}" data-ps="${x.s}">
@@ -77,7 +78,8 @@ function show(b, r) {
   flyReward(b, 'gold', r.gold || 0); flyReward(b, 'gems', r.gems || 0);
   if (r.runes || r.cosm || r.title) { const rc = b.getBoundingClientRect(); burstAt(rc.left + rc.width / 2, rc.top, ['#ffd84a', '#c9a8ff', '#ffffff'], 22); }
   if (r.title) flashScreen();
-  if (r.chest && !r.chestRes) openChest(r.chest);
+  // Tagesaufgaben geben die Truhe roh zurück (öffnen hier), alles aus game/quests.js ist schon geöffnet (nur Animation)
+  if (r.chestRes) playChest(r.chestRes, () => onChange()); else if (r.chest) openChest(r.chest);
 }
 $('#quests').addEventListener('click', e => {
   const s = e.target.closest('[data-qsub]'); if (s) { if (s.dataset.qsub !== sub) { sub = s.dataset.qsub; sfx.tab(); renderQuests(); scrollPass(); } return; }

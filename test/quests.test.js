@@ -29,7 +29,8 @@ test('Wochenaufgaben: 5 feste je Woche, nur was schon geht, Fortschritt ab Woche
   for (let i = 0; i < WEEKLY_N; i++) assert.ok(claimWeekly(s, i, day));
   assert.equal(claimWeekly(s, 0, day), null, 'nur einmal');
   assert.ok(s.wallet.gems + s.wallet.gold > g0 || Object.keys(s.runes.bag).length, 'Belohnung kam an');
-  assert.deepEqual(claimWeeklyBonus(s, day), { chest: 'gold' });
+  const sh = s.stats.chests, wb = claimWeeklyBonus(s, day);
+  assert.equal(wb.chest, 'gold'); assert.ok(wb.chestRes, 'Truhe gleich geöffnet'); assert.ok(s.stats.chests > sh || wb.chestRes.cards.length);
   assert.equal(s.pass.pts, WEEKLY_N * PASS_PTS.weekly);
   // nächste Woche: neue Aufgaben, Zähler beginnen bei null
   ensureWeekly(s, '2026-11-02'); assert.ok(weeklyTasks(s, '2026-11-02').every(x => x.prog === 0));
@@ -57,6 +58,10 @@ test('Aufgaben-Pass: Stufen, Kosmetik und Titel, Bonustruhen, neue Saison', () =
   assert.ok(claimPass(s, 'bonus', day)); assert.ok(claimPass(s, 'bonus', day)); assert.equal(claimPass(s, 'bonus', day), null);
   ensurePass(s, '2026-11-23');
   assert.equal(s.pass.pts, 0); assert.deepEqual(s.pass.claimed, []); assert.ok(s.pass.champ, 'Titel bleibt');
+  // nicht Abgeholtes der alten Saison kommt beim Wechsel nach (Kosmetik, Titel, Truhen ins Regal)
+  const t = defaults(); addPassPts(t, PASS_STAGES * PASS_STEP, '2026-11-20'); claimPass(t, 1, '2026-11-20');
+  ensurePass(t, '2026-11-23');
+  assert.ok(t.cosm.includes(passReward(30, 0).cosm) && t.pass.champ && t.chests.shelf.length > 0);
 });
 
 test('Kopfgeld: erst ab Welt 2, drei Steckbriefe mit Text, Bedingungen', () => {
@@ -93,9 +98,11 @@ test('Fähigkeiten-Quests: drei Stufen, Belohnung, Titel, Pass-Punkte', () => {
 test('Spielstand v7: Quests werden geprüft, alte Stände leer', () => {
   const s = migrate({ version: 6 });
   assert.deepEqual(s.aq, {}); assert.equal(s.weekly.tasks.length, 0); assert.equal(s.pass.pts, 0);
-  const t = normalize({ weekly: { wk: 3, tasks: [{ id: 'kills', n: 10 }, { id: 'quatsch', n: 1 }], claimed: [true, true] }, pass: { season: 1, pts: 250, claimed: [1, 2, 99, 'x'] },
-    bounty: { day: 'd', list: [{ t: 'boss', si: 1 }, { t: 'nix' }], done: [true] }, aq: { trap: 2, nix: 1, rage: 9 } });
-  assert.deepEqual(t.weekly.tasks, [{ id: 'kills', n: 10 }]); assert.deepEqual(t.weekly.claimed, [true]);
-  assert.deepEqual(t.pass.claimed, [1, 2]); assert.equal(t.bounty.list.length, 1); assert.deepEqual(t.aq, { trap: 2, rage: 3 });
+  const t = normalize({ weekly: { wk: 3, tasks: [{ id: 'quatsch', n: 1 }, { id: 'kills', n: 10 }], claimed: [true, false] }, pass: { season: 1, pts: 250, claimed: [1, 2, 99, 'x'] },
+    bounty: { day: 'd', list: [{ t: 'nix', sk: 1 }, { t: 'boss', si: 1, sk: 2 }, { t: 'boss', si: 1 }, { t: 'level', si: 0, sk: 1, c: 'abil', abil: 'weg' }, { t: 'school', school: 'fire', n: 40, sk: 1, c: 'cls', cls: 'bow' }], done: [true, false, true, true, true] },
+    aq: { trap: 2, nix: 1, rage: 9 } });
+  assert.deepEqual(t.weekly.tasks, [{ id: 'kills', n: 10 }]); assert.deepEqual(t.weekly.claimed, [false], 'Haken rutscht nicht weiter');
+  assert.deepEqual(t.pass.claimed, [1, 2]); assert.deepEqual(t.aq, { trap: 2, rage: 3 });
+  assert.deepEqual(t.bounty.list.map(b => b.t), ['boss', 'school'], 'ohne Totenköpfe oder mit unbekannter Fähigkeit fällt weg'); assert.deepEqual(t.bounty.done, [false, true]);
   assert.ok(WEEKLY_POOL.every(q => q.n.length === 3));
 });

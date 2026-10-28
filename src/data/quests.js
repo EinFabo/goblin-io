@@ -41,9 +41,11 @@ export const SEASON_SETS = [
   { name: 'Nacht', trail: 'stars', dagger: 'shadow', mech: 'night' },
 ];
 export const PASS_TITLE = 'Pass-Held';
+// Kosmetik-Set einer Saison
+export const seasonSet = season => SEASON_SETS[((season % SEASON_SETS.length) + SEASON_SETS.length) % SEASON_SETS.length];
 // Belohnung von Stufe s (1–30) in Saison season
 export function passReward(s, season) {
-  const set = SEASON_SETS[((season % SEASON_SETS.length) + SEASON_SETS.length) % SEASON_SETS.length];
+  const set = seasonSet(season);
   if (s === 10) return { cosm: 'trail.' + set.trail };
   if (s === 20) return { cosm: 'dagger.' + set.dagger };
   if (s === 30) return { cosm: 'mech.' + set.mech, title: PASS_TITLE };
@@ -67,6 +69,8 @@ export const bountyTime = si => 180 + 5 * si;
 // kills: Gegner, die die Fähigkeit (oder ihre Helfer) besiegt; use: Einsätze (Fähigkeiten ohne eigenen Schaden).
 // Bronze = passende seltene Rune, Silber = Runenkiste + silberner Rahmen, Gold = Titel „Meister der …“ + legendäre Rune.
 export const AQ_GOALS = { kills: [200, 1500, 8000], use: [30, 200, 800] };
+// Ausnahmen: das Amulett wirkt nur, wenn man stirbt (höchstens einmal je Lauf und Ladung)
+export const AQ_GOAL_OF = { charm: [5, 25, 80] };
 export const AQ_TIERS = [{ name: 'Bronze', col: '#c9844a' }, { name: 'Silber', col: '#c9d1d8' }, { name: 'Gold', col: '#f4d03f' }];
 // Fähigkeiten ohne eigenen Schaden zählen Einsätze
 export const AQ_USE = ['smoke', 'shroom', 'shield', 'totem', 'charm', 'brew'];

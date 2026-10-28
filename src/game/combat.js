@@ -9,7 +9,7 @@ import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, later, puff } from './fx.js';
 import { addEvents } from './run.js';
-import { P, abSrc, aoeId, isBig, run } from './state.js';
+import { P, abSrc, aoeId, heal, isBig, run } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
@@ -50,7 +50,7 @@ function leech(d) {
   const sec = Math.floor(run.time);
   if (run.leechSec !== sec) { run.leechSec = sec; run.leechGot = 0; }
   const h = Math.min(d * P.leech, P.maxHp * .03 - run.leechGot);
-  if (h > 0) { run.leechGot += h; P.hp = Math.min(P.maxHp, P.hp + h); }
+  if (h > 0) { run.leechGot += h; heal(h); }
 }
 export function kill(e, xpMul = 1) {
   if (e.link || e.decoy) return;   // Teile von Morgra und Spiegelbilder sterben nur mit ihrem Boss (bossDown)
@@ -63,7 +63,7 @@ export function kill(e, xpMul = 1) {
   const T = ETYPES[e.type];
   if (T && !T.sprite && !e.clone && !e.obj) count(run, 'k.' + T.school);
   // Phase 11: Kopfgeld (Elite mit Eigenschaft) und Fähigkeiten-Quests (Kills durch die Fähigkeit oder ihre Helfer)
-  if (e.affixes) for (const a of e.affixes) count(run, 'af.' + a);
+  if (e.affixes && e.elite && !e.miniboss) for (const a of e.affixes) count(run, 'af.' + a);
   if (abSrc) count(run, 'ab.' + abSrc + '.kills');
   dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);

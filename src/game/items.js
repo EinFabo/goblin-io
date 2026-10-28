@@ -7,7 +7,7 @@ import { fuseMega, megaReady } from './mega.js';
 import { chargeAbil, xpBonus } from './abilities.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
-import { P, aoeScope, onScreen, pR, run, xpNeed } from './state.js';
+import { P, aoeScope, heal, onScreen, pR, run, xpNeed } from './state.js';
 import { GEM_COL } from '../render/proc.js';
 
 export const gemTier = v => v >= 100 ? 3 : v >= 20 ? 2 : v >= 5 ? 1 : 0;
@@ -55,7 +55,7 @@ export function collect(it) {
       chargeAbil('scrap', 7); sfx.gear();
       for (let i = 0; i < 4; i++) part(P.x, P.y - 10, frand(-90, 90), frand(-120, -20), .3, '#c9d1d8', 2.5);
       break;
-    case 'heal': P.hp = Math.min(P.maxHp, P.hp + 35); addNum(P.x, P.y - 40, '+35', '#7dff7a'); sfx.heal(); break;
+    case 'heal': heal(35); addNum(P.x, P.y - 40, '+35', '#7dff7a'); sfx.heal(); break;
     case 'magnet': pullAll(); sfx.heal(); ring(P.x, P.y, 10, 300, .5, 'rgba(110,220,255,.8)', 6); break;
     case 'bomb':
       aoeScope(() => { for (const e of run.enemies) if (!e.dead && onScreen(e.x, e.y)) hurt(e, e.boss ? 300 : 9999); });

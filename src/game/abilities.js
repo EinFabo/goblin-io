@@ -14,7 +14,7 @@ import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, pa
 import { runeMods } from './runes.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { TAU } from '../core/util.js';
-import { P, abSrc, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc } from './state.js';
+import { P, abSrc, heal, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc } from './state.js';
 import { shootRaw, stepAlly } from './weapons.js';
 import { recalc } from './run.js';
 import { banner } from '../ui/hud.js';
@@ -78,7 +78,7 @@ export function charmHp() { const s = run.abil && run.abil.find(x => x && x.id =
 export function onKill(e) {
   if (P.rageT > 0 && run.abMods.rage) {
     const m = M('rage');
-    if (m.s1 && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + m.s1);
+    if (m.s1 && P.hp < P.maxHp) heal(m.s1);
     if (m.s3 && run.rageExt < 4) { const x = Math.min(.1 * m.s3, 4 - run.rageExt); run.rageExt += x; P.rageT += x; }
   }
   if (P.mechT > 0 && M('mech').s3) { const s = run.abil.find(x => x && x.id === 'mech'); if (s) s.ch = Math.min(s.need, s.ch + s.need * .004 * M('mech').s3); }
@@ -260,7 +260,7 @@ export function perfectRoll(x, y) {
 function doRage(m) {
   P.rageT = (ABILITIES.rage.dur + (m.a ? 3 : 0)) * m.area;
   const dmg = (40 + P.lv * 6) * P.dmgMult * m.pow;
-  if (m.b) { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .2 * m.pow); addNum(P.x, P.y - 40, '+' + Math.round(P.maxHp * .2 * m.pow), '#7dff7a'); }
+  if (m.b) { heal(P.maxHp * .2 * m.pow); addNum(P.x, P.y - 40, '+' + Math.round(P.maxHp * .2 * m.pow), '#7dff7a'); }
   const R = 380 * (1 + .12 * m.s2), kb = 700 * (1 + .12 * m.s2);
   run.rageExt = 0;
   blast(P.x, P.y, R, dmg, kb, '#ff8a5c');
@@ -458,7 +458,7 @@ function callGoblins(m) {
 
 // ---------- Totem der Gier ----------
 function raiseTotem(m) {
-  if (m.b) { P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .25 * m.pow); addNum(P.x, P.y - 40, '+' + Math.round(P.maxHp * .25 * m.pow), '#7dff7a'); }
+  if (m.b) { heal(P.maxHp * .25 * m.pow); addNum(P.x, P.y - 40, '+' + Math.round(P.maxHp * .25 * m.pow), '#7dff7a'); }
   pullAll();
   run.goldT = (ABILITIES.totem.dur + (m.a ? 5 : 0)) * m.area;
   run.totem = { x: P.x, y: P.y, gold: run.gold };
@@ -503,7 +503,8 @@ export function tryRevive() {
   if (!s) return false;
   const m = M('charm'), R = 300 * (1 + .15 * m.s2);
   s.ch--; if (m.s3) recalc();   // Schutzgeist endet, wenn das Amulett verbraucht ist
-  P.hp = P.maxHp * (m.b ? 1 : .5); P.inv = 2 + .5 * m.s1;
+  P.hp = Math.max(0, P.hp); heal(P.maxHp * (m.b ? 1 : .5)); P.inv = 2 + .5 * m.s1;
+  count(run, 'ab.charm.use');   // Fähigkeiten-Quest (das Amulett läuft nicht über useAbility)
   if (m.m) P.rageT = Math.max(P.rageT, 5);   // Wiedergeburt
   run.abXp.charm = (run.abXp.charm || 0) + xpPerUse('charm');
   const prev = setSrc('charm'); blast(P.x, P.y, R, 50 * P.dmgMult * (1 + .5 * m.s2), 800, '#ffd84a'); setSrc(prev);
@@ -606,7 +607,7 @@ const spinFx = (m, dur, at) => ({ k: 'spin', t: 0, dur, at, tick: 0, every: .25 
 function unleashGrudge(m) {
   const taken = ABILITIES.grudge.need / 100 * P.maxHp, R = 300 * P.area * m.area;
   blast(P.x, P.y, R, 4 * taken * P.dmgMult * m.pow * (1 + .4 * m.s1), 600, '#ff7a3c');
-  const heal = P.maxHp * (.15 + .05 * m.s3) * m.pow; P.hp = Math.min(P.maxHp, P.hp + heal); addNum(P.x, P.y - 40, '+' + Math.round(heal), '#7dff7a');
+  const h = P.maxHp * (.15 + .05 * m.s3) * m.pow; heal(h); addNum(P.x, P.y - 40, '+' + Math.round(h), '#7dff7a');
   // Racheblick: wer zuletzt traf, nimmt 5 s doppelten Schaden
   if (m.a && run.foe && !run.foe.dead) { run.foe.foeT = run.time + 5; addNum(run.foe.x, run.foe.y - 40, 'Rache!', '#ff7a3c', true); }
   if (m.m) { P.inv = Math.max(P.inv, 3); run.abfx.push({ k: 'refill', t: 0, dur: 0, id: 'grudge', p: .3 }); }
@@ -650,7 +651,7 @@ function brewPotion(m) {
   for (const p of got) {
     P.brew[p] = dur;
     if (p === 'swift') haste(dur, .5 * k);
-    if (p === 'heal') { const h = P.maxHp * .4 * k; P.hp = Math.min(P.maxHp, P.hp + h); addNum(P.x, P.y - 40, '+' + Math.round(h), '#7dff7a'); }
+    if (p === 'heal') { const h = P.maxHp * .4 * k; heal(h); addNum(P.x, P.y - 40, '+' + Math.round(h), '#7dff7a'); }
   }
   // Übersprudeln: kochender Sud spritzt um dich
   if (m.s3) blast(P.x, P.y, 120 * P.area, (30 + P.lv * 3) * m.s3 * P.dmgMult * m.pow, 260, '#9cf06a');
@@ -661,7 +662,7 @@ function brewPotion(m) {
 function updBrew(dt) {
   const b = P.brew; if (!b) return;
   for (const p of POTIONS) if (b[p] > 0) b[p] -= dt;
-  if (b.heal > 0 && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .02 * b.k * dt);
+  if (b.heal > 0 && P.hp < P.maxHp) heal(P.maxHp * .02 * b.k * dt);
   // Riese stampft
   if (b.giant > 0 && (b.stompT -= dt) <= 0) { b.stompT = .6; const r = 90 * P.area; blast(P.x, P.y, r, (20 + P.lv * 2) * P.dmgMult * b.k, 260, '#e5a03a'); ring(P.x, P.y + 10, 6, r, .3, 'rgba(230,170,80,.8)', 6); run.shake = Math.max(run.shake, 3); }
   // Feuer spucken: Kegel zum nächsten Gegner
@@ -721,7 +722,7 @@ function runeKill(e, r) {
   if (r.blood && P.hp > 0 && P.hp < P.maxHp) {
     const sec = Math.floor(run.time); if (run.bloodSec !== sec) { run.bloodSec = sec; run.bloodGot = 0; }
     const h = Math.min(P.maxHp * r.blood, P.maxHp * .03 - run.bloodGot);
-    if (h > 0) { run.bloodGot += h; P.hp = Math.min(P.maxHp, P.hp + h); }
+    if (h > 0) { run.bloodGot += h; heal(h); }
   }
   if (r.greed && RNG.loot.next() < r.greed) addItem('coin', e.x, e.y);
   if (r.soul) for (const s of run.abil) if (s && s.id !== abSrc && ABILITIES[s.id].charge !== 'once') s.ch = Math.min(s.need, s.ch + s.need * r.soul);
@@ -794,7 +795,7 @@ const COMBO_FX = {
       e.slowT = Math.max(e.slowT, 2);
     }
   },
-  witchkitchen() { const h = P.maxHp * .25; P.hp = Math.min(P.maxHp, P.hp + h); addNum(P.x, P.y - 40, '+' + Math.round(h), '#7dff7a'); brewPotion(M('brew')); },
+  witchkitchen() { const h = P.maxHp * .25; heal(h); addNum(P.x, P.y - 40, '+' + Math.round(h), '#7dff7a'); brewPotion(M('brew')); },
   bladeshield() { if (P.shieldT > 0) { P.shieldHp *= 1.5; P.shieldMax *= 1.5; P.bladeT = run.time + P.shieldT; } },
   quakebomb() { let n = 0; for (const f of live('tb')) for (const e of f.list) if (!e.dead && n++ < 12) quake(e.x, e.y, 90 * P.area, (60 + P.lv * 7) * P.dmgMult * .7, false); },
 };
@@ -857,7 +858,7 @@ const FX_UPD = {
   },
   honey(f, dt) {
     if (f.t >= f.dur) { f.done = true; return; }
-    if ((P.x - f.x) ** 2 + (P.y - f.y) ** 2 < f.r * f.r && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.maxHp * .02 * dt);
+    if ((P.x - f.x) ** 2 + (P.y - f.y) ** 2 < f.r * f.r && P.hp < P.maxHp) heal(P.maxHp * .02 * dt);
     query(f.x, f.y, f.r, e => { if (e.obj) return; e.slowT = Math.max(e.slowT, .2); slowAt(e, .25); });
   },
   kettle(f) { if (f.t >= f.dur) f.done = true; },
@@ -993,7 +994,7 @@ const FX_UPD = {
       f.done = true; return;
     }
     if (f.follow) { f.x = P.x; f.y = P.y; }
-    if ((P.x - f.x) ** 2 + (P.y - f.y) ** 2 < f.r * f.r && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.maxHp * f.heal * dt);
+    if ((P.x - f.x) ** 2 + (P.y - f.y) ** 2 < f.r * f.r && P.hp < P.maxHp) heal(P.maxHp * f.heal * dt);
     f.tick -= dt; const bite = f.dmg && f.tick <= 0; if (bite) f.tick = 1;
     query(f.x, f.y, f.r, e => {
       e.slowT = Math.max(e.slowT, .2); if (f.slowK < .5) { e.slowK = f.slowK; e.slowKT = run.time + .25; }

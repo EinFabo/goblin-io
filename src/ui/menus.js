@@ -6,7 +6,7 @@ import { TALENT, TALENTS, talentCost } from '../data/talents.js';
 import { accountXpNeed } from '../game/balance.js';
 import { icon } from '../render/icons.js';
 import { ensureStage, rushing } from '../render/sprites.js';
-import { cleanLoadout, renderArmory } from './armory.js';
+import { armoryChanged, cleanLoadout, renderArmory } from './armory.js';
 import { renderProfile } from './profile.js';
 import { mapKey, onStart, renderMap } from './worldmap.js';
 import { renderStore, storeChanged, storeHasNews } from './store.js';
@@ -70,6 +70,7 @@ wardrobeChanged(renderTopbar);
 profileHooks({ ward: renderWardrobe, ach: renderAch });
 achChanged(renderTopbar);
 questsChanged(renderTopbar);
+armoryChanged(renderTopbar);
 workshopHooks(renderTopbar, () => renderShop());
 setInterval(() => { if (document.body.classList.contains('hub')) $('#storeDot').hidden = !storeHasNews(); }, 5000);
 $('#tabbar').addEventListener('click', e => {

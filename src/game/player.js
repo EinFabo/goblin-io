@@ -10,7 +10,7 @@ import { part } from './fx.js';
 import { save } from '../core/save.js';
 import { trailCol } from '../data/cosmetics.js';
 import { hint } from './run.js';
-import { P, clampToArena, pR, query, run, hidden } from './state.js';
+import { P, clampToArena, heal, hidden, pR, query, run } from './state.js';
 
 // ---------- Spieler ----------
 export function updPlayer(dt) {
@@ -72,7 +72,7 @@ export function updPlayer(dt) {
   P.vx = (P.x - ox) / Math.max(dt, 1e-4); P.vy = (P.y - oy) / Math.max(dt, 1e-4);
   P.inv -= dt; P.slowT -= dt; P.rageT -= dt; P.rollT -= dt; P.hitT -= dt; P.exSlowT -= dt; P.anim += dt * (P.sprinting ? 1.5 : 1);
   if (P.hp < P.maxHp * LOW_HP) run.lowT += dt;
-  if (P.regen && P.hp < P.maxHp) P.hp = Math.min(P.maxHp, P.hp + P.regen * dt);
+  if (P.regen && P.hp < P.maxHp) heal(P.regen * dt);
   if (!hidden()) query(P.x, P.y, pR(), e => {
     if (e.dmg > 0 && !(e.freezeT > 0) && !e.obj) {
       const was = P.inv, before = P.hp; damagePlayer(e.dash ? e.dmg * 1.5 : e.dmg, 'contact', e); affixOnHitPlayer(e, before - P.hp);

@@ -45,7 +45,9 @@ export function renderArmory() {
 // ---------- Klassen (Phase 9): Leiste über dem Regal, Antippen wählt die Klasse ----------
 // Bewegung der gewählten Klasse (Salto, Teleport, Sturmangriff): eigener Name, gleicher Baum wie Rolle bzw. Sprint
 const moveKind = id => { const C = CLASSES[activeCls()]; return id === 'dash' ? DASH_KIND[C.dash] : SPRINT_KIND[C.sprint]; };
-let reload = 0;
+let reload = 0, onChange = () => {};
+// Hub-Leiste auffrischen (Pass-Punkte aus Fähigkeiten-Quests → roter Punkt am Aufgaben-Tab)
+export function armoryChanged(fn) { onChange = fn; }
 const clsSel = () => (sel && sel.startsWith('cls:') ? sel.slice(4) : null);
 const clsOk = id => classUnlocked(id, stageCleared);
 const pct = v => (v > 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + ' %';
@@ -157,7 +159,7 @@ $('#armory').addEventListener('click', e => {
     const r = claimAq(save, aq.dataset.aq); if (!r) { sfx.buzz(); return; }
     persist(); sfx.lvl();
     const rc = aq.getBoundingClientRect(); burstAt(rc.left + rc.width / 2, rc.top, [AQ_TIERS[r.tier].col, '#ffffff'], 24);
-    renderShelf(); renderNote(); return;
+    renderShelf(); renderNote(); onChange(); return;
   }
   const u = e.target.closest('[data-usecls]'); if (u) { useClass(u.dataset.usecls); return; }
   // Klasse antippen: zeigt sie; eine freie Klasse wird gleich gewählt
