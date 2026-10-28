@@ -50,8 +50,8 @@ export function spawnEnemy(type, opt = {}) {
   if (opt.elite) { e.elite = true; e.hp *= 14; e.sc *= 1.6; e.r *= 1.6; e.dmg *= 1.5; e.xp = 30; e.tint = 'gold'; e.spd *= .85; rollAffixes(e, opt.affixes); }
   if (opt.miniboss) { e.miniboss = true; e.hp *= opt.hpMul ?? 5; e.sc *= 1.3; e.r *= 1.3; e.xp = 40; e.spd *= .9; }
   // Mutatoren (Phase 12): Riesen, Goldrausch, Schnelle Magier
-  if (hasMut('giants') && !e.boss) { e.sc *= 1.35; e.r *= 1.3; e.hp *= 2; e.spd *= .85; }
-  if (hasMut('gold')) e.hp *= 1.3;
+  if (hasMut('giants') && !e.boss) { e.sc *= 1.3; e.r *= 1.2; e.hp *= 1.25; e.spd *= .9; }
+  if (hasMut('gold')) e.hp *= 1.15;
   if (hasMut('fast')) e.spd *= 1.3;
   e.maxHp = e.hp;
   // Sichtbare Spawns kommen durch ein Portal (0,4 s, solange nicht angreifbar)

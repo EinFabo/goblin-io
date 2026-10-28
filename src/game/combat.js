@@ -70,7 +70,7 @@ export function kill(e, xpMul = 1) {
   // Mutator Explosive Tode: kleine Explosion, die nur den Goblin trifft (keine Kettenreaktion unter Gegnern)
   if (hasMut('boom') && !e.boss && !e.obj && !e.bomber) {
     animFx('f_fireball_hit_', 5, e.x, e.y, 3.5);
-    if (Math.hypot(P.x - e.x, P.y - e.y) < 55 + pR()) damagePlayer(8 * run.st.dmg * (1 + run.time / 400), 'bomb');
+    if (Math.hypot(P.x - e.x, P.y - e.y) < 55 + pR()) damagePlayer(6 * run.st.dmg * (1 + run.time / 400), 'bomb');
   }
   dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);

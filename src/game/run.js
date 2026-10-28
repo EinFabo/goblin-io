@@ -81,7 +81,7 @@ export function recalc() {
   // Klasse (Phase 9): Leben, Tempo, Abklingzeit; Klassen-Level: kleine Boni
   const C = classOf(run.cls), cl = k => hasPerk(run.clsLv || 1, k);
   const glass = hasMut('glass');   // Mutator Glaskanone
-  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1) * (glass ? 2 : 1) * (1 + .05 * soulRank(save, 'w_dmg'));
+  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1) * (glass ? 1.6 : 1) * (1 + .05 * soulRank(save, 'w_dmg'));
   P.cdMult = Math.pow(.92, pl('book')) * C.cd * (1 - .04 * soulRank(save, 'm_cd'));
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));

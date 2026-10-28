@@ -119,7 +119,7 @@ const nm = await p.evaluate(async () => {
   run.paused = false; await new Promise(r => setTimeout(r, 400));
   return { ratio: +ratio.toFixed(2), nm: run.nm, title: document.querySelector('#overTitle').textContent, stage: document.querySelector('#stageTxt').textContent };
 });
-if (nm.ratio !== 1.8 || !nm.nm || nm.title !== 'Albtraum überstanden!') errs.push('Albtraum: ' + JSON.stringify(nm));
+if (nm.ratio !== 1.8 || !nm.nm || nm.title !== 'Albtraum 1 überstanden!') errs.push('Albtraum: ' + JSON.stringify(nm));
 console.log('Albtraum:', JSON.stringify(nm));
 // In der Goblin-Maschine: andere Fähigkeit und Rolle gesperrt, Knöpfe mit Schloss
 await p.evaluate(() => { const G = GOBLIN; G.save.loadout = ['rage', 'mech']; G.go('run', { si: 0, li: 0, seed: 7 }); });
