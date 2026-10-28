@@ -12,10 +12,11 @@ import { LEVELS } from '../data/levels.js';
 import { normRunes } from '../game/runes.js';
 import { COMBOS } from '../data/combos.js';
 import { CLASS_MAX_LV, classUnlocked, classXpNeed, isClass } from '../data/classes.js';
+import { BOUNTY_N, PASS_STAGES, WEEKLY_N, WEEKLY_POOL } from '../data/quests.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
-export const VERSION = 6;
+export const VERSION = 7;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -66,6 +67,12 @@ export function defaults() {
     // Goblin-Klassen (Phase 9): gewählte Klasse und Klassen-Level { id: { lv, xp } }
     cls: 'gob',
     classes: {},
+    // Phase 11: Wochenaufgaben (Woche, Zählerstand, Aufgaben, abgeholt), Aufgaben-Pass (Saison, Punkte, abgeholte Stufen,
+    // Bonustruhen, Titel „Pass-Held“), Kopfgeld des Tages (Steckbriefe, erfüllt), Fähigkeiten-Quests (abgeholte Stufe je Fähigkeit)
+    weekly: { wk: -1, base: {}, tasks: [], claimed: [], bonus: false },
+    pass: { season: -1, pts: 0, claimed: [], bonus: 0, champ: false },
+    bounty: { day: '', list: [], done: [] },
+    aq: {},
   };
 }
 
@@ -134,6 +141,7 @@ export function normalize(raw) {
   out.cls = isClass(r.cls) ? r.cls : 'gob';
   out.classes = {};
   for (const [k, v] of Object.entries(obj(r.classes))) if (isClass(k)) { const c = obj(v); out.classes[k] = { lv: num(c.lv, 1, 1, CLASS_MAX_LV) | 0, xp: num(c.xp) }; }
+  normQuests(r, out);
   out.seen = Array.isArray(r.seen) ? [...new Set(r.seen.filter(id => ABILITIES[id]))] : d.seen;
   for (const [k, v] of Object.entries(obj(st.c))) { const n = num(v); if (n) out.stats.c[k] = n; }
   for (const [k, v] of Object.entries(obj(r.ach))) if (ACH[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.ach[k] = n; }
@@ -235,6 +243,22 @@ export function migrateV4(v4) {
   return { ...r, version: 5, seen };
 }
 
+// Phase 11: Wochenaufgaben, Pass, Kopfgeld, Fähigkeiten-Quests prüfen (alles Unbekannte fällt weg)
+function normQuests(r, out) {
+  const w = obj(r.weekly), p = obj(r.pass), b = obj(r.bounty), arr = v => (Array.isArray(v) ? v : []);
+  const tasks = arr(w.tasks).map(obj).filter(t => WEEKLY_POOL.some(q => q.id === t.id)).slice(0, WEEKLY_N).map(t => ({ id: t.id, n: Math.max(1, num(t.n, 1) | 0) }));
+  const base = {}; for (const [k, v] of Object.entries(obj(w.base))) base[k] = num(v);
+  out.weekly = { wk: Number.isInteger(w.wk) ? w.wk : -1, base, tasks, claimed: tasks.map((_, i) => arr(w.claimed)[i] === true), bonus: bool(w.bonus, false) };
+  out.pass = { season: Number.isInteger(p.season) ? p.season : -1, pts: num(p.pts) | 0, claimed: [...new Set(arr(p.claimed).filter(s => Number.isInteger(s) && s >= 1 && s <= PASS_STAGES))],
+    bonus: num(p.bonus) | 0, champ: bool(p.champ, false) };
+  const list = arr(b.list).map(obj).filter(x => ['boss', 'level', 'school', 'affix'].includes(x.t)).slice(0, BOUNTY_N);
+  out.bounty = { day: typeof b.day === 'string' ? b.day : '', list, done: list.map((_, i) => arr(b.done)[i] === true) };
+  out.aq = {}; for (const [k, v] of Object.entries(obj(r.aq))) if (ABILITIES[k]) { const n = num(v, 0, 0, 3) | 0; if (n) out.aq[k] = n; }
+}
+
+// v6 → v7 (Phase 11: Quests und Aufgaben-Pass): alles kommt leer über normalize dazu
+export function migrateV6(v6) { return { ...obj(v6), version: 7 }; }
+
 // v5 → v6 (Phase 9: Goblin-Klassen). Klasse und Klassen-Level kommen über normalize dazu (Goblin, Level 1).
 export function migrateV5(v5) { return { ...obj(v5), version: 6 }; }
 
@@ -246,6 +270,7 @@ export function migrate(raw) {
   if (r.version < 4) r = migrateV3(r);
   if (r.version < 5) r = migrateV4(r);
   if (r.version < 6) r = migrateV5(r);
+  if (r.version < 7) r = migrateV6(r);
   return normalize(r);
 }
 

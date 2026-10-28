@@ -131,7 +131,7 @@ export function useAbility(i) {
   } finally { setSrc(prev); }
   if (s.stock > 0) s.stock--; else s.ch = 0;
   run.abXp[s.id] = (run.abXp[s.id] || 0) + xpPerUse(s.id);   // XP durch Benutzen, gutgeschrieben am Laufende
-  count(run, 'abil');
+  count(run, 'abil'); count(run, 'ab.' + s.id + '.use');   // Fähigkeiten-Quests (Phase 11)
   emit('abilUse', { i, id: s.id });   // Rückmeldung am Knopf (ui/hud.js)
   return true;
 }

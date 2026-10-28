@@ -36,7 +36,7 @@ export const ACHIEVEMENTS = [
   { id: 'acct', name: 'Erfahrener Goblin', desc: 'Erreiche Konto-Level {n}', v: s => s.profile.level, goals: [10, 25, 50], title: 'Goblin-Ältester' },
   { id: 'abilLv', name: 'Gelehrter', desc: 'Sammle {n} Fähigkeiten-Level', v: s => Object.values(s.abilities).reduce((n, a) => n + a.lv - 1, 0), goals: [20, 100, 300] },
   { id: 'talents', name: 'Talentiert', desc: 'Kaufe {n} Talent-Stufen', v: s => Object.values(s.talents).reduce((n, x) => n + x, 0), goals: [10, 40, TALENTS.reduce((n, t) => n + t.max, 0)] },
-  { id: 'cosm', name: 'Modegoblin', desc: 'Besitze {n} Kosmetik-Teile', v: s => s.cosm.length, goals: [10, 20, COSMETICS.length], title: 'Modegoblin' },
+  { id: 'cosm', name: 'Modegoblin', desc: 'Besitze {n} Kosmetik-Teile', v: s => s.cosm.length, goals: [10, 20, COSMETICS.filter(x => !x.src.startsWith('Aufgaben-Pass')).length], title: 'Modegoblin' },
   { id: 'combos', name: 'Kombo-Meister', desc: 'Entdecke {n} Kombos', v: s => (s.combos || []).length, goals: [3, 8, 12], title: 'Kombo-Meister' },
   { id: 'stars', name: 'Sternensammler', desc: 'Sammle {n} Fähigkeiten-Sterne', v: s => Object.values(s.abilities).reduce((n, a) => n + (a.st || 0), 0), goals: [1, 10, 40] },
   { id: 'barrel', name: 'Fassbinder', desc: 'Gewinne {n} Level mit dem Sprengfass', v: c('w.barrel'), goals: [1, 10, 50], title: 'Fassbinder' },

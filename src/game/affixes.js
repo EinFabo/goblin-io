@@ -5,15 +5,8 @@ import { addHaz } from './hazards.js';
 import { part, ring } from './fx.js';
 import { run } from './state.js';
 
-export const AFFIXES = {
-  fast: { name: 'Schnell' },
-  armored: { name: 'Gepanzert' },
-  vampiric: { name: 'Vampirisch' },
-  splitting: { name: 'Teilend' },
-  explosive: { name: 'Explosiv' },
-  shielder: { name: 'Schildträger' },
-  summoner: { name: 'Beschwörer' },
-};
+import { AFFIXES } from '../data/affixes.js';
+export { AFFIXES };
 export const hasAffix = (e, a) => !!(e.affixes && e.affixes.includes(a));
 // Albtraum-Modus (6.1): Elites immer mit 2 Eigenschaften
 export const affixCount = () => (run.nm || run.st.endless || run.loop > 0 ? 2 : run.si >= 2 ? 1 : 0);

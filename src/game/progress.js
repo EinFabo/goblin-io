@@ -7,6 +7,8 @@ import { ABILITIES, STAR_MAX } from '../data/abilities.js';
 import { CLASSES, hasPerk, isClass } from '../data/classes.js';
 import { dayKey } from './shop.js';
 import { grantCosmetic } from './cosmetics.js';
+import { PASS_PTS } from '../data/quests.js';
+import { addPassPts, aqTitles, ensurePass, ensureWeekly, passTitles } from './quests.js';
 
 export function count(run, key, n = 1) { if (run && run.cnt && key) run.cnt[key] = (run.cnt[key] || 0) + n; }
 export function countMeta(save, key, n = 1) { ensureDaily(save); save.stats.c[key] = (save.stats.c[key] || 0) + n; }
@@ -20,8 +22,8 @@ export function mergeRun(save, run, win) {
   if (win && !run.st.endless) { add('levels', 1); for (const w of run.weapons) add('w.' + w.id, 1); }
   if (run.st.endless) c.endless = Math.max(c.endless || 0, Math.floor(run.time));
 }
-// Zählerwert für Tagesaufgaben (Kills stehen seit jeher in stats.kills; „elites“ zählt Mini-Bosse mit)
-const val = (save, key) => key === 'kills' ? save.stats.kills : key === 'elites' ? (save.stats.c.elites || 0) + (save.stats.c.minis || 0) : (save.stats.c[key] || 0);
+// Zählerwert für Tages- und Wochenaufgaben (Kills und Truhen stehen seit jeher in stats; „elites“ zählt Mini-Bosse mit)
+export const val = (save, key) => key === 'kills' ? save.stats.kills : key === 'chests' ? save.stats.chests : key === 'elites' ? (save.stats.c.elites || 0) + (save.stats.c.minis || 0) : (save.stats.c[key] || 0);
 
 // ---------- Erfolge ----------
 export function achState(save, a) {
@@ -44,12 +46,16 @@ export function claimAch(save, id) {
 export const titles = save => [...ACHIEVEMENTS.filter(a => a.title && (save.ach[a.id] || 0) >= 3).map(a => a.title),
   ...Object.entries(save.abilities).filter(([id, a]) => ABILITIES[id] && (a.st || 0) >= STAR_MAX).map(([id]) => 'Legende der ' + ABILITIES[id].name),
   // Klassen-Level 20 (Phase 9): Meister-Titel der Klasse
-  ...Object.entries(save.classes || {}).filter(([id, c]) => isClass(id) && hasPerk(c.lv, 'master')).map(([id]) => CLASSES[id].master)];
+  ...Object.entries(save.classes || {}).filter(([id, c]) => isClass(id) && hasPerk(c.lv, 'master')).map(([id]) => CLASSES[id].master),
+  // Phase 11: Pass-Held (Stufe 30) und „Meister der …“ (Fähigkeiten-Quest Gold)
+  ...passTitles(save), ...aqTitles(save)];
 
 // ---------- Tagesaufgaben ----------
 // Drei Aufgaben je Tag (gleich für alle, Seed = Datum). Der Tagesbeginn (Zählerstand) wird nur an festen Stellen
 // genommen: Laufstart, Laufende (vor dem Verbuchen), Karte aufwerten, Abholen. Anzeigen ändern nichts.
 export function ensureDaily(save, day = dayKey()) {
+  // Woche und Pass-Saison (Phase 11) beginnen an denselben Stellen
+  ensureWeekly(save, day); ensurePass(save, day);
   const d = save.daily;
   if (d.day === day) return d;
   const base = {};
@@ -71,7 +77,7 @@ export function claimDaily(save, i, day = dayKey()) {
   ensureDaily(save, day);
   const t = dailyTasks(save, day)[i];
   if (!t || !t.done || t.claimed) return null;
-  save.daily.claimed[i] = true;
+  save.daily.claimed[i] = true; addPassPts(save, PASS_PTS.daily, day);
   if (t.reward.gold) save.wallet.gold += t.reward.gold;
   if (t.reward.gems) save.wallet.gems += t.reward.gems;
   return t.reward;
@@ -79,7 +85,7 @@ export function claimDaily(save, i, day = dayKey()) {
 export function claimDailyBonus(save, day = dayKey()) {
   const d = ensureDaily(save, day);
   if (d.bonus || !d.claimed.every(Boolean)) return null;
-  d.bonus = true; save.wallet.gems += DAILY_BONUS.gems;
+  d.bonus = true; save.wallet.gems += DAILY_BONUS.gems; addPassPts(save, PASS_PTS.dailyAll, day);
   return DAILY_BONUS;
 }
 export const dailyOpen = (save, day = dayKey()) => { const t = dailyTasks(save, day); return t.some(x => x.done && !x.claimed) || (t.every(x => x.claimed) && save.daily.day === day && !save.daily.bonus); };

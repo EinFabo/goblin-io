@@ -20,7 +20,8 @@ import { CLASSES, DASH_KIND, SPRINT_KIND, classOf, hasPerk } from '../data/class
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
 import { grantCosmetic } from './cosmetics.js';
-import { ensureDaily, mergeRun } from './progress.js';
+import { count, ensureDaily, mergeRun } from './progress.js';
+import { checkBounties } from './quests.js';
 import { P, buildGrid, grid, query, run, setRun, setSrc, xpNeed } from './state.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 import { updWfx } from './weapons2.js';
@@ -54,7 +55,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   initAbilities();
   addEvents(0);
   grid.clear();
-  recalc(); P.hp = P.maxHp; P.stam = P.stamMax;
+  recalc(); P.hp = P.maxHp; P.stam = P.stamMax; r.hpPrev = P.hp; r.hpGrow = 0; r.healed = 0; r.bossHits = 0;
   const C = classOf(r.cls), dn = DASH_KIND[C.dash].name, sn = SPRINT_KIND[C.sprint].name;
   addWeapon(C.weapon, hasPerk(r.clsLv, 'start2'));
   if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ` unten: ${dn}, ${sn} und deine Fähigkeiten.` : `<b>Tipp</b> WASD laufen · Leertaste ${dn} · Shift ${sn} · Q und E Fähigkeiten`);
@@ -77,7 +78,7 @@ export function recalc() {
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
   P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1);
-  if (old) P.hp += Math.max(0, P.maxHp - old);
+  if (old) { const g = Math.max(0, P.maxHp - old); P.hp += g; run.hpGrow = (run.hpGrow || 0) + g; }   // mehr Leben ist keine Heilung (Kopfgeld)
   P.regen = .4 * pl('herbs');
   P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd')) * C.speed;
   P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .06 * sh('mag'));
@@ -128,6 +129,8 @@ export function update(dt) {
   savePrev();
   // Boss-Szene (Auftritt, Phasenwechsel): die Welt steht, nur Kamera, Boss und Effekte laufen
   if (run.cut) { updCut(dt); updFx(dt); return; }
+  // Heilung zählen (Kopfgeld „ohne Heilung“): Zuwachs seit dem letzten Schritt, ohne den durch mehr maximales Leben
+  const gain = P.hp - run.hpPrev - (run.hpGrow || 0); if (gain > 1e-6) run.healed += gain; run.hpPrev = P.hp; run.hpGrow = 0;
   run.time += dt;
   while (run.ei < run.events.length && run.time >= run.events[run.ei].t) doEvent(run.events[run.ei++]);
   updPlayer(dt);
@@ -248,11 +251,15 @@ export function endRun(win) {
   const s = save.stats; s.runs++; if (win) s.wins++; s.kills += run.kills; s.playSeconds += run.time;
   s.bestKills = Math.max(s.bestKills, run.kills); s.bestLevel = Math.max(s.bestLevel, P.lv);
   for (const w of run.weapons) s.weapons[w.id] = (s.weapons[w.id] || 0) + 1;
+  // Phase 11: Zähler für Wochenaufgaben, dann die Steckbriefe des Kopfgeld-Bretts (Belohnung gleich, Truhen ins Regal)
+  if (win && !run.st.endless) { if (run.nm) count(run, 'nmwin'); if (hats === 3) count(run, 'hat3'); if (run.cls !== 'gob') count(run, 'clswin'); }
   mergeRun(save, run, win);
+  const bounty = checkBounties(save, { win, boss, si: run.si, endless: !!run.st.endless, cont: cont, cnt: run.cnt, bossHits: run.bossHits || 0, time: run.time,
+    abil: run.abil.filter(Boolean).map(s => s.id), nm: run.nm, healed: run.healed || 0, cls: run.cls });
   const next = win ? nextLevel(run.si, run.li) : null;
   if (rec.first && next) save.map = { ...save.map, si: next.si, li: next.li, fresh: true };   // Karte: der Goblin läuft zum neuen Level
   persist();
-  run.result = { win, cont: run.cont || 0, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil, cls };
+  run.result = { win, cont: run.cont || 0, bonus, gold: run.gold + bonus, gems, chest, trophy, next, hats, hatOk, newHats: rec.newHats, first: rec.first, nm: run.nm, nmFirst: rec.nmFirst, bonusLv: win ? run.bonusLv : 0, bonusGold: br ? br.gold : 0, bonusCard, xp, level: save.profile.level, up, unlocked, abil, cls, bounty };
   emit('runEnd', run.result);
 }
 

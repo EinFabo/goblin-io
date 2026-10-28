@@ -141,7 +141,7 @@ test('Sterne: nach Level 30 je 2000 XP, bis 5; Rolle und Sprint bekommen keine',
 
 test('v5 → v6: Klasse Goblin, Klassen-Level leer; kaputte Klassen werden repariert', () => {
   const s = migrate({ version: 5, wallet: { gold: 7 } });
-  assert.equal(s.version, 6); assert.equal(s.cls, 'gob'); assert.deepEqual(s.classes, {}); assert.equal(s.wallet.gold, 7);
+  assert.equal(s.version, VERSION); assert.equal(s.cls, 'gob'); assert.deepEqual(s.classes, {}); assert.equal(s.wallet.gold, 7);
   const t = normalize({ version: 6, cls: 'ninja', classes: { bow: { lv: 99, xp: -5 }, ninja: { lv: 3 }, war: 'x' } });
   assert.equal(t.cls, 'gob');
   assert.deepEqual(t.classes, { bow: { lv: CLASS_MAX_LV, xp: 0 }, war: { lv: 1, xp: 0 } });

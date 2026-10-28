@@ -62,6 +62,9 @@ export function kill(e, xpMul = 1) {
   // je Schule nur echte Magier (keine Diener, Klone, Portale oder Knochenhaufen)
   const T = ETYPES[e.type];
   if (T && !T.sprite && !e.clone && !e.obj) count(run, 'k.' + T.school);
+  // Phase 11: Kopfgeld (Elite mit Eigenschaft) und Fähigkeiten-Quests (Kills durch die Fähigkeit oder ihre Helfer)
+  if (e.affixes) for (const a of e.affixes) count(run, 'af.' + a);
+  if (abSrc) count(run, 'ab.' + abSrc + '.kills');
   dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);
   if (e.elite || e.miniboss) run.hitstop = Math.max(run.hitstop, .04);
@@ -111,6 +114,7 @@ export function damagePlayer(d, src = 'contact', by = null) {
   d = shieldAbsorb(d);
   if (d <= 0) { P.inv = .5; return; }
   P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
+  if (run.boss && !run.boss.dead) run.bossHits = (run.bossHits || 0) + 1;   // Kopfgeld „ohne Treffer im Bosskampf“
   chargeAbil('hurt', d / P.maxHp * 100);   // Goblin-Groll lädt mit eingestecktem Schaden
   if (by && !by.dead) run.foe = by;        // Racheblick: wer zuletzt traf
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
