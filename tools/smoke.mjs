@@ -493,6 +493,39 @@ await p.click('[data-pick="trap"]'); await p.waitForTimeout(200); await p.click(
 q.aq = await p.evaluate(() => GOBLIN.save.aq.trap || 0);
 if (!q.tab.daily || !q.tab.weekly || !q.tab.pass || q.tab.wanted !== 3 || q.run.got !== 1 || !q.run.done || q.aq !== 1) errs.push('Aufgaben: ' + JSON.stringify(q));
 console.log('Aufgaben (Täglich, Woche, Pass, Kopfgeld, Fähigkeiten-Quest):', JSON.stringify(q));
+// Phase 12: Albtraum-Stufe auf der Karte wählen, Herausforderung starten (Mutatoren, feste Fähigkeiten), Kopfgeld mit Mutator, Wiedergeburt + Seelenbaum
+const w = {};
+await p.evaluate(() => { const G = GOBLIN, S = G.save; for (let s = 1; s <= 8; s++) S.stages[s] = { cleared: true, stars: 0, best: 300, nightmare: false, nmMax: s === 3 ? 2 : 0, lv: Array.from({ length: 5 }, () => ({ hats: 1, kills: 0, fast: 0, nm: 0 })) };
+  S.map = { si: 2, li: 4, fresh: false, nm: 0 }; G.go('menu', '#menu'); });
+await p.waitForTimeout(1200);
+await p.click('#lvNote [data-nm="3"]'); await p.waitForTimeout(200);
+w.nm = await p.evaluate(() => GOBLIN.save.map.nm);
+await p.click('#lvNote [data-go]'); await p.waitForTimeout(1500);
+w.nmRun = await p.evaluate(() => { const G = GOBLIN, run = G.run; run.paused = true; for (let i = 0; i < 600; i++) G.update(1 / 60); const r = { nm: run.nm, banner: document.querySelector('#stageTxt').textContent }; G.go('menu'); return r; });
+await p.evaluate(() => GOBLIN.go('menu', '#quests')); await p.waitForTimeout(300);
+await p.click('[data-qsub="chal"]'); await p.waitForTimeout(300);
+await p.click('[data-chgo]'); await p.waitForTimeout(1500);
+w.chal = await p.evaluate(async () => {
+  const G = GOBLIN, run = G.run, d = G.save.challenge.def; run.paused = true;
+  for (let i = 0; i < 1200 && !run.over; i++) { G.P.hp = G.P.maxHp; G.update(1 / 60); if (run.lvDelay > 0) { run.lvDelay = 0; G.choose(G.genChoices(), 0); } }
+  run.paused = false; await new Promise(r => setTimeout(r, 300));
+  const out = { mode: run.mode, mut: run.mut.join() === d.mut.join(), abil: run.abil.map(s => s && s.id).join() === d.abil.join(), loadout: G.save.loadout.join() !== d.abil.join() || true };
+  run.paused = true; G.endRun(true); await new Promise(r => setTimeout(r, 300)); out.done = G.save.challenge.done; out.res = !!(run.result && run.result.challenge); G.go('menu'); return out;
+});
+w.bounty = await p.evaluate(() => {
+  const G = GOBLIN, S = G.save, d = new Date(), day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  S.bounty = { day, list: [{ t: 'level', si: 1, c: 'mut', mut: 'giants', sk: 2 }], done: [false] }; G.go('menu', '#quests'); return true;
+});
+await p.click('[data-qsub="bounty"]'); await p.waitForTimeout(300);
+await p.click('[data-bgo="0"]'); await p.waitForTimeout(1500);
+w.bountyRun = await p.evaluate(async () => { const G = GOBLIN, run = G.run; run.paused = true; const r = { mode: run.mode, mut: run.mut.join(), si: run.si, li: run.li }; G.endRun(true); await new Promise(r => setTimeout(r, 300)); r.done = G.save.bounty.done[0]; G.go('menu'); return r; });
+await p.evaluate(() => { const S = GOBLIN.save; S.stats.c.endless = 300; S.rebirth.souls = 50; S.map = { si: 8, li: 0, fresh: false, nm: 0 }; GOBLIN.go('menu', '#menu'); });
+await p.waitForTimeout(1500);
+await p.click('#lvNote [data-altar]'); await p.waitForTimeout(300);
+await p.click('[data-soul="w_dmg"]'); await p.click('[data-rebirth]'); await p.click('[data-rebirth]'); await p.waitForTimeout(400);
+w.reb = await p.evaluate(() => { const S = GOBLIN.save; document.querySelector('#soulTree').hidden = true; GOBLIN.go('run', { si: 0, seed: 2 }); const r = { n: S.rebirth.n, dmg: S.rebirth.spent.w_dmg, stages: Object.keys(S.stages).length, cycle: GOBLIN.run.cycle }; GOBLIN.run.paused = true; GOBLIN.go('menu'); return r; });
+if (w.nm !== 3 || w.nmRun.nm !== 3 || w.chal.mode !== 'challenge' || !w.chal.mut || !w.chal.abil || !w.chal.done || w.bountyRun.mut !== 'giants' || !w.bountyRun.done || w.reb.n !== 1 || w.reb.dmg !== 1 || w.reb.stages !== 0 || w.reb.cycle !== 1) errs.push('Phase 12: ' + JSON.stringify(w));
+console.log('Albtraum-Stufen, Herausforderung, Kopfgeld mit Mutator, Wiedergeburt:', JSON.stringify(w));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');
