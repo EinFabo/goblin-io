@@ -16,6 +16,7 @@ import { pullable, updItems } from './items.js';
 import { updPlayer } from './player.js';
 import { newOfferState } from './offer.js';
 import { BOONS, cardIdOf } from '../data/weapons.js';
+import { NM_MAX, nmGems, nmGold, nmXp } from '../data/nightmare.js';
 import { CLASSES, DASH_KIND, SPRINT_KIND, classOf, hasPerk } from '../data/classes.js';
 import { CARD_FAST, CARD_IDS, CARD_START_LV2, GEMS, passiveCardMul, victoryChest, weaponCardMul } from '../data/cards.js';
 import { addToShelf, cardLv, grantCards, grantChest, pickBonusCard, rollChest } from './chests.js';
@@ -34,7 +35,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false) {
   const st = levelStage(si, li);
   seedRun(seed);
   const r = {
-    si, li: st.li, st, seed, nm: !!nm && !st.endless, mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
+    si, li: st.li, st, seed, nm: st.endless ? 0 : Math.max(0, Math.min(NM_MAX, nm === true ? 1 : nm | 0)),   // Albtraum-Stufe 0–10 mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, boons: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     rerolls: 2 + talent('reroll'), bans: 1 + talent('ban'), locks: 1, cardN: talent('xp') >= 10 ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
@@ -213,7 +214,7 @@ export function endRun(win) {
     bonus += br.gold;
   }
   // Albtraum (6.1): +50 % Gold und Konto-XP, Siegtruhe eine Stufe besser, erster Albtraum-Sieg je Level gibt Juwelen
-  if (win && run.nm) bonus += Math.round((run.gold + bonus) * .5);
+  if (win && run.nm) bonus += Math.round((run.gold + bonus) * nmGold(run.nm));
   // Magierhüte (6.1a): geschafft, über 50 % Leben am Ende, nie unter 25 % gefallen
   // welche Hut-Bedingungen erfüllt sind (HAT_TXT): geschafft, über 50 % Leben, nie unter 25 %
   // Mit Weitermachen geschafft (run.cont): nur der erste Hut zählt, die Bestzeit auch nicht
@@ -222,7 +223,7 @@ export function endRun(win) {
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
   const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm, noBest: cont });
-  const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * (run.nm ? 1.5 : 1)), up = gainAccountXp(xp);
+  const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * nmXp(run.nm)), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');
   const nx = rec.first && boss && nextLevel(run.si, run.li);
@@ -235,7 +236,7 @@ export function endRun(win) {
   const abil = Object.entries(run.abXp).map(([id, x]) => [id, Math.round(x)]).filter(([, x]) => x > 0).map(([id, x]) => { const st0 = abilState(id).st || 0, lvUp = gainAbilXp(id, x), a = abilState(id); return { id, xp: x, lv: a.lv, up: lvUp, st: a.st || 0, star: (a.st || 0) - st0 }; });
   save.wallet.gold += run.gold + bonus;
   // Juwelen (9.2): neue Hüte, Konto-Level, Boss-Erstsieg
-  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? GEMS.nightmare : 0) + (br ? br.gems : 0);
+  const gems = rec.newHats * GEMS.hat + up * GEMS.acctLevel + (rec.first && boss ? GEMS.bossFirst(run.si) : 0) + (rec.nmFirst ? nmGems(run.nm) : 0) + (br ? br.gems : 0);
   save.wallet.gems += gems;
   // Siegtruhe nach jedem Boss-Level; ist das Regal voll, geht sie sofort auf
   // Boss-Trophäe (9.7, steht beim Boss in data/stages.js): beim ersten Sieg

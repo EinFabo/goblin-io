@@ -5,6 +5,7 @@ import { ETYPES, SCHOOL_COL } from '../data/enemies.js';
 import { H, W, ZOOM } from '../render/canvas.js';
 import { MAGE_OFF, U } from '../render/sprites.js';
 import { STAGE_LEN } from '../data/stages.js';
+import { nmHp, nmMinis } from '../data/nightmare.js';
 import { boonHp, endlessDmg, enemyHp } from './balance.js';
 import { bossAI, bossDamageRule, spawnBoss } from './boss.js';
 import { CASTS, castAllowed, castWindup } from './casts.js';
@@ -19,7 +20,7 @@ export { eShot } from './casts.js';
 
 // ---------- Gegner ----------
 export const SPAWN_T = .4;
-export const NM_HP = 1.8;   // Albtraum-Modus: +80 % Leben (Gegner und Boss)
+// Albtraum: Leben je Stufe (data/nightmare.js), Stufe 1 = +80 %
 const has = (e, t) => e.traits && e.traits.includes(t);
 
 
@@ -38,7 +39,7 @@ export function spawnEnemy(type, opt = {}) {
   if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60; x = P.x + Math.cos(a) * R; y = P.y + Math.sin(a) * R; }
   const e = {
     type, pre: typeSprite(T), x, y, r: T.r, sc: T.sc, spd: T.spd * RNG.spawn.range(.9, 1.1), dmg: T.dmg * st.dmg * tf,
-    hp: enemyHp(T.hp, run.si, run.time + (st.hpT || 0)) * (st.endless ? boonHp(run.cnt.boon || 0) : 1) * (st.hpMul || 1) * (run.nm ? NM_HP : 1), xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
+    hp: enemyHp(T.hp, run.si, run.time + (st.hpT || 0)) * (st.endless ? boonHp(run.cnt.boon || 0) : 1) * (st.hpMul || 1) * nmHp(run.nm), xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
     casts: (T.casts || []).map(c => ({ ...c, t: RNG.spawn.range(1.5, c.cd[1]) })),
     bomber: has(T, 'bomber'), obj: !!T.draw, clone: !!T.clone, side: RNG.spawn.next() < .5 ? 1 : -1,
     state: 'walk', face: 'down', at: RNG.spawn.next() * 5, ft: 0, fired: false, ck: null, charge: 0, chain: null, fuse: 0,
@@ -92,6 +93,8 @@ export function doEvent(ev) {
     // Mini-Boss (6.3): Meister der Schule mit 2 Elite-Eigenschaften und eigener Leiste oben
     const e = spawnEnemy(ev.type, { miniboss: true, hpMul: ev.hp });
     rollAffixes(e, ev.affixes ?? 2); run.mini = e;
+    // Albtraum ab Stufe 7: ein zweiter Mini-Boss (ohne eigene Leiste)
+    for (let k = 1; k < nmMinis(run.nm); k++) rollAffixes(spawnEnemy(ev.type, { miniboss: true, hpMul: ev.hp }), ev.affixes ?? 2);
     banner('Mini-Boss: ' + ETYPES[ev.type].name + '!', 'danger'); sfx.warn();
     hint(`<b>${ETYPES[ev.type].name}</b> ${e.affixes.length ? affixNames(e) + ' – ' : ''}er trägt eine Truhe.`);
     return e;

@@ -13,12 +13,13 @@ import { normRunes } from '../game/runes.js';
 import { COMBOS } from '../data/combos.js';
 import { CLASS_MAX_LV, classUnlocked, classXpNeed, isClass } from '../data/classes.js';
 import { BOUNTY_COND, BOUNTY_N, PASS_STAGES, WEEKLY_N, WEEKLY_POOL } from '../data/quests.js';
+import { NM_MAX } from '../data/nightmare.js';
 import { STAGES } from '../data/stages.js';
 import { AFFIXES } from '../data/affixes.js';
 
 export const SAVE_KEY = 'goblinio_save_v2';
 export const SAVE_KEY_V1 = 'goblinio_save_v1';
-export const VERSION = 7;
+export const VERSION = 8;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -35,7 +36,7 @@ export function defaults() {
     stats: { runs: 0, wins: 0, kills: 0, playSeconds: 0, bestKills: 0, bestLevel: 0, weapons: {}, chests: 0, c: {} },
     // Platz des Goblins auf der Weltkarte (si = Welt 0-basiert, li = Level); fresh: gerade freigespielt
     // nm: Albtraum-Schalter auf der Karte
-    map: { si: 0, li: 0, fresh: false, nm: false },
+    map: { si: 0, li: 0, fresh: false, nm: 0 },
     // Fähigkeiten in Slot 1 und 2 (Slot 2 ab Konto-Level 3)
     loadout: [...DEFAULT_LOADOUT],
     // Fähigkeiten, die schon über Welten freigespielt waren, als die Welten neu geordnet wurden (v4)
@@ -78,6 +79,8 @@ export function defaults() {
   };
 }
 
+// Albtraum-Stufe 0–10; bis v7 war es Ja/Nein (true = Stufe 1)
+const nmNum = v => (v === true ? 1 : typeof v === 'number' && isFinite(v) ? Math.max(0, Math.min(NM_MAX, v | 0)) : 0);
 const num = (v, d = 0, min = 0, max = Infinity) => (typeof v === 'number' && isFinite(v) ? Math.min(max, Math.max(min, v)) : d);
 const bool = (v, d) => (typeof v === 'boolean' ? v : d);
 const obj = v => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
@@ -120,7 +123,7 @@ export function normalize(raw) {
       runs: num(st.runs) | 0, wins: num(st.wins) | 0, kills: num(st.kills) | 0, playSeconds: num(st.playSeconds),
       bestKills: num(st.bestKills) | 0, bestLevel: num(st.bestLevel) | 0, weapons: {}, c: {},
     },
-    map: { si: 0, li: 0, fresh: false, nm: false },
+    map: { si: 0, li: 0, fresh: false, nm: 0 },
     loadout: normLoadout(r.loadout),
     savedAt: num(r.savedAt),
     keep: Array.isArray(r.keep) ? [...new Set(r.keep.filter(id => ABILITIES[id]))] : [],
@@ -177,17 +180,19 @@ export function normalize(raw) {
     const lv = Array.isArray(s.lv) ? s.lv : [];
     for (let i = 0; i < LEVELS; i++) {
       const l = obj(lv[i]);
-      o.lv.push({ hats: num(l.hats, o.cleared && !Array.isArray(s.lv) ? 1 : 0, 0, 3) | 0, hm: num(l.hm, 0, 0, 7) | 0, kills: num(l.kills) | 0, fast: num(l.fast), nm: bool(l.nm, false) });
+      o.lv.push({ hats: num(l.hats, o.cleared && !Array.isArray(s.lv) ? 1 : 0, 0, 3) | 0, hm: num(l.hm, 0, 0, 7) | 0, kills: num(l.kills) | 0, fast: num(l.fast), nm: nmNum(l.nm) });
     }
+    // Albtraum-Stufen (v8): höchste Stufe mit besiegtem Boss; alte Stände: Boss im Albtraum geschafft = Stufe 1
+    o.nmMax = Math.max(nmNum(s.nmMax), o.lv[LEVELS - 1].nm);
   }
   // Kartenplatz; alte Stände: erstes offenes Level der höchsten freien Welt
   const m = obj(r.map);
-  if (typeof m.si === 'number') out.map = { si: num(m.si, 0, 0, 99) | 0, li: num(m.li, 0, 0, LEVELS - 1) | 0, fresh: bool(m.fresh, false), nm: bool(m.nm, false) };
+  if (typeof m.si === 'number') out.map = { si: num(m.si, 0, 0, 99) | 0, li: num(m.li, 0, 0, LEVELS - 1) | 0, fresh: bool(m.fresh, false), nm: nmNum(m.nm) };
   else {
     let k = 0; while (out.stages[k + 1] && out.stages[k + 1].cleared) k++;
     const lv = out.stages[k + 1] ? out.stages[k + 1].lv : [];
     let li = 0; while (li < LEVELS - 1 && lv[li] && lv[li].hats) li++;
-    out.map = { si: k, li, fresh: false, nm: false };
+    out.map = { si: k, li, fresh: false, nm: 0 };
   }
   return out;
 }
@@ -276,6 +281,9 @@ function bountyValid(x) {
   return true;
 }
 
+// v7 → v8 (Phase 12: Albtraum-Stufen, Herausforderung, Wiedergeburt): Umwandlung in normalize
+export function migrateV7(v7) { return { ...obj(v7), version: 8 }; }
+
 // v6 → v7 (Phase 11: Quests und Aufgaben-Pass): alles kommt leer über normalize dazu
 export function migrateV6(v6) { return { ...obj(v6), version: 7 }; }
 
@@ -291,6 +299,7 @@ export function migrate(raw) {
   if (r.version < 5) r = migrateV4(r);
   if (r.version < 6) r = migrateV5(r);
   if (r.version < 7) r = migrateV6(r);
+  if (r.version < 8) r = migrateV7(r);
   return normalize(r);
 }
 
@@ -364,23 +373,26 @@ export function gainAbilXp(id, n) {
 }
 
 // Level einer Welt
-const newLv = () => Array.from({ length: LEVELS }, () => ({ hats: 0, hm: 0, kills: 0, fast: 0, nm: false }));
+const newLv = () => Array.from({ length: LEVELS }, () => ({ hats: 0, hm: 0, kills: 0, fast: 0, nm: 0 }));
 function stageRec(i) {
   const s = save.stages[i + 1] || (save.stages[i + 1] = { cleared: false, stars: 0, best: 0, nightmare: false });
   if (!Array.isArray(s.lv)) s.lv = newLv();
   return s;
 }
-export const levelInfo = (si, li) => { const s = save.stages[si + 1]; return (s && s.lv && s.lv[li]) || { hats: 0, hm: 0, kills: 0, fast: 0, nm: false }; };
+export const levelInfo = (si, li) => { const s = save.stages[si + 1]; return (s && s.lv && s.lv[li]) || { hats: 0, hm: 0, kills: 0, fast: 0, nm: 0 }; };
 export const levelDone = (si, li) => levelInfo(si, li).hats > 0;
 export const levelUnlocked = (si, li) => stageUnlocked(si) && (li === 0 || levelDone(si, li - 1));
 // Ergebnis eines Levels speichern. first = erstes Mal geschafft, newHats = Hüte dazugewonnen
-// nm: im Albtraum-Modus gespielt; nmFirst = erstes Mal im Albtraum geschafft
+// nm: Albtraum-Stufe (0 = normal); nmFirst = diese Stufe zum ersten Mal in diesem Level geschafft (L.nm = beste Stufe).
+// Boss-Level: nmMax der Welt = höchste Stufe mit besiegtem Boss (schaltet die nächste frei)
 // hatOk: welche Hut-Bedingungen erfüllt waren; gespeichert als Bitmaske hm des besten Laufs (für die Karte)
 // noBest: mit Weitermachen geschafft → Bestzeit zählt nicht (Wunsch Fabi 2026-10-16)
 export function recordLevel(si, li, { win, time, hats, hatOk = null, kills = 0, endless = false, nm = false, noBest = false }) {
   if (endless) { recordStage(si, { win: false, time }); return { first: false, newHats: 0, nmFirst: false }; }
-  const L = stageRec(si).lv[li], first = win && !L.hats, newHats = Math.max(0, hats - L.hats), nmFirst = win && nm && !L.nm;
-  if (nmFirst) L.nm = true;
+  nm = nm === true ? 1 : nm | 0;
+  const S = stageRec(si), L = S.lv[li], first = win && !L.hats, newHats = Math.max(0, hats - L.hats), nmFirst = win && nm > 0 && nm > (L.nm || 0);
+  if (nmFirst) L.nm = nm;
+  if (win && nm > 0 && li === LEVELS - 1 && nm > (S.nmMax || 0)) S.nmMax = nm;
   if (win && hatOk && hats >= L.hats) L.hm = hatOk.reduce((m, ok, i) => m | (ok ? 1 << i : 0), 0);
   L.hats = Math.max(L.hats, hats); L.kills = Math.max(L.kills, kills);
   if (win && li === LEVELS - 1) { if (!noBest) L.fast = L.fast ? Math.min(L.fast, Math.floor(time)) : Math.floor(time); recordStage(si, { win, time }); }

@@ -1228,3 +1228,11 @@ body.hub #menu.screen{display:block;padding:0;background:none;overflow:hidden}
 #over .vchest.bounty{display:flex;align-items:center;justify-content:space-between;gap:8px}
 #over .vchest.bounty .rw{display:flex;align-items:center;gap:4px;font-weight:900;white-space:nowrap}#over .vchest.bounty .rw .chest{width:36px;height:32px}
 @media (max-width:420px){.tab{font-size:11px;letter-spacing:0}}
+/* Albtraum-Stufen (Phase 12) */
+.nmrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:6px 0 4px}
+.nmrow .nmtog{margin:0}
+.nmdots{display:flex;gap:3px;flex-wrap:wrap}
+.nmdot{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid var(--edge);background:#3a2a1e;color:#e8d8b0;font-size:11px;font-weight:900;cursor:pointer}
+.nmdot.on{background:#c0393e;color:#fff}
+.nmdot.lk{opacity:.35;cursor:default}
+.mnode .nmdone b{position:absolute;right:-3px;bottom:-4px;font-size:10px;color:#fff;text-shadow:0 1px 0 #000,0 0 2px #000}

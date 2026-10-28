@@ -22,9 +22,9 @@ defineScene('run', {
     newRun(si, seed, li, nm);
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();
-    $('#stageTxt').textContent = (run.nm ? '☠ ' : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`);
+    $('#stageTxt').textContent = (run.nm ? `☠${run.nm} ` : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`);
     refreshSlots(); setupAbilButtons();
-    banner((run.nm ? 'Albtraum · ' : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`), run.nm ? 'danger' : '');
+    banner((run.nm ? `Albtraum ${run.nm} · ` : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} · ${run.st.lvName}`), run.nm ? 'danger' : '');
     Music.boss = false; Music.theme = null; Music.hold = false; Music.world = run.st.music || null; Music.part = Music.cur = 0; Music.step = 0; Music.start();
     offs = [
       on('runEnd', r => go('results', r)),

@@ -25,7 +25,7 @@ import { COSM } from '../data/cosmetics.js';
 let showT = 0;
 export function showResults(r) {
   const endless = run.st.endless;
-  $('#overTitle').textContent = endless ? 'Die Nacht hat dich erwischt!' : r.win ? (r.nm ? 'Albtraum überstanden!' : 'Level geschafft!') : 'Besiegt!';
+  $('#overTitle').textContent = endless ? 'Die Nacht hat dich erwischt!' : r.win ? (r.nm ? `Albtraum ${r.nm} überstanden!` : 'Level geschafft!') : 'Besiegt!';
   $('#overHats').innerHTML = endless ? '' : `<span class="lvlbl">${levelLabel(run.si, run.li)} ${run.st.lvName}</span>${hatsHtml(r.hats, r.newHats)}`;
   const res = [['Zeit', fmtTime(run.st.len && !endless ? Math.min(run.time, run.st.len) : run.time)], ['Level', P.lv], ['Besiegt', run.kills], ['Gold', '+' + r.gold, 'ovGold']];
   res.push(['Konto-XP', '+' + r.xp + (r.up ? ` · Level ${r.level}!` : '')]);
@@ -108,6 +108,6 @@ $('#over').addEventListener('pointerdown', e => { if (seqDone && !e.target.close
 export function hideResults() { clearTimeout(showT); seqT.forEach(clearTimeout); seqT = []; seqDone = null; $('#over').hidden = true; }
 $('#againBtn').addEventListener('click', () => startStage(run.si, run.li, run.nm));
 // Albtraum bleibt an, solange das nächste Level in einer geschafften Welt liegt
-$('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li, run.nm && stageCleared(n.si)); });
+$('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li, stageCleared(n.si) ? run.nm : 0); });
 $('#menuBtn').addEventListener('click', () => go('menu'));
 $('#overStats').addEventListener('click', e => { if (e.target.closest('#vchestBtn') && run.result.chest) playChest(run.result.chest.res); });

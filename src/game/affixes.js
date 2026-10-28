@@ -6,10 +6,11 @@ import { part, ring } from './fx.js';
 import { run } from './state.js';
 
 import { AFFIXES } from '../data/affixes.js';
+import { nmAffix } from '../data/nightmare.js';
 export { AFFIXES };
 export const hasAffix = (e, a) => !!(e.affixes && e.affixes.includes(a));
 // Albtraum-Modus (6.1): Elites immer mit 2 Eigenschaften
-export const affixCount = () => (run.nm || run.st.endless || run.loop > 0 ? 2 : run.si >= 2 ? 1 : 0);
+export const affixCount = () => (run.nm || run.st.endless || run.loop > 0 ? 2 : run.si >= 2 ? 1 : 0) + nmAffix(run.nm);   // Albtraum ab Stufe 4: eine mehr
 
 export function rollAffixes(e, n) {
   if (n === undefined) n = affixCount();

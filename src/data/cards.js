@@ -2,6 +2,7 @@
 // Jede Waffe und jedes Passiv hat eine Kartenstufe. Karten kommen aus Truhen und dem Laden,
 // Aufwerten kostet Karten + Gold. Alle Gegenstände sind auch ohne Karten im Lauf wählbar.
 import { PASSIVES, POOL_WEAPONS, WEAPONS } from './weapons.js';
+import { nmChestSteps } from './nightmare.js';
 
 export const RARITIES = ['common', 'rare', 'epic', 'legendary'];
 export const RARITY = {
@@ -77,7 +78,8 @@ export const PITY_EPIC = 10, PITY_LEG = 40;
 // Siegtruhe nach jedem Boss-Level, je nach Welt (0-basiert)
 // Albtraum: eine Stufe besser
 const CHEST_UP = { wood: 'iron', iron: 'gold', gold: 'mage', mage: 'mage' };
-export const victoryChest = (si, nm = false) => { const t = si <= 1 ? 'wood' : si <= 4 ? 'iron' : 'gold'; return nm ? CHEST_UP[t] : t; };
+// Albtraum: eine Stufe besser, ab Stufe 3/6/9 je eine weitere (data/nightmare.js); nm: Stufe (true = 1 für alte Aufrufer)
+export const victoryChest = (si, nm = 0) => { let t = si <= 1 ? 'wood' : si <= 4 ? 'iron' : 'gold'; for (let i = nmChestSteps(nm === true ? 1 : +nm || 0); i > 0; i--) t = CHEST_UP[t]; return t; };
 export const SHELF = 4;                       // Plätze im Truhenregal
 export const FREE_EVERY = 4 * 3600 * 1000;    // Gratis-Holztruhe alle 4 Stunden
 export const FREE_MAX = 2;                    // höchstens 2 gespeichert

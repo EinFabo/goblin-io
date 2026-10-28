@@ -1,5 +1,6 @@
 import { audioInit, sfx } from '../core/audio.js';
-import { activeCls, levelDone, levelInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
+import { NM_MAX, nmCap, nmInfo } from '../data/nightmare.js';
+import { activeCls, levelDone, levelInfo, stageInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
 import { $, fmtTime } from '../core/util.js';
 import { ENDLESS, LEVELS, LEVEL_KIND, WORLDS, levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
@@ -99,7 +100,7 @@ function build() {
   $('#wHats').innerHTML = open ? `<i class="hat1">${hatSvg}</i><b>${hats} / ${LEVELS * 3}</b>` : '<b>Gesperrt</b>';
   $('#wPrev').disabled = M.wi === 0; $('#wNext').disabled = M.wi === WORLDS.length - 1;
   $('#menu').classList.toggle('lockedworld', !open);
-  $('#menu').classList.toggle('nightmare', nmOn(si));
+  $('#menu').classList.toggle('nightmare', nmOn(si) > 0);
 }
 function renderNodes() {
   $('#mapNodes').innerHTML = M.nodes.map((n, i) => {
@@ -109,7 +110,7 @@ function renderNodes() {
     return `<button class="mnode${boss ? ' boss' : ''}${n.endless ? ' endless' : ''}${open ? '' : ' locked'}${done ? ' done' : ''}${i === M.gob.sel ? ' sel' : ''}"
       style="left:${n.x}px;top:${n.y}px" data-node="${i}" aria-label="${n.endless ? 'Endlose Nacht' : 'Level ' + levelLabel(n.si, n.li)}${open ? '' : ', gesperrt'}">
       <span class="disc">${boss ? SKULL : `<b>${lbl}</b>`}</span>
-      ${done && !n.endless ? '<span class="flag"></span>' : ''}${!n.endless && levelInfo(n.si, n.li).nm ? `<span class="nmdone" title="Im Albtraum geschafft">${SKULL_SM}</span>` : ''}${!n.endless && open ? hatsHtml(hats) : ''}</button>`;
+      ${done && !n.endless ? '<span class="flag"></span>' : ''}${!n.endless && levelInfo(n.si, n.li).nm ? `<span class="nmdone" title="Im Albtraum ${levelInfo(n.si, n.li).nm} geschafft">${SKULL_SM}<b>${levelInfo(n.si, n.li).nm}</b></span>` : ''}${!n.endless && open ? hatsHtml(hats) : ''}</button>`;
   }).join('');
 }
 // Gewählte Klasse (Phase 9) mit Wechsel-Knopf zur Rüstkammer, sobald mehr als eine frei ist
@@ -139,7 +140,7 @@ function renderNote(show = true) {
   const why = HAT_TXT.map((t, i) => `<li class="${got(i) ? 'on' : ''}">${t}</li>`).join('');
   note.innerHTML = `<div class="nh"><span class="lbl">${levelLabel(n.si, n.li)}</span><h3>${name}</h3>${hatsHtml(info.hats)}</div><p>${sub}</p>
     <ul class="why">${why}</ul>${rec ? `<p class="rec">${rec}</p>` : ''}
-    ${open && stageCleared(n.si) ? nmHtml() : ''}${open ? clsHtml() : ''}
+    ${open && stageCleared(n.si) ? nmHtml(n.si) : ''}${open ? clsHtml() : ''}
     ${open ? `<button class="btn primary go" data-go>Los!</button>` : `<p class="lock">${!stageUnlocked(n.si) ? `Besiege zuerst den Boss von Welt ${M.wi}.` : `Schaffe zuerst ${levelLabel(n.si, n.li - 1)}.`}</p>`}`;
 }
 
@@ -155,12 +156,14 @@ function playHatPop() {
   if (!Number.isFinite(total)) return;
   countUp(b, total, 160 * h.n, '', total - h.n, b.textContent.slice(String(total).length));
 }
-// Albtraum-Schalter (6.1): erst wenn der Boss der Welt besiegt ist
-const nmOn = si => !!save.map.nm && stageCleared(si);
-function nmHtml() {
-  const on = !!save.map.nm;
-  return `<button class="nmtog${on ? ' on' : ''}" data-nm aria-pressed="${on}">${SKULL_SM} Albtraum: ${on ? 'an' : 'aus'}</button>
-    ${on ? '<p class="nminfo">Gegner +80 % Leben, Elites mit 2 Eigenschaften. Dafür +50 % Gold und Konto-XP, bessere Siegtruhe, 5 Juwelen beim ersten Albtraum-Sieg.</p>' : ''}`;
+// Albtraum-Stufen (Phase 12): erst wenn der Boss der Welt besiegt ist; Stufe t+1 nach dem Boss auf Stufe t (je Welt)
+const nmCapOf = si => (stageCleared(si) ? nmCap(stageInfo(si).nmMax) : 0);
+const nmOn = si => Math.min(save.map.nm || 0, nmCapOf(si));
+function nmHtml(si) {
+  const t = nmOn(si), cap = nmCapOf(si);
+  const dots = Array.from({ length: NM_MAX }, (_, i) => i + 1).map(k => `<button class="nmdot${k <= t ? ' on' : ''}${k > cap ? ' lk' : ''}" data-nm="${k}" ${k > cap ? 'disabled' : ''} aria-label="Albtraum Stufe ${k}${k > cap ? ', gesperrt' : ''}">${k}</button>`).join('');
+  return `<div class="nmrow"><button class="nmtog${t ? ' on' : ''}" data-nm="0" aria-pressed="${!!t}">${SKULL_SM} Albtraum${t ? ' ' + t : ': aus'}</button><div class="nmdots">${dots}</div></div>
+    ${t ? `<p class="nminfo">${nmInfo(t)}</p>` : cap < NM_MAX ? `<p class="nminfo">Stufe ${cap + 1} wird frei, wenn du den Boss dieser Welt auf Stufe ${cap} besiegst.</p>` : ''}`;
 }
 // Goblin zu Punkt i schicken (nur über freie Wegstücke)
 function goTo(i) {
@@ -223,9 +226,11 @@ $('#lvNote').addEventListener('click', e => {
 });
 $('#lvNote').addEventListener('click', e => {
   if (e.target.closest('[data-clsgo]')) { sfx.click(); const t = document.querySelector('.tab[data-tab="#armory"]'); if (t) t.click(); return; }
-  if (!e.target.closest('[data-nm]')) return;
-  save.map.nm = !save.map.nm; persist(); sfx.click();
-  $('#menu').classList.toggle('nightmare', nmOn(worldSi()));
+  const b = e.target.closest('[data-nm]'); if (!b) return;
+  // Totenkopf-Punkt: diese Stufe; der Schalter: aus bzw. höchste freie Stufe; gleiche Stufe nochmal: aus
+  const k = +b.dataset.nm, cap = nmCapOf(worldSi());
+  save.map.nm = k === 0 ? (nmOn(worldSi()) ? 0 : cap) : k === nmOn(worldSi()) ? 0 : Math.min(k, cap); persist(); sfx.click();
+  $('#menu').classList.toggle('nightmare', nmOn(worldSi()) > 0);
   renderNote();
 });
 $('#wPrev').addEventListener('click', () => switchWorld(-1));

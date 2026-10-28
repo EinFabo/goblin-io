@@ -10,7 +10,8 @@ import {
   SCHOOL_ATK, armorRule, blockOnce, clearBossWorld, dismount, iceRule, initArmor, raiseShield, setSchool, spawnClones, spawnPillars,
   spawnShades, spawnVessels, splitBoss, updBurn, updPillars, updPortals, updRise, updSchools, updWind, vesselsUp,
 } from './boss-mech.js';
-import { NM_HP, mspr, tipPos } from './enemies.js';
+import { mspr, tipPos } from './enemies.js';
+import { nmHp, nmRageAt } from '../data/nightmare.js';
 import { boltFx, dropGem, part, puff, ring } from './fx.js';
 import { hint } from './run.js';
 import { P, run } from './state.js';
@@ -35,7 +36,7 @@ export function makeBoss(id, { x = P.x, y = P.y - 300 } = {}) {
   const st = run.st, B = BOSSES[id], lf = 1 + run.loop * 1.5;
   const b = {
     type: 'boss', boss: true, id, B, pre: 'm.' + bossVariant(id), name: B.name, x, y, r: 38, sc: 2.7, spd: 52 * (B.spd || 1), dmg: 13 * st.dmg * lf,
-    hp: 2500 * stageHp(run.si) * lf * (st.bossHp || 1) * (B.hp || 1) * (run.nm ? NM_HP : 1), xp: 150, tint: B.tint || null, state: 'walk', face: 'down', fa: Math.PI / 2, at: 0, ft: 0, fired: false, charge: .7, ck: 'fire',
+    hp: 2500 * stageHp(run.si) * lf * (st.bossHp || 1) * (B.hp || 1) * nmHp(run.nm), xp: 150, tint: B.tint || null, state: 'walk', face: 'down', fa: Math.PI / 2, at: 0, ft: 0, fired: false, charge: .7, ck: 'fire',
     kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, dead: false,
     ph: 0, phT: 0, fightT: 0, rage: false, inv: 0, ice: 0, iceT: 0, iceCd: 0, blkT: 0, stunT: 0, armor: 0, mount: !!B.mount,
     ai: { st: 'chase', t: 2.2, i: 0, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0, chan: 0, spin: null },
@@ -240,7 +241,7 @@ export function bossAI(b, dt, dx, dy, d) {
     const ph = phase(b);
     b.fightT += dt; b.phT += dt; b.inv -= dt; b.iceCd -= dt; b.blkT -= dt;
     // Wut nach RAGE_AT Sekunden Kampf; Malvorns letzte Phase schon nach 60 s in der Phase
-    if (!b.rage && (b.fightT >= RAGE_AT || (ph.rageIn && b.phT >= ph.rageIn))) enrage(b);
+    if (!b.rage && (b.fightT >= nmRageAt(run.nm, RAGE_AT) || (ph.rageIn && b.phT >= ph.rageIn))) enrage(b);
     if (b.ice <= 0 && b.iceT > 0) { b.iceT -= dt; if (b.iceT <= 0 && ph.shield) raiseShield(b); }
     updBurn(dt, b); updRise(b, dt); updPortals(dt); updPillars(b, dt, tempo(b)); updSchools(b, dt);
     if (ph.wind) updWind(dt);

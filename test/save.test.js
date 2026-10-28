@@ -11,9 +11,9 @@ test('v1 → v3 übernimmt Gold, Stages, Bestzeiten, Werkstatt (als Talente ×2)
   const s = normalize(migrateV2(migrateV1(V1)));
   assert.deepEqual(migrate(V1).stages, {}); assert.deepEqual(migrate(V1).keep.sort(), ['hook', 'smoke']);
   assert.equal(s.wallet.gold, 812);
-  { const { lv, ...rest } = s.stages[1]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 251, nightmare: false }); assert.equal(lv[4].hats, 1); }
-  { const { lv, ...rest } = s.stages[2]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 244, nightmare: false }); assert.equal(lv[4].hats, 1); }
-  { const { lv, ...rest } = s.stages[3]; assert.deepEqual(rest, { cleared: false, stars: 0, best: 130, nightmare: false }); assert.equal(lv[4].hats, 0); }
+  { const { lv, ...rest } = s.stages[1]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 251, nightmare: false, nmMax: 0 }); assert.equal(lv[4].hats, 1); }
+  { const { lv, ...rest } = s.stages[2]; assert.deepEqual(rest, { cleared: true, stars: 0, best: 244, nightmare: false, nmMax: 0 }); assert.equal(lv[4].hats, 1); }
+  { const { lv, ...rest } = s.stages[3]; assert.deepEqual(rest, { cleared: false, stars: 0, best: 130, nightmare: false, nmMax: 0 }); assert.equal(lv[4].hats, 0); }
   assert.deepEqual(s.talents, { atk: 8, hp: 6, reroll: 1 });
   assert.equal(s.settings.mute, true);
   assert.equal(s.settings.musicOff, false);
@@ -80,17 +80,17 @@ test('Talente über dem Maximum werden gekappt, unbekannte entfernt', () => {
 
 test('Statistiken und Kartenplatz: alte Stände bekommen Standardwerte, Unsinn wird verworfen', () => {
   const s = migrate({ version: 4, stages: { 1: { cleared: true }, 2: { cleared: true } }, stats: { runs: 5, weapons: { dagger: 4, nix: 9, orbit: 'x' } } });
-  assert.deepEqual(s.map, { si: 2, li: 0, fresh: false, nm: false });   // erste offene Welt
+  assert.deepEqual(s.map, { si: 2, li: 0, fresh: false, nm: 0 });   // erste offene Welt
   assert.equal(s.stats.bestKills, 0);
   assert.deepEqual(s.stats.weapons, { dagger: 4 });
-  assert.deepEqual(migrate({ version: 4, map: { si: 0, li: 3 } }).map, { si: 0, li: 3, fresh: false, nm: false });
+  assert.deepEqual(migrate({ version: 4, map: { si: 0, li: 3 } }).map, { si: 0, li: 3, fresh: false, nm: 0 });
 });
 
 test('Welten: geschaffte Stage aus alten Ständen = alle Level mit 1 Hut, sonst gelten gespeicherte Hüte', () => {
   const s = migrate({ version: 4, stages: { 1: { cleared: true, best: 250 }, 2: { lv: [{ hats: 3 }, { hats: 9 }, {}] } } });
   assert.deepEqual(s.stages[1].lv.map(l => l.hats), [1, 1, 1, 1, 1]);
   assert.deepEqual(s.stages[2].lv.map(l => l.hats), [3, 3, 0, 0, 0]);
-  assert.deepEqual(s.map, { si: 1, li: 2, fresh: false, nm: false });
+  assert.deepEqual(s.map, { si: 1, li: 2, fresh: false, nm: 0 });
 });
 
 test('v3 → v4: 8 Welten, Weltfortschritt neu, über Welten freie Fähigkeiten bleiben frei', () => {
@@ -98,7 +98,7 @@ test('v3 → v4: 8 Welten, Weltfortschritt neu, über Welten freie Fähigkeiten 
   const s = migrate(v3);
   assert.equal(s.version, VERSION);
   assert.deepEqual(s.stages, {});
-  assert.deepEqual(s.map, { si: 0, li: 0, fresh: false, nm: false });
+  assert.deepEqual(s.map, { si: 0, li: 0, fresh: false, nm: 0 });
   assert.deepEqual(s.keep.sort(), ['hook', 'smoke']);   // Welt 1 → Rauch, Welt 2 → Haken; Welt 3 nicht geschafft
   assert.equal(s.wallet.gold, 500); assert.equal(s.talents.atk, 4);
   assert.deepEqual(s.loadout, ['hook', 'rats']);
@@ -108,8 +108,8 @@ test('v3 → v4: 8 Welten, Weltfortschritt neu, über Welten freie Fähigkeiten 
 
 test('Albtraum: Schalter und Albtraum-Siege bleiben im Spielstand', () => {
   const s = normalize({ version: 4, map: { si: 1, li: 2, nm: true }, stages: { 1: { cleared: true, lv: [{ hats: 3, nm: true }, { hats: 1 }] } } });
-  assert.equal(s.map.nm, true);
-  assert.deepEqual(s.stages[1].lv.map(l => l.nm), [true, false, false, false, false]);
+  assert.equal(s.map.nm, 1);   // v8: Stufe statt Ja/Nein
+  assert.deepEqual(s.stages[1].lv.map(l => l.nm), [1, 0, 0, 0, 0]);
 });
 
 test('Weitermachen: Boss-Level geschafft, aber ohne Bestzeit (noBest)', () => {
@@ -154,4 +154,22 @@ test('Klassen-XP: Level-Aufstieg, bei Level 20 ist Schluss', () => {
   assert.deepEqual(save.classes.bow, { lv: 2, xp: 10 });
   gainClassXp('bow', 1e7); assert.deepEqual(save.classes.bow, { lv: CLASS_MAX_LV, xp: 0 });
   assert.equal(save.classes.war, undefined);
+});
+
+test('v7 → v8: Albtraum wird zur Stufe (true → 1), nmMax aus dem Boss-Level', () => {
+  const lv = [0, 1, 2, 3, 4].map(i => ({ hats: 1, nm: i === 4 }));
+  const s = migrate({ version: 7, map: { si: 0, li: 0, nm: true }, stages: { 1: { cleared: true, lv }, 2: { cleared: true, lv: [{ hats: 1, nm: true }] } } });
+  assert.equal(s.version, VERSION); assert.equal(s.map.nm, 1);
+  assert.equal(s.stages[1].lv[4].nm, 1); assert.equal(s.stages[1].lv[0].nm, 0); assert.equal(s.stages[1].nmMax, 1); assert.equal(s.stages[2].nmMax, 0);
+  assert.equal(normalize({ map: { si: 0, nm: 99 } }).map.nm, 10);
+});
+
+test('Albtraum-Stufen: beste Stufe je Level, Boss schaltet die nächste der Welt frei, Juwelen je neue Stufe', () => {
+  setSave(defaults());
+  const r1 = recordLevel(2, 4, { win: true, time: 200, hats: 1, nm: 1 });
+  assert.ok(r1.nmFirst); assert.equal(save.stages[3].nmMax, 1); assert.equal(save.stages[3].lv[4].nm, 1);
+  assert.ok(!recordLevel(2, 4, { win: true, time: 200, hats: 1, nm: 1 }).nmFirst, 'gleiche Stufe nur einmal');
+  recordLevel(2, 2, { win: true, time: 150, hats: 1, nm: 3 }); assert.equal(save.stages[3].nmMax, 1, 'nur der Boss schaltet frei');
+  recordLevel(2, 4, { win: false, time: 100, hats: 0, nm: 2 }); assert.equal(save.stages[3].nmMax, 1);
+  recordLevel(2, 4, { win: true, time: 100, hats: 1, nm: 2 }); assert.equal(save.stages[3].nmMax, 2);
 });

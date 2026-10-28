@@ -14,6 +14,7 @@ import { banner } from '../ui/hud.js';
 import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
 import { ETYPES } from '../data/enemies.js';
+import { nmDmg } from '../data/nightmare.js';
 
 // ---------- Schaden ----------
 // xpMul: tötet dieser Treffer, gibt der Gegner so viel mehr Erfahrung (Kristallregen)
@@ -109,7 +110,7 @@ export function damagePlayer(d, src = 'contact', by = null) {
   if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
   // Schattenmantel: ausweichen
   if (P.dodge && rnd() < P.dodge) { P.inv = .3; addNum(P.x, P.y - 40, 'Ausgewichen', '#d9c8ff', false); return; }
-  d = hitDamage(d, P.maxHp, src, run.st.endless ? endlessCap(run.time) : 1) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult();
+  d = hitDamage(d, P.maxHp, src, run.st.endless ? endlessCap(run.time) : 1) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult() * nmDmg(run.nm);   // Albtraum-Stufe
   if (P.flatArmor) d = Math.max(d * .4, d - P.flatArmor);   // Eisenhelm, nie unter 40 %
   d = shieldAbsorb(d);
   if (d <= 0) { P.inv = .5; return; }

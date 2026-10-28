@@ -2,6 +2,7 @@
 // npm run sim                         → alle 5 Level jeder Welt mit den erwarteten Upgrades, mit Zielwerten
 // npm run sim -- --stage 2            → nur Welt 2 (--levels ist gleichbedeutend mit dem Standard)
 // npm run sim -- --stage 3 --level 5   → nur ein Level (5 = Boss-Level)
+// npm run sim -- --nm 5  → Albtraum-Stufe 5 (Phase 12)
 // npm run sim -- --cls bow  → Goblin-Klasse (gob, bow, mage, war; Klassen-Level 1)
 // npm run sim -- --loadout rage,trap  → andere Fähigkeiten (Standard rage,mech wie v2); --acct 40 für spät freie
 // npm run sim -- --runes fire.3+bolt.3,might.2  → Runen je Slot (Komma), zwei Sockel mit + (Fähigkeiten auf Level 20)
@@ -51,7 +52,7 @@ const pages = await Promise.all(Array.from({ length: par }, async () => {
 
 const pct = (a, n) => (100 * a / n).toFixed(0).padStart(3) + ' %';
 const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
-console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz, Fähigkeiten ${loadout.join(' + ')}${runes ? ', Runen ' + args.runes : ''}${tree ? ', volle Bäume' : ''}${args.cls ? ', Klasse ' + args.cls : ''}\n`);
+console.log(`${html}\n${runs} Läufe pro Konfiguration, Seeds ab ${seed0}, ${hz} Hz, Fähigkeiten ${loadout.join(' + ')}${runes ? ', Runen ' + args.runes : ''}${tree ? ', volle Bäume' : ''}${args.cls ? ', Klasse ' + args.cls : ''}${args.nm ? ', Albtraum ' + args.nm : ''}\n`);
 console.log('Level  Talente               Siege   Ziel       Ø Zeit  Boss    Fähigk.  Ø Lv@1/2/3/4 min      Ø Schaden nach Quelle');
 const t0 = Date.now();
 let lastRes = [];
@@ -72,7 +73,7 @@ for (const [stage, talents, level] of configs) {
   const res = new Array(runs);
   let next = 0;
   await Promise.all(pages.map(async p => {
-    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout, runes, tree, maxTime, god: !!args.god, acct: +args.acct || 20, cls: args.cls || 'gob' }); }
+    while (next < runs) { const k = next++; res[k] = await p.evaluate(botRun, { si: stage - 1, li: (level || 1) - 1, talents, seed: seed0 + k, step: 1 / hz, loadout, runes, tree, maxTime, god: !!args.god, acct: +args.acct || 20, cls: args.cls || 'gob', nm: +args.nm || 0 }); }
   }));
   lastRes = res;
   const wins = res.filter(r => r.win).length;
