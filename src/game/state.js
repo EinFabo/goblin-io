@@ -4,9 +4,10 @@ import { H, W, ZOOM } from '../render/canvas.js';
 // run = aktueller Lauf, P = Spieler. Zuweisen nur über setRun (ES-Module sind read-only von außen).
 export let run = null, P = null;
 export function setRun(r, p) { run = r; P = p; }
-// Welt steht für eine Animation (Mega-Verschmelzung, Truhe im Lauf; Echtzeit). Nur für Eingaben von Spielern,
-// nie in der Logik: die Sim ruft update/useAbility ohne Uhr auf und muss mit gleichen Seeds gleich ausgehen.
-export const uiFrozen = () => !!run && run.megaFreeze > performance.now();
+// Welt steht für eine Animation (Mega-Verschmelzung, Truhe im Lauf). run.megaFreeze sind Sekunden Sim-Zeit,
+// heruntergezählt je Schritt in scenes/run.js (nicht die Wanduhr: im Koop stehen beide gleich lange).
+// Nur für Eingaben und die Szene, nie in der Logik: die Sim ruft update ohne Szene auf.
+export const uiFrozen = () => !!run && run.megaFreeze > 0;
 export const grid = new Map(); const CELL = 64;
 export const gk = (cx, cy) => cx * 100003 + cy;
 export function buildGrid() {

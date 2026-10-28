@@ -21,8 +21,15 @@ export function hashSeed(x) {
   return h >>> 0;
 }
 
+// Wie mulberry32, aber mit sichtbarem Zustand s (Prüfsumme im Koop, game/run.js simHash)
 class Stream {
-  constructor(seed) { this.next = mulberry32(seed); }
+  constructor(seed) { this.s = seed >>> 0; }
+  next() {
+    const a = this.s = (this.s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(a ^ (a >>> 15), a | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
   range(a, b) { return a + this.next() * (b - a); }
   pick(arr) { return arr[(this.next() * arr.length) | 0]; }
   chance(p) { return this.next() < p; }

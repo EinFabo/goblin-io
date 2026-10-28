@@ -18,7 +18,7 @@ export function playMega(id) {
     <div class="mfx-mega"><img src="${icon(a + '_evo')}" alt=""><img src="${icon(b + '_evo')}" alt=""></div>
     <div class="mfx-text"><small>MEGA-ENTWICKLUNG</small><b>${M.name}</b><span>${M.info}</span></div>`;
   el.className = 'show';
-  run.megaFreeze = performance.now() + DUR;
+  run.megaFreeze = DUR / 1000;
   setTimeout(() => sfx.bladeUp(), 900);
   setTimeout(() => sfx.ult(), 1150);
   setTimeout(() => { el.className = ''; el.innerHTML = ''; }, DUR);

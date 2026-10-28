@@ -1,7 +1,7 @@
 // Truhe im Lauf (Elite, Boss): kurze Öffnung wie bei Vampire Survivors (rein optisch, ~1,7–2,6 s).
 // Truhe springt auf, Licht und Strahlenkranz dahinter, dann je Gewinn eine Walze, die auf dem Gewinn stoppt.
 // Die Logik ist schon erledigt (game/levelup.js autoChest meldet das Ereignis autoChest); solange steht die Welt
-// (run.megaFreeze, nur scenes/run.js und die Eingaben schauen darauf, nie die Logik → die Sim bleibt unberührt).
+// (run.megaFreeze in Sekunden Sim-Zeit, nur scenes/run.js und die Eingaben schauen darauf, nie die Logik → die Sim bleibt unberührt).
 // Mehrere Truhen (oder Mega-Verschmelzung + Truhe) laufen nacheinander. Tippen oder Leertaste/Enter/Esc überspringt alle.
 // Zufall nur für die Optik (Math.random), nie das Sim-rand.
 import { sfx } from '../core/audio.js';
@@ -21,13 +21,13 @@ export function playRunChest(picks, src = 'elite') {
   if (!picks.length || !run || run.over) return;
   if (!el) { el = document.createElement('div'); el.id = 'runChest'; document.body.append(el); el.addEventListener('pointerdown', e => { e.preventDefault(); finish(); }); }
   // Nach allem, was schon läuft oder wartet (Mega-Verschmelzung, vorige Truhe)
-  const now = performance.now(), at = Math.max(now, run.megaFreeze || 0), dur = durOf(picks);
-  run.megaFreeze = at + dur;
-  timers.push(setTimeout(() => start(picks, src, dur), at - now));
+  const wait = Math.max(0, run.megaFreeze || 0) * 1000, dur = durOf(picks);
+  run.megaFreeze = (wait + dur) / 1000;
+  timers.push(setTimeout(() => start(picks, src, dur), wait));
   if (!watch) watch = setInterval(() => {
     // Lauf vorbei oder verlassen (HUD weg): sofort weg; alles gezeigt: Wache beenden
     if (!run || run.over || !document.querySelector('#hud:not([hidden])')) finish();
-    else if (performance.now() > run.megaFreeze && !showing()) stopWatch();
+    else if (!(run.megaFreeze > 0) && !showing()) stopWatch();
   }, 100);
 }
 on('autoChest', d => playRunChest(d.picks, d.src));

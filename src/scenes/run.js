@@ -1,4 +1,5 @@
 import { on } from '../core/events.js';
+import { clearInput } from '../core/input.js';
 import { Music } from '../core/music.js';
 import { defineScene, go } from '../core/scenes.js';
 import { $ } from '../core/util.js';
@@ -21,7 +22,7 @@ defineScene('run', {
   // mut/abil/mode (Phase 12): Mutatoren, feste Fähigkeiten und Art des Laufs (Herausforderung, Kopfgeld)
   enter({ si, li = 0, seed, nm = false, mut, abil, mode }) {
     pauseBackground(true);   // im Lauf kein Hintergrund-Laden
-    newRun(si, seed, li, nm, { mut, abil, mode });
+    newRun(si, seed, li, nm, { mut, abil, mode }); clearInput();   // Knöpfe aus dem Menü nicht in den Lauf mitnehmen
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();
     $('#stageTxt').textContent = (run.nm ? `☠${run.nm} ` : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`);
@@ -40,11 +41,14 @@ defineScene('run', {
   },
   exit() { for (const f of offs) f(); offs = []; endCine(); Music.hold = false; },
   update(step) {
+    // Mega-Verschmelzung/Truhe zählt auch in der Pause weiter wie ihre Animation (sonst stünde die Welt danach ohne Bild)
+    const frozen = run.megaFreeze > 0;
+    if (frozen) run.megaFreeze -= step;
     if (run.paused) return;
     // Musik-Teil (core/music.js): ruhig am Anfang, treibend ab 45 s, eigener Teil solange ein Mini-Boss lebt
     Music.part = run.mini && !run.mini.dead ? 2 : run.time >= 45 ? 1 : 0;
     // Mega-Entwicklung: die Welt steht, solange die Verschmelz-Animation läuft (ui/mega-fx.js)
-    if (run.megaFreeze > performance.now()) return;
+    if (frozen) return;
     // Hitstop: Spiel steht kurz still (Elite-Kill, Boss besiegt)
     if (run.hitstop > 0) { run.hitstop -= step; return; }
     // Boss-Szene läuft in Echtzeit; ein offenes Level-Up und Zeitlupe warten, bis sie vorbei ist

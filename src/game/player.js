@@ -1,6 +1,5 @@
 import { frand } from '../core/rng.js';
 import { blinking, idleFrame, walkFrame } from '../gen/goblin.js';
-import { joy, keys, sprintHeld } from '../core/input.js';
 import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { LOW_HP, damagePlayer } from './combat.js';
@@ -14,15 +13,12 @@ import { hint } from './run.js';
 import { P, clampToArena, heal, hidden, pR, query, run } from './state.js';
 
 // ---------- Spieler ----------
-export function updPlayer(dt) {
-  let mx = 0, my = 0;
-  if (keys.KeyA || keys.ArrowLeft) mx -= 1; if (keys.KeyD || keys.ArrowRight) mx += 1;
-  if (keys.KeyW || keys.ArrowUp) my -= 1; if (keys.KeyS || keys.ArrowDown) my += 1;
-  if (joy.id !== null) { const jx = (joy.x - joy.ox) / 55, jy = (joy.y - joy.oy) / 55; if (Math.hypot(jx, jy) > .15) { mx += jx; my += jy; } }
-  const len = Math.hypot(mx, my);
+// inp: Eingabe dieses Ticks (core/input.js takeInput)
+export function updPlayer(dt, inp) {
+  const { mx, my } = inp, len = Math.hypot(mx, my);
   P.moving = len > .1;
   if (P.moving) { P.aimX = mx / len; P.aimY = my / len; P.face = face8(mx, my, P.face); }
-  const want = (keys.ShiftLeft || keys.ShiftRight || sprintHeld) && P.moving && !lockOf('sprint');
+  const want = inp.sprint && P.moving && !lockOf('sprint');
   if (want && !P.exhaust && P.stam > 0) {
     // Unermüdlich: die erste Sekunde jedes Sprints ist gratis
     P.sprinting = true; P.stam -= (P.tireless && P.sprintT < 1 ? 0 : P.stamDrain) * dt; P.stamDelay = .7; P.sprintT += dt;

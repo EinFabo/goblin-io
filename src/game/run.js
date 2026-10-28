@@ -1,15 +1,16 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
-import { mulberry32, newSeed, seedRun } from '../core/rng.js';
+import { RNG, mulberry32, newSeed, seedRun } from '../core/rng.js';
+import { takeInput } from '../core/input.js';
 import { abilState, activeCls, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, persist, recordLevel, save, talent } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp, bonusReward } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
 import { STAGES, STAGE_LEN } from '../data/stages.js';
 import { LEVELS, levelStage, nextLevel } from '../data/levels.js';
-import { canEquip, charmHp, initAbilities, updAbilities } from './abilities.js';
+import { canEquip, charmHp, doDash, initAbilities, updAbilities, useAbility } from './abilities.js';
 import { doEvent, spawnTick, updEnemy } from './enemies.js';
-import { restartBoss, updCut } from './boss.js';
+import { restartBoss, skipCut, updCut } from './boss.js';
 import { part, ring } from './fx.js';
 import { updEProj, updTele } from './hazards.js';
 import { pullable, updItems } from './items.js';
@@ -40,7 +41,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   const st = levelStage(si, li);
   seedRun(seed);
   const r = {
-    si, li: st.li, st, seed, nm: st.endless ? 0 : Math.max(0, Math.min(NM_MAX, nm === true ? 1 : nm | 0)), mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
+    si, li: st.li, st, seed, tick: 0, megaFreeze: 0, nm: st.endless ? 0 : Math.max(0, Math.min(NM_MAX, nm === true ? 1 : nm | 0)), mini: null, time: 0, minHp: 1, kills: 0, gold: 0, enemies: [], eproj: [], pproj: [], wfx: [], megas: [], items: [], fx: [], parts: [], nums: [], zones: [], tele: [], haz: [], graves: [], allies: [],
     weapons: [], passives: {}, boons: {}, spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     rerolls: 2 + talent('reroll') + soulRank(save, 'w_reroll'), bans: 1 + talent('ban') + soulRank(save, 'w_ban'), locks: 1, cardN: talent('xp') >= 10 || soulRank(save, 'crown') ? 4 : 3, pendingLv: 0, pendingChest: 0, lowT: 0, goldT: 0, decoy: null, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
@@ -134,13 +135,20 @@ export function startClear(t) {
 
 // ---------- Haupt-Update ----------
 // Ein fester Simulationsschritt (60 Hz, siehe core/loop.js)
-export function update(dt) {
+// inp: Eingabe dieses Ticks (core/input.js). Bot und Smoke rufen update(dt) ohne und lösen Rolle/Fähigkeiten direkt aus.
+export function update(dt, inp = takeInput()) {
+  run.tick++;
+  // Knöpfe vor allem anderen, wie früher direkt aus dem Tasten-Handler (Teleport-Rolle ohne Zwischenbild)
+  if (inp.skip) skipCut();
+  if (inp.dash) doDash();
+  if (inp.ab0) useAbility(0);
+  if (inp.ab1) useAbility(1);
   savePrev();
   // Boss-Szene (Auftritt, Phasenwechsel): die Welt steht, nur Kamera, Boss und Effekte laufen
   if (run.cut) { updCut(dt); updFx(dt); return; }
   run.time += dt;
   while (run.ei < run.events.length && run.time >= run.events[run.ei].t) doEvent(run.events[run.ei++]);
-  updPlayer(dt);
+  updPlayer(dt, inp);
   if (P.maxHp) run.minHp = Math.min(run.minHp, P.hp / P.maxHp);
   updCamera(dt);
   if (run.over) return;
@@ -192,6 +200,19 @@ export function updFx(dt) {
   for (const n of run.nums) n.t += dt;
   run.nums = run.nums.filter(n => n.t < .7);
   run.shake *= Math.exp(-10 * dt); run.hurtT -= dt; run.flashT -= dt;
+}
+
+// Prüfsumme des Spielzustands (Koop: beide Seiten vergleichen sie regelmäßig, Abweichung = Lauf nicht mehr gleich).
+// Zahlen bitgenau über ihre 64-bit-Darstellung, gemischt per FNV-1a.
+const f64 = new Float64Array(1), u32 = new Uint32Array(f64.buffer);
+export function simHash() {
+  let h = 2166136261;
+  const mix = x => { f64[0] = x; h = Math.imul(h ^ u32[0], 16777619); h = Math.imul(h ^ u32[1], 16777619); };
+  mix(run.tick); mix(run.time); mix(run.kills); mix(run.gold); mix(run.enemies.length);
+  mix(P.x); mix(P.y); mix(P.hp); mix(P.lv); mix(P.xp);
+  for (const e of run.enemies) { mix(e.x); mix(e.y); mix(e.hp); }
+  for (const k of ['game', 'spawn', 'loot', 'lvl']) mix(RNG[k].s);
+  return h >>> 0;
 }
 
 // Positionen vor dem Schritt merken, damit der Renderer zwischen zwei Schritten interpolieren kann

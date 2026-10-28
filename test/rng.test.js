@@ -18,3 +18,10 @@ test('Streams sind unabhängig: Loot-Würfe verschieben keine Spawns', () => {
   seedRun(7); RNG.loot.next(); RNG.loot.next(); rand(0, 1); const spawnB = [RNG.spawn.next(), RNG.spawn.next()];
   assert.deepEqual(spawnA, spawnB);
 });
+
+test('Streams laufen wie mulberry32 und zeigen ihren Zustand (Koop-Prüfsumme)', () => {
+  seedRun(42); const ref = mulberry32(hashSeed('42:game'));
+  for (let i = 0; i < 1000; i++) assert.equal(RNG.game.next(), ref());
+  const s = RNG.game.s; seedRun(42); for (let i = 0; i < 1000; i++) RNG.game.next();
+  assert.equal(RNG.game.s, s);
+});
