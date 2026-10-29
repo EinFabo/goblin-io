@@ -40,20 +40,21 @@ export const canEquip = id => save.keep.includes(id) || abilityUnlocked(id, save
 
 export function initAbilities() {
   run.abMods = {}; run.abXp = {}; run.runes = {};
-  const lo = run.forceAbil || save.loadout;   // Herausforderung: feste Fähigkeiten nur für diesen Lauf
+  const pr = P.prof, lo = run.forceAbil || pr.loadout;   // Herausforderung: feste Fähigkeiten nur für diesen Lauf
   for (const id of lo) {
     if (!id) continue;
-    const m = run.abMods[id] = abilMods(save.abilities[id]), rn = runeMods(save, id);
+    const m = run.abMods[id] = abilMods(pr.abilities[id]), rn = runeMods(pr, id);
     // Runen (Phase 10): Wucht und Weite wirken wie Baum-Punkte auf Kraft und Fläche/Dauer
     if (Object.keys(rn).length) { run.runes[id] = rn; m.pow *= 1 + (rn.might || 0); m.area *= 1 + (rn.wide || 0); }
   }
-  run.dotOn = Object.values(run.runes).some(r => r.fire || r.poison);
+  // Brand/Gift laufen über alle Gegner (updDots): an, sobald ein Goblin solche Runen hat
+  run.dotOn = run.dotOn || Object.values(run.runes).some(r => r.fire || r.poison);
   // Rolle und Sprint sind immer dabei und haben eigene Bäume
-  for (const id of MOVE_IDS) run.abMods[id] = abilMods(save.abilities[id]);
+  for (const id of MOVE_IDS) run.abMods[id] = abilMods(pr.abilities[id]);
   // max: Aufladungen (Doppelhaken), stock: gespeicherte volle Ladungen außer der laufenden
-  run.abil = lo.map((id, i) => id && (run.forceAbil || (slotOpen(i) && canEquip(id))) ? { id, ch: ABILITIES[id].charge === 'once' ? (M(id).a ? 2 : 1) : 0, need: needOf(id), max: id === 'hook' && M(id).m ? 2 : 1, stock: 0 } : null);
+  run.abil = lo.map((id, i) => id && (run.forceAbil || pr.equip[i]) ? { id, ch: ABILITIES[id].charge === 'once' ? (M(id).a ? 2 : 1) : 0, need: needOf(id), max: id === 'hook' && M(id).m ? 2 : 1, stock: 0 } : null);
   // Seelenbaum „Vorladung“: Fähigkeiten starten mit 25 % Ladung
-  if (soulRank(save, 'm_charge')) for (const s of run.abil) if (s && ABILITIES[s.id].charge !== 'once') s.ch = s.need * .25;
+  if (soulRank(pr, 'm_charge')) for (const s of run.abil) if (s && ABILITIES[s.id].charge !== 'once') s.ch = s.need * .25;
   run.abfx = []; run.tmpAllies = []; run.trapRolls = 0; run.rageExt = 0; run.lastAbil = null;
   initMoves();
 }
@@ -139,15 +140,15 @@ export function useAbility(i) {
   return true;
 }
 
-export function updAbilities(dt) {
-  run.lures = [];   // Strohgoblins melden sich jeden Schritt neu an (game/enemies.js)
+// world: auch die Teile, die über alle Gegner laufen (Brand/Gift, Verwirrte); im Koop nur beim ersten Goblin
+export function updAbilities(dt, world = true) {
   for (const s of run.abil) {
     if (!s || ABILITIES[s.id].charge !== 'cd') continue;
     s.ch = Math.min(s.need, s.ch + dt);
     if (s.ch >= s.need && s.stock < s.max - 1) { s.stock++; s.ch = 0; }
   }
   setSrc('mech'); updMech(dt); setSrc(null); updMoves(dt); setSrc('brew'); updBrew(dt); setSrc(null);
-  updDots(dt);
+  if (world) updDots(dt);
   // Ewiger Stock: bis zum nächsten Einsatz alle 15 s ein kleiner Schwarm
   if (run.hive && (run.hive.t -= dt) <= 0) { run.hive.t = 15; setSrc('bees'); swarmOf(M('bees'), 10, ABILITIES.bees.dur * .6); setSrc(null); }
   if (P.smokeT > 0) { P.smokeT -= dt; if (P.smokeT <= 0) smokeEnd(M('smoke')); }
@@ -166,7 +167,7 @@ export function updAbilities(dt) {
   setSrc(null);
   run.abfx = run.abfx.filter(f => !f.done);
   // Verwirrte Gegner (Rauchbombe) schlagen auf Nachbarn ein
-  for (const e of run.enemies) {
+  if (world) for (const e of run.enemies) {
     if (!(e.confT > 0) || e.dead) continue;
     e.confT -= dt; e.confHit = (e.confHit || 0) - dt;
     if (e.confHit <= 0) { e.confHit = .5; query(e.x, e.y, 40, o => { if (o !== e && !o.boss) { hurt(o, 6 + e.dmg, 0, 0, 0, '#c9b6ff'); return false; } }); }
@@ -243,7 +244,7 @@ export function doDash() {
   // Fallensteller (Meister der Bärenfalle): jede 3. Rolle legt eine Falle
   if (hasAbil('trap') && M('trap').m && ++run.trapRolls % 3 === 0) layTraps(M('trap'), 1);
   run.abXp.dash = (run.abXp.dash || 0) + xpPerUse('dash'); count(run, 'rolls');
-  for (let i = 0; i < 8; i++) part(P.x + frand(-10, 10), P.y + 16, -P.aimX * 90 + frand(-40, 40), frand(-50, -10), .4, trailCol(save.look.trail), frand(4, 7));
+  for (let i = 0; i < 8; i++) part(P.x + frand(-10, 10), P.y + 16, -P.aimX * 90 + frand(-40, 40), frand(-50, -10), .4, trailCol(P.prof.look.trail), frand(4, 7));
   sfx.dash();
 }
 
@@ -759,7 +760,7 @@ function updDots(dt) {
 // Sterne (Phase 10): Glanz in der Sternfarbe beim Einsatz; 5 Sterne = Regenbogen (nur Optik, Zufall über frand)
 const RAINBOW = ['#ff5d55', '#ffb02e', '#f4d03f', '#7dff7a', '#6fb7ff', '#c27cff'];
 function starFx(id) {
-  const n = (save.abilities[id] && save.abilities[id].st) || 0; if (!n) return;
+  const n = (P.prof.abilities[id] && P.prof.abilities[id].st) || 0; if (!n) return;
   const col = i => (n >= 5 ? RAINBOW[i % RAINBOW.length] : STAR_COLS[n - 1]);
   ring(P.x, P.y, 14, 70 + n * 12, .4, n >= 5 ? 'rgba(255,255,255,.9)' : STAR_COLS[n - 1], 4 + n);
   for (let i = 0; i < 6 + n * 4; i++) { const a = frand(0, TAU), v = frand(80, 200); part(P.x, P.y - 14, Math.cos(a) * v, Math.sin(a) * v - 40, .55, col(i), frand(2.5, 4.5)); }

@@ -39,7 +39,7 @@ export function updPlayer(dt, inp) {
     // auf Eis: nach der Rolle in Rollrichtung weiterschlittern, nicht mit dem alten Schwung zurück
     P.ivx = P.aimX * P.speed; P.ivy = P.aimY * P.speed; P.iceT -= dt;
     P.trailT -= dt; if (P.trailT <= 0) { P.trailT = .06; P.trail.push({ x: P.x, y: P.y, spr: curPlayerSpr(), t: .25 }); }
-    if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, trailCol(save.look.trail), frand(4, 7));
+    if (P.dashT <= 0) for (let i = 0; i < 6; i++) part(P.x + frand(-14, 14), P.y + 16, frand(-50, 50), frand(-40, -10), .4, trailCol(P.prof.look.trail), frand(4, 7));
   } else {
     const sp = P.moving ? P.speed * (P.slowT > 0 ? .75 : 1) * (P.rageT > 0 ? 1.25 : 1) * (P.sprinting ? P.sprintMul : 1) * (P.mechT > 0 ? .95 : 1) * (P.exSlowT > 0 ? .8 : 1) * (P.hasteT > 0 ? 1 + P.haste : 1) * (P.spinT > 0 ? P.spinSlow : 1) * Math.min(1, len) : 0;
     // Auf Eis (Frostbart) schlittert man: Tempo folgt der Eingabe nur langsam

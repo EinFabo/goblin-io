@@ -1,9 +1,27 @@
 import { H, W, ZOOM } from '../render/canvas.js';
 
 // ---------- Spielzustand ----------
-// run = aktueller Lauf, P = Spieler. Zuweisen nur über setRun (ES-Module sind read-only von außen).
+// run = aktueller Lauf, P = Spieler. Zuweisen nur über setRun/activate (ES-Module sind read-only von außen).
 export let run = null, P = null;
 export function setRun(r, p) { run = r; P = p; }
+// Koop (Phase 14b): run.players = alle Goblins, run.pi = der gerade gerechnete, P = run.players[run.pi].
+// Was einem Goblin gehört, aber auf run liegt (Ausrüstung, Fähigkeiten, eigene Geschosse und Helfer …), steht für die
+// anderen in p.kit und wird von activate eingetauscht. Allein gibt es nur einen Goblin, activate(0) tut dann nichts.
+export const KIT = ['weapons', 'passives', 'boons', 'offer', 'cards', 'rerolls', 'bans', 'locks', 'cardN', 'cls', 'clsLv',
+  'abil', 'abMods', 'abXp', 'runes', 'abfx', 'tmpAllies', 'trapRolls', 'rageExt', 'lastAbil', 'allies', 'pproj', 'wfx', 'megas',
+  'totem', 'goldT', 'decoy', 'hive', 'foe', 'favPotion', 'lockBuzz', 'leechGot', 'leechSec', 'bloodGot', 'bloodSec', 'soulHealT'];
+export function activate(i) {
+  if (i === run.pi) return;
+  const a = run.players[run.pi].kit, b = run.players[i].kit;
+  for (const k of KIT) { a[k] = run[k]; run[k] = b[k]; }
+  run.pi = i; P = run.players[i];
+}
+// fn für jeden Goblin, danach ist wieder der vorige aktiv
+export function eachPlayer(fn) {
+  const pi = run.pi;
+  for (let i = 0; i < run.players.length; i++) { activate(i); fn(P, i); }
+  activate(pi);
+}
 // Welt steht für eine Animation (Mega-Verschmelzung, Truhe im Lauf). run.megaFreeze sind Sekunden Sim-Zeit,
 // heruntergezählt je Schritt in scenes/run.js (nicht die Wanduhr: im Koop stehen beide gleich lange).
 // Nur für Eingaben und die Szene, nie in der Logik: die Sim ruft update ohne Szene auf.
