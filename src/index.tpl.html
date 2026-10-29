@@ -310,6 +310,24 @@
   </div>
 </div>
 
+<div class="overlay" id="coop" hidden>
+  <div class="panel cooppanel">
+    <h2>Koop zu zweit</h2>
+    <p class="cooplvl" id="coopLvl"></p>
+    <div id="coopJoin">
+      <button class="btn primary" id="coopCreate">Raum erstellen</button>
+      <p class="coopor">oder Code von deinem Partner eingeben</p>
+      <div class="coopcode"><input id="coopCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD" aria-label="Raum-Code"><button class="btn" id="coopEnter">Beitreten</button></div>
+    </div>
+    <div id="coopRoom" hidden>
+      <p class="coopshow">Code <b id="coopShow"></b></p>
+      <ul class="coopplayers" id="coopPlayers"></ul>
+      <button class="btn primary" id="coopGo" hidden>Los!</button>
+    </div>
+    <p class="coopmsg" id="coopMsg"></p>
+    <div class="menubtns row"><button class="btn ghost" id="coopClose">Schließen</button></div>
+  </div>
+</div>
 <div class="overlay contov" id="cont" hidden>
   <div class="panel contpanel">
     <div class="contskull" aria-hidden="true">💀</div>

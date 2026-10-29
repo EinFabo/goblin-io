@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DELAY, HASH_EVERY, NO_INPUT, WAIT_GIVEUP, createLockstep, pack, unpack } from '../src/net/lockstep.js';
+import { DELAY, HASH_EVERY, NO_INPUT, WAIT_FIRST, WAIT_GIVEUP, createLockstep, pack, unpack } from '../src/net/lockstep.js';
 import { mulberry32 } from '../src/core/rng.js';
 
 // Zwei Teilnehmer mit einer Verbindung, die Nachrichten nach lag(rnd) Bildern zustellt (Reihenfolge kann sich ändern).
@@ -90,6 +90,14 @@ test(`Partner schweigt: nach ${WAIT_GIVEUP} s allein weiter`, () => {
   assert.ok(sides[0].gone);
   run(120, [true, false]);
   assert.ok(sides[0].ticks > t0 + 100, 'läuft allein weiter');
+});
+
+test(`Partner lädt noch (noch nichts gehört): erst nach ${WAIT_FIRST} s allein weiter`, () => {
+  const { sides, run } = pair();
+  run(WAIT_GIVEUP * 60 + 30, [true, false]);
+  assert.equal(sides[0].gone, false);
+  run((WAIT_FIRST - WAIT_GIVEUP) * 60, [true, false]);
+  assert.ok(sides[0].gone);
 });
 
 test('Abschied: Partner spielt sofort allein weiter', () => {

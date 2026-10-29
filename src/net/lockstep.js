@@ -3,7 +3,8 @@
 // ein Tick erst, wenn die Eingaben beider Goblins dafür da sind. Alle HASH_EVERY Ticks vergleichen beide die Prüfsumme.
 // Ohne DOM und ohne Netz: link ist die Verbindung ({ send(msg), onMessage(fn) }), tick rechnet einen Schritt
 // (scenes/run.js simStep), take liefert die eigene Eingabe (core/input.js), hash die Prüfsumme (game/run.js simHash).
-export const DELAY = 4, HASH_EVERY = 60, WAIT_SHOW = .5, WAIT_GIVEUP = 15, CATCH_UP = 2;
+// WAIT_FIRST: bevor vom Partner überhaupt etwas kam (er lädt noch die Welt, am Handy einige Sekunden), länger warten
+export const DELAY = 4, HASH_EVERY = 60, WAIT_SHOW = .5, WAIT_GIVEUP = 15, WAIT_FIRST = 60, CATCH_UP = 2;
 export const NO_INPUT = Object.freeze({ mx: 0, my: 0, sprint: false, dash: false, ab0: false, ab1: false, skip: false, pick: -1 });
 
 // Eingabe kompakt als [t, mx, my, Knöpfe, pick]. Richtung auf 1/100 gerundet: beide rechnen mit genau der Zahl, die übers Netz geht.
@@ -16,11 +17,12 @@ export const unpack = a => ({ mx: a[1], my: a[2], sprint: !!(a[3] & 1), dash: !!
 // onDesync(t) (Prüfsummen weichen ab), onGone() (Partner weg: Abschied oder WAIT_GIVEUP s still).
 export function createLockstep({ me, link, tick, take, hash, delay = DELAY, onWait = () => {}, onDesync = () => {}, onGone = () => {} }) {
   const other = 1 - me, inputs = [new Map(), new Map()], sums = new Map();
-  let T = 0, waited = 0, gone = false, broken = false;
+  let T = 0, waited = 0, gone = false, broken = false, heard = false;
   // Die ersten delay Ticks hat niemand eine Eingabe geschickt: beide stehen
   for (let t = 0; t < delay; t++) { inputs[0].set(t, NO_INPUT); inputs[1].set(t, NO_INPUT); }
   link.onMessage(m => {
     if (!m || broken) return;
+    heard = true;
     if (m.k === 'in' && Array.isArray(m.a)) { if (m.a[0] >= T) inputs[other].set(m.a[0], unpack(m.a)); }
     else if (m.k === 'hash') compare(m.t, 'theirs', m.h);
     else if (m.k === 'bye') leave();
@@ -59,7 +61,7 @@ export function createLockstep({ me, link, tick, take, hash, delay = DELAY, onWa
         if (!gone && !inputs[other].has(T)) {
           if (n) break;
           waited += step; onWait(waited);
-          if (waited >= WAIT_GIVEUP) leave();
+          if (waited >= (heard ? WAIT_GIVEUP : WAIT_FIRST)) leave();
           return 0;
         }
         if (waited) { waited = 0; onWait(0); }

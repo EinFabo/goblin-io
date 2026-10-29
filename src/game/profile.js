@@ -16,3 +16,4 @@ export function profileOf() {
     cards: Object.fromEntries(CARD_IDS.map(id => [id, cardLv(s, id)])), owned: Object.keys(s.cards).filter(id => s.cards[id]),
   }));
 }
+

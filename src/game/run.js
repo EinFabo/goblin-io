@@ -2,7 +2,7 @@ import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { RNG, mulberry32, newSeed, seedRun } from '../core/rng.js';
 import { takeInputs } from '../core/input.js';
-import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, persist, recordLevel, save } from '../core/save.js';
+import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, levelUnlocked, persist, recordLevel, save } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp, bonusReward } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
@@ -323,7 +323,9 @@ export function endRun(win) {
   const hatOk = [win, win && !cont && P.hp / P.maxHp > .5, win && !cont && run.minHp >= .25], hats = hatOk.filter(Boolean).length;
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
-  const rec = recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm, noBest: cont });
+  // Koop: als Gast in einem Level, das man selbst noch nicht freigespielt hat, gibt es Gold und XP, aber keinen Fortschritt
+  const own = !run.coop || run.st.endless || levelUnlocked(run.si, run.li);
+  const rec = own ? recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm, noBest: cont }) : { first: false, newHats: 0, nmFirst: false };
   const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * nmXp(run.nm) * cycleReward(run.cycle) * (1 + .05 * soulRank(save, 'c_xp'))), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
   if (up && save.profile.level >= SLOT2_ACCT && save.profile.level - up < SLOT2_ACCT) unlocked.unshift('zweiter Fähigkeiten-Slot');

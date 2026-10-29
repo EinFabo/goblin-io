@@ -21,6 +21,7 @@ import { rewardHtml } from './quests.js';
 import { playChest } from './chest-open.js';
 import { cosmTile } from './cosmart.js';
 import { COSM } from '../data/cosmetics.js';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // ---------- Ergebnis ----------
 let showT = 0;
@@ -34,7 +35,9 @@ export function showResults(r) {
   const bc = r.bonusCard, bcTxt = !bc ? '' : bc.gold ? ` · ${cardName(bc.id)} voll → Gold` : ` · ${bc.n}× ${cardName(bc.id)}`;
   if (r.bonusLv) res.push(['Bonus-Level ×' + r.bonusLv, '+' + r.bonusGold + ' Gold' + bcTxt]);
   if (r.gems) res.push(['Juwelen', '+' + r.gems, 'ovGems']);
-  $('#overStats').innerHTML = res.map(([k, v, id]) => `<div><span>${k}</span><b${id ? ` id="${id}"` : ''}>${v}</b></div>`).join('') +
+  // Koop (Phase 14d): mit wem, und ob der Partner bis zum Ende dabei war bzw. die Spiele auseinanderliefen
+  if (run.coop) { const p = run.players[1 - run.me]; res.unshift(['Koop mit', esc(p.prof.name || 'Partner') + (p.gone ? ' (vorher gegangen)' : '')]); }
+  $('#overStats').innerHTML = (run.netNote ? `<p class="unlock">${run.netNote}</p>` : '') + res.map(([k, v, id]) => `<div><span>${k}</span><b${id ? ` id="${id}"` : ''}>${v}</b></div>`).join('') +
     (r.unlocked.length ? `<p class="unlock">Neu freigeschaltet: <b>${r.unlocked.join(', ')}</b></p>` : '') +
     (r.trophy ? `<p class="vchest trophy">${cosmTile(r.trophy)}<span>Trophäe: <b>${COSM[r.trophy].name}</b><br><small>in der Garderobe (Profil)</small></span></p>` : '') +
     (r.chest ? `<p class="vchest">${chestSvg(r.chest.type)}<span>Siegtruhe: <b>${CHESTS[r.chest.type].name}</b><br><small>${r.chest.shelf ? 'liegt im Truhenregal (Laden)' : 'Regal voll – sie ist sofort aufgegangen'}</small></span>${r.chest.shelf ? '' : '<button class="btn small" id="vchestBtn">Ansehen</button>'}</p>` : '') +

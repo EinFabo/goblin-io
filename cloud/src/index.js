@@ -9,6 +9,8 @@
 //   DELETE /api/account                     Konto löschen: Spielstand und alle Sitzungen
 //   POST /api/claim { name }                dieses Gerät wird das aktive (nur das aktive darf speichern, sonst 423)
 //   GET  /api/active                        → { active, activeName }
+//   POST /api/room { v }                    → { code }   Koop-Raum anlegen (Phase 14d, src/room.js)
+//   GET  /api/room/<CODE> (WebSocket)       Koop-Raum betreten
 //   GET  /anmelden?code=…                   exe/APK: direkt zu Googles Kontoauswahl, zurück über /api/auth/callback
 //   GET  /api/save                          → { data, level, runs, updated, acct } | { data: null, acct }
 //   PUT  /api/save   { data, level, runs, base, force }
@@ -20,6 +22,9 @@ const GOOGLE_USERINFO = 'https://openidconnect.googleapis.com/v1/userinfo';
 
 class HttpError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8' } });
+
+export { Room } from './room.js';
+import { newCode, validCode } from './room.js';
 
 export default {
   async fetch(req, env) {
@@ -34,6 +39,8 @@ export default {
       }
     }
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(req);
+    // Koop-Raum betreten (WebSocket): vor dem CORS-Teil, die Antwort 101 kommt direkt vom Raum
+    if (url.pathname.startsWith('/api/room/')) return roomSocket(req, env, url.pathname.slice(10));
     const cors = corsHeaders(env, req.headers.get('Origin'));
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
     let res;
@@ -52,7 +59,29 @@ function corsHeaders(env, origin) {
   return { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'GET, PUT, POST, DELETE, OPTIONS', 'Access-Control-Allow-Headers': 'Authorization, Content-Type', 'Access-Control-Max-Age': '86400', Vary: 'Origin' };
 }
 
+// Koop-Raum (Phase 14d, room.js): freien Code würfeln und Raum anlegen. v = Spielversion (nur gleiche spielen zusammen)
+const roomStub = (env, code) => env.ROOM.get(env.ROOM.idFromName(code));
+async function roomCreate(req, env) {
+  const { v } = await req.json().catch(() => ({}));
+  if (typeof v !== 'string' || !v || v.length > 32) throw new HttpError(400, 'Version fehlt');
+  for (let i = 0; i < 6; i++) {
+    const code = newCode(), r = await roomStub(env, code).fetch('https://room/create', { method: 'POST', body: JSON.stringify({ v }) });
+    if ((await r.json()).ok) return json({ code });
+  }
+  throw new HttpError(503, 'Kein freier Raum, gleich nochmal');
+}
+// Nur aus dem Spiel (erlaubte Origins; lokal mit DEV auch andere), nur gültige Codes
+function roomSocket(req, env, code) {
+  if (req.headers.get('Upgrade') !== 'websocket') return new Response('WebSocket erwartet', { status: 426 });
+  const origin = req.headers.get('Origin') || '', ok = (env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim());
+  if (env.DEV !== '1' && !ok.includes(origin)) return new Response('Nicht erlaubt', { status: 403 });
+  code = code.toUpperCase();
+  if (!validCode(code)) return new Response('Code ungültig', { status: 404 });
+  return roomStub(env, code).fetch(req);
+}
+
 async function route(req, env, path) {
+  if (path === '/api/room' && req.method === 'POST') return roomCreate(req, env);
   if (path === '/api/login' && req.method === 'POST') return login(req, env);
   if (path === '/api/link/start' && req.method === 'POST') return linkStart(env);
   if (path === '/api/link/confirm' && req.method === 'POST') return linkConfirm(req, env);

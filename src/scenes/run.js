@@ -35,6 +35,7 @@ defineScene('run', {
       onDesync: () => { run.netNote = 'Die beiden Spiele liefen auseinander – Lauf beendet.'; endRun(false); },
       onGone: () => { partnerGone(); hint(`<b>${run.players[1 - run.me].prof.name || 'Partner'}</b> ist weg – du spielst allein weiter.`); },
     }) : null;
+    run.netDelay = link ? delay : 0;   // nur zur Anzeige/Prüfung (tools/coop-e2e.mjs)
     netNote('');
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();

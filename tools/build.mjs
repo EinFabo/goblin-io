@@ -30,9 +30,12 @@ for (const [name, s0] of Object.entries(files)) {
 const grass = readFileSync(join(A, 'sb3', 'd84248371980f30554c1b2d46d74b054.png')).toString('base64');
 const assets = `const SVGS=${JSON.stringify(uniq)};\nconst SPRMAP=${JSON.stringify(sprmap)};\nconst GRASS="data:image/png;base64,${grass}";\n`;
 
+// Spielversion (package.json) für den Koop-Raum: nur gleiche Versionen rechnen gleich (src/net/room.js)
+const version = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8')).version;
 const res = await build({
   entryPoints: [join(ROOT, 'src', 'main.js')], bundle: true, format: 'iife', write: false,
   target: 'es2020', minify: !dev, legalComments: 'none', charset: 'utf8',
+  define: { __GAME_VERSION__: JSON.stringify(version) },
 });
 const js = res.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const tpl = readFileSync(join(ROOT, 'src', 'index.tpl.html'), 'utf8');

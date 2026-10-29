@@ -15,7 +15,7 @@ const LIVE = true;
 const HOST = 'https://goblin.node-wave.org';
 // ?cloudtest: lokal gegen `npm run dev` in cloud/ (Port 8787) mit Test-Anmeldung ohne Google
 const TEST = /[?&]cloudtest\b/.test(location.search);
-const API = location.origin === HOST || location.port === '8787' ? '' : HOST;
+export const API = location.origin === HOST || location.port === '8787' ? '' : HOST;
 const KEY = 'goblinio_cloud', MIN_GAP = 30e3;
 // exe/APK: dort geht „Sign in with Google“ nicht (kein echter Web-Ursprung) → App zeigt einen Code, den man auf
 // goblin.node-wave.org/verbinden (Seite mit ?verbinden) nach der Google-Anmeldung eingibt.

@@ -1,5 +1,7 @@
 // Koop übers Netz, Ende zu Ende (Phase 14c/14e): zwei Browserseiten mit eigenem Spielstand spielen zusammen.
 //   node tools/coop-e2e.mjs [--secs 45] [--lag 40] [--delay 4] [--stage 1] [--level 2] [--trace]
+//   node tools/coop-e2e.mjs --server http://localhost:8787 [--secs 45]   (cloud/: npm run dev, public/index.html = dist)
+// Mit --server: echter Raum (Durable Object) über die Oberfläche – Koop am Level-Zettel, Raum erstellen, Code eingeben, Los.
 // Ohne Server: Node reicht die Nachrichten zwischen den Seiten weiter (je Richtung lag ± 50 % ms Verzögerung).
 // Vorlauf delay in Ticks (16,7 ms): deckt er die Verzögerung nicht, wartet das Spiel (läuft langsamer, bleibt gleich).
 // --trace: beide Seiten schreiben je Schritt den ganzen Zustand mit; ausgegeben wird der erste Unterschied.
@@ -20,7 +22,7 @@ for (const name of ['Anna', 'Bert']) {
   const ctx = await b.newContext({ viewport: { width: 960, height: 540 } });
   const p = await ctx.newPage();
   p.on('pageerror', e => errs.push(name + ': ' + String(e.stack || e)));
-  await p.goto('file://' + html);
+  await p.goto(args.server ? args.server + '/' : 'file://' + html);
   await p.waitForFunction(() => window.GOBLIN && window.GOBLIN.scene === 'menu');
   // Bert hat einen anderen Spielstand (Talente, Wiedergeburt, Seelenbaum): beide Rechner müssen trotzdem gleich rechnen
   await p.evaluate(n => {
@@ -30,8 +32,22 @@ for (const name of ['Anna', 'Bert']) {
   }, name);
   pages.push(p);
 }
-// Weiterleiten mit Verzögerung; die Seite puffert, bis der Gleichschritt zuhört
 let sent = 0;
+if (args.server) {
+  // Über die Oberfläche: Anna erstellt den Raum für Level 1-1, Bert tritt mit dem Code bei, Anna startet
+  for (const p of pages) await p.evaluate(() => { GOBLIN.go('menu', '#menu'); });
+  const coopBtn = p => p.evaluate(() => { const b = document.querySelector('#lvNote [data-coop]'); if (!b) throw new Error('kein Koop-Knopf'); b.click(); });
+  await coopBtn(pages[0]); await pages[0].click('#coopCreate');
+  await pages[0].waitForFunction(() => /^[A-Z]{4}$/.test(document.getElementById('coopShow').textContent), null, { timeout: 15000 });
+  const code = await pages[0].evaluate(() => document.getElementById('coopShow').textContent);
+  await coopBtn(pages[1]); await pages[1].fill('#coopCode', code); await pages[1].click('#coopEnter');
+  await pages[0].waitForFunction(() => !document.getElementById('coopGo').hidden, null, { timeout: 15000 });
+  await pages[0].waitForTimeout(2500);   // ein paar Pings für den Vorlauf
+  await pages[0].click('#coopGo');
+  await Promise.all(pages.map(p => p.waitForFunction(() => GOBLIN.scene === 'run' && GOBLIN.run && GOBLIN.run.coop, null, { timeout: 30000 })));
+  console.log('Raum', code, 'Vorlauf', await pages[0].evaluate(() => GOBLIN.run && GOBLIN.run.netDelay));
+} else {
+// Weiterleiten mit Verzögerung; die Seite puffert, bis der Gleichschritt zuhört
 for (const [i, p] of pages.entries()) {
   const other = pages[1 - i];
   await p.exposeFunction('netOut', msg => { sent++; setTimeout(() => other.evaluate(m => window.__netIn(m), msg).catch(() => {}), lag * (.5 + Math.random())); });
@@ -44,6 +60,7 @@ await Promise.all(pages.map((p, me) => p.evaluate(({ delay, trace, me, profs, si
   if (trace) globalThis.__coopTrace = [];
   GOBLIN.go('run', { si, li, seed: 4242, coop: { profs, me }, link, delay });
 }, { delay, trace: !!args.trace, me, profs, si: (+args.stage || 1) - 1, li: (+args.level || 2) - 1 })));
+}
 
 // Beide laufen in Kreisen (andere Richtung), rollen ab und zu, wählen Karten
 const keys = [['KeyD', 'KeyS', 'KeyA', 'KeyW'], ['KeyA', 'KeyW', 'KeyD', 'KeyS']];
@@ -86,7 +103,7 @@ await pages[0].waitForTimeout(2500);
 const after = await state();
 console.log(JSON.stringify({ mid, after, picks, sent, errs: errs.slice(0, 3) }, null, 1));
 await b.close();
-const ok = !errs.length && mid.every(s => !s.note && s.tick > secs * 30) && Math.abs(mid[0].tick - mid[1].tick) < 120 && picks > 0
+const ok = !errs.length && mid.every(s => !s.note && s.tick > secs * 30) && Math.abs(mid[0].tick - mid[1].tick) < 120 && (picks > 0 || !!args.server)
   && after[1].gone[0] && !after[1].over && after[1].tick > mid[1].tick + 60;
 console.log(ok ? 'ok' : 'FEHLER');
 process.exit(ok ? 0 : 1);

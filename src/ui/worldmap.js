@@ -10,6 +10,7 @@ import { CLASSES, CLASS_IDS } from '../data/classes.js';
 import { icon } from '../render/icons.js';
 import { cycle, rebirthOpen, soulsFor } from '../game/souls.js';
 import { openAltar } from './soultree.js';
+import { openCoop } from './coop.js';
 
 // ---------- Weltkarte (PLAN 6.1a) ----------
 // Eine Karte pro Welt: Pfad mit 5 Level-Punkten (der letzten Welt hängt Endlos als 6. Punkt an).
@@ -150,7 +151,7 @@ function renderNote(show = true) {
   note.innerHTML = `<div class="nh"><span class="lbl">${levelLabel(n.si, n.li)}</span><h3>${name}</h3>${hatsHtml(info.hats)}</div><p>${sub}</p>
     <ul class="why">${why}</ul>${rec ? `<p class="rec">${rec}</p>` : ''}
     ${open && stageCleared(n.si) ? nmHtml(n.si) : ''}${open ? clsHtml() : ''}
-    ${open ? `<button class="btn primary go" data-go>Los!</button>` : `<p class="lock">${!stageUnlocked(n.si) ? `Besiege zuerst den Boss von Welt ${M.wi}.` : `Schaffe zuerst ${levelLabel(n.si, n.li - 1)}.`}</p>`}`;
+    ${open ? `<div class="gorow"><button class="btn primary go" data-go>Los!</button><button class="btn go" data-coop title="Zu zweit spielen">Koop</button></div>` : `<p class="lock">${!stageUnlocked(n.si) ? `Besiege zuerst den Boss von Welt ${M.wi}.` : `Schaffe zuerst ${levelLabel(n.si, n.li - 1)}.`}</p>`}`;
 }
 
 // Neue Hüte aus dem letzten Ergebnis: auf der Karte hüpfen sie einmal, der Hutzähler der Welt zählt hoch
@@ -234,6 +235,12 @@ $('#lvNote').addEventListener('click', e => {
   audioInit(); sfx.pickCard(); start(n.si, n.li, nmOn(n.si));
 });
 $('#lvNote').addEventListener('click', e => {
+  // Koop (Phase 14d): Raum für dieses Level (Weltkarte-Level inkl. Albtraum, nicht die Endlose Nacht)
+  if (e.target.closest('[data-coop]')) {
+    const n = M.nodes[M.gob.sel]; if (!n || !nodeOpen(n) || n.endless) return;
+    audioInit(); sfx.click(); openCoop({ si: n.si, li: n.li, nm: nmOn(n.si), label: levelLabel(n.si, n.li) + (nmOn(n.si) ? ` · Albtraum ${nmOn(n.si)}` : '') });
+    return;
+  }
   if (e.target.closest('[data-altar]')) { openAltar(() => { renderMap(); }); return; }
   if (e.target.closest('[data-clsgo]')) { sfx.click(); const t = document.querySelector('.tab[data-tab="#armory"]'); if (t) t.click(); return; }
   const b = e.target.closest('[data-nm]'); if (!b) return;
