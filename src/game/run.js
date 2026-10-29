@@ -2,7 +2,7 @@ import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { RNG, mulberry32, newSeed, seedRun } from '../core/rng.js';
 import { takeInputs } from '../core/input.js';
-import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, levelUnlocked, persist, recordLevel, save } from '../core/save.js';
+import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, levelUnlocked, persist, recordLevel, save, stageCleared, stageInfo } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp, bonusReward } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
@@ -18,7 +18,7 @@ import { updPlayer } from './player.js';
 import { reviveTick } from './combat.js';
 import { newOfferState } from './offer.js';
 import { BOONS, cardIdOf } from '../data/weapons.js';
-import { NM_MAX, nmGems, nmGold, nmXp } from '../data/nightmare.js';
+import { NM_MAX, nmCap, nmGems, nmGold, nmXp } from '../data/nightmare.js';
 import { cycleReward } from '../data/souls.js';
 import { cycle, pityMul, soulRank } from './souls.js';
 import { addRunes, rollRuneBag } from './runes.js';
@@ -77,6 +77,10 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
 export function partnerGone() {
   const p = run.players[1 - run.me]; if (!p || p.gone) return;
   p.gone = p.down = true; p.hp = 0;
+  // seine Helfer, Geschosse und laufenden Effekte verschwinden mit ihm (sonst kämpften sie unsichtbar weiter)
+  activate(1 - run.me);
+  run.allies = []; run.tmpAllies = []; run.abfx = []; run.pproj = []; run.wfx = []; run.megas = []; run.hive = null; run.totem = null; run.goldT = 0;
+  activate(run.me);
   if (run.players[run.me].down) endRun(false);
 }
 // Koop: Gegner haben mehr Leben und treffen härter (Ausgleich fürs Wiederbeleben), Sicht in Welt-Einheiten fest (wie ein 16:9-Fenster bei ZOOM 1), Abstand beim Start
@@ -216,7 +220,7 @@ function step(dt, inps) {
   if (run.over) return;
   run.lures = [];   // Strohgoblins melden sich jeden Schritt neu an (game/enemies.js)
   let world = true;   // Gestürzte: Aufladung und laufende Effekte gehen weiter, nur einsetzen können sie nichts
-  eachPlayer(() => { updAbilities(dt, world); world = false; });
+  eachPlayer(p => { if (p.gone) return; updAbilities(dt, world); world = false; });
   spawnTick(dt);
   buildGrid();
   // Phasenwechsel mitten im Schritt (run.cut): niemand zaubert mehr
@@ -238,7 +242,7 @@ function step(dt, inps) {
     });
   }
   buildGrid();
-  eachPlayer(p => { if (!p.down) updWeapons(dt); updAllies(dt); updPProj(dt); updWfx(dt); updMegas(dt); });   // Gestürzt: keine neuen Angriffe
+  eachPlayer(p => { if (p.gone) return; if (!p.down) updWeapons(dt); updAllies(dt); updPProj(dt); updWfx(dt); updMegas(dt); });   // Gestürzt: keine neuen Angriffe
   updTele(dt);
   updEProj(dt);
   run.enemies = run.enemies.filter(e => !e.dead);
@@ -324,7 +328,7 @@ export function endRun(win) {
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
   // Koop: als Gast in einem Level, das man selbst noch nicht freigespielt hat, gibt es Gold und XP, aber keinen Fortschritt
-  const own = !run.coop || run.st.endless || levelUnlocked(run.si, run.li);
+  const own = !run.coop || run.st.endless || (levelUnlocked(run.si, run.li) && (!run.nm || (stageCleared(run.si) && run.nm <= nmCap((stageInfo(run.si) || {}).nmMax))));
   const rec = own ? recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm, noBest: cont }) : { first: false, newHats: 0, nmFirst: false };
   const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * nmXp(run.nm) * cycleReward(run.cycle) * (1 + .05 * soulRank(save, 'c_xp'))), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);

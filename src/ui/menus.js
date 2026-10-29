@@ -5,7 +5,7 @@ import { $ } from '../core/util.js';
 import { TALENT, TALENTS, talentCost } from '../data/talents.js';
 import { accountXpNeed } from '../game/balance.js';
 import { icon } from '../render/icons.js';
-import { ensureStage, rushing } from '../render/sprites.js';
+import { ensureStage, loadPartner, rushing } from '../render/sprites.js';
 import { stageTile } from '../render/tiles.js';
 import { armoryChanged, cleanLoadout, renderArmory } from './armory.js';
 import { renderProfile } from './profile.js';
@@ -26,7 +26,8 @@ import { closeTree } from './evotree.js';
 export async function startStage(si, li = 0, nm = false, opts = {}) {
   const t = setTimeout(() => { $('#loadMsg').textContent = 'Lade Magier …'; $('#loading').classList.add('solo'); $('#loading').hidden = false; }, 120);
   cleanLoadout();
-  await rushing(ensureStage(si));
+  // Koop: Bilder des Partners gleich mitladen (eigenes Aussehen und Klasse)
+  await rushing(Promise.all([ensureStage(si), opts.coop ? loadPartner(opts.coop.profs[1 - opts.coop.me]) : null]));
   stageTile(si);   // Boden der Welt jetzt malen, nicht im ersten Bild des Laufs
   clearTimeout(t); $('#loading').hidden = true; $('#loading').classList.remove('solo');
   go('run', { si, li, nm, ...opts });

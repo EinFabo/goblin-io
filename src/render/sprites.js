@@ -225,10 +225,31 @@ async function loadGoblinRest(me, look) {
   }));
   return me === gobToken;
 }
-function setGoblin(anim, dir, i, e) {
-  SPR[`gob.${anim}.${dir}.${i + 1}`] = e;
+function setGoblin(anim, dir, i, e, pre = 'gob') {
+  SPR[`${pre}.${anim}.${dir}.${i + 1}`] = e;
   const m = mirrorOf(dir);
-  if (m) SPR[`gob.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
+  if (m) SPR[`${pre}.${anim}.${m}.${i + 1}`] = { ...e, flip: true };
+}
+// Koop (Phase 14d): der Goblin des Partners mit eigenen Bildern (gob2.<anim>.<richtung>.<n>) aus seinem Profil.
+// Gleiches Aussehen wie das eigene: nichts laden, er nutzt gob.*. Lädt beim Koop-Start (ui/menus.js startStage).
+export const lookOf = p => ({ skin: p.look.skin, outfit: p.look.outfit, hat: p.look.hat, cls: p.cls, gold: hasPerk(p.clsLv || 1, 'master') });
+let partnerKey = '';
+export async function loadPartner(prof) {
+  const look = lookOf(prof), key = JSON.stringify(look);
+  if (key === JSON.stringify(goblinLook())) { partnerKey = 'gob'; return; }
+  if (key === partnerKey) return;
+  PAGES.gob2 = []; PAGES.gob2tint = []; partnerKey = '';
+  const jobs = [];
+  for (const anim of Object.keys(ANIMS)) for (const dir of Object.keys(DRAWN)) for (let i = 0; i < ANIMS[anim]; i++) jobs.push([anim, dir, i]);
+  const res = await Promise.all(jobs.map(([anim, dir, i]) => loadQueued(() => goblinSvg(dir, anim, i, look), true)));
+  await sliced(res.map(([im, svg], k) => () => setGoblin(...jobs[k], raster(im, svg, false, 0, 'gob2'), 'gob2')));
+  partnerKey = key;
+}
+// Bildname für den Partner (gob.… → gob2.…), solange seine Bilder da sind; sonst die eigenen
+export function partnerSpr(name) {
+  if (!partnerKey || partnerKey === 'gob' || !name.startsWith('gob.')) return name;
+  const n = 'gob2' + name.slice(3);
+  return SPR[n] ? n : name;
 }
 export const TINTS = {
   gold: ['#ffc928', .42], shadow: ['#3b1466', .5], ember: ['#a3140c', .38], rage: ['#ff2a1a', .42],
@@ -237,14 +258,14 @@ export const TINTS = {
 };
 // Dolch-Skins als Tönungen (data/cosmetics.js)
 for (const [k, t] of Object.entries(DAGGER_TINT)) if (t) TINTS['dagger_' + k] = t;
-export const daggerTint = () => (DAGGER_TINT[save.look.dagger] ? 'dagger_' + save.look.dagger : null);
+export const daggerTint = (look = save.look) => (DAGGER_TINT[look.dagger] ? 'dagger_' + look.dagger : null);   // Koop: look des Partners
 // Getönte Fassung als eigene Fläche (ohne flip: das Spiegeln übernimmt der Aufrufer)
 // Die Tönungen hängen am Eintrag (kein Schlüssel-String je Zeichnung); gespiegelte Einträge haben ihren eigenen Satz
 export function tinted(e, tint) {
   const tc = e.tc || (e.tc = {});
   let t = tc[tint];
   if (!t) {
-    const [p, sx, sy] = alloc(e.group === 'gob' || e.group === 'gobrun' ? e.group + 'tint' : 'tint', e.sw, e.sh), g = p.g;
+    const [p, sx, sy] = alloc(e.group === 'gob' || e.group === 'gobrun' || e.group === 'gob2' ? e.group + 'tint' : 'tint', e.sw, e.sh), g = p.g;
     g.drawImage(e.c, e.sx, e.sy, e.sw, e.sh, sx, sy, e.sw, e.sh);
     const [col, a] = TINTS[tint] || [tint, .85];
     g.save(); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = a; g.fillStyle = col; g.fillRect(sx, sy, e.sw, e.sh); g.restore();

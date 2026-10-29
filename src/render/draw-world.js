@@ -18,7 +18,9 @@ import { PROC, mk } from './proc.js';
 import { drawGround } from './tiles.js';
 import { ABIL_OBJ, drawAbilGround, drawAbilObj, drawAbilTop, drawBrewAura, drawBurrow } from './draw-abilities.js';
 import { potionGiant } from '../game/abilities.js';
-import { daggerTint } from './sprites.js';
+import { daggerTint, partnerSpr } from './sprites.js';
+// Koop: der Partner hat eigene Bilder (render/sprites.js loadPartner)
+const gobSpr = name => (run.pi !== run.me ? partnerSpr(name) : name);
 import { drawProj2, drawWfxGround, drawWfxTop } from './draw-weapons2.js';
 import { MECH_PAINT, TRAIL } from '../data/cosmetics.js';
 
@@ -159,7 +161,7 @@ function drawRun(now) {
     for (const f of run.abfx) if (ABIL_OBJ.has(f.k)) add(f);   // Strohpuppe, Flammenturm, Kanone
     add(P);
     const trT = (TRAIL[P.prof.look.trail] || TRAIL.dust).tint;
-    for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, trT, tr.t * 2.4);
+    for (const tr of P.trail) drawSpr(gobSpr(tr.spr), tr.x, tr.y - 8, 1, 0, trT, tr.t * 2.4);
   });
   list.sort((a, b) => a.y - b.y);
   let gang = null;
@@ -377,11 +379,11 @@ function drawOwnShots() {
   for (const w of run.weapons) if (w.id === 'orbit') {
     ctx.strokeStyle = w.evo ? 'rgba(255,230,120,.25)' : 'rgba(255,255,255,.14)'; ctx.lineWidth = 10;
     ctx.beginPath(); ctx.arc(P.x, P.y - 8, w.r || 80, 0, TAU); ctx.stroke();
-    for (const [bx, by, a] of w.blades) drawSpr('dagger', bx, by, w.evo ? 1.5 : 1.25, a + Math.PI / 2, daggerTint());
+    for (const [bx, by, a] of w.blades) drawSpr('dagger', bx, by, w.evo ? 1.5 : 1.25, a + Math.PI / 2, daggerTint(P.prof.look));
   }
   for (const p of run.pproj) {
   if (drawProj2(p)) continue;
-  if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a, daggerTint());
+  if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a, daggerTint(P.prof.look));
   else if (!onScreen(p.x, p.y, 100)) continue;
   else if (p.k === 'spear') glowTail('frost', p.x, p.y, p.vx, p.vy, 4, .7), drawSpr('e_frostbolt_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.25, p.a);
   else if (p.k === 'fireball') glowTail('fire', p.x, p.y, p.vx, p.vy, 6, .8), drawSpr('f_fireball_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.3, p.a);
@@ -409,7 +411,7 @@ function drawDown(t) {
   const d = P.face, q = (P.reviveT || 0) / REVIVE_T;
   ctx.strokeStyle = `rgba(255,90,80,${.35 + .2 * Math.sin(t * 6)})`; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
   ctx.beginPath(); ctx.ellipse(P.x, P.y + 10, REVIVE_R, REVIVE_R * .72, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-  drawSpr(`gob.death.${d}.5`, P.x, P.y - 8, 1, 0, null, .8);
+  drawSpr(gobSpr(`gob.death.${d}.5`), P.x, P.y - 8, 1, 0, null, .8);
   if (q > 0) { ctx.strokeStyle = '#7dff7a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(P.x, P.y - 70, 14, -Math.PI / 2, -Math.PI / 2 + q * TAU); ctx.stroke(); }
 }
 export function drawPlayer(t) {
@@ -421,7 +423,7 @@ export function drawPlayer(t) {
     ctx.strokeStyle = 'rgba(255,240,170,.55)'; ctx.lineWidth = 2;
     for (let i = 0; i < 3; i++) { const o = (i - 1) * 12; ctx.beginPath(); ctx.moveTo(P.x - P.aimX * 30 - P.aimY * o, P.y - 8 - P.aimY * 30 + P.aimX * o); ctx.lineTo(P.x - P.aimX * 55 - P.aimY * o, P.y - 8 - P.aimY * 55 + P.aimX * o); ctx.stroke(); }
   }
-  const spr = curPlayerSpr();
+  const spr = gobSpr(curPlayerSpr());
   ctx.save(); ctx.translate(P.x, P.y - 8);
   if (roll) {
     // Squash & Stretch in Bewegungsrichtung: Start gestaucht, Ende gestreckt

@@ -18,6 +18,7 @@ import '../ui/run-chest.js';   // Truhe im Lauf: hängt sich an das Ereignis aut
 import { hideOverlays, showScreen } from '../ui/menus.js';
 
 let offs = [], net = null;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // Boss-Auftritt aufräumen (falls der Lauf mitten in der Szene verlassen wird)
 function endCine() { document.body.classList.remove('cine'); $('#bossCard').hidden = true; }
 
@@ -29,11 +30,12 @@ defineScene('run', {
     pauseBackground(true);   // im Lauf kein Hintergrund-Laden
     if (!coop && localCoop && !mode) coop = { profs: [profileOf(), { ...profileOf(), name: 'Goblin 2' }], me: 0 };
     newRun(si, seed, li, nm, { mut, abil, mode, coop }); clearInput();   // Knöpfe aus dem Menü nicht in den Lauf mitnehmen
+    carry = null;
     net = link ? createLockstep({
       me: coop.me, link, delay, tick: simStep, take: () => takeInputs()[0], hash: simHash,
       onWait: s => netNote(s >= WAIT_SHOW ? 'Warte auf Partner …' : ''),
       onDesync: () => { run.netNote = 'Die beiden Spiele liefen auseinander – Lauf beendet.'; endRun(false); },
-      onGone: () => { partnerGone(); hint(`<b>${run.players[1 - run.me].prof.name || 'Partner'}</b> ist weg – du spielst allein weiter.`); },
+      onGone: () => { partnerGone(); hint(`<b>${esc(run.players[1 - run.me].prof.name || 'Partner')}</b> ist weg – du spielst allein weiter.`); },
     }) : null;
     run.netDelay = link ? delay : 0;   // nur zur Anzeige/Prüfung (tools/coop-e2e.mjs)
     netNote('');
@@ -66,7 +68,13 @@ defineScene('run', {
 
 // Ein Schritt des Laufs mit allem, was die Szene drumherum steuert (Starre, Hitstop, Boss-Szene, Zeitlupe, Level-Up).
 // Im Koop Teil der Sim: beide Rechner rechnen ihn gleich, inps kommen vom Gleichschritt (allein holt update sie selbst).
+// Koop: Knöpfe aus Schritten ohne update() (Starre, Hitstop, Ende der Zeitlupe) gehen in den nächsten mit, sonst wären
+// sie verloren (allein holt update sie ohnehin erst ab, wenn es läuft). Beide Rechner rechnen das gleich.
+let carry = null;
+const keep = (c, i) => ({ ...i, dash: i.dash || c.dash, ab0: i.ab0 || c.ab0, ab1: i.ab1 || c.ab1, pick: i.pick >= 0 ? i.pick : c.pick });
 function simStep(step, inps) {
+  if (inps && carry) inps = inps.map((i, k) => keep(carry[k], i));
+  carry = inps ? inps.map(i => ({ ...i, skip: false })) : null;   // bleibt nur, wenn update() unten nicht läuft
   // Mega-Verschmelzung/Truhe zählt auch in der Pause weiter wie ihre Animation (sonst stünde die Welt danach ohne Bild)
   const frozen = run.megaFreeze > 0;
   if (frozen) {
@@ -79,6 +87,7 @@ function simStep(step, inps) {
   if (frozen) return;
   // Hitstop: Spiel steht kurz still (Elite-Kill, Boss besiegt)
   if (run.hitstop > 0) { run.hitstop -= step; return; }
+  carry = null;   // ab hier läuft update() (bzw. öffnet das Level-Up, das die Wahl selbst abwartet)
   // Boss-Szene läuft in Echtzeit; ein offenes Level-Up und Zeitlupe warten, bis sie vorbei ist
   if (run.cut) { update(step, inps); return; }
   // Nach einem Level-Up kurz Zeitlupe, dann die Karten

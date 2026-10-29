@@ -29,6 +29,7 @@ function leave() { if (room) room.close(); room = null; last = null; view(); }
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 function connect(code) {
+  if (room) leave();
   msg('Verbinde …');
   const r = room = joinRoom(code, profileOf(), {
     onRoom: info => { if (room === r) { last = info; render(); } },
@@ -41,8 +42,10 @@ function connect(code) {
 function render() {
   const info = last; if (!info) return;
   const rows = info.players.map(p => {
-    const C = CLASSES[p.cls] || CLASSES.gob, me = p.slot === info.you;
-    return `<li><img src="${icon(C.weapon)}" alt=""><span>${esc(p.name)}${me ? ' (du)' : ''} · ${C.short} ${p.clsLv}${p.slot === 0 ? ' · Gastgeber' : ''}</span><span class="ping">${p.rtt ? Math.round(p.rtt) + ' ms' : ''}</span></li>`;
+    // Werte kommen vom Partner (ungeprüft): Klasse nur aus der eigenen Liste, Zahlen als Zahlen, Text escapen
+    const C = Object.prototype.hasOwnProperty.call(CLASSES, p.cls) ? CLASSES[p.cls] : CLASSES.gob, me = p.slot === info.you;
+    const lv = Math.max(1, Math.min(30, p.clsLv | 0)), ms = Math.max(0, Math.round(+p.rtt || 0));
+    return `<li><img src="${icon(C.weapon)}" alt=""><span>${esc(p.name)}${me ? ' (du)' : ''} · ${C.short} ${lv}${p.slot === 0 ? ' · Gastgeber' : ''}</span><span class="ping">${ms ? ms + ' ms' : ''}</span></li>`;
   });
   if (info.players.length < 2) rows.push('<li class="wait">Warte auf Partner … Gib ihm den Code.</li>');
   $('#coopPlayers').innerHTML = rows.join('');
@@ -60,11 +63,14 @@ function begin(s) {
 // Lauf vorbei: Verbindung kurz danach schließen (der Abschied an den Partner geht vorher noch raus)
 on('runEnd', () => { if (room && room.started) { const r = room; room = null; last = null; setTimeout(() => r.close(), 400); } });
 
+let busy = false;
 $('#coopCreate').addEventListener('click', async () => {
-  sfx.click(); msg('Raum wird erstellt …');
-  try { connect(await createRoom()); } catch (e) { msg(e.message); }
+  if (busy || room) return;
+  busy = true; sfx.click(); msg('Raum wird erstellt …');
+  try { const code = await createRoom(); if (!room) connect(code); } catch (e) { msg(e.message); } finally { busy = false; }
 });
 const enter = () => {
+  if (busy) return;
   const code = $('#coopCode').value.trim().toUpperCase();
   if (!/^[A-Z]{4}$/.test(code)) { msg('Der Code hat 4 Buchstaben.'); return; }
   sfx.click(); connect(code);
@@ -72,4 +78,5 @@ const enter = () => {
 $('#coopEnter').addEventListener('click', enter);
 $('#coopCode').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') enter(); });
 $('#coopGo').addEventListener('click', () => { if (room && sel) { sfx.pickCard(); room.start({ si: sel.si, li: sel.li, nm: sel.nm, seed: newSeed() }); } });
+new MutationObserver(() => { if ($('#coop').hidden && room && !room.started) { leave(); msg(''); } }).observe($('#coop'), { attributes: true, attributeFilter: ['hidden'] });
 $('#coopClose').addEventListener('click', () => { sfx.click(); leave(); $('#coop').hidden = true; });

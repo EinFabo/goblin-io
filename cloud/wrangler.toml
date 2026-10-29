@@ -26,6 +26,15 @@ class_name = "Room"
 tag = "v1"
 new_sqlite_classes = ["Room"]
 
+# Raum-Anlage begrenzen: 10 je Minute und IP (src/index.js roomCreate)
+[[ratelimits]]
+name = "ROOM_LIMIT"
+namespace_id = "1401"
+
+  [ratelimits.simple]
+  limit = 10
+  period = 60
+
 [vars]
 # Client-IDs aus der Google Cloud Console (Web), durch Komma getrennt; öffentlich.
 # exe/APK melden sich über den Browser an (goblin.node-wave.org/verbinden), brauchen also keine eigene Client-ID.

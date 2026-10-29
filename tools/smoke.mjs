@@ -526,6 +526,32 @@ await p.click('[data-soul="w_dmg"]'); await p.click('[data-rebirth]'); await p.c
 w.reb = await p.evaluate(() => { const S = GOBLIN.save; document.querySelector('#soulTree').hidden = true; GOBLIN.go('run', { si: 0, seed: 2 }); const r = { n: S.rebirth.n, dmg: S.rebirth.spent.w_dmg, stages: Object.keys(S.stages).length, cycle: GOBLIN.run.cycle }; GOBLIN.run.paused = true; GOBLIN.go('menu'); return r; });
 if (w.nm !== 3 || w.nmRun.nm !== 3 || w.chal.mode !== 'challenge' || !w.chal.mut || !w.chal.abil || !w.chal.done || w.bountyRun.mut !== 'giants' || !w.bountyRun.done || w.reb.n !== 1 || w.reb.dmg !== 1 || w.reb.stages !== 0 || w.reb.cycle !== 1) errs.push('Phase 12: ' + JSON.stringify(w));
 console.log('Albtraum-Stufen, Herausforderung, Kopfgeld mit Mutator, Wiedergeburt:', JSON.stringify(w));
+// Koop (Phase 14): zwei Goblins zeichnen, gemeinsames Level-Up über die Oberfläche, Sturz und Wiederbeleben,
+// Ergebnis mit Partner, Koop-Fenster am Level-Zettel (ohne Netz; das prüft tools/coop-e2e.mjs)
+const co = {};
+await p.evaluate(() => { const G = GOBLIN; G.go('run', { si: 1, li: 0, seed: 5, coop: { profs: [G.profileOf(), { ...G.profileOf(), name: 'Zwei' }], me: 0 } }); });
+await p.waitForTimeout(1500);
+co.run = await p.evaluate(() => { const r = GOBLIN.run; return { coop: r.coop, n: r.players.length, partner: !document.getElementById('partnerBox').hidden }; });
+await p.evaluate(() => { GOBLIN.run.pendingLv = 1; });
+await p.waitForFunction(() => GOBLIN.run.lvl && !document.getElementById('levelup').hidden && document.getElementById('levelup').classList.contains('coop'), null, { timeout: 5000 });
+await p.click('#cards .card');
+co.lvl = await p.evaluate(async () => {
+  const r = GOBLIN.run, picked = !!document.querySelector('#cards .card.picked'), note = document.getElementById('lvCardNote').textContent;
+  r.lvl.t = .05;   // Partner wählt nicht: nach der Zeit gilt seine erste Karte
+  await new Promise(res => setTimeout(res, 400));
+  return { picked, waits: /Warte auf Zwei/.test(note), done: !r.lvl, hidden: document.getElementById('levelup').hidden };
+});
+co.revive = await p.evaluate(async () => {
+  const r = GOBLIN.run, [a, q] = r.players;
+  q.down = true; q.hp = 0; q.reviveT = 0; q.x = a.x + 30; q.y = a.y;
+  await new Promise(res => setTimeout(res, 3600));
+  return { up: !q.down, hp: Math.round(q.hp / q.maxHp * 100) };
+});
+co.res = await p.evaluate(async () => { const G = GOBLIN; G.endRun(true); await new Promise(res => setTimeout(res, 400)); const t = document.getElementById('overStats').textContent; G.go('menu', '#menu'); return { partner: /Koop mit\s*Zwei/.test(t) }; });
+await p.waitForTimeout(800);
+co.ui = await p.evaluate(() => { const b = document.querySelector('#lvNote [data-coop]'); if (!b) return { btn: false }; b.click(); const r = { btn: true, open: !document.getElementById('coop').hidden }; document.getElementById('coopClose').click(); r.closed = document.getElementById('coop').hidden; return r; });
+if (!co.run.coop || co.run.n !== 2 || !co.run.partner || !co.lvl.picked || !co.lvl.waits || !co.lvl.done || !co.lvl.hidden || !co.revive.up || co.revive.hp !== 50 || !co.res.partner || !co.ui.btn || !co.ui.open || !co.ui.closed) errs.push('Koop: ' + JSON.stringify(co));
+console.log('Koop (zwei Goblins, Level-Up, Wiederbeleben, Ergebnis, Raum-Fenster):', JSON.stringify(co));
 await b.close();
 if (errs.length) { console.log('\nFEHLER:\n' + [...new Set(errs)].join('\n')); process.exit(1); }
 console.log('\nkeine Fehler');

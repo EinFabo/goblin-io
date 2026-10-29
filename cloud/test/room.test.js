@@ -145,3 +145,22 @@ test('Kaputte Nachrichten: Fehler bad, Socket zu', async () => {
   await wake(ctx).webSocketMessage(a, '{kaputt');
   assert.equal(a.last('err').why, 'bad'); assert.ok(a.closed);
 });
+
+test('Gastgeber geht in der Lobby: der andere wird Gastgeber und darf starten', async () => {
+  const { ctx, a, b } = await setup();
+  a.closed = true; await wake(ctx).webSocketClose(a);
+  const r = b.last('room');
+  assert.equal(r.you, 0); assert.deepEqual(r.players.map(p => [p.slot, p.name]), [[0, 'Bert']]);
+  const c = fakeWs(); await wake(ctx).join(c); await wake(ctx).webSocketMessage(c, JSON.stringify({ k: 'hello', v: '3.0.6', prof: prof('Carl') }));
+  assert.equal(c.last('room').you, 1);
+  await wake(ctx).webSocketMessage(b, JSON.stringify({ k: 'start', si: 0, li: 1, seed: 3, delay: 4 }));
+  assert.deepEqual(c.last('start').profs.map(p => p.name), ['Bert', 'Carl']);
+});
+
+test('Lobby gibt nur einfache Werte weiter (Name gekürzt, Klasse Text, Level Zahl)', async () => {
+  const ctx = fakeCtx(); await wake(ctx).create('3.0.6');
+  const a = fakeWs(); await wake(ctx).join(a);
+  await wake(ctx).webSocketMessage(a, JSON.stringify({ k: 'hello', v: '3.0.6', prof: { name: '<img src=x onerror=alert(1)>', cls: { x: 1 }, clsLv: '<b>' } }));
+  const p = a.last('room').players[0];
+  assert.equal(p.name.length, 16); assert.equal(p.cls, 'gob'); assert.equal(p.clsLv, 1);
+});

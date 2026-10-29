@@ -11,10 +11,11 @@ import { P, activate, eachPlayer, hasMut, onScreen, pR, query, run, setSrc } fro
 // Einschlag-Animation je Geschossart
 const HIT_FX = { fire: 'f_fireball_hit_', frost: 'e_frostbolt_hit_', void: 'p.shade_hit.', toxic: 'p.glob_hit.', storm: 'p.spark_hit.', necro: 'p.soul_hit.', earth: 'p.rock_hit.', light: 'p.lance_hit.' };
 
-// Würfe und Zonen gehören einem Goblin (pi): mit ihm als P rechnen (Schaden, Fläche, Dauer, Runen; Koop)
+// Würfe und Zonen gehören einem Goblin (pi): mit ihm als P rechnen (Schaden, Fläche, Dauer, Runen; Koop).
+// Je Goblin ein Durchgang (allein einer), damit nicht für jeden Wurf umgeschaltet wird.
 export function updTele(dt) {
-  for (const t of run.tele) {
-    activate(t.pi || 0);
+  for (let pi = 0; pi < run.players.length; pi++) { activate(pi); for (const t of run.tele) {
+    if ((t.pi || 0) !== pi) continue;
     setSrc(t.src);   // Katapult-Felsen tragen die Runen des Katapults
     if (t.k === 'meteor') {
       t.t -= dt;
@@ -40,17 +41,17 @@ export function updTele(dt) {
         }
       }
     }
-  }
+  } }
   setSrc(null);
   run.tele = run.tele.filter(t => !t.done);
   // Lachen und Brand: Sanduhr verlängert (P.dur), Glutkern verstärkt (P.aoeMult); Säure bremst stark
-  for (const z of run.zones) {
-    activate(z.pi || 0);
+  for (let pi = 0; pi < run.players.length; pi++) { activate(pi); for (const z of run.zones) {
+    if ((z.pi || 0) !== pi) continue;
     const zd = dt / (P.dur || 1), zm = P.aoeMult || 1;
     z.t -= zd; z.tick -= dt;
     if (z.tick <= 0) { z.tick = .35; setSrc(z.src); query(z.x, z.y, z.r, e => { hurt(e, z.dmg * zm, 0, 0, 0, z.k === 'burn' ? '#ffb35c' : z.k === 'acid' ? '#d6ff5a' : '#9cf06a'); if (z.k === 'acid' && !e.boss) e.slowT = Math.max(e.slowT || 0, .6); }); }
     if (Math.random() < dt * 8) part(z.x + frand(-z.r, z.r) * .7, z.y + frand(-z.r, z.r) * .5, 0, -25, .6, z.k === 'poison' ? 'rgba(170,255,110,.7)' : z.k === 'acid' ? 'rgba(215,255,90,.75)' : 'rgba(255,170,60,.8)', 4);
-  }
+  } }
   setSrc(null); activate(0);
   run.zones = run.zones.filter(z => z.t > 0);
   updHaz(dt);

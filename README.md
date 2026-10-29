@@ -35,6 +35,7 @@ Tauri 2 in `src-tauri/`, packt `dist/app/index.html` (`npm run build:app`) ein. 
 | `src/game/` | Spiellogik: Lauf, Spieler, Gegner, Boss, Waffen, Gefahren, Gegenstände, Level-Up |
 | `src/render/` | Canvas, Sprites, prozedurale Grafiken, Icons, Welt- und Menü-Zeichnung |
 | `src/ui/` | HUD, Menüs, Pause, Level-Up-Karten, Ergebnis, Knöpfe |
+| `src/net/` | Koop: Gleichschritt (`lockstep.js`) und Raum-Verbindung (`room.js`) |
 | `src/scenes/` | `boot → menu → run → results → menu` |
 | `src/data/` | Stages, Waffen, Passive, Gegner, Werkstatt |
 | `src/gen/` | Sprite-Generatoren (Goblin, 8 Magierschulen, Diener), laufen beim Laden im Browser |
@@ -47,8 +48,21 @@ Tauri 2 in `src-tauri/`, packt `dist/app/index.html` (`npm run build:app`) ein. 
 ## Regeln im Code
 
 - **Zufall:** Spiellogik nutzt nur die Seed-Streams aus `core/rng.js` (`rand`, `pick`, `rnd`, `RNG.spawn`, `RNG.loot`, `RNG.lvl`). Reine Optik (Partikel, Wackeln) nutzt `frand` oder `Math.random`. So ist ein Lauf mit gleichem Seed und gleicher Eingabe reproduzierbar.
-- **Zustand:** `run` und `P` kommen aus `game/state.js` und werden nur über `setRun()` neu gesetzt.
+- **Zustand:** `run` und `P` kommen aus `game/state.js` und werden nur über `setRun()`/`activate()` neu gesetzt. `P` ist der gerade gerechnete Goblin; was einem Goblin gehört und auf `run` liegt (Waffen, Fähigkeiten, eigene Geschosse …), steht in `KIT` und wird von `activate(i)` getauscht.
 - **Spiellogik kennt keine Szenen.** Sie meldet sich über den Event-Bus (`runEnd`, `bossSpawn`, `playerHurt` …), die Szenen reagieren darauf.
 - **Spielstand:** `core/save.js`, Version 2. Alte v1-Stände werden beim Start übernommen; der v1-Eintrag bleibt als Sicherung liegen.
+
+## Koop zu zweit (Phase 14)
+
+Beide Spiele rechnen dieselbe Sim im Gleichschritt; übers Netz gehen nur Eingaben (`src/net/lockstep.js`) und alle 60 Ticks eine Prüfsumme. Der Raum ist ein Durable Object im Worker (`cloud/src/room.js`), das nur weiterreicht. Am Level-Zettel „Koop“ → Raum erstellen oder Code eingeben; der Gastgeber startet.
+
+    node tools/coop-check.mjs                 # Prüfsummen allein und im Koop (ohne Zeichnen)
+    node tools/coop-e2e.mjs [--trace]          # zwei Browserseiten, Node als Verbindung; --trace zeigt den ersten Unterschied
+    cd cloud && npm run dev                    # Worker mit Raum lokal (Port 8787, public/index.html = dist)
+    node tools/coop-e2e.mjs --server http://127.0.0.1:8787   # durch die Oberfläche über den lokalen Raum
+    npm run sim -- --coop                      # Koop-Balance (zwei Bot-Goblins)
+    goblin-io.html?coop=local                  # zwei Goblins an einer Tastatur (Pfeile, Enter, Shift rechts, K/L, 7–0)
+
+Die Sim darf nur von Eingaben und Profilen (`P.prof`) abhängen, nicht vom eigenen Spielstand, vom Ladestand der Bilder oder der Fenstergröße.
 
 `PLAN.md` ist der Ausbauplan v3.

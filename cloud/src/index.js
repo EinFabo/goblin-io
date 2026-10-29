@@ -62,6 +62,8 @@ function corsHeaders(env, origin) {
 // Koop-Raum (Phase 14d, room.js): freien Code würfeln und Raum anlegen. v = Spielversion (nur gleiche spielen zusammen)
 const roomStub = (env, code) => env.ROOM.get(env.ROOM.idFromName(code));
 async function roomCreate(req, env) {
+  // höchstens 10 neue Räume je Minute und Adresse (Bindung ROOM_LIMIT; lokal/in Tests ohne)
+  if (env.ROOM_LIMIT) { const { success } = await env.ROOM_LIMIT.limit({ key: req.headers.get('CF-Connecting-IP') || 'x' }); if (!success) throw new HttpError(429, 'Zu viele Räume, kurz warten'); }
   const { v } = await req.json().catch(() => ({}));
   if (typeof v !== 'string' || !v || v.length > 32) throw new HttpError(400, 'Version fehlt');
   for (let i = 0; i < 6; i++) {

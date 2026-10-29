@@ -46,7 +46,8 @@ export class Room {
     const socks = this.seated(except), players = [];
     for (const s of socks) {
       const a = s.deserializeAttachment(), p = (await this.ctx.storage.get('prof:' + a.slot)) || {};
-      players.push({ slot: a.slot, name: p.name || 'Goblin', cls: p.cls || 'gob', clsLv: p.clsLv || 1, rtt: a.rtt || 0 });
+      // nur einfache Werte weitergeben (die Spiele escapen trotzdem, das Profil kommt ungeprüft vom Spieler)
+      players.push({ slot: a.slot, name: String(typeof p.name === 'string' ? p.name : 'Goblin').slice(0, 16), cls: String(typeof p.cls === 'string' ? p.cls : 'gob').slice(0, 12), clsLv: Math.max(1, Math.min(30, p.clsLv | 0)), rtt: a.rtt || 0 });
     }
     players.sort((a, b) => a.slot - b.slot);
     for (const s of socks) send(s, { k: 'room', you: slotOf(s), players });
@@ -96,8 +97,13 @@ export class Room {
     const rest = this.seated(ws), meta = await this.ctx.storage.get('meta');
     for (const s of rest) send(s, { k: 'left', slot });
     if (meta && meta.started) { if (!rest.length) await this.clear(); return; }
-    // Lobby: Platz wird frei, ein anderer darf ihn nehmen
+    // Lobby: Platz wird frei, ein anderer darf ihn nehmen. Ging der Gastgeber, wird der andere Gastgeber (nur Platz 0 startet)
     await this.ctx.storage.delete('prof:' + slot);
+    if (slot === 0) for (const s of rest) {
+      const a = s.deserializeAttachment(); if (a.slot !== 1) continue;
+      await this.ctx.storage.put('prof:0', await this.ctx.storage.get('prof:1')); await this.ctx.storage.delete('prof:1');
+      s.serializeAttachment({ ...a, slot: 0 });
+    }
     await this.roster(ws);
   }
   async webSocketError(ws) { await this.webSocketClose(ws); }
