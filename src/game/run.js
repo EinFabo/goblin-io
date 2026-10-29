@@ -35,6 +35,7 @@ import { profileOf } from './profile.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 import { updWfx } from './weapons2.js';
 import { updMegas } from './mega.js';
+import { keyLabel } from '../core/device.js';
 
 // Neuer Lauf: nur Spielzustand. Bildschirm, HUD und Musik macht die Szene "run".
 // si = Welt (Stage), li = Level in der Welt (0–4, das letzte ist das Boss-Level)
@@ -69,7 +70,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   const C = classOf(r.cls), dn = DASH_KIND[C.dash].name, sn = SPRINT_KIND[C.sprint].name;
   addWeapon(C.weapon, hasPerk(r.clsLv, 'start2') || soulRank(P.prof, 'w_start') > 0);
   if (co) { P.x = -COOP_GAP; for (const pr of co.profs.slice(1)) addPlayer(pr); activate(r.me); }
-  if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ` unten: ${dn}, ${sn} und deine Fähigkeiten.` : `<b>Tipp</b> WASD laufen · Leertaste ${dn} · Shift ${sn} · Q und E Fähigkeiten`);
+  if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ` unten: ${dn}, ${sn} und deine Fähigkeiten.` : `<b>Tipp</b> ${['up', 'left', 'down', 'right'].map(keyLabel).join('')} laufen · ${keyLabel('dash')} ${dn} · ${keyLabel('sprint')} ${sn} · ${keyLabel('ab0')} und ${keyLabel('ab1')} Fähigkeiten`);
   emit('runStart', run);
 }
 // Koop: Partner hat den Lauf verlassen (net/lockstep.js, Abschied oder lange still). Ab hier rechnet nur noch dieser
@@ -259,6 +260,7 @@ function step(dt, inps) {
     if (run.pendingChest > 0) { run.pendingChest--; run.lvKind = 'chest'; sfx.chest(); }
     else { run.pendingLv--; run.lvKind = 'lv'; sfx.lvl(); }
     run.lvDelay = .45; run.lvOpen = true;
+    emit('levelUp', run.lvKind);   // Vibration am Handy (ui/haptics.js)
     const col = run.lvKind === 'chest' ? '#ffd84a' : '#8fe6ff';
     ring(P.x, P.y, 10, 160, .45, col, 8);
     for (let i = 0; i < 18; i++) { const a = i * TAU / 18; part(P.x, P.y - 10, Math.cos(a) * 220, Math.sin(a) * 220, .45, col, 3.5); }

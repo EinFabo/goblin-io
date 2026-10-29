@@ -1,7 +1,7 @@
 import { audioInit, sfx } from '../core/audio.js';
 import { NM_MAX, nmCap, nmInfo } from '../data/nightmare.js';
 import { activeCls, classFree, levelDone, levelInfo, stageInfo, levelUnlocked, persist, save, stageBest, stageCleared, stageUnlocked } from '../core/save.js';
-import { $, fmtTime } from '../core/util.js';
+import { $, fmtTime, uiz } from '../core/util.js';
 import { ENDLESS, LEVELS, LEVEL_KIND, WORLDS, levelLabel } from '../data/levels.js';
 import { STAGES } from '../data/stages.js';
 import { HAT_TXT, hatSvg, hatsHtml } from './hats.js';
@@ -38,14 +38,18 @@ const nodeOpen = n => STAGES[n.si].endless ? stageUnlocked(n.si) : levelUnlocked
 const nodeDone = n => STAGES[n.si].endless ? stageBest(n.si) > 0 : levelDone(n.si, n.li);
 
 // Punkte im freien Bereich zwischen Kopfzeile und Zettel, quer im Zickzack, hochkant von unten nach oben
+let noteTop = 0;   // Oberkante des Level-Zettels in Fensterpixeln (fitNote)
+// Koordinaten in Fensterpixeln (die Karte zeichnet auf der ungezoomten Fläche); Abstände wachsen mit der Oberfläche (uiz)
 function layout() {
-  const W = innerWidth, H = innerHeight, narrow = W < 640, short = H < 500 && W > H;
+  const Z = uiz(), W = innerWidth, H = innerHeight, narrow = W / Z < 640, short = H / Z < 500 && W > H;
   // oben: unter der Welt-Tafel (+ Platz für Fahne und Goblin), unten: über Zettel und Tab-Leiste.
   // Handy quer: der Zettel steht rechts, die Karte nimmt die ganze Höhe
   const head = $('.worldhead').getBoundingClientRect(), tab = $('#tabbar').getBoundingClientRect();
-  const top = (head.bottom || 150) + (short ? 36 : narrow ? 50 : 70), bot = (tab.top || H - 100) - (short ? 34 : narrow ? 205 : 250);
-  const right = short ? 330 : 0, n = LEVELS + (hasEndless() ? 1 : 0), ah = Math.max(80, bot - top);
-  const aw = Math.min(W - right - (narrow ? 40 : 80), 1000), x0 = (W - right - aw) / 2;
+  // unten über dem Zettel: seine echte Oberkante, sobald er einmal stand (wird mit Albtraum-Zeile und Oberfläche höher)
+  const top = (head.bottom || 150) + (short ? 36 : narrow ? 50 : 70) * Z;
+  const bot = Math.min((tab.top || H - 100) - (short ? 34 : narrow ? 205 : 250) * Z, !short && noteTop ? noteTop - 48 * Z : Infinity);
+  const right = (short ? 330 : 0) * Z, n = LEVELS + (hasEndless() ? 1 : 0), ah = Math.max(80, bot - top);
+  const aw = Math.min(W - right - (narrow ? 40 : 80) * Z, 1000 * Z), x0 = (W - right - aw) / 2;
   const wide = !narrow && aw > ah * 1.15;
   M.nodes = [];
   for (let i = 0; i < n; i++) {
@@ -112,7 +116,7 @@ function renderNodes() {
     const hats = n.endless ? 0 : levelInfo(n.si, n.li).hats;
     const lbl = n.endless ? '∞' : boss ? '' : n.li + 1;
     return `<button class="mnode${boss ? ' boss' : ''}${n.endless ? ' endless' : ''}${open ? '' : ' locked'}${done ? ' done' : ''}${i === M.gob.sel ? ' sel' : ''}"
-      style="left:${n.x}px;top:${n.y}px" data-node="${i}" aria-label="${n.endless ? 'Endlose Nacht' : 'Level ' + levelLabel(n.si, n.li)}${open ? '' : ', gesperrt'}">
+      style="left:${n.x / uiz()}px;top:${n.y / uiz()}px" data-node="${i}" aria-label="${n.endless ? 'Endlose Nacht' : 'Level ' + levelLabel(n.si, n.li)}${open ? '' : ', gesperrt'}">
       <span class="disc">${boss ? SKULL : `<b>${lbl}</b>`}</span>
       ${done && !n.endless ? '<span class="flag"></span>' : ''}${!n.endless && levelInfo(n.si, n.li).nm ? `<span class="nmdone" title="Im Albtraum ${levelInfo(n.si, n.li).nm} geschafft">${SKULL_SM}<b>${levelInfo(n.si, n.li).nm}</b></span>` : ''}${!n.endless && open ? hatsHtml(hats) : ''}</button>`;
   }).join('');
@@ -131,7 +135,25 @@ function altarHtml() {
 }
 // Markierung umsetzen, ohne die Punkte neu aufzubauen (sonst spielt ihre Einblend-Animation erneut)
 function markSel() { document.querySelectorAll('#mapNodes .mnode').forEach((b, i) => b.classList.toggle('sel', i === M.gob.sel)); }
-function renderNote(show = true) {
+// Weiterspielen (Phase 15): das zuletzt gewählte Level, oder – wenn schon geschafft – das nächste offene dieser Welt
+export function quickLevel() {
+  const m = save.map, st = STAGES[m.si]; if (!st) return null;
+  if (st.endless) return stageUnlocked(m.si) ? { si: m.si, li: 0, nm: 0, label: st.name } : null;
+  let li = m.li; if (!levelUnlocked(m.si, li)) return null;
+  if (levelDone(m.si, li)) for (let k = 0; k < LEVELS; k++) if (levelUnlocked(m.si, k) && !levelDone(m.si, k)) { li = k; break; }
+  return { si: m.si, li, nm: nmOn(m.si), label: levelLabel(m.si, li) };
+}
+// Steht der Zettel höher als gedacht (Albtraum-Zeile, Klasse, große Oberfläche), rücken die Punkte über ihn
+function fitNote() {
+  const note = $('#lvNote'); if (note.hidden || (innerHeight / uiz() < 500 && innerWidth > innerHeight)) return;   // Handy quer: Zettel rechts
+  const t = note.getBoundingClientRect().top;
+  if (!t || Math.abs(t - noteTop) < 6) return;
+  noteTop = t;
+  const g = M.gob; layout(); renderNodes();
+  const n = M.nodes[g.sel]; if (n) { g.to = n.d; if (!g.walking) g.d = n.d; }
+}
+function renderNote(show = true) { renderNote0(show); fitNote(); }
+function renderNote0(show = true) {
   const n = M.nodes[M.gob.sel], note = $('#lvNote');
   if (!show || !n) { note.hidden = true; return; }
   note.hidden = false;

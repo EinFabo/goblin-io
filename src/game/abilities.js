@@ -14,7 +14,7 @@ import { hurt } from './combat.js';
 import { addItem, addNum, animFx, boltFx, dropGem, explode, igniteOil, later, part, puff, ring } from './fx.js';
 import { runeMods } from './runes.js';
 import { TAU } from '../core/util.js';
-import { P, abSrc, hasMut, heal, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc, viewHH, viewHW } from './state.js';
+import { P, abSrc, hasMut, heal, nearest, onScreen, pR, query, randomEnemyInView, run, setSrc, viewHH, viewHW, wsrc } from './state.js';
 import { shootRaw, stepAlly } from './weapons.js';
 import { recalc } from './run.js';
 import { banner } from '../ui/hud.js';
@@ -372,7 +372,7 @@ function fireCatapult(m, pow = 1) {
   const tx = best ? best.x : P.x + P.aimX * 200, ty = best ? best.y : P.y + P.aimY * 200;
   for (let i = 0; i < (m.a ? 8 : 5); i++) {
     const a = rand(0, TAU), r = i ? rand(20, 80) * m.area : 0;
-    run.tele.push({ pi: run.pi, k: 'boulder', sx: P.x - 30, sy: P.y - 40, x: tx + Math.cos(a) * r, y: ty + Math.sin(a) * r, t: -i * .12, dur: .7 / (1 + .15 * m.s2), rad: 85 * P.area * m.area, dmg: (100 + P.lv * 10) * P.dmgMult * m.pow * pow, burn: m.b, shards: m.s1, stun: .3 * m.s3, src: abSrc });
+    run.tele.push({ pi: run.pi, ws: wsrc, k: 'boulder', sx: P.x - 30, sy: P.y - 40, x: tx + Math.cos(a) * r, y: ty + Math.sin(a) * r, t: -i * .12, dur: .7 / (1 + .15 * m.s2), rad: 85 * P.area * m.area, dmg: (100 + P.lv * 10) * P.dmgMult * m.pow * pow, burn: m.b, shards: m.s1, stun: .3 * m.s3, src: abSrc });
   }
   // Dauerfeuer: 2 s später eine zweite Salve mit halbem Schaden
   if (m.m && pow === 1) run.abfx.push({ k: 'volley', t: 0, dur: 2 });
@@ -786,7 +786,7 @@ const COMBO_FX = {
   poisontrap() { for (const f of live('trap')) run.abfx.push({ k: 'gas', x: f.x, y: f.y, r: 110 * P.area, t: 0, dur: 5, tick: 0, dmg: (20 + P.lv * 3) * P.dmgMult }); },
   inferno() { for (const f of live('oil')) igniteOil(f.x, f.y, 1); for (const f of live('turret')) if (!f.inferno) { f.inferno = true; f.dmg *= 1.5; } },
   implosion() { later(.6, () => { const R = 360 * P.area; blast(P.x, P.y, R, (300 + P.lv * 20) * P.dmgMult * .5, 500, '#ffe08a'); ring(P.x, P.y, R, 10, .5, 'rgba(255,224,138,.95)', 14); run.shake = Math.max(run.shake, 12); sfx.boom(); }); },
-  bullseye() { run.tele.push({ pi: run.pi, k: 'boulder', sx: P.x - 30, sy: P.y - 60, x: P.x, y: P.y, t: 0, dur: .8, rad: 170 * P.area, dmg: (250 + P.lv * 25) * P.dmgMult, burn: false, shards: 0, stun: .5, src: abSrc }); },
+  bullseye() { run.tele.push({ pi: run.pi, ws: wsrc, k: 'boulder', sx: P.x - 30, sy: P.y - 60, x: P.x, y: P.y, t: 0, dur: .8, rad: 170 * P.area, dmg: (250 + P.lv * 25) * P.dmgMult, burn: false, shards: 0, stun: .5, src: abSrc }); },
   whirlhook() { query(P.x, P.y, 380, e => { if (e.boss || e.obj) return; const dx = P.x - e.x, dy = P.y - e.y, d = Math.hypot(dx, dy) || 1; e.kx += dx / d * 900; e.ky += dy / d * 900; }); },
   warfrenzy() { for (const al of run.tmpAllies) if (!al.frenzy) { al.frenzy = true; al.pow *= 1.5; al.spd *= 1.3; al.rate *= 1.3; } P.rageT = Math.max(P.rageT, 3); },
   icerink() { for (const f of live('oil')) { query(f.x, f.y, f.r, e => { if (!e.boss && !e.obj) e.freezeT = Math.max(e.freezeT, 2); else e.slowT = Math.max(e.slowT, 2); }); ring(f.x, f.y, 10, f.r, .4, 'rgba(150,220,255,.95)', 8); } sfx.frost(); },
@@ -908,7 +908,7 @@ const FX_UPD = {
         if (f.hit.has(e) || e.obj) return; f.hit.add(e);
         const d = Math.hypot(e.x - P.x, e.y - P.y) || 1; hurt(e, f.path, 380, (e.x - P.x) / d, (e.y - P.y) / d, '#ffd27a');
       });
-      if (f.fire && (f.fireT -= dt) <= 0) { f.fireT = .06; run.zones.push({ pi: run.pi, k: 'burn', x: P.x, y: P.y + 6, r: 34 * P.area, t: 3, dur: 3, tick: 0, dmg: (6 + P.lv * .8) * P.dmgMult, src: abSrc }); }
+      if (f.fire && (f.fireT -= dt) <= 0) { f.fireT = .06; run.zones.push({ pi: run.pi, ws: wsrc, k: 'burn', x: P.x, y: P.y + 6, r: 34 * P.area, t: 3, dur: 3, tick: 0, dmg: (6 + P.lv * .8) * P.dmgMult, src: abSrc }); }
       return;
     }
     f.done = true; cannonLand(f);

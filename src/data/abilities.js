@@ -214,7 +214,6 @@ export const ROLES = {
   help: { name: 'Helfer', ids: ['rage', 'totem', 'rats', 'call', 'brew', 'mech'] },
 };
 export const SLOT2_ACCT = 3;
-export const SLOT_KEYS = ['Q', 'E'];
 export const DEFAULT_LOADOUT = ['rage', 'trap'];
 export const CHARGE_TXT = { cd: s => `alle ${s} s`, kills: n => `${n} Kills`, scrap: n => `${n} % Schrott`, hurt: n => `${n} % Leben einstecken`, once: () => '1× pro Lauf' };
 

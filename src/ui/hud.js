@@ -14,6 +14,7 @@ import { RUNES, parseRune, tierInfo } from '../data/runes.js';
 import { socketsOf } from '../game/runes.js';
 import { DASH_KIND, SPRINT_KIND, classOf } from '../data/classes.js';
 import { aqFrame } from '../game/quests.js';
+import { keyLabel } from '../core/device.js';
 
 // ---------- HUD ----------
 export const hudCache = {};
@@ -85,7 +86,13 @@ function abilFill(s) {
   return s.ch / s.need;
 }
 // Knöpfe passend zur Ausrüstung beschriften (beim Start eines Laufs)
+// Tasten-Beschriftung der Knöpfe aus der Tastenbelegung (Einstellungen → Steuerung)
+export function keyLabels() {
+  for (const [id, a] of [['#ab0Btn', 'ab0'], ['#ab1Btn', 'ab1'], ['#dashBtn', 'dash'], ['#sprintBtn', 'sprint']]) { const k = $(id + ' .key'); if (k) k.textContent = keyLabel(a); }
+}
+on('keysChanged', keyLabels);
 export function setupAbilButtons() {
+  keyLabels();
   run.abil.forEach((s, i) => {
     const b = $('#ab' + i + 'Btn'); b.hidden = !s; if (!s) return;
     const A = ABILITIES[s.id];

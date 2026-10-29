@@ -8,7 +8,7 @@ import { sfx } from '../core/audio.js';
 import { TAU } from '../core/util.js';
 import { hurt } from './combat.js';
 import { explode, later, part, ring } from './fx.js';
-import { P, heal, isBig, nearest, query, randomEnemyInView, run } from './state.js';
+import { P, heal, isBig, nearest, query, randomEnemyInView, run, setWsrc, wsrc } from './state.js';
 // Kreis-Import (weapons.js ↔ weapons2.js) ist unbedenklich: beides sind Funktions-Deklarationen
 import { shoot, shootRaw } from './weapons.js';
 
@@ -85,7 +85,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       if (w.evo) {
         w.t = 4 * P.cdMult;
         const c = randomEnemyInView(40), e = c.length ? pick(c) : null;
-        run.wfx.push({ k: 'hole', x: e ? e.x : P.x + rand(-160, 160), y: e ? e.y : P.y + rand(-120, 120), t: 0, dur: 3 * (P.dur || 1), tick: 0, R: 230 * P.area, dmg: 14 * dm * aoe(), end: 120 * dm });
+        run.wfx.push({ ws: wsrc, k: 'hole', x: e ? e.x : P.x + rand(-160, 160), y: e ? e.y : P.y + rand(-120, 120), t: 0, dur: 3 * (P.dur || 1), tick: 0, R: 230 * P.area, dmg: 14 * dm * aoe(), end: 120 * dm });
         sfx.cast();
       } else {
         w.t = [2.2, 2.2, 2.1, 2.1, 1.9][L] * P.cdMult;
@@ -100,7 +100,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       w.t -= dt * rate; if (w.t > 0) break;
       if (w.evo) {
         w.t = 1.6 * P.cdMult; const c = randomEnemyInView(20);
-        for (let i = 0; i < 4; i++) { const e = c.length ? pick(c) : null; run.wfx.push({ k: 'boulder', x: e ? e.x + rand(-20, 20) : P.x + rand(-250, 250), y: e ? e.y + rand(-20, 20) : P.y + rand(-200, 200), t: 0, dur: .55, rad: 80 * P.area, dmg: 40 * dm, shard: 18 * dm }); }
+        for (let i = 0; i < 4; i++) { const e = c.length ? pick(c) : null; run.wfx.push({ ws: wsrc, k: 'boulder', x: e ? e.x + rand(-20, 20) : P.x + rand(-250, 250), y: e ? e.y + rand(-20, 20) : P.y + rand(-200, 200), t: 0, dur: .55, rad: 80 * P.area, dmg: 40 * dm, shard: 18 * dm }); }
       } else {
         w.t = [1.5, 1.5, 1.4, 1.3, 1.2][L] * P.cdMult;
         const n = [1, 1, 1, 2, 2][L], dmg = [14, 14, 18, 18, 22][L], bounce = [2, 3, 3, 3, 5][L];
@@ -120,8 +120,8 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       w.t = [1.6, 1.6, 1.5, 1.5, 1.2][L] * P.cdMult;
       const a = Math.atan2(P.aimY, P.aimX), len = 520 * P.area, wid = [22, 22, 32, 32, 32][L] * P.area, dmg = [22, 29, 29, 29, 40][L] * dm;
       beam(P.x, P.y - 8, a, len, wid, dmg);
-      run.wfx.push({ k: 'beam', x: P.x, y: P.y - 8, a, len, wid, t: 0, dur: .25 });
-      if (L >= 3) { beam(P.x, P.y - 8, a + Math.PI, len, wid, dmg); run.wfx.push({ k: 'beam', x: P.x, y: P.y - 8, a: a + Math.PI, len, wid, t: 0, dur: .25 }); }
+      run.wfx.push({ ws: wsrc, k: 'beam', x: P.x, y: P.y - 8, a, len, wid, t: 0, dur: .25 });
+      if (L >= 3) { beam(P.x, P.y - 8, a + Math.PI, len, wid, dmg); run.wfx.push({ ws: wsrc, k: 'beam', x: P.x, y: P.y - 8, a: a + Math.PI, len, wid, t: 0, dur: .25 }); }
       sfx.zap(); break;
     }
     case 'soul': {
@@ -137,7 +137,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
     }
     case 'glob': {
       w.t -= dt * rate; if (w.t > 0) break;
-      const c = randomEnemyInView(40), throwAt = (rad, zdur, dmg) => { const e = c.length ? pick(c) : null; run.tele.push({ pi: run.pi, k: 'flask', zk: 'acid', sx: P.x, sy: P.y - 10, x: e ? e.x : P.x + rand(-200, 200), y: e ? e.y : P.y + rand(-160, 160), t: 0, dur: .5, rad, zdur, dmg }); };
+      const c = randomEnemyInView(40), throwAt = (rad, zdur, dmg) => { const e = c.length ? pick(c) : null; run.tele.push({ pi: run.pi, ws: wsrc, k: 'flask', zk: 'acid', sx: P.x, sy: P.y - 10, x: e ? e.x : P.x + rand(-200, 200), y: e ? e.y : P.y + rand(-160, 160), t: 0, dur: .5, rad, zdur, dmg }); };
       if (w.evo) { w.t = 1.2 * P.cdMult; for (let i = 0; i < 4; i++) throwAt(75 * P.area, 3.5, 12 * dm); }
       else {
         w.t = [2.2, 2.1, 2, 1.9, 1.8][L] * P.cdMult;
@@ -172,7 +172,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
       const evo = w.evo, n = evo ? 2 : [1, 1, 2, 2, 3][L];
       w.t = (evo ? .7 : [1.6, 1.6, 1.5, 1.5, 1.3][L]) * P.cdMult;
       const rad = (evo ? 85 : [60, 60, 60, 80, 80][L]) * P.area, dmg = (evo ? 50 : [30, 39, 39, 39, 45][L]) * dm;
-      for (let i = 0; i < n; i++) run.wfx.push({ k: 'mine', x: P.x + rand(-30, 30), y: P.y + rand(-20, 25), t: 0, arm: .5, life: 14, rad, dmg, evo, dm });
+      for (let i = 0; i < n; i++) run.wfx.push({ ws: wsrc, k: 'mine', x: P.x + rand(-30, 30), y: P.y + rand(-20, 25), t: 0, arm: .5, life: 14, rad, dmg, evo, dm });
       // höchstens 14 Minen liegen: die ältesten verpuffen
       let mines = 0; for (let i = run.wfx.length - 1; i >= 0; i--) if (run.wfx[i].k === 'mine' && ++mines > 14) run.wfx[i].life = 0;
       sfx.throw(); break;
@@ -184,7 +184,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
         w.t2 -= dt * rate;
         if (w.t2 <= 0) {
           w.t2 = 2.6 * P.cdMult; const c = randomEnemyInView(20);
-          for (let i = 0; i < 6 && c.length; i++) { const e = c.splice((rnd() * c.length) | 0, 1)[0]; run.wfx.push({ k: 'arrows', x: e.x, y: e.y, t: 0, dur: .35, rad: 55 * P.area, dmg: 20 * dm * aoe() }); }
+          for (let i = 0; i < 6 && c.length; i++) { const e = c.splice((rnd() * c.length) | 0, 1)[0]; run.wfx.push({ ws: wsrc, k: 'arrows', x: e.x, y: e.y, t: 0, dur: .35, rad: 55 * P.area, dmg: 20 * dm * aoe() }); }
         }
       }
       w.t -= dt * rate; if (w.t > 0) break;
@@ -246,7 +246,7 @@ function swing(a, R, dmg, kb, full) {
 // ---------- Dauerhafte Effekte ----------
 export function updWfx(dt) {
   for (const f of run.wfx) {
-    f.t += dt;
+    f.t += dt; setWsrc(f.ws);
     if (f.k === 'hole') {
       // ansaugen (keine Bosse), alle 0,25 s Schaden, am Ende Zusammenbruch
       query(f.x, f.y, f.R, e => {
@@ -283,6 +283,7 @@ export function updWfx(dt) {
     }
   }
   if (run.wfx.some(f => f.done || f.life <= 0)) run.wfx = run.wfx.filter(f => !f.done && !(f.life <= 0));
+  setWsrc(null);
 }
 
 // Treffer-Sonderfälle der neuen Geschosse (aus updPProj): Stein springt weiter, Seele heilt

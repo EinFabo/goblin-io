@@ -86,7 +86,7 @@ function passHtml() {
   const p = save.pass, list = passList(save), set = seasonSet(p.season), d = daysLeftSeason(), bonus = passBonusReady(p);
   return `<h3 class="sect">Aufgaben-Pass · Saison ${p.season + 1}: ${set.name} <small>endet in ${d === 1 ? 'einem Tag' : d + ' Tagen'}</small></h3>
     <p class="qhint">Punkte aus Tagesaufgaben, Wochenaufgaben, Kopfgeld und Fähigkeiten-Quests. Stufe 10, 20, 30: ${set.name}-Kosmetik, Stufe 30 dazu der Titel „${PASS_TITLE}“. Danach alle ${PASS_BONUS_STEP} Punkte eine ${CHESTS[PASS_BONUS.chest].name}.</p>
-    <div class="passrow" id="passRow">${list.map(x => `<div class="pstage${x.claimed ? ' got' : x.reached ? ' ready' : ''}${x.s % 10 === 0 ? ' big' : ''}" data-ps="${x.s}">
+    <div class="passrow" id="passRow">${list.map(x => `<div class="passst${x.claimed ? ' got' : x.reached ? ' ready' : ''}${x.s % 10 === 0 ? ' big' : ''}" data-ps="${x.s}">
       <span class="pn">${x.s}</span><div class="prw">${x.reward.cosm ? cosmTile(x.reward.cosm, 'small') : rewardHtml(x.reward)}</div>${btn(x.reached, `data-pass="${x.s}"`, x.claimed)}</div>`).join('')}</div>
     ${p.pts >= PASS_STAGES * PASS_STEP ? `<div class="task bonus${bonus > 0 ? ' done' : ''}"><div class="tt"><b>Bonustruhen</b><span>${bonus > 0 ? bonus + ' bereit' : `nächste bei ${fmtN(PASS_STAGES * PASS_STEP + (p.bonus + 1) * PASS_BONUS_STEP)} Punkten`}</span></div><div class="rw">${rewardHtml(PASS_BONUS)}</div>${btn(bonus > 0, 'data-pass="bonus"', false)}</div>` : ''}`;
 }
@@ -128,6 +128,6 @@ setInterval(() => {
 // Pass: beim Öffnen zur ersten offenen Stufe scrollen
 export function scrollPass() {
   const row = $('#passRow'); if (!row) return;
-  const t = row.querySelector('.pstage.ready:not(.got)') || row.querySelector('.pstage:not(.ready)');
+  const t = row.querySelector('.passst.ready:not(.got)') || row.querySelector('.passst:not(.ready)');
   if (t) row.scrollLeft = t.offsetLeft - row.clientWidth / 2 + t.clientWidth / 2;
 }

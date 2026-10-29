@@ -21,6 +21,7 @@ import { rewardHtml } from './quests.js';
 import { playChest } from './chest-open.js';
 import { cosmTile } from './cosmart.js';
 import { COSM } from '../data/cosmetics.js';
+import { dmgStatHtml } from './dmgstat.js';
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 // ---------- Ergebnis ----------
@@ -44,11 +45,13 @@ export function showResults(r) {
     clsXpHtml(r.cls) +
     (r.challenge ? `<p class="vchest bounty"><span>Herausforderung geschafft! Bestwert: <b>${r.challenge.boss ? fmtTime(r.challenge.v) : r.challenge.v + ' Kills'}</b>${r.challenge.better ? ' (neu!)' : ''}</span>${r.challenge.reward ? `<span class="rw">${rewardHtml({ gold: r.challenge.reward.gold })}</span>` : ''}</p>` : '') +
     (r.bounty || []).map(x => { const t = bountyText(x.b); return `<p class="vchest bounty"><span>Kopfgeld erfüllt: <b>${t.goal}</b>${t.cond ? ` (${t.cond})` : ''}</span><span class="rw">${rewardHtml(x.reward)}</span></p>`; }).join('') +
-    r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}${a.star ? ` · <em>${a.st >= STAR_MAX ? 'Legende!' : 'Neuer Stern!'}</em> ${'★'.repeat(a.st)}` : ''}</b></p>`).join('');
+    r.abil.map((a, i) => `<p class="abxp${a.up ? ' up' : ''}" style="--i:${i}"><img src="${icon(treeDef(a.id).icon || a.id)}" alt=""><span>${treeDef(a.id).name}</span><b>+${a.xp} XP${a.up ? ` · <em>Level ${a.lv}!</em> +${a.up} Skillpunkt${a.up > 1 ? 'e' : ''}` : ''}${a.star ? ` · <em>${a.st >= STAR_MAX ? 'Legende!' : 'Neuer Stern!'}</em> ${'★'.repeat(a.st)}` : ''}</b></p>`).join('') +
+    (() => { const h = dmgStatHtml(); return h ? `<details class="dmgstat"><summary>Schaden im Lauf</summary>${h}</details>` : ''; })();
   $('#nextBtn').hidden = !r.next;
   if (r.next) $('#nextBtn').textContent = STAGES[r.next.si].endless ? 'Endlose Nacht' : r.next.si !== run.si ? `Welt ${r.next.si + 1}` : `Weiter: ${levelLabel(r.next.si, r.next.li)}`;
-  $('#againBtn').textContent = r.win ? 'Nochmal' : 'Nochmal versuchen';
+  $('#againBtn').textContent = run.coop ? 'Allein nochmal' : r.win ? 'Nochmal' : 'Nochmal versuchen';   // Koop: neuer Raum über „Koop“ auf der Karte
   $('#menuBtn').textContent = 'Karte';
+  if (run.coop) $('#nextBtn').hidden = true;
   $('#overStats').classList.remove('show');
   noteNewHats(run.si, run.li, endless ? 0 : r.newHats);   // auch Endlos: alte Notiz löschen
   showT = setTimeout(() => { $('#over').hidden = false; hatSequence(r); }, r.win ? 200 : 700);
@@ -115,4 +118,11 @@ $('#againBtn').addEventListener('click', () => startStage(run.si, run.li, run.nm
 // Albtraum bleibt an, solange das nächste Level in einer geschafften Welt liegt
 $('#nextBtn').addEventListener('click', () => { const n = run.result.next; startStage(n.si, n.li, stageCleared(n.si) ? Math.min(run.nm, nmCap((stageInfo(n.si) || {}).nmMax)) : 0); });   // nur bis zur freien Albtraum-Stufe der Welt
 $('#menuBtn').addEventListener('click', () => go('menu'));
+// Tastatur (Phase 15): Enter = Weiter bzw. Nochmal, R = Nochmal, Esc/M = Karte – solange kein anderes Fenster darüber liegt
+window.addEventListener('keydown', e => {
+  if ($('#over').hidden || e.repeat || document.querySelector('.overlay:not([hidden]):not(#over)')) return;
+  const b = e.code === 'Enter' || e.code === 'NumpadEnter' ? (!$('#nextBtn').hidden ? $('#nextBtn') : $('#againBtn'))
+    : e.code === 'KeyR' ? $('#againBtn') : e.code === 'Escape' || e.code === 'KeyM' ? $('#menuBtn') : null;
+  if (b && !b.disabled) { e.preventDefault(); b.click(); }
+});
 $('#overStats').addEventListener('click', e => { if (e.target.closest('#vchestBtn') && run.result.chest) playChest(run.result.chest.res); });

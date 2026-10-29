@@ -1,5 +1,7 @@
 import { audioInit } from './audio.js';
 import { $ } from './util.js';
+import { dev, isKey } from './device.js';
+import { pad } from './gamepad.js';
 import { run, uiFrozen } from '../game/state.js';
 import { cv } from '../render/canvas.js';
 import { closeTree } from '../ui/evotree.js';
@@ -24,15 +26,20 @@ export function pressInput(k, who = 0) { if (run && !run.over && (k === 'skip' |
 export function clearInput() { for (const p of press) Object.assign(p, newPress()); }
 export function pickInput(i, who = 0) { if (run && run.lvl) press[who].pick = i; }
 const axis = (neg, pos) => (neg ? -1 : 0) + (pos ? 1 : 0);
+// Tasten von Spieler 2 im Testmodus ?coop=local: dort zählen sie nicht für Spieler 1
+const P2_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftRight', 'Enter', 'KeyK', 'KeyL', 'Digit7', 'Digit8', 'Digit9', 'Digit0']);
+const own = code => !(localCoop && run && run.coop && P2_KEYS.has(code));
+// Aktion gedrückt? (Tastenbelegung, core/device.js)
+const held = a => dev.keys[a].some(c => c && keys[c] && own(c));
+export const JOY_R = 55;   // Joystick-Radius in px für volles Tempo (geteilt durch die Empfindlichkeit)
 function take(who) {
   let mx, my, sprint;
   if (who === 1) { mx = axis(keys.ArrowLeft, keys.ArrowRight); my = axis(keys.ArrowUp, keys.ArrowDown); sprint = !!keys.ShiftRight; }
   else {
-    const arrows = !(localCoop && run && run.coop);   // allein steuern auch die Pfeile und beide Shift-Tasten den Goblin
-    mx = axis(keys.KeyA || (arrows && keys.ArrowLeft), keys.KeyD || (arrows && keys.ArrowRight));
-    my = axis(keys.KeyW || (arrows && keys.ArrowUp), keys.KeyS || (arrows && keys.ArrowDown));
-    if (joy.id !== null) { const jx = (joy.x - joy.ox) / 55, jy = (joy.y - joy.oy) / 55; if (Math.hypot(jx, jy) > .15) { mx += jx; my += jy; } }
-    sprint = !!(keys.ShiftLeft || (arrows && keys.ShiftRight) || sprintHeld);
+    mx = axis(held('left'), held('right')); my = axis(held('up'), held('down'));
+    if (joy.id !== null) { const r = JOY_R / dev.joySens, jx = (joy.x - joy.ox) / r, jy = (joy.y - joy.oy) / r; if (Math.hypot(jx, jy) > .15) { mx += jx; my += jy; } }
+    if (pad.on) { mx += pad.mx; my += pad.my; }   // Controller (core/gamepad.js)
+    sprint = held('sprint') || sprintHeld || pad.sprint;
   }
   const inp = { mx, my, sprint, ...press[who] };
   Object.assign(press[who], newPress());
@@ -49,7 +56,7 @@ window.addEventListener('keydown', e => {
   // Entwicklungs-Baum über Level-Up/Pause: Esc schließt nur ihn, sonst keine Tasten
   if (!$('#evoTree').hidden) { if (e.code === 'Escape') closeTree(); return; }
   if (!$('#options').hidden || !$('#howto').hidden) { if (e.code === 'Escape') $(!$('#howto').hidden ? '#howto' : '#options').hidden = true; return; }
-  if (run.cut && !run.paused && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); pressInput('skip'); return; }
+  if (run.cut && !run.paused && (isKey('dash', e.code) || e.code === 'Enter')) { e.preventDefault(); pressInput('skip'); return; }
   if (localCoop && run.coop) {
     if (e.code === 'Enter') { e.preventDefault(); pressInput('dash', 1); }
     if (e.code === 'KeyK') pressInput('ab0', 1);
@@ -58,11 +65,13 @@ window.addEventListener('keydown', e => {
     const k2 = ['Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(e.code), c2 = document.getElementById('cards2');
     if (k2 >= 0 && c2 && !c2.hidden && c2.children[k2]) c2.children[k2].click();
   }
-  if (e.code === 'Space') { e.preventDefault(); pressInput('dash'); }
-  if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();
-  if (e.code === 'KeyQ') pressInput('ab0');
-  if (e.code === 'KeyE' || e.code === 'KeyF') pressInput('ab1');
-  if (e.code === 'Escape' || e.code === 'KeyP') { if (!$('#pause').hidden) resume(); else if (!run.paused) openPause(); }
+  // Tastenbelegung (Einstellungen → Steuerung); Esc pausiert immer
+  const k = own(e.code) ? e.code : null;
+  if (isKey('dash', k)) { e.preventDefault(); pressInput('dash'); }
+  if (isKey('sprint', k) || e.code === 'Space' || e.code === 'Tab') e.preventDefault();   // Seite nicht scrollen / Fokus nicht wechseln
+  if (isKey('ab0', k)) pressInput('ab0');
+  if (isKey('ab1', k)) pressInput('ab1');
+  if (e.code === 'Escape' || isKey('pause', k)) { if (!$('#pause').hidden) resume(); else if (!run.paused) openPause(); }
   if (!$('#levelup').hidden && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) { const b = $('#cards').children[+e.code.slice(5) - 1]; if (b) b.click(); }
   if (!$('#levelup').hidden && e.code === 'KeyR') $('#rerollBtn').click();
   if (!$('#levelup').hidden && e.code === 'KeyB') $('#banBtn').click();
@@ -74,10 +83,17 @@ cv.addEventListener('pointerdown', e => {
   if (run && run.cut) pressInput('skip');
   if (joy.id !== null) return;
   if (e.pointerType === 'mouse' && document.body.classList.contains('pc')) return;   // am PC kein Maus-Joystick (WASD)
-  joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY;
+  // Fester Joystick (Einstellung): Mitte bleibt links unten (bzw. rechts für Linkshänder), nur Berührungen auf dieser Hälfte
+  if (dev.joy === 'fixed') {
+    const c = joyHome(), lefty = document.body.classList.contains('lefty');
+    if (lefty ? e.clientX < innerWidth / 2 : e.clientX > innerWidth / 2) return;
+    joy.id = e.pointerId; joy.ox = c.x; joy.oy = c.y; joy.x = e.clientX; joy.y = e.clientY;
+  } else { joy.id = e.pointerId; joy.ox = joy.x = e.clientX; joy.oy = joy.y = e.clientY; }
   try { cv.setPointerCapture(e.pointerId); } catch (_) {}
 });
 cv.addEventListener('pointermove', e => { if (e.pointerId === joy.id) { joy.x = e.clientX; joy.y = e.clientY; } });
+// Mitte des festen Joysticks (Bildschirm-Pixel)
+export const joyHome = () => (document.body.classList.contains('lefty') ? { x: innerWidth - 120, y: innerHeight - 115 } : { x: 120, y: innerHeight - 115 });
 export const joyEnd = e => { if (e.pointerId === joy.id) joy.id = null; };
 cv.addEventListener('pointerup', joyEnd); cv.addEventListener('pointercancel', joyEnd);
 // Fenster verliert den Fokus (Browser-Tab, exe minimiert oder anderes Fenster): Tasten loslassen, Lauf pausieren.

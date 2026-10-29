@@ -1,7 +1,8 @@
 import { frand } from '../core/rng.js';
 import { idleFrame, walkFrame } from '../gen/goblin.js';
-import { joy } from '../core/input.js';
-import { DIR8, TAU, clamp } from '../core/util.js';
+import { JOY_R, joy, joyHome } from '../core/input.js';
+import { dev } from '../core/device.js';
+import { DIR8, TAU, clamp, uiz } from '../core/util.js';
 import { CCOL, ECOL, SCHOOL_COL, ETYPES } from '../data/enemies.js';
 import { CASTS } from '../game/casts.js';
 import { affixNames, hasAffix } from '../game/affixes.js';
@@ -254,6 +255,7 @@ function drawRun(now) {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
   if (run.storm > 0) drawStorm(t, zm, W / 2 + (P.x - camX) * zm, H / 2 + (P.y - 8 - camY) * zm);
+  if (!run.cut && !run.over) drawPointers(t, zm, camX, camY);
   if (run.wind) drawWind(t);
   if (P.hp / P.maxHp < .3 || run.hurtT > 0) {
     const a = run.hurtT > 0 ? .45 : .25 + .1 * Math.sin(t * 6);
@@ -262,13 +264,20 @@ function drawRun(now) {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
   if (P.rageT > 0) { ctx.fillStyle = `rgba(255,60,20,${.08 + .04 * Math.sin(t * 10)})`; ctx.fillRect(0, 0, W, H); }
-  if (run.lvDelay > 0) { ctx.fillStyle = `rgba(255,255,255,${run.lvDelay * .35})`; ctx.fillRect(0, 0, W, H); }
-  if (run.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${run.flashT / .3 * .8})`; ctx.fillRect(0, 0, W, H); }
-  if (joy.id !== null) {
+  // „Helle Blitze abschwächen“ (Einstellung): weiße Blitze bei Level-Up, Bombe und Boss nur angedeutet
+  const fl = dev.calm ? .3 : 1;
+  if (run.lvDelay > 0) { ctx.fillStyle = `rgba(255,255,255,${run.lvDelay * .35 * fl})`; ctx.fillRect(0, 0, W, H); }
+  if (run.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${run.flashT / .3 * .8 * fl})`; ctx.fillRect(0, 0, W, H); }
+  // Joystick (Handy): Ring so groß wie der Weg bis zum vollen Tempo; der feste wartet blass an seinem Platz
+  const fixedJoy = dev.joy === 'fixed' && !document.body.classList.contains('pc');
+  if (joy.id !== null || fixedJoy) {
+    const R = JOY_R / dev.joySens, c = joy.id !== null ? { x: joy.ox, y: joy.oy } : joyHome(), a = (joy.id !== null ? 1 : .5) * dev.btnAlpha;
+    ctx.globalAlpha = a;
     ctx.fillStyle = 'rgba(10,15,6,.35)'; ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(joy.ox, joy.oy, 55, 0, TAU); ctx.fill(); ctx.stroke();
-    let jx = joy.x - joy.ox, jy = joy.y - joy.oy; const l = Math.hypot(jx, jy); if (l > 55) { jx *= 55 / l; jy *= 55 / l; }
-    ctx.fillStyle = 'rgba(111,194,58,.85)'; ctx.beginPath(); ctx.arc(joy.ox + jx, joy.oy + jy, 24, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(c.x, c.y, R, 0, TAU); ctx.fill(); ctx.stroke();
+    let jx = joy.id !== null ? joy.x - joy.ox : 0, jy = joy.id !== null ? joy.y - joy.oy : 0; const l = Math.hypot(jx, jy); if (l > R) { jx *= R / l; jy *= R / l; }
+    ctx.fillStyle = 'rgba(111,194,58,.85)'; ctx.beginPath(); ctx.arc(c.x + jx, c.y + jy, 24, 0, TAU); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 }
 // Meteor im Anflug (Fähigkeit und Ignaz): q = Rest des Wegs (1 = ganz oben, 0 = Einschlag)
@@ -372,6 +381,37 @@ export function drawAlly(al, w) {
   if (al.slash > 0) {
     ctx.strokeStyle = `rgba(255,255,255,${al.slash / .15})`; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(al.x + Math.cos(al.sa) * 16, al.y - 6 + Math.sin(al.sa) * 16, 14, al.sa - 1.2, al.sa + 1.2); ctx.stroke();
+  }
+}
+// Wegweiser (Phase 15, Wunsch Fabi): Pfeile am Bildschirmrand zu Mini-Bossen, Boss, Truhen und Partner außerhalb der Sicht.
+// Im Kreis ein kleines Bild des Ziels, das Dreieck zeigt die Richtung. Bildschirm-Ebene (CSS-Pixel), Ränder für HUD und Knöpfe.
+function drawPointers(t, zm, camX, camY) {
+  const T = [];
+  for (const e of run.enemies) if (!e.dead && (e.miniboss || (e.boss && e === run.boss))) T.push({ x: e.x, y: e.y - 20 * e.sc, col: e.boss ? '#c27cff' : '#ff5d55', spr: e.spr || e.pre + '.idle.down.1', sc: e.boss ? .34 : .5 });
+  for (const it of run.items) if (it.k === 'chest' && !it.got) T.push({ x: it.x, y: it.y, col: '#ffd84a', icon: iconCanvas('chest') });
+  if (run.coop) { const q = run.players[1 - run.me]; if (q && !q.gone) T.push({ x: q.x, y: q.y - 8, col: q.down ? '#ff7a6e' : '#8fd0ff', spr: partnerSpr(`gob.idle.down.1`), sc: .62 }); }
+  if (!T.length) return;
+  const z = uiz(), touch = !document.body.classList.contains('pc');
+  // Abstand zum Rand: Kreis + Pfeilspitze passen hinein; oben/unten Platz für HUD und Knöpfe, auf niedrigen Bildschirmen anteilig
+  const edge = 42 * z, ml = edge, mr = edge, mt = Math.min(92 * z, H * .24), mb = Math.min((touch ? 150 : 108) * z, H * .26), cx = W / 2, cy = H / 2;
+  for (const g of T) {
+    const sx = cx + (g.x - camX) * zm, sy = cy + (g.y - camY) * zm;
+    if (sx > ml - 20 && sx < W - mr + 20 && sy > mt - 20 && sy < H - mb + 20) continue;   // im Bild
+    const dx = sx - cx, dy = sy - cy;
+    const k = Math.min(dx ? ((dx > 0 ? W - mr : ml) - cx) / dx : Infinity, dy ? ((dy > 0 ? H - mb : mt) - cy) / dy : Infinity, 1);
+    const px = cx + dx * k, py = cy + dy * k, a = Math.atan2(dy, dx), r = 20 * z, pulse = .85 + .15 * Math.sin(t * 6);
+    ctx.save(); ctx.translate(px, py);
+    ctx.fillStyle = g.col; ctx.strokeStyle = '#0a0f06'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a) * (r + 13 * z), Math.sin(a) * (r + 13 * z));
+    ctx.lineTo(Math.cos(a + .5) * (r + 1), Math.sin(a + .5) * (r + 1)); ctx.lineTo(Math.cos(a - .5) * (r + 1), Math.sin(a - .5) * (r + 1)); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = pulse;
+    ctx.fillStyle = 'rgba(10,15,6,.82)'; ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU); ctx.fill();
+    ctx.lineWidth = 3; ctx.strokeStyle = g.col; ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.beginPath(); ctx.arc(0, 0, r - 2, 0, TAU); ctx.clip();
+    if (g.icon) ctx.drawImage(g.icon, -r * .75, -r * .75, r * 1.5, r * 1.5);
+    else drawSpr(g.spr, 0, r * .25, g.sc * z);
+    ctx.restore();
   }
 }
 // Waffen-Klingen und Geschosse des aktiven Goblins (Koop: je Goblin aufgerufen)

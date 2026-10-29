@@ -7,6 +7,7 @@ import { M, pathAt, tickMap } from '../ui/worldmap.js';
 import { DPR, ZOOM, ctx, cv } from './canvas.js';
 import { SPR, blit, tinted } from './sprites.js';
 import { drawGround } from './tiles.js';
+import { uiz } from '../core/util.js';
 
 // ---------- Weltkarte zeichnen (Logik und Knöpfe in ui/worldmap.js) ----------
 // Bild mittig auf (x, y) mit Höhe h; gespiegelte Richtungen beachten
@@ -73,7 +74,8 @@ export function renderMapScene(t, dt) {
     // Der Goblin hat eine eigene Ebene über den Level-Punkten (DOM), damit er vor den Siegeln steht
     const gc = gobCv || (gobCv = $('#mapGob')), g2 = gobCtx || (gobCtx = gc.getContext('2d')), S = gc.width;
     gc.hidden = false;
-    gc.style.translate = `${p.x - 48}px ${p.y - 106}px`;
+    const z = uiz();   // die Ebene liegt in der gezoomten Karte, der Weg in Fensterpixeln
+    gc.style.translate = `${p.x / z - 48}px ${p.y / z - 106}px`;
     g2.clearRect(0, 0, S, S);
     g2.fillStyle = 'rgba(10,15,6,.35)'; g2.beginPath(); g2.ellipse(S / 2, S * .86, S * .2, S * .07, 0, 0, 7); g2.fill();
     if (e) { g2.save(); g2.translate(S / 2, S * .5); if (e.flip) g2.scale(-1, 1); blit(g2, e, -S * .44, -S * .44, S * .88, S * .88); g2.restore(); }

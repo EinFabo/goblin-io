@@ -1,6 +1,8 @@
 // Fester Zeitschritt: Spiellogik immer mit 60 Hz, Rendern so oft der Bildschirm will.
 // alpha (0..1) sagt dem Renderer, wie weit wir zwischen zwei Schritten sind.
 import { scene } from './scenes.js';
+import { fpsCap } from './device.js';
+import { pollPad } from './gamepad.js';
 
 export const STEP = 1 / 60;
 const MAX_STEPS = 8;
@@ -8,9 +10,19 @@ let acc = 0, last = 0;
 // Zeiten des letzten Frames für den Mess-Modus (?perf, src/perf.js)
 export const loopStats = { upd: 0, ren: 0, steps: 0 };
 
+let nextT = 0, fpsN = 0, fpsT = 0;
+// gemessene Bilder pro Sekunde (Anzeige „FPS“, ui/hud.js)
+export const fpsNow = { v: 0 };
 function frame(now) {
   // Zuerst anmelden: ein Fehler in einer Szene kostet so nur einen Frame, nicht das ganze Spiel
   requestAnimationFrame(frame);
+  pollPad();   // Controller (core/gamepad.js), auch wenn das Bild ausgelassen wird
+  // Bildrate begrenzen (Einstellung, Akkusparmodus): Bilder auslassen; die Logik holt die Zeit über acc nach
+  // (Sollzeiten statt fester Abstände: auf 144 Hz ergibt „60“ sonst nur etwa 48 Bilder)
+  const cap = fpsCap();
+  if (cap) { if (now < nextT - 1) return; nextT = Math.max(nextT + 1000 / cap, now); }
+  fpsN++;
+  if (now - fpsT >= 500) { fpsNow.v = Math.round(fpsN * 1000 / (now - fpsT)); fpsN = 0; fpsT = now; }
   const dt = Math.min(.1, (now - last) / 1000); last = now;
   const t0 = performance.now();
   let n = 0;

@@ -8,7 +8,7 @@ import { AQ_TIERS, PASS_PTS } from '../data/quests.js';
 import { aqFrame, aqState, claimAq } from '../game/quests.js';
 import { burstAt } from './rewardfx.js';
 import { $ } from '../core/util.js';
-import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, ROLES, SLOT2_ACCT, SLOT_KEYS, STAR_COLS, STAR_MAX, STAR_NAMES, STAR_XP, abilXpNeed, spentPoints, treeDef, unlockText, xpPerUse } from '../data/abilities.js';
+import { ABILITIES, ABILITY_IDS, ABIL_MAX_LV, CHARGE_TXT, MOVES, MOVE_IDS, ROLES, SLOT2_ACCT, STAR_COLS, STAR_MAX, STAR_NAMES, STAR_XP, abilXpNeed, spentPoints, treeDef, unlockText, xpPerUse } from '../data/abilities.js';
 import { openCombos } from './combobook.js';
 import { COMBO_IDS } from '../data/combos.js';
 import { canEquip, slotOpen } from '../game/abilities.js';
@@ -18,6 +18,9 @@ import { openRunes } from './runes.js';
 import { runeSvg } from './cardart.js';
 import { SOCKET_LV } from '../data/runes.js';
 import { socketIdx, socketOpen, socketsOf } from '../game/runes.js';
+import { keyLabel } from '../core/device.js';
+// Schloss als Bild (das Emoji 🔒 fehlt manchen Schriften und erschien als „▯“)
+const LOCK_SVG = '<svg viewBox="0 0 16 16" width="14" height="14" aria-label="gesperrt"><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="7" width="10" height="7.5" rx="1.6" fill="currentColor"/></svg>';
 
 // ---------- Rüstkammer: zwei Haken für die Fähigkeiten, Brett mit allen Fähigkeiten, Zettel mit Details ----------
 // Die Auswahl bleibt gespeichert (save.loadout); Stages starten direkt damit.
@@ -55,7 +58,7 @@ function renderClasses() {
   $('#armCls').innerHTML = CLASS_IDS.map(id => {
     const C = CLASSES[id], ok = clsOk(id), on = save.cls === id;
     return `<button class="clsbtn${on ? ' on' : ''}${ok ? '' : ' locked'}${clsSel() === id ? ' sel' : ''}" data-cls="${id}" aria-pressed="${on}">
-      <img src="${icon(C.weapon)}" alt=""><span class="n">${C.short}</span>${ok ? `<span class="tlv">${clsState(id).lv}</span>` : '<span class="lk">🔒</span>'}</button>`;
+      <img src="${icon(C.weapon)}" alt=""><span class="n">${C.short}</span>${ok ? `<span class="tlv">${clsState(id).lv}</span>` : '<span class="lk">' + LOCK_SVG + '</span>'}</button>`;
   }).join('');
 }
 function clsNote(id) {
@@ -63,7 +66,7 @@ function clsNote(id) {
   const stats = [C.hp !== 1 && `Leben ${pct(C.hp)}`, C.speed !== 1 && `Tempo ${pct(C.speed)}`, C.cd !== 1 && `Abklingzeit ${pct(C.cd)}`].filter(Boolean);
   let h = `<h3>${C.name}</h3><p class="c">${save.cls === id ? 'Gewählt' : ok ? 'Klasse' : 'Gesperrt'}</p><p>${C.desc}</p>
     <p class="clsw"><img src="${icon(C.weapon)}" alt=""><span><b>${W.name}</b> – ${W.info[0]}</span></p>
-    <p class="clsmv"><span class="key">Leer</span> ${DASH_KIND[C.dash].name} · <span class="key">Shift</span> ${SPRINT_KIND[C.sprint].name}${stats.length ? ` · ${stats.join(', ')}` : ''}</p>`;
+    <p class="clsmv"><span class="key">${keyLabel('dash')}</span> ${DASH_KIND[C.dash].name} · <span class="key">${keyLabel('sprint')}</span> ${SPRINT_KIND[C.sprint].name}${stats.length ? ` · ${stats.join(', ')}` : ''}</p>`;
   if (!ok) return h + `<p class="lock">Noch nicht frei. ${classUnlockText(id)}.</p>`;
   const full = c.lv >= CLASS_MAX_LV;
   h += `<div class="bar"><i style="width:${full ? 100 : Math.min(100, c.xp / classXpNeed(c.lv) * 100).toFixed(0)}%"></i></div><p class="xp">Klassen-Level ${c.lv}${full ? ` · Maximum: ${C.master}` : ` · ${Math.floor(c.xp)} / ${classXpNeed(c.lv)} XP (wie Konto-XP)`}</p>`;
@@ -81,11 +84,11 @@ function useClass(id) {
 
 function renderHooks(swing = -1) {
   $('#armHooks').innerHTML = [0, 1].map(i => {
-    const id = save.loadout[i], key = `<span class="key">${SLOT_KEYS[i]}</span>`;
+    const id = save.loadout[i], key = `<span class="key">${keyLabel('ab' + i)}</span>`;
     let body;
     if (!slotOpen(i)) body = `<div class="plaque closed">${key}<span class="t">Noch zu</span><span class="lvl">ab Konto-Level ${SLOT2_ACCT}</span></div>`;
     else if (!id) body = `<div class="plaque empty">${key}<span class="t">Frei</span><span class="lvl">Fähigkeit wählen</span></div>`;
-    else body = `<button class="plaque${id === sel ? ' sel' : ''}" data-pick="${id}" aria-label="${ABILITIES[id].name} auf ${SLOT_KEYS[i]}">${key}<img src="${icon(id)}" alt=""><span class="t">${ABILITIES[id].name}</span><span class="lvl">Level ${st(id).lv}</span>${stars(id)}</button>`;
+    else body = `<button class="plaque${id === sel ? ' sel' : ''}" data-pick="${id}" aria-label="${ABILITIES[id].name} auf ${keyLabel('ab' + i)}">${key}<img src="${icon(id)}" alt=""><span class="t">${ABILITIES[id].name}</span><span class="lvl">Level ${st(id).lv}</span>${stars(id)}</button>`;
     return `<div class="hook${i === swing ? ' swing' : ''}">${body}</div>`;
   }).join('');
 }
@@ -102,7 +105,7 @@ function renderShelf() {
     const qf = aqFrame(save, id), qc = ok && aqState(save, id).can;   // Fähigkeiten-Quest: Silber-/Goldrahmen, Stern = Stufe abholbar
     return `<button class="token${ok ? '' : ' locked'}${id === sel ? ' on' : ''}${qf ? ' qf' : ''}" ${qf ? `style="--qf:${qf}"` : ''} data-pick="${id}" role="option" aria-selected="${id === sel}">${qc ? '<span class="aqn" title="Quest-Stufe abholen">★</span>' : ''}
       <span class="disc"><img src="${icon(id)}" alt=""></span><span class="n">${ABILITIES[id].name}</span>
-      ${ok ? `<span class="tlv">${st(id).lv}</span>` : ''}${slot >= 0 ? `<span class="eq">${SLOT_KEYS[slot]}</span>` : ''}${ok && freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}${isNew(id) ? '<span class="newtag">Neu</span>' : ''}${stars(id)}</button>`;
+      ${ok ? `<span class="tlv">${st(id).lv}</span>` : ''}${slot >= 0 ? `<span class="eq">${keyLabel('ab' + slot)}</span>` : ''}${ok && freePts(id) > 0 ? '<span class="pts" title="Skillpunkte frei"></span>' : ''}${isNew(id) ? '<span class="newtag">Neu</span>' : ''}${stars(id)}</button>`;
   }).join('');
   const nNew = ABILITY_IDS.filter(isNew).length;
   $('#armChips').innerHTML = [['all', 'Alle'], ...Object.entries(ROLES).map(([k, R]) => [k, R.name])].map(([k, n]) => `<button class="chip${role === k ? ' on' : ''}" data-role="${k}">${n}</button>`).join('') +
@@ -121,7 +124,7 @@ function renderNote() {
   const xpTxt = s.lv < ABIL_MAX_LV ? ` · ${Math.floor(s.xp)} / ${abilXpNeed(s.lv)} XP · +${xpPerUse(id)} ${id === 'sprint' ? 'pro Sekunde' : 'pro Einsatz'}`
     : move ? ' · Maximum' : n >= STAR_MAX ? ` · ${STAR_MAX} Sterne: Legende!` : ` · Stern ${n + 1} (${STAR_NAMES[n]}): ${Math.floor(s.xp)} / ${STAR_XP} XP`;
   h += `<div class="bar${starBar ? ' starbar' : ''}" style="--sc:${STAR_COLS[Math.min(n, STAR_MAX - 1)]}"><i style="width:${pct.toFixed(0)}%"></i></div><p class="xp">Level ${s.lv}${xpTxt}${n ? ` · +${n * 3} % Kraft` : ''}</p>`;
-  const hang = i => move || !slotOpen(i) ? '' : `<button class="btn ${slot === i ? 'ghost' : 'primary'}" data-hang="${i}" ${slot === i ? 'disabled' : ''}>${slot === i ? `Hängt an ${SLOT_KEYS[i]}` : `An ${SLOT_KEYS[i]} hängen`}</button>`;
+  const hang = i => move || !slotOpen(i) ? '' : `<button class="btn ${slot === i ? 'ghost' : 'primary'}" data-hang="${i}" ${slot === i ? 'disabled' : ''}>${slot === i ? `Hängt an ${keyLabel('ab' + i)}` : `An ${keyLabel('ab' + i)} hängen`}</button>`;
   h += `<div class="acts">${hang(0)}${hang(1)}<button class="btn" data-tree="${id}">Skill Tree${free > 0 ? ` (${free} frei)` : ''}</button></div>`;
   // Fähigkeiten-Quest (Phase 11): Bronze/Silber/Gold, eine Stufe je Abholen
   if (!move) {

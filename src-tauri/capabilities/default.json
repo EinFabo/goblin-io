@@ -1,8 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "desktop",
-  "description": "Spiel-Fenster am Desktop: Auto-Update, Neustart, Fenster bei der Anmeldung minimieren und zurückholen, Vollbild",
+  "description": "Spiel-Fenster am Desktop: Auto-Update, Neustart, Fenster bei der Anmeldung minimieren und zurückholen, Vollbild, Fenstergröße",
   "platforms": ["windows", "linux", "macOS"],
   "windows": ["main"],
-  "permissions": ["core:default", "opener:default", "updater:default", "process:allow-restart", "core:window:allow-minimize", "core:window:allow-unminimize", "core:window:allow-set-focus", "core:window:allow-set-fullscreen", "core:window:allow-is-fullscreen"]
+  "permissions": ["core:default", "opener:default", "updater:default", "process:allow-restart", "core:window:allow-minimize", "core:window:allow-unminimize", "core:window:allow-set-focus", "core:window:allow-set-fullscreen", "core:window:allow-is-fullscreen", "core:window:allow-set-size", "core:window:allow-center"]
 }

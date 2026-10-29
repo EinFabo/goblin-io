@@ -1,26 +1,48 @@
 import { save } from './save.js';
 import { emit } from './events.js';
+import { dev } from './device.js';
 
 // ---------- Ton & Musik ----------
-export let AC = null, sfxBus = null, musBus = null, noiseBuf = null;
+// Busse: Effekte, Musik und Menütöne (Phase 15) laufen über die Gesamtlautstärke (master) in den Kompressor
+export let AC = null, sfxBus = null, musBus = null, uiBus = null, masterBus = null, noiseBuf = null;
 export const lastS = {};
-// Lautstärke aus den Einstellungen; quadratisch, damit der Regler sich gleichmäßig anfühlt
+// Lautstärke aus den Einstellungen; quadratisch, damit der Regler sich gleichmäßig anfühlt.
+// Menütöne gehören zu den Soundeffekten (mit ihnen stumm), haben aber eine eigene Lautstärke (Gerät).
 export const sfxGain = () => (save.settings.mute ? 0 : .5 * save.settings.sfxVol ** 2);
 export const musGain = () => (save.settings.musicOff ? 0 : .3 * save.settings.musVol ** 2);
+export const uiGain = () => (save.settings.mute ? 0 : .5 * dev.uiVol ** 2);
+// Ton aus, solange das Fenster im Hintergrund ist (Einstellung „Ton im Hintergrund aus“)
+let away = false;
+export const masterGain = () => (away && dev.bgMute ? 0 : dev.master ** 2);
+export function applyGains() {
+  if (!AC) return;
+  const t = AC.currentTime;
+  for (const [b, g] of [[sfxBus, sfxGain()], [musBus, musGain()], [uiBus, uiGain()], [masterBus, masterGain()]]) b.gain.setTargetAtTime(g, t, .03);
+}
+export function setAway(a) { if (away === a) return; away = a; applyGains(); }
+if (typeof window !== 'undefined') {   // (Tests laden das Modul in Node)
+  window.addEventListener('blur', () => setAway(true));
+  window.addEventListener('focus', () => setAway(false));
+  document.addEventListener('visibilitychange', () => setAway(document.hidden));
+}
 export function audioInit() {
   if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
   try {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     const comp = AC.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(AC.destination);
-    sfxBus = AC.createGain(); sfxBus.gain.value = sfxGain(); sfxBus.connect(comp);
-    musBus = AC.createGain(); musBus.gain.value = musGain(); musBus.connect(comp);
+    masterBus = AC.createGain(); masterBus.gain.value = masterGain(); masterBus.connect(comp);
+    sfxBus = AC.createGain(); sfxBus.gain.value = sfxGain(); sfxBus.connect(masterBus);
+    musBus = AC.createGain(); musBus.gain.value = musGain(); musBus.connect(masterBus);
+    uiBus = AC.createGain(); uiBus.gain.value = uiGain(); uiBus.connect(masterBus);
     noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     emit('audioReady');
   } catch (e) { AC = null; }
 }
 // Stumm für Abläufe ohne Ton (Vorschau im Entwicklungs-Baum)
-let hush = 0;
+let hush = 0, over = null;
+// Menütöne (Hover, Klick, Tab, Karten) über den eigenen Bus
+const ui = fn => function (...a) { const p = over; over = uiBus; try { return fn.apply(this, a); } finally { over = p; } };
 export function hushed(fn) { hush++; try { return fn(); } finally { hush--; } }
 export function thr(k, ms) { if (hush) return false; const n = performance.now(); if (lastS[k] && n - lastS[k] < ms) return false; lastS[k] = n; return true; }
 export function tone(f0, f1, dur, type = 'square', vol = .1, delay = 0, bus = null, attack = .004) {
@@ -28,14 +50,14 @@ export function tone(f0, f1, dur, type = 'square', vol = .1, delay = 0, bus = nu
   const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
-  o.connect(g); g.connect(bus || sfxBus); o.start(t); o.stop(t + dur + .03);
+  o.connect(g); g.connect(bus || over || sfxBus); o.start(t); o.stop(t + dur + .03);
 }
 export function noise(dur, vol, freq, type = 'lowpass', delay = 0, bus = null, q = 1, f1 = 0) {
   if (!AC || hush) return;
   const t = AC.currentTime + delay, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
   s.buffer = noiseBuf; f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q; if (f1) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
-  s.connect(f); f.connect(g); g.connect(bus || sfxBus); s.start(t, Math.random() * .5); s.stop(t + dur + .03);
+  s.connect(f); f.connect(g); g.connect(bus || over || sfxBus); s.start(t, Math.random() * .5); s.stop(t + dur + .03);
 }
 let gemCombo = 0, gemComboT = 0;
 // Ton-Kombo beim Kristallsammeln klingt ab, wenn eine Weile nichts kommt
@@ -139,6 +161,7 @@ export const sfx = {
   bladeUp() { [1175, 1568, 2093].forEach((f, i) => tone(f, 0, .12, 'triangle', .06, i * .05)); tone(3136, 0, .25, 'sine', .03, .16); },
   abilUp() { [659, 880, 1175].forEach((f, i) => tone(f, 0, .14, 'triangle', .07, i * .07)); tone(1760, 0, .3, 'sine', .04, .22); },
 };
+for (const k of ['hover', 'hoverCard', 'click', 'buzz', 'tab', 'cards', 'pickCard']) if (sfx[k]) sfx[k] = ui(sfx[k]);
 
 // Aufladen beim Halten eines Knotens: Ton steigt über dur Sekunden; stop(true) = geschafft, stop(false) = abgebrochen
 export function chargeTone(n, dur) {

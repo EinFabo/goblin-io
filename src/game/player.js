@@ -4,7 +4,8 @@ import { face8, isTouch } from '../core/util.js';
 import { sfx } from '../core/audio.js';
 import { LOW_HP, damagePlayer } from './combat.js';
 import { abilReady, bulwark, lockOf, shieldThorns } from './abilities.js';
-import { ABILITIES, SLOT_KEYS } from '../data/abilities.js';
+import { ABILITIES } from '../data/abilities.js';
+import { keyLabel } from '../core/device.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { part } from './fx.js';
 import { save } from '../core/save.js';
@@ -84,7 +85,7 @@ export function updPlayer(dt, inp) {
   run.abil.forEach((s, i) => {
     if (!s || P.abilReadyShown[i] || !abilReady(s)) return;
     P.abilReadyShown[i] = true;
-    hint(`<b>${ABILITIES[s.id].name} bereit!</b> ` + (isTouch() ? `Tippe auf den Knopf ${save.settings.lefty ? 'links' : 'rechts'} unten.` : `Drück ${SLOT_KEYS[i]}.`));
+    hint(`<b>${ABILITIES[s.id].name} bereit!</b> ` + (isTouch() ? `Tippe auf den Knopf ${save.settings.lefty ? 'links' : 'rechts'} unten.` : `Drück ${keyLabel('ab' + i)}.`));
   });
 }
 export const ROLL_T = .3;   // Roll-Animation (die Rolle selbst dauert .18 s)

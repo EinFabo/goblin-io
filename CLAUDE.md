@@ -25,6 +25,7 @@ Fabi spricht Deutsch; Antworten, Commit-Texte und Kommentare auf Deutsch. Aufbau
 
 - **Determinismus:** Bei gleichen Seeds muss die Sim gleich ausgehen. Im Spielablauf nie `rnd()`/`rand()` für Optik und nie `Math.random()` für Logik. Prüfen: zwei gleiche Sim-Aufrufe vergleichen.
 - **Koop-Gleichlauf:** Die Sim darf nur von Eingaben und Profilen (`P.prof`) abhängen – nie vom eigenen Spielstand (`save`), vom aktiven Goblin außerhalb des Schritts (`P` ist dann der eigene), vom Ladestand der Bilder oder von der Fenstergröße. Ein Fehler fiel nur in `coop-e2e` auf, nicht in der Sim.
+- **Oberflächengröße (Phase 15):** Alles außer `#cv` und `#rewardFx` ist per CSS `zoom: var(--uiz)` skaliert. Darin rechnen `vw`/`vh` falsch → im CSS `calc(N * var(--vwu))`; `getBoundingClientRect` liefert Fensterpixel → DOM-Positionen in gezoomten Bereichen durch `uiz()` teilen (siehe `ui/worldmap.js`). Geräte-Einstellungen (`core/device.js`) liegen lokal, nicht im Spielstand.
 - Globale CSS-Klasse `.lv` ist vom HUD belegt.
 - Playwright bleibt auf 1.58.2 gepinnt (passt zu chromium-1208).
 - Jede Chromium-Seite der Sim braucht ~550 MB; `run-sims.mjs` begrenzt die Parallelität nach freiem Speicher.

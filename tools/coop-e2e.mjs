@@ -98,7 +98,7 @@ if (args.trace) {
   for (let i = 0; i < n; i++) { const d = [...diff(tr[0][i], tr[1][i]), ...wdiff(tr[0][i], tr[1][i])]; if (d.length || tr[0][i].h !== tr[1][i].h) { console.log('erster Unterschied bei Tick', tr[0][i].t, tr[0][i].h === tr[1][i].h ? '(Prüfsumme noch gleich)' : '(Prüfsumme anders)', '\n' + d.join('\n').slice(0, 3000)); break; } }
 }
 // Anna verlässt den Lauf (Pause → Aufgeben): Bert spielt allein weiter
-await pages[0].evaluate(() => { document.getElementById('pauseBtn').click(); document.getElementById('quitBtn').click(); });
+await pages[0].evaluate(() => { document.getElementById('pauseBtn').click(); document.getElementById('quitBtn').click(); document.getElementById('quitBtn').click(); });   // Aufgeben fragt nach (zweiter Klick)
 await pages[0].waitForTimeout(2500);
 const after = await state();
 console.log(JSON.stringify({ mid, after, picks, sent, errs: errs.slice(0, 3) }, null, 1));

@@ -9,7 +9,7 @@ import { ensureStage, loadPartner, rushing } from '../render/sprites.js';
 import { stageTile } from '../render/tiles.js';
 import { armoryChanged, cleanLoadout, renderArmory } from './armory.js';
 import { renderProfile } from './profile.js';
-import { mapKey, onStart, renderMap } from './worldmap.js';
+import { mapKey, onStart, quickLevel, renderMap } from './worldmap.js';
 import { renderStore, storeChanged, storeHasNews } from './store.js';
 import { anyUpgrade, renderWorkshop, workshopHooks } from './workshop.js';
 import { renderWardrobe, wardrobeChanged } from './wardrobe.js';
@@ -50,6 +50,9 @@ export function showScreen(id) {
   document.querySelectorAll('#tabbar .tab').forEach(b => b.setAttribute('aria-current', b.dataset.tab === id ? 'page' : 'false'));
   if (!hub) return;
   renderTopbar();
+  // Weiterspielen-Knopf in der Kopfzeile, außer auf der Karte (dort steht „Los!“ am Zettel)
+  const q = id !== '#menu' && quickLevel();
+  $('#quickBtn').hidden = !q; if (q) $('#quickLbl').textContent = 'Weiter: ' + q.label;
   if (id === '#menu') renderMap();
   if (id === '#shop') renderWorkshop();
   if (id === '#store') renderStore();
@@ -120,3 +123,5 @@ for (const b of ['#optBtn', '#pOptBtn']) $(b).addEventListener('click', () => { 
 $('#howBtn').addEventListener('click', () => { $('#options').hidden = true; $('#howto').hidden = false; });
 document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => { b.closest('.overlay').hidden = true; }));
 for (const o of ['#options', '#howto']) $(o).addEventListener('click', e => { if (e.target === $(o)) $(o).hidden = true; });
+
+$('#quickBtn').addEventListener('click', () => { const q = quickLevel(); if (q) startStage(q.si, q.li, q.nm); });

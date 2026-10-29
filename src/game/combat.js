@@ -9,7 +9,7 @@ import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, later, puff, sparks } from './fx.js';
 import { addEvents } from './run.js';
-import { P, abSrc, aoeId, eachPlayer, hasMut, heal, isBig, pR, run } from './state.js';
+import { P, abSrc, aoeId, eachPlayer, hasMut, heal, isBig, pR, run, wsrc } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
@@ -37,6 +37,7 @@ export function hurt(e, dmg, kb = 0, kx = 0, ky = 0, col = null, xpMul = 1) {
   }
   const hpBefore = tgt.hp, fresh = !(e.flash > 0);   // Funken nur beim ersten Treffer im Aufblitzen (Flächen treffen sonst vielfach)
   tgt.hp -= d; e.flash = .09;
+  if (d > 0) tally(Math.min(d, Math.max(0, hpBefore)), 0);
   // Funken höchstens bis zur halben Teilchen-Grenze, damit Sterbe-Wolken und Boss-Effekte nicht verdrängt werden
   if (d > 0 && fresh && run.parts.length < 300) sparks(e.x, e.y - 14 * e.sc, crit ? '#ffd84a' : col || '#fff2c0', crit ? 4 : 2);
   if (P.leech && d > 0 && P.hp > 0) leech(Math.min(d, Math.max(0, hpBefore)));
@@ -56,9 +57,16 @@ function leech(d) {
   const h = Math.min(d * P.leech, P.maxHp * .03 - run.leechGot);
   if (h > 0) { run.leechGot += h; heal(h); }
 }
+// Schadens-Statistik (Phase 15, Ergebnis-Bildschirm): je Goblin und Quelle (Waffe „w:“, Fähigkeit „a:“) Schaden und Kills.
+// Nur zum Anzeigen; hpBefore begrenzt Überschaden (ein 9999-Treffer auf 20 Leben zählt 20).
+function tally(dmg, kills) {
+  const key = abSrc ? 'a:' + abSrc : wsrc ? 'w:' + wsrc : null; if (!key) return;
+  const all = run.dmgStat || (run.dmgStat = []), m = all[run.pi] || (all[run.pi] = {}), r = m[key] || (m[key] = [0, 0]);
+  r[0] += dmg; r[1] += kills;
+}
 export function kill(e, xpMul = 1) {
   if (e.link || e.decoy) return;   // Teile von Morgra und Spiegelbilder sterben nur mit ihrem Boss (bossDown)
-  e.dead = true; run.kills++;
+  e.dead = true; run.kills++; tally(0, 1);
   emit('enemyKilled', e);
   if (!e.boss) { chargeAbil('kills', 1); chargeAbil('scrap', .35); }
   onKill(e);

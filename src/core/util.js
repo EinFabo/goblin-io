@@ -22,3 +22,8 @@ export function face8(dx, dy, cur) {
   if (ci >= 0) { const d = Math.atan2(Math.sin(a - ci * SEC), Math.cos(a - ci * SEC)); if (Math.abs(d) < SEC / 2 + HYST) return cur; }
   return DIR8[(Math.round(a / SEC) + 8) % 8];
 }
+
+// Größe der Oberfläche (CSS zoom aller Bausteine außer der Zeichenfläche, ui/settings.js): Fensterpixel ÷ uiz = CSS-Pixel darin
+let UIZ = 1;
+export const uiz = () => UIZ;
+export function setUiz(z) { UIZ = z; document.documentElement.style.setProperty('--uiz', z); }

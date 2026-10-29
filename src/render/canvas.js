@@ -1,4 +1,5 @@
 import { $, clamp } from '../core/util.js';
+import { renderScale } from '../core/device.js';
 import { SPR, U, blit, tinted } from './sprites.js';
 
 // ---------- Canvas ----------
@@ -12,7 +13,8 @@ export function withCanvas(c, w, h, dpr, zoom, fn) {
   try { return fn(); } finally { [cv, ctx, W, H, DPR, ZOOM] = prev; }
 }
 export function resize() {
-  DPR = Math.min(2, window.devicePixelRatio || 1);
+  // Renderauflösung (Einstellung, Akkusparmodus): weniger Pixel zeichnen, der Browser skaliert hoch
+  DPR = Math.min(2, window.devicePixelRatio || 1) * renderScale();
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   ZOOM = clamp(Math.min(W, H) / 640, 0.55, 1.05);

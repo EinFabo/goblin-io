@@ -60,6 +60,10 @@ export function aoeScope(fn) { const prev = aoeId; aoeId = ++aoeSeq; try { fn();
 // setSrc gibt die vorige Quelle zurück, damit man sie wiederherstellen kann.
 export let abSrc = null;
 export function setSrc(s) { const p = abSrc; abSrc = s || null; return p; }
+// Schadens-Statistik (Phase 15): von welcher Waffe der Schaden gerade kommt (Geschosse, Effekte, Würfe merken sie sich als ws).
+// Nur zum Zählen, die Sim liest es nie.
+export let wsrc = null;
+export function setWsrc(id) { wsrc = id || null; }
 export function query(x, y, r, cb) {
   const prev = aoeId; aoeId = ++aoeSeq;
   try {

@@ -204,22 +204,29 @@ await p.click('#nameEdit'); await p.fill('#nameIn', 'Gr'); await p.press('#nameI
 if ((await p.evaluate(() => GOBLIN.save.profile.name)) === 'Gr') hubFail('zu kurzer Name wurde angenommen');
 await p.fill('#nameIn', 'Grubnik'); await p.press('#nameIn', 'Enter');
 if ((await p.evaluate(() => GOBLIN.save.profile.name + '|' + document.querySelector('#topName').textContent)) !== 'Grubnik|Grubnik') hubFail('Name wird nicht übernommen');
-await p.click('#optBtn'); await p.click('#howBtn');
+await p.click('#optBtn'); await p.click('[data-otab="spiel"]'); await p.click('#howBtn');   // „So spielst du“ steht im Reiter Spiel (Phase 15)
 if (!(await vis('#howto')) || (await vis('#options'))) hubFail('„So spielst du“ öffnet nicht aus den Einstellungen');
 await p.keyboard.press('Escape');
 if (await vis('#howto')) hubFail('Esc schließt „So spielst du“ nicht');
 // Einstellungen: Schalter, Knopfgröße, Lautstärke-Regler; werden gespeichert und sofort angewendet
 await p.click('#optBtn');
 // PC (Maus): Handy-Knöpfe-Einstellungen versteckt, Vollbild-Schalter da. Ein echtes Tippen holt die Handy-Steuerung zurück
-const pcm = await p.evaluate(() => ({ pc: document.body.classList.contains('pc'), lefty: !!document.querySelector('#leftySw').offsetParent, full: !!document.querySelector('#fullSw').offsetParent }));
-if (!pcm.pc || pcm.lefty || !pcm.full) hubFail('PC-Modus: ' + JSON.stringify(pcm));
+// (Phase 15: Vollbild im Reiter Bild, Handy-Knöpfe und Tasten im Reiter Steuerung)
+await p.click('[data-otab="bild"]');
+const fullVis = await p.evaluate(() => !!document.querySelector('#fullSw').offsetParent);
+await p.click('[data-otab="steuer"]');
+const pcm = await p.evaluate(f => ({ pc: document.body.classList.contains('pc'), lefty: !!document.querySelector('#leftySw').offsetParent, keys: !!document.querySelector('#keyMap .keycap'), full: f }), fullVis);
+if (!pcm.pc || pcm.lefty || !pcm.full || !pcm.keys) hubFail('PC-Modus: ' + JSON.stringify(pcm));
 await p.evaluate(() => window.dispatchEvent(new PointerEvent('pointerdown', { pointerType: 'touch' })));
 if (await p.evaluate(() => document.body.classList.contains('pc'))) hubFail('Tippen schaltet den PC-Modus nicht ab');
-await p.click('#leftySw'); await p.click('#numSw'); await p.click('#btnSeg [data-bs="l"]');
+await p.click('#leftySw'); await p.click('#btnSeg [data-bs="l"]');
+await p.click('[data-otab="spiel"]'); await p.click('#numSw');
+await p.click('[data-otab="ton"]');
 { const r = await p.locator('#musVol').boundingBox(); await p.mouse.click(r.x + r.width * .5, r.y + r.height / 2); }
 const opt = await p.evaluate(() => ({ s: GOBLIN.save.settings, lefty: document.body.classList.contains('lefty'), bs: getComputedStyle(document.documentElement).getPropertyValue('--bs').trim(), sw: document.querySelector('#leftySw').getAttribute('aria-checked') }));
 if (!opt.s.lefty || opt.s.numbers || opt.s.btn !== 'l' || Math.abs(opt.s.musVol - .5) > .06 || !opt.lefty || opt.bs !== '1.2' || opt.sw !== 'true') hubFail('Einstellungen greifen nicht: ' + JSON.stringify(opt));
-await p.click('#leftySw'); await p.click('#numSw'); await p.click('#btnSeg [data-bs="m"]');
+await p.click('[data-otab="steuer"]'); await p.click('#leftySw'); await p.click('#btnSeg [data-bs="m"]');
+await p.click('[data-otab="spiel"]'); await p.click('#numSw');
 await p.keyboard.press('Escape');
 if (await vis('#options')) hubFail('Esc schließt die Einstellungen nicht');
 await p.click('#tabbar [data-tab="#menu"]');

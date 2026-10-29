@@ -21,9 +21,14 @@ import { startPerf } from './perf.js';
 import { startUpdateCheck } from './app-update.js';
 import { startCloud } from './cloud.js';
 import { startPlatform } from './ui/platform.js';
+import './ui/haptics.js';
+import { applyDevice } from './ui/settings.js';
+import { loadLayout } from './core/device.js';
 
 loadSave();
 resize();
+applyDevice();   // Geräte-Einstellungen (Phase 15): Oberflächengröße, Auflösung, Ton, Tasten
+loadLayout().then(applyDevice);   // Tastennamen der echten Tastatur
 go('boot');
 startLoop();
 if (/[?&]perf\b/.test(location.search)) startPerf();

@@ -1317,6 +1317,21 @@ Ansatz „aktiver Spieler“: `run.players = [p0, p1]`, `P` bleibt die Variable 
   - Bemerkt: Die Korrektur der Magier-Stabspitzen (`mageOff`, 14c) ändert allein Läufe, die starten, bevor die Magierbilder geladen sind (Zauber fliegen jetzt immer aus der Stabspitze). Die Balance-Sim wartet aufs Laden und ist gleich geblieben.
 - Risiko: iOS-Safari kann bei `Math.sin/cos` minimal abweichen → Prüfsumme erkennt das; Windows-App, Android-App und Chrome nutzen alle V8.
 
+### Phase 15 – Einstellungen und Oberfläche für PC und Handy (Wunsch Fabi, 2026-10-29)
+Fabi hat gewählt: Spielen-Knopf mit **gekreuzten Schwertern**; PC: **Ton, Bild & Auflösung, Tastenbelegung, UI-Größe**; Handy: **Vibration, Akkusparmodus, Bildschirm anlassen, Joystick & Knöpfe**; Menüs am PC **breiter und mitwachsend**. Die neuen Einstellungen gelten je Gerät (`core/device.js`, lokal, nicht in der Cloud), damit z. B. der Akkusparmodus vom Handy nicht auf dem PC landet.
+- [x] **15a Oberfläche:** Spielen-Icon gekreuzte Schwerter; Welten im Profil (`.pstage` doppelt belegt mit dem Pass), Schloss als Bild statt Emoji (zeigte „▯“), Aufgaben oben statt mittig, Hub-Fenster ganz sichtbar (scrollen innen statt unter die Tab-Leiste), am PC breiter mit mehr Spalten, wächst auf großen Bildschirmen mit (UI-Größe automatisch × Einstellung).
+- [x] **15b Einstellungen neu ordnen:** Reiter Ton · Bild · Steuerung · Spiel; Gerät-Einstellungen in `core/device.js`.
+- [x] **15c Ton:** Gesamtlautstärke, Menütöne eigene Lautstärke, Ton aus im Hintergrund.
+- [x] **15d Bild:** Fenstermodus und Fenstergröße (exe), Renderauflösung 50/75/100 %, Bildrate 30/60/Bildschirm, FPS anzeigen, UI-Größe 80–150 %.
+- [x] **15e Steuerung PC:** Tastenbelegung (je Aktion zwei Tasten, Zurücksetzen); alle Tasten-Beschriftungen (HUD, Rüstkammer, Tipps) folgen ihr.
+- [x] **15f Handy:** Vibration (Treffer, Level-Up, Boss), Akkusparmodus (30 FPS, 75 % Auflösung), Bildschirm anlassen im Lauf (Wake Lock), Joystick fest/frei und Empfindlichkeit, Durchsichtigkeit der Knöpfe; APK: Berechtigung VIBRATE.
+- [x] **15h Wegweiser (Wunsch Fabi 2026-10-29: „man weiß nicht, wo die Mini-Bosse sind“):** Pfeile am Bildschirmrand zu Mini-Boss, Boss, Truhen und (Koop) Partner, solange sie außerhalb der Sicht sind.
+- [x] **15i User Experience und Quality of Life (Wunsch Fabi 2026-10-29):** Abläufe durchgehen und nervige Stellen beheben (Liste beim Umsetzen).
+  - Direkt umgesetzt: Rückfrage beim Aufgeben, Tastatur im Ergebnis (Enter/R/Esc), „Helle Blitze abschwächen“, nach Koop „Allein nochmal“.
+  - Fabi hat zusätzlich gewählt: **Controller** (Xbox/PlayStation am PC und Handy), **Schadens-Statistik** nach dem Lauf (je Waffe/Fähigkeit), **Infos in der Pause** (Waffen und Passive antippen), **Weiterspielen-Knopf** im Hub.
+- [ ] **15g Prüfen:** Screenshots PC (1280, 1920) und Handy, Smoke, Review (high).
+- Umsetzung 2026-10-29: Oberfläche skaliert per CSS `zoom` (alles außer der Zeichenfläche und `#rewardFx`), automatisch größer auf großen PC-Bildschirmen (bis 1,45) × Einstellung; `vw`/`vh` im CSS laufen über `--vwu`/`--vhu`, Kartenpunkte und Goblin-Ebene teilen durch `uiz()`. Tastenbelegung mit Tausch (eine Taste nur für eine Aktion), Tastennamen der echten Tastatur (Keyboard-Layout-API). Wegweiser in `render/draw-world.js` `drawPointers`. Schadens-Statistik zählt in `combat.js` `tally` je Goblin und Quelle (`abSrc` bzw. `wsrc`, Geschosse/Effekte/Würfe/Zonen merken `ws`). Controller in `core/gamepad.js` (Knöpfe als virtuelle Tastendrücke). Weiterspielen-Knopf in der Kopfzeile (`quickLevel`). exe: Rechte `set-size`/`center`; APK: `VIBRATE`. Geprüft: Screenshots Full HD, 1280×720, Handy quer; Einzelspieler-Sim gleich wie vor Phase 14; coop-check, coop-e2e.
+
 ---
 
 ## 12. Testen und Qualität

@@ -3,7 +3,7 @@ import { sfx } from '../core/audio.js';
 import { TAU, angDiff, clamp, face8 } from '../core/util.js';
 import { hurt } from './combat.js';
 import { animFx, boltFx, explode, part, puff, ring } from './fx.js';
-import { P, abSrc, isBig, nearest, query, randomEnemyInView, run, setSrc, viewHH, viewHW } from './state.js';
+import { P, abSrc, isBig, nearest, query, randomEnemyInView, run, setSrc, setWsrc, viewHH, viewHW, wsrc } from './state.js';
 import { smokeAtkSlow } from '../data/abilities.js';
 import { onProjHit, stepWeapon2 } from './weapons2.js';
 
@@ -14,13 +14,14 @@ export function shoot(k, a, dmg, pierce, spd, life, extra = {}) { shootRaw(k, a,
 // ohne den Schadensfaktor der gerade schießenden Waffe (dmg schon fertig); Splitterkristall: mehr Durchbohren
 export function shootRaw(k, a, dmg, pierce, spd, life, extra = {}) {
   if (pierce < 99) pierce += P.pierceAdd || 0;
-  run.pproj.push(Object.assign({ k, x: P.x, y: P.y - 8, a, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, dmg, pierce, life, hit: new Set(), r: 13, t: 0, src: abSrc }, extra));
+  run.pproj.push(Object.assign({ ws: wsrc, k, x: P.x, y: P.y - 8, a, vx: Math.cos(a) * spd, vy: Math.sin(a) * spd, dmg, pierce, life, hit: new Set(), r: 13, t: 0, src: abSrc }, extra));
 }
 export function updWeapons(dt) {
   const smoke = P.smokeT > 0 && run.abMods && run.abMods.smoke;
   const rate = (P.rageT > 0 ? 1.6 : 1) * (smoke ? 1 - smokeAtkSlow(smoke.s1) : 1) * (P.burrowT > 0 ? .5 : 1) * (P.brew && P.brew.swift > 0 ? 1.5 : 1) * (P.atkSpd || 1);   // Kriegshorn; eingegraben halb so schnell
   // Kartenstufe (9.3): mehr Grundschaden je Waffe (dm statt P.dmgMult), auf Stufe 10 schneller
-  for (const w of run.weapons) stepWeapon(w, rate * (w.fast || 1), P.dmgMult * (w.card || 1), dt);
+  for (const w of run.weapons) { setWsrc(w.id); stepWeapon(w, rate * (w.fast || 1), P.dmgMult * (w.card || 1), dt); }
+  setWsrc(null);
 }
 // Schadensfaktor der gerade schießenden Waffe für shoot()
 let shotMul = 1;
@@ -54,7 +55,7 @@ function stepWeapon(w, rate, dm, dt) {
       w.t -= dt * rate; if (w.t > 0) break;
       if (w.evo) {
         w.t = 1 * P.cdMult; const c = randomEnemyInView(20);
-        for (let i = 0; i < 3; i++) { const e = c.length ? pick(c) : null; run.tele.push({ pi: run.pi, k: 'meteor', x: e ? e.x + rand(-20, 20) : P.x + rand(-250, 250), y: e ? e.y + rand(-20, 20) : P.y + rand(-200, 200), t: .65, dur: .65, rad: 105 * P.area, dmg: 46 * dm, burn: 9 * dm }); }
+        for (let i = 0; i < 3; i++) { const e = c.length ? pick(c) : null; run.tele.push({ pi: run.pi, ws: wsrc, k: 'meteor', x: e ? e.x + rand(-20, 20) : P.x + rand(-250, 250), y: e ? e.y + rand(-20, 20) : P.y + rand(-200, 200), t: .65, dur: .65, rad: 105 * P.area, dmg: 46 * dm, burn: 9 * dm }); }
       } else {
         w.t = [1.8, 1.7, 1.6, 1.35, 1.25][L] * P.cdMult;
         const n = [1, 1, 2, 2, 3][L], dmg = [18, 22, 22, 28, 32][L], rad = [55, 64, 64, 68, 82][L] * P.area;
@@ -108,7 +109,7 @@ function stepWeapon(w, rate, dm, dt) {
       const n = w.evo ? 3 : [1, 1, 2, 2, 3][L];
       const rad = (w.evo ? 85 : [50, 60, 60, 64, 72][L]) * P.area, dur = w.evo ? 4.5 : [3, 3.2, 3.2, 4.2, 4.2][L], dmg = (w.evo ? 12 : [5, 7, 7, 8, 10][L]) * dm;
       const c = randomEnemyInView(40);
-      for (let i = 0; i < n; i++) { const e = c.length ? pick(c) : null; run.tele.push({ pi: run.pi, k: 'flask', sx: P.x, sy: P.y - 10, x: e ? e.x : P.x + rand(-200, 200), y: e ? e.y : P.y + rand(-160, 160), t: 0, dur: .55, rad, zdur: dur, dmg }); }
+      for (let i = 0; i < n; i++) { const e = c.length ? pick(c) : null; run.tele.push({ pi: run.pi, ws: wsrc, k: 'flask', sx: P.x, sy: P.y - 10, x: e ? e.x : P.x + rand(-200, 200), y: e ? e.y : P.y + rand(-160, 160), t: 0, dur: .55, rad, zdur: dur, dmg }); }
       sfx.throw(); break;
     }
     case 'boomer': {
@@ -133,7 +134,7 @@ function stepWeapon(w, rate, dm, dt) {
         const e = c.length ? pick(c) : null;
         let tx = e ? e.x : P.x + rand(-120, 120), ty = e ? e.y : P.y + rand(-120, 120);
         const dd = Math.hypot(tx - P.x, ty - P.y); if (dd > 260) { tx = P.x + (tx - P.x) / dd * 260; ty = P.y + (ty - P.y) / dd * 260; }
-        run.tele.push({ pi: run.pi, k: 'barrel', sx: P.x, sy: P.y - 10, x: tx, y: ty, t: 0, dur: .45, fuse: 1, rad, dmg, evo: w.evo });
+        run.tele.push({ pi: run.pi, ws: wsrc, k: 'barrel', sx: P.x, sy: P.y - 10, x: tx, y: ty, t: 0, dur: .45, fuse: 1, rad, dmg, evo: w.evo });
       }
       sfx.throw(); break;
     }
@@ -157,7 +158,7 @@ function stepWeapon(w, rate, dm, dt) {
 export function updAllies(dt) {
   const w = run.weapons.find(x => x.id === 'gang'); if (!w || !w.dmg) return;
   const rate = (P.rageT > 0 ? 1.6 : 1) * (w.fast || 1);   // Kartenstufe 10: schneller
-  run.allies.forEach((al, i) => stepAlly(al, i, run.allies.length, w.dmg, w.spd, rate, dt));
+  setWsrc('gang'); run.allies.forEach((al, i) => stepAlly(al, i, run.allies.length, w.dmg, w.spd, rate, dt)); setWsrc(null);
 }
 // Ein Kumpel: nächsten Gegner in Reichweite suchen, hinlaufen, zustechen (auch für den Goblin-Ruf)
 // bigMul: Schadensfaktor gegen große Gegner (Goblin-Ruf .3)
@@ -182,6 +183,7 @@ export function updPProj(dt) {
   const hw = viewHW(), hh = viewHH();
   for (const p of run.pproj) {
     setSrc(p.src);   // Geschosse von Fähigkeiten (Mech, Schild, Wirbelaxt …) tragen deren Runen
+    setWsrc(p.ws);
     p.t += dt; p.life -= dt;
     // Irrlichter und Funken suchen sich ein neues Ziel, wenn ihres stirbt
     if ((p.k === 'soul' || p.k === 'spark') && (!p.target || p.target.dead) && p.t >= (p.rt || .15)) { p.rt = p.t + .2; p.target = nearest(420, p); }
@@ -227,4 +229,5 @@ export function updPProj(dt) {
   }
   setSrc(null);
   run.pproj = run.pproj.filter(p => p.life > 0);
+  setWsrc(null);
 }
