@@ -1,6 +1,5 @@
 import { lostFocus } from '../core/input.js';
 import { setAway } from '../core/audio.js';
-import { dev } from '../core/device.js';
 import { persist, save } from '../core/save.js';
 import { $ } from '../core/util.js';
 
@@ -14,7 +13,11 @@ const desktopApp = !!(T && T.window && !android);
 const appWin = () => T.window.getCurrentWindow();
 const finePointer = () => !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
 
-function setPc(on) { document.body.classList.toggle('pc', on); }
+function setPc(on) {
+  if (document.body.classList.contains('pc') === on) return;
+  document.body.classList.toggle('pc', on);
+  window.dispatchEvent(new Event('resize'));   // automatische Oberflächengröße hängt am PC-Modus (ui/settings.js uiZoom)
+}
 document.body.classList.toggle('appwin', desktopApp);   // Fenstergröße gibt es nur in der exe
 // Fenstergröße der exe (Einstellung „Fenstergröße“): nur im Fenstermodus, danach mittig
 export async function setWindowSize(sz) {
@@ -59,6 +62,5 @@ export function startPlatform() {
   if (desktopApp) {
     if (save.settings.full) setFull(true); else syncFull();
     try { appWin().onFocusChanged(({ payload }) => { setAway(!payload); if (!payload) lostFocus(); }).catch(() => {}); } catch (_) { /* ältere Tauri-Version: blur reicht */ }
-    if (!save.settings.full) setWindowSize(dev.winSize);
   } else syncFull();
 }

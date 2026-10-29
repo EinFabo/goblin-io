@@ -29,7 +29,7 @@ import { grantCosmetic } from './cosmetics.js';
 import { count, ensureDaily, mergeRun } from './progress.js';
 import { checkBounties, finishChallenge } from './quests.js';
 import { dayKey } from './shop.js';
-import { P, activate, buildGrid, clampToArena, eachPlayer, grid, nearestGob, hasMut, query, run, setRun, setSrc, xpNeed } from './state.js';
+import { P, activate, buildGrid, clampToArena, eachPlayer, grid, nearestGob, hasMut, query, run, setRun, setSrc, xpNeed, setWsrc } from './state.js';
 import { coopLevelTick } from './levelup.js';
 import { profileOf } from './profile.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
@@ -268,7 +268,7 @@ function step(dt, inps) {
 }
 // Effekte, Partikel, Schadenszahlen, Wackeln
 export function updFx(dt) {
-  for (const f of run.fx) { f.t += dt; if (f.k === 'later' && f.t >= f.dur) { setSrc(f.src); f.fn(); setSrc(null); } }
+  for (const f of run.fx) { f.t += dt; if (f.k === 'later' && f.t >= f.dur) { setSrc(f.src); setWsrc(f.ws); f.fn(); setSrc(null); setWsrc(null); } }
   run.fx = run.fx.filter(f => f.k === 'anim' ? f.t * f.fps < f.n : f.t < f.dur);
   for (const p of run.parts) { p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= .96; p.vy *= .96; }
   run.parts = run.parts.filter(p => p.t < p.life);

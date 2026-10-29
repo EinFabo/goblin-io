@@ -72,7 +72,7 @@ function layout() {
   let d = 0;
   pts.forEach((p, i) => { if (i) d += Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y); p.d = d; });
   P.forEach((nd, i) => { nd.d = (pts.find(p => p.seg === i) || pts[pts.length - 1]).d; });
-  M.path = pts; M.len = d; M.w = W; M.h = H;
+  M.path = pts; M.len = d; M.w = W; M.h = H; M.z = Z;
 }
 // Strecke bis zum letzten freien Punkt
 const openDist = () => { let d = 0; for (const n of M.nodes) if (nodeOpen(n)) d = n.d; return d; };
@@ -231,7 +231,7 @@ function switchWorld(d) {
 
 // Jeden Frame aus der Menü-Szene: Goblin laufen lassen, Wegstück aufmalen
 export function tickMap(dt) {
-  if (M.w !== innerWidth || M.h !== innerHeight) { const g = M.gob, n = M.nodes[g.sel]; build(); g.d = g.to = M.nodes[g.sel] ? M.nodes[g.sel].d : 0; if (n) renderNodes();
+  if (M.w !== innerWidth || M.h !== innerHeight || M.z !== uiz()) { noteTop = 0; const g = M.gob, n = M.nodes[g.sel]; build(); g.d = g.to = M.nodes[g.sel] ? M.nodes[g.sel].d : 0; if (n) { renderNodes(); fitNote(); }
     const R = M.reveal; if (R) { R.from = M.nodes[R.sel - 1].d; R.to = M.nodes[R.sel].d; } else M.open = openDist(); }
   const R = M.reveal;
   if (R) {

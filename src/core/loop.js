@@ -16,7 +16,7 @@ export const fpsNow = { v: 0 };
 function frame(now) {
   // Zuerst anmelden: ein Fehler in einer Szene kostet so nur einen Frame, nicht das ganze Spiel
   requestAnimationFrame(frame);
-  pollPad();   // Controller (core/gamepad.js), auch wenn das Bild ausgelassen wird
+  try { pollPad(); } catch (_) { /* Gamepad-API verboten (iframe ohne allow) o. Ä.: ohne Controller weiter */ }   // Controller (core/gamepad.js)
   // Bildrate begrenzen (Einstellung, Akkusparmodus): Bilder auslassen; die Logik holt die Zeit über acc nach
   // (Sollzeiten statt fester Abstände: auf 144 Hz ergibt „60“ sonst nur etwa 48 Bilder)
   const cap = fpsCap();

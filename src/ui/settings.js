@@ -112,7 +112,17 @@ function showTab(t) {
 document.querySelector('.opttabs').addEventListener('click', e => { const b = e.target.closest('[data-otab]'); if (b) showTab(b.dataset.otab); });
 showTab(otab);
 
-const setDev = (k, v) => { dev[k] = v; saveDevice(); applyDevice(); };
+// Eine Einstellung ändern: nur anwenden, was sie betrifft (Regler feuern bei jeder Bewegung; resize() leert die Zeichenfläche)
+function setDev(k, v) {
+  dev[k] = v; saveDevice();
+  if (k === 'master' || k === 'uiVol' || k === 'bgMute') applyGains();
+  else if (k === 'uiScale') setUiz(uiZoom());
+  else if (k === 'render' || k === 'saver') resize();
+  else if (k === 'btnAlpha') document.documentElement.style.setProperty('--ba', dev.btnAlpha);
+  else if (k === 'showFps') fpsTag(dev.showFps);
+  else if (k === 'wake' && !dev.wake) keepAwake(false);
+  syncControls();
+}
 document.querySelectorAll('[data-dev]').forEach(b => b.addEventListener('click', () => setDev(b.dataset.dev, !dev[b.dataset.dev])));
 document.querySelectorAll('[data-devseg]').forEach(g => g.addEventListener('click', e => {
   const b = e.target.closest('[data-v]'); if (!b) return;
@@ -161,22 +171,28 @@ window.addEventListener('keydown', e => {
   const { a, i } = wait; wait = null;
   if (e.code === 'Escape') { renderKeys(); return; }
   bindKey(a, i, e.code === 'Delete' || e.code === 'Backspace' ? null : e.code);
-  renderKeys(); applyDevice(); sfx.click();
+  renderKeys(); syncControls(); emitKeys(); sfx.click();
 }, true);
-$('#keyReset').addEventListener('click', () => { resetKeys(); wait = null; renderKeys(); applyDevice(); });
+$('#keyReset').addEventListener('click', () => { resetKeys(); wait = null; renderKeys(); syncControls(); emitKeys(); });
 
 // Anwenden: Ton, Oberfläche (automatisch größer auf großen PC-Bildschirmen × Einstellung), Auflösung, Knöpfe, Fenster
 export function uiZoom() {
   const auto = document.body.classList.contains('pc') ? Math.min(1.45, Math.max(1, Math.min(innerWidth / 1280, innerHeight / 760))) : 1;
   return Math.round(auto * dev.uiScale * 100) / 100;
 }
+// Alles anwenden (Start, Tastenbelegung zurückgesetzt)
 export function applyDevice() {
   applyGains();
-  const root = document.documentElement.style;
   setUiz(uiZoom());
-  root.setProperty('--ba', dev.btnAlpha);
+  document.documentElement.style.setProperty('--ba', dev.btnAlpha);
   resize();
-  document.body.classList.toggle('showfps', dev.showFps);
+  if (!dev.wake) keepAwake(false);
+  fpsTag(dev.showFps);
+  syncControls();
+  emitKeys();
+}
+// Schalter, Auswahl und Regler im Fenster auf den Stand bringen
+function syncControls() {
   document.querySelectorAll('[data-dev]').forEach(b => setSw(b, !!dev[b.dataset.dev]));
   document.querySelectorAll('[data-devseg]').forEach(g => g.querySelectorAll('[data-v]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === String(dev[g.dataset.devseg])))));
   document.querySelectorAll('[data-devvol]').forEach(el => {
@@ -186,10 +202,7 @@ export function applyDevice() {
   });
   // Akkusparmodus begrenzt Bildrate und Auflösung: die Auswahl zeigt das an
   document.body.classList.toggle('saver', dev.saver);
-  if (!dev.wake) keepAwake(false);
-  fpsTag(dev.showFps);
   if (!wait) renderKeys();
-  emitKeys();
 }
 window.addEventListener('resize', () => setUiz(uiZoom()));
 // Fenstergröße der exe sofort übernehmen

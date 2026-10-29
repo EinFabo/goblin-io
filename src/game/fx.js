@@ -4,7 +4,7 @@ import { sfx } from '../core/audio.js';
 import { save } from '../core/save.js';
 import { TAU } from '../core/util.js';
 import { hurt } from './combat.js';
-import { P, abSrc, query, run } from './state.js';
+import { P, abSrc, query, run, wsrc } from './state.js';
 
 // ---------- Gegenstände & Effekte ----------
 export function dropGem(x, y, v) {
@@ -30,7 +30,7 @@ export function puff(x, y, sc = 1, col = null) { for (let i = 0; i < 7; i++) par
 export function sparks(x, y, col, n = 3) { for (let i = 0; i < n; i++) { const a = frand(0, Math.PI * 2), v = frand(60, 150); part(x, y, Math.cos(a) * v, Math.sin(a) * v - 30, frand(.15, .28), col, frand(2, 3.5)); } }
 export function animFx(pre, n, x, y, sc = 1, fps = 18, rot = 0) { run.fx.push({ k: 'anim', pre, n, x, y, sc, fps, rot, t: 0 }); }
 // fn nach t Sekunden Spielzeit (steht in Pause, Hitstop und Zeitlupe mit still); merkt sich die Schadensquelle (Runen)
-export function later(t, fn) { run.fx.push({ k: 'later', t: 0, dur: t, fn, src: abSrc }); }
+export function later(t, fn) { run.fx.push({ k: 'later', t: 0, dur: t, fn, src: abSrc, ws: wsrc }); }
 export function ring(x, y, r0, r1, dur, c, w = 4) { run.fx.push({ k: 'ring', x, y, r0, r1, dur, c, w, t: 0 }); }
 export function boltFx(x0, y0, x1, y1, w = 3, col = null) {
   const pts = [[x0, y0]], n = 7;

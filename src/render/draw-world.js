@@ -269,7 +269,7 @@ function drawRun(now) {
   if (run.lvDelay > 0) { ctx.fillStyle = `rgba(255,255,255,${run.lvDelay * .35 * fl})`; ctx.fillRect(0, 0, W, H); }
   if (run.flashT > 0) { ctx.fillStyle = `rgba(255,255,255,${run.flashT / .3 * .8 * fl})`; ctx.fillRect(0, 0, W, H); }
   // Joystick (Handy): Ring so groß wie der Weg bis zum vollen Tempo; der feste wartet blass an seinem Platz
-  const fixedJoy = dev.joy === 'fixed' && !document.body.classList.contains('pc');
+  const fixedJoy = dev.joy === 'fixed' && !document.body.classList.contains('pc') && !document.body.classList.contains('pad') && !run.cut && !run.over && !run.paused;
   if (joy.id !== null || fixedJoy) {
     const R = JOY_R / dev.joySens, c = joy.id !== null ? { x: joy.ox, y: joy.oy } : joyHome(), a = (joy.id !== null ? 1 : .5) * dev.btnAlpha;
     ctx.globalAlpha = a;
