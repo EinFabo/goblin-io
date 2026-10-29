@@ -15,7 +15,7 @@ import { startStage } from './menus.js';
 let room = null, sel = null, last = null;
 export function openCoop(level) {
   sel = level;
-  $('#coopLvl').textContent = level ? 'Level ' + level.label : '';
+  $('#coopLvl').textContent = !level ? '' : level.endless ? level.label : 'Level ' + level.label;
   msg(''); view(); $('#coop').hidden = false;
   if (!room) setTimeout(() => $('#coopCode').focus(), 50);
 }

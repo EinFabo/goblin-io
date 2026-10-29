@@ -13,7 +13,7 @@ import { damagePlayer, hurt } from './combat.js';
 import { addItem, animFx, part, puff, ring } from './fx.js';
 import { hint, startClear } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
-import { P, eachPlayer, hasMut, onScreen, pR, query, run, viewC, viewHH, viewHW, viewR, hidden } from './state.js';
+import { P, eachPlayer, hasMut, heard, onScreen, pR, query, run, spawnC, viewHH, viewHW, viewR, hidden } from './state.js';
 import { banner } from '../ui/hud.js';
 
 export { eShot } from './casts.js';
@@ -36,7 +36,7 @@ export function spawnEnemy(type, opt = {}) {
   // Runde (nur Endlos): Schaden wächst glatt mit der Zeit, Leben über enemyHp (balance.js)
   const tf = st.endless ? endlessDmg(run.time) : 1 + run.time / 400;
   let x = opt.x, y = opt.y;
-  if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60, c = viewC(); x = c.x + Math.cos(a) * R; y = c.y + Math.sin(a) * R; }
+  if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60, c = spawnC(); x = c.x + Math.cos(a) * R; y = c.y + Math.sin(a) * R; }
   const e = {
     type, pre: typeSprite(T), x, y, r: T.r, sc: T.sc, spd: T.spd * RNG.spawn.range(.9, 1.1), dmg: T.dmg * st.dmg * tf,
     hp: enemyHp(T.hp, run.si, run.time + (st.hpT || 0)) * (st.endless ? boonHp(run.cnt.boon || 0) : 1) * (st.hpMul || 1) * nmHp(run.nm) * cycleHp(run.cycle) * (run.coopHp || 1), xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
@@ -54,7 +54,7 @@ export function spawnEnemy(type, opt = {}) {
   if (hasMut('fast')) e.spd *= 1.3;
   e.maxHp = e.hp;
   // Sichtbare Spawns kommen durch ein Portal (0,4 s, solange nicht angreifbar)
-  if ((opt.x !== undefined && opt.portal !== false) || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (onScreen(x, y)) sfx.portal(); }
+  if ((opt.x !== undefined && opt.portal !== false) || onScreen(x, y, 40)) { e.spawnT = SPAWN_T; if (heard(x, y)) sfx.portal(); }
   run.enemies.push(e);
   if (!run.seen.has(type) && T.tip) { run.seen.add(type); if (type !== 'fire_mage' || run.si === 0) hint(`<b>${T.name}</b> ${T.tip}`); }
   return e;
@@ -122,33 +122,34 @@ function levelClear() {
 // Schwarm-Formen. Jeder sechste Gegner ist "extra", falls angegeben.
 function swarm({ type, extra, count = 30, shape = 'ring', side }) {
   const n = Math.round(count * (1 + run.loop * .25)), kind = i => i % 6 === 0 && extra ? extra : type;
-  const hw = viewHW(), hh = viewHH();
+  const hw = viewHW(), hh = viewHH(), c0 = spawnC();   // Koop: ein Schwarm kommt um einen Goblin
   // Linie außerhalb des Bildschirms auf Seite s (0 rechts, 1 unten, 2 links, 3 oben), läuft dann herein
   const wall = (s, m, k0) => {
     for (let i = 0; i < m; i++) {
       const f = m > 1 ? i / (m - 1) * 2 - 1 : 0;
       const x = s === 0 ? hw + 50 : s === 2 ? -hw - 50 : f * hw * 1.1, y = s === 1 ? hh + 50 : s === 3 ? -hh - 50 : f * hh * 1.1;
-      spawnEnemy(kind(k0 + i), { x: viewC().x + x, y: viewC().y + y, portal: false });
+      spawnEnemy(kind(k0 + i), { x: c0.x + x, y: c0.y + y, portal: false });
     }
   };
   const pickSide = () => side === undefined ? (RNG.spawn.next() * 4) | 0 : side;
   if (shape === 'ring') {
     const R = viewR() * .85;
-    for (let i = 0; i < n; i++) { const a = i * TAU / n, c = viewC(); spawnEnemy(kind(i), { x: c.x + Math.cos(a) * R, y: c.y + Math.sin(a) * R }); }
+    for (let i = 0; i < n; i++) { const a = i * TAU / n; spawnEnemy(kind(i), { x: c0.x + Math.cos(a) * R, y: c0.y + Math.sin(a) * R }); }
   } else if (shape === 'wall') wall(pickSide(), n, 0);
   else if (shape === 'pincer') { const s = pickSide() % 2; wall(s, n >> 1, 0); wall(s + 2, n - (n >> 1), n >> 1); }
   else if (shape === 'stream') {
     // Strom: über 4 s aus einer Richtung, die Richtung bleibt fest, auch wenn du läufst
     const a = RNG.spawn.next() * TAU;
-    for (let i = 0; i < n; i++) run.spawnQ.push({ t: run.time + i * 4 / n, type: kind(i), a: a + RNG.spawn.range(-.25, .25) });
+    const pi = run.players ? run.players.indexOf(c0) : -1;   // Koop: der Strom bleibt bei seinem Goblin
+    for (let i = 0; i < n; i++) run.spawnQ.push({ t: run.time + i * 4 / n, type: kind(i), a: a + RNG.spawn.range(-.25, .25), pi });
   }
 }
 
 export function spawnTick(dt) {
   // Warteschlange (Ströme) läuft auch während Ereignissen weiter
   while (run.spawnQ.length && run.spawnQ[0].t <= run.time) {
-    const q = run.spawnQ.shift(), R = viewR() + 40;
-    if (!run.boss) spawnEnemy(q.type, { x: viewC().x + Math.cos(q.a) * R, y: viewC().y + Math.sin(q.a) * R, portal: false });
+    const q = run.spawnQ.shift(), R = viewR() + 40, g = run.coop && q.pi >= 0 && !run.players[q.pi].down ? run.players[q.pi] : spawnC();
+    if (!run.boss) spawnEnemy(q.type, { x: g.x + Math.cos(q.a) * R, y: g.y + Math.sin(q.a) * R, portal: false });
   }
   if (run.boss) return;
   const t = localT(), w = phaseAt(t, true);
@@ -168,7 +169,7 @@ function startCast(e, c) {
   e.face = face8(P.x - e.x, P.y - e.y, e.face);
   const C = CASTS[c.id];
   if (C.start) { run.caster = e; C.start(e); run.caster = null; }
-  if (onScreen(e.x, e.y) && !e.clone) sfx.charge();
+  if (heard(e.x, e.y) && !e.clone) sfx.charge();
 }
 
 // ---------- Bewegung ----------

@@ -6,7 +6,7 @@ import { animFx, boltFx, explode, part, ring } from './fx.js';
 import { bulwark, perfectRoll, reflect } from './abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { portalWarp, spinHaz } from './boss.js';
-import { P, activate, eachPlayer, hasMut, onScreen, pR, query, run, setSrc, setWsrc, wsrc } from './state.js';
+import { P, activate, eachPlayer, hasMut, heard, pR, query, run, setSrc, setWsrc, wsrc } from './state.js';
 
 // Einschlag-Animation je Geschossart
 const HIT_FX = { fire: 'f_fireball_hit_', frost: 'e_frostbolt_hit_', void: 'p.shade_hit.', toxic: 'p.glob_hit.', storm: 'p.spark_hit.', necro: 'p.soul_hit.', earth: 'p.rock_hit.', light: 'p.lance_hit.' };
@@ -156,14 +156,14 @@ function hazFx(h) {
     boltFx(h.x + frand(-30, 30), h.y - 460, h.x, h.y, 6, 'storm');
     for (let i = 0; i < 10; i++) part(h.x, h.y, frand(-150, 150), frand(-150, 50), .35, '#fff59a', 3);
     ring(h.x, h.y, 5, h.r, .25, 'rgba(255,240,120,.9)', 6);
-    if (onScreen(h.x, h.y)) sfx.ezap();
+    if (heard(h.x, h.y)) sfx.ezap();
   } else if (h.kind === 'earth') {
     run.shake = Math.max(run.shake, 4);
     for (let i = 0; i < 12; i++) part(x + frand(-40, 40), y + frand(-20, 20), frand(-80, 80), frand(-120, -30), .5, 'rgba(170,140,100,.9)', frand(3, 6));
-    if (onScreen(x, y)) sfx.stomp();
+    if (heard(x, y)) sfx.stomp();
   } else if (h.boom) { animFx('f_fireball_hit_', 5, h.x, h.y, h.r / 16); run.shake = Math.max(run.shake, 8); sfx.boom(); }
-  else if (h.kind === 'fire') { if (onScreen(x, y)) sfx.boom(); }
-  else if (h.kind === 'ice') { for (let i = 0; i < 10; i++) part(x + frand(-h.r, h.r) * .7, y + frand(-h.r, h.r) * .5, 0, frand(-40, -10), .5, '#eafcff', 3); if (onScreen(x, y)) sfx.frost(); }
+  else if (h.kind === 'fire') { if (heard(x, y)) sfx.boom(); }
+  else if (h.kind === 'ice') { for (let i = 0; i < 10; i++) part(x + frand(-h.r, h.r) * .7, y + frand(-h.r, h.r) * .5, 0, frand(-40, -10), .5, '#eafcff', 3); if (heard(x, y)) sfx.frost(); }
 }
 
 function updHaz(dt) {

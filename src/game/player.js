@@ -64,7 +64,11 @@ export function updPlayer(dt, inp) {
   for (const t of P.trail) t.t -= dt; P.trail = P.trail.filter(t => t.t > 0);
   // Arena: Goblin und alle Boss-Körper (Boss, Teile, Spiegelbilder, Schatten) bleiben drin
   if (run.arena) {
-    clampToArena(P, 22);
+    // weit draußen (Koop, frei gelaufen): ein Sog zieht den Goblin in ~1–2 s hinein (je weiter weg, desto schneller),
+    // unverwundbar; sonst am Rand halten
+    const A = run.arena, dx = A.x - P.x, dy = A.y - P.y, d = Math.hypot(dx, dy), out = d - (A.r - 22);
+    if (out > 60) { const s = Math.min(out, Math.max(1300, out * 2.5) * dt); P.x += dx / d * s; P.y += dy / d * s; P.inv = Math.max(P.inv, .3); P.ivx = P.ivy = 0; }
+    else clampToArena(P, 22);
     for (const e of run.enemies) if (e.boss && !e.dead) clampToArena(e, 30);
   }
   P.vx = (P.x - ox) / Math.max(dt, 1e-4); P.vy = (P.y - oy) / Math.max(dt, 1e-4);

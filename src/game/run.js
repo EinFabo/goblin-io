@@ -2,7 +2,7 @@ import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { RNG, mulberry32, newSeed, seedRun } from '../core/rng.js';
 import { takeInputs } from '../core/input.js';
-import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, levelUnlocked, persist, recordLevel, save, stageCleared, stageInfo } from '../core/save.js';
+import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, levelUnlocked, persist, recordLevel, save, stageCleared, stageInfo, stageUnlocked } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp, bonusReward } from './balance.js';
 import { TAU, isTouch } from '../core/util.js';
@@ -29,7 +29,7 @@ import { grantCosmetic } from './cosmetics.js';
 import { count, ensureDaily, mergeRun } from './progress.js';
 import { checkBounties, finishChallenge } from './quests.js';
 import { dayKey } from './shop.js';
-import { P, activate, buildGrid, clampToArena, eachPlayer, grid, nearestGob, hasMut, query, run, setRun, setSrc, xpNeed, setWsrc } from './state.js';
+import { P, activate, buildGrid, clampToArena, eachPlayer, grid, nearestGob, hasMut, query, run, ownP, setRun, setSrc, xpNeed, setWsrc } from './state.js';
 import { coopLevelTick } from './levelup.js';
 import { profileOf } from './profile.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
@@ -53,7 +53,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   const co = opts.coop || null, p = newPlayer(co ? co.profs[0] : profileOf());
   r.players = [p]; r.pi = 0; r.me = co ? co.me : 0;   // Koop (Phase 14b): alle Goblins, der gerade gerechnete, der eigene
   if (co) {
-    r.coop = true; r.coopHp = COOP_HP; r.coopDmg = COOP_DMG; r.noCont = true;   // kein Weitermachen für Juwelen im Koop
+    r.coop = true; r.coopHp = st.endless ? COOP_HP_NIGHT : COOP_HP; r.coopDmg = st.endless ? COOP_DMG_NIGHT : COOP_DMG; r.noCont = true;   // kein Weitermachen für Juwelen im Koop
     r.fixedView = COOP_VIEW; r.vc = { x: 0, y: 0 };      // gleiche Sicht auf beiden Rechnern (state.js viewHW)
   }
   r.cycle = cycle(co ? co.profs[0] : save);   // Wiedergeburt: Zyklus (Gegner stärker, mehr Gold und XP); Koop: der von Goblin 0
@@ -85,7 +85,9 @@ export function partnerGone() {
   if (run.players[run.me].down) endRun(false);
 }
 // Koop: Gegner haben mehr Leben und treffen härter (Ausgleich fürs Wiederbeleben), Sicht in Welt-Einheiten fest (wie ein 16:9-Fenster bei ZOOM 1), Abstand beim Start
-export const COOP_HP = 1.8, COOP_DMG = 1.5, COOP_VIEW = [800, 450], COOP_LEASH = [450, 260], COOP_GAP = 40;
+export const COOP_HP = 1.8, COOP_DMG = 1.7, COOP_VIEW = [800, 450], COOP_GAP = 40;
+// Endlose Nacht: Gegner wachsen dort ohnehin mit der Zeit, mit dem vollen Ausgleich scheiterten Teams fast immer am ersten Boss
+export const COOP_HP_NIGHT = 1.65, COOP_DMG_NIGHT = 1.35;
 // Weiterer Goblin (Koop): eigene Ausrüstung aus seinem Profil, startet rechts neben Goblin 0
 function addPlayer(prof) {
   const i = run.players.length, p = newPlayer(prof);
@@ -212,10 +214,7 @@ function step(dt, inps) {
   if (run.players.length > 1) {
     let x = 0, y = 0, n = 0;
     for (const p of run.players) if (!p.gone) { x += p.x; y += p.y; n++; }
-    run.vc = { x: x / n, y: y / n };
-    // Leine: beide bleiben nah genug, dass sie auch am Handy groß im Bild sind (höchstens 2 × COOP_LEASH auseinander)
-    const [hw, hh] = COOP_LEASH, c = run.vc;
-    for (const p of run.players) if (!p.down) { p.x = Math.max(c.x - hw, Math.min(c.x + hw, p.x)); p.y = Math.max(c.y - hh, Math.min(c.y + hh, p.y)); }
+    run.vc = { x: x / n, y: y / n };   // Mitte (Boss-Arena); keine Leine mehr – jeder läuft frei (Phase 16, Wunsch Fabi)
   }
   updCamera(dt);
   if (run.over) return;
@@ -330,7 +329,8 @@ export function endRun(win) {
   // Konto-XP (14.3) und was dadurch neu freigeschaltet wird
   const before = ABILITY_IDS.filter(canEquip);
   // Koop: als Gast in einem Level, das man selbst noch nicht freigespielt hat, gibt es Gold und XP, aber keinen Fortschritt
-  const own = !run.coop || run.st.endless || (levelUnlocked(run.si, run.li) && (!run.nm || (stageCleared(run.si) && run.nm <= nmCap((stageInfo(run.si) || {}).nmMax))));
+  // (Endlose Nacht: nur wer sie selbst freigespielt hat; sonst auch kein Altar-Fortschritt, game/progress.js)
+  const own = !run.coop || (run.st.endless ? stageUnlocked(run.si) : levelUnlocked(run.si, run.li) && (!run.nm || (stageCleared(run.si) && run.nm <= nmCap((stageInfo(run.si) || {}).nmMax))));
   const rec = own ? recordLevel(run.si, run.li, { win, time: run.time, hats, hatOk, kills: run.kills, endless: !!run.st.endless, nm: run.nm, noBest: cont }) : { first: false, newHats: 0, nmFirst: false };
   const xp = Math.round(accountXp({ kills: run.kills, seconds: run.time, win, firstClear: rec.first, boss: boss || !!run.st.endless }) * nmXp(run.nm) * cycleReward(run.cycle) * (1 + .05 * soulRank(save, 'c_xp'))), up = gainAccountXp(xp);
   const unlocked = ABILITY_IDS.filter(id => canEquip(id) && !before.includes(id)).map(id => ABILITIES[id].name);
@@ -364,7 +364,7 @@ export function endRun(win) {
   for (const w of run.weapons) s.weapons[w.id] = (s.weapons[w.id] || 0) + 1;
   // Phase 11: Zähler für Wochenaufgaben, dann die Steckbriefe des Kopfgeld-Bretts (Belohnung gleich, Truhen ins Regal)
   if (win && !run.st.endless) { if (run.nm) count(run, 'nmwin'); if (hats === 3) count(run, 'hat3'); if (run.cls !== 'gob') count(run, 'clswin'); }
-  mergeRun(save, run, win);
+  run.ownProgress = own; mergeRun(save, run, win);
   const bounty = checkBounties(save, { win, boss, si: run.si, endless: !!run.st.endless, cont: cont, cnt: run.cnt, bossHits: run.bossHits || 0, time: run.time,
     abil: run.abil.filter(Boolean).map(s => s.id), nm: run.nm, healed: run.healed || 0, cls: run.cls, mut: run.mut });
   // Tägliche Herausforderung (Phase 12): Bestwert und Belohnung für den ersten Sieg des Tages
@@ -410,7 +410,8 @@ export function doContinue() {
 // Kamera zieht weich nach und schaut in Laufrichtung voraus, beim Sprinten weiter und 4 % herausgezoomt
 function updCamera(dt) {
   const c = run.cam, a = 1 - Math.pow(.85, dt * 60);
-  if (run.vc) { c.x += (run.vc.x - c.x) * a; c.y += (run.vc.y - c.y) * a; c.z += (1 - c.z) * a; return; }   // Koop: Mitte, kein Vorausschauen
+  // Koop: die Kamera jedes Rechners folgt seinem eigenen Goblin (nur Bild, die Sim liest die Kamera nicht)
+  const P = ownP();
   const look = P.sprinting ? 40 : P.moving ? 16 : 0;
   c.x += (P.x + P.aimX * look - c.x) * a; c.y += (P.y + P.aimY * look - c.y) * a;
   c.z += ((P.sprinting ? .96 : 1) - c.z) * (1 - Math.pow(.92, dt * 60));

@@ -20,7 +20,7 @@ export function mergeRun(save, run, win) {
   for (const [k, n] of Object.entries(run.cnt)) add(k, n);
   add('gold', run.gold);
   if (win && !run.st.endless) { add('levels', 1); for (const w of run.weapons) add('w.' + w.id, 1); }
-  if (run.st.endless) { c.endless = Math.max(c.endless || 0, Math.floor(run.time)); if (save.rebirth) save.rebirth.night = Math.max(save.rebirth.night || 0, Math.floor(run.time)); }   // night: bester Lauf in diesem Zyklus (Phase 12)
+  if (run.st.endless && run.ownProgress !== false) { c.endless = Math.max(c.endless || 0, Math.floor(run.time)); if (save.rebirth) save.rebirth.night = Math.max(save.rebirth.night || 0, Math.floor(run.time)); }   // night: bester Lauf in diesem Zyklus (Phase 12)
 }
 // Zählerwert für Tages- und Wochenaufgaben (Kills und Truhen stehen seit jeher in stats; „elites“ zählt Mini-Bosse mit)
 export const val = (save, key) => key === 'kills' ? save.stats.kills : key === 'chests' ? save.stats.chests : key === 'elites' ? (save.stats.c.elites || 0) + (save.stats.c.minis || 0) : (save.stats.c[key] || 0);

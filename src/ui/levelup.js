@@ -4,7 +4,7 @@ import { on } from '../core/events.js';
 import { Music } from '../core/music.js';
 import { $ } from '../core/util.js';
 import { BOONS, MEGAS, PASSIVES, WEAPONS, megaOf, weaponOf } from '../data/weapons.js';
-import { SKIP_GOLD, SKIP_HEAL, ban, choose, genChoices, reroll } from '../game/levelup.js';
+import { PICK, SKIP_GOLD, SKIP_HEAL, ban, choose, genChoices, reroll } from '../game/levelup.js';
 import { MAX_P, MAX_W, canBan } from '../game/offer.js';
 import { P, activate, ownIds, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
@@ -94,7 +94,11 @@ $('#cards').addEventListener('click', e => {
   if (pk && !mode) { openTree(pk.dataset.peek, true); return; }   // beim Bannen/Sperren zählt der Klick für die Karte
   const b = e.target.closest('.card'); if (!b) return;
   const i = +b.dataset.i, c = curChoices[i];
-  if (run.lvl) { coopPick(i, 0); return; }
+  if (run.lvl) {   // Koop: Bannen/Sperren/Wählen als Eingabe (game/levelup.js PICK)
+    if (mode === 'ban') { if (canBan(c)) coopAct(PICK.BAN + i); mode = null; renderCoop(); return; }
+    if (mode === 'lock') { coopAct(PICK.LOCK + i); mode = null; renderCoop(); return; }
+    coopPick(i, 0); return;
+  }
   if (mode === 'ban') {
     if (!canBan(c)) return;
     curChoices = ban(curChoices, i); mode = null; if (lockIdx === i) lockIdx = -1;
@@ -103,43 +107,60 @@ $('#cards').addEventListener('click', e => {
   if (mode === 'lock') { lockIdx = lockIdx === i ? -1 : i; mode = null; renderCards(); return; }
   close(i);
 });
-$('#rerollBtn').addEventListener('click', () => { if (run.lvl || run.rerolls <= 0 || mode) return; curChoices = reroll(curChoices); lockIdx = -1; renderCards(); sfx.cards(); });
-$('#banBtn').addEventListener('click', () => { if (run.lvl || run.bans <= 0) return; mode = mode === 'ban' ? null : 'ban'; renderCards(); });
+$('#rerollBtn').addEventListener('click', () => { if (run.lvl) { if (!mode) coopAct(PICK.REROLL); return; } if (run.rerolls <= 0 || mode) return; curChoices = reroll(curChoices); lockIdx = -1; renderCards(); sfx.cards(); });
+$('#banBtn').addEventListener('click', () => { if (run.bans <= 0 || coopBusy()) return; mode = mode === 'ban' ? null : 'ban'; if (run.lvl) renderCoop(); else renderCards(); });
 $('#lockBtn').addEventListener('click', () => {
-  if (run.lvl || run.locks <= 0) return;
-  if (lockIdx >= 0 && !mode) lockIdx = -1; else mode = mode === 'lock' ? null : 'lock';
-  renderCards();
+  if (run.locks <= 0 || coopBusy()) return;
+  if (lockIdx >= 0 && !mode) { if (run.lvl) { coopAct(PICK.LOCK + lockIdx); return; } lockIdx = -1; } else mode = mode === 'lock' ? null : 'lock';
+  if (run.lvl) renderCoop(); else renderCards();
 });
 $('#lvEvoBtn').addEventListener('click', () => openTree(null, true));
-$('#skipGold').addEventListener('click', () => close('gold'));
-$('#skipHeal').addEventListener('click', () => close('heal'));
+$('#skipGold').addEventListener('click', () => { if (run.lvl) coopPick('gold', 0); else close('gold'); });
+$('#skipHeal').addEventListener('click', () => { if (run.lvl) coopPick('heal', 0); else close('heal'); });
 
 // ---------- Koop (Phase 14b): gemeinsames Level-Up ----------
 // Angebote kommen aus der Sim (run.lvl, game/levelup.js startCoopLevel); die Wahl geht als Eingabe pick hinein,
-// angewandt wird sie erst, wenn beide gewählt haben. Würfeln, Bannen, Sperren und Überspringen gibt es im Koop nicht.
+// angewandt wird sie erst, wenn beide gewählt haben. Würfeln, Bannen, Sperren und Überspringen gehen ebenfalls als Eingabe
+// (Phase 16); die Sim meldet das neue Angebot mit coopLevelUpdate zurück.
 // who: 0 = eigener Goblin, 1 = Spieler 2 im Testmodus ?coop=local (zweite Kartenreihe, Tasten 7–0)
 const picked = [-1, -1];
 function coopPick(i, who) {
   const L = run.lvl, gi = who ? 1 - run.me : run.me;
-  if (!L || !L.offers[gi] || picked[who] >= 0) return;
-  picked[who] = i; pickInput(i, who); sfx.pickCard();
+  if (!L || !L.offers[gi] || picked[who] !== -1 || (!who && waitOffer > performance.now())) return;
+  picked[who] = i; pickInput(i === 'gold' ? PICK.GOLD : i === 'heal' ? PICK.HEAL : i, who); sfx.pickCard();
   const box = who ? $('#cards2') : $('#cards');
   box.querySelectorAll('.card').forEach((b, j) => b.classList.toggle(j === i ? 'picked' : 'off', true));
+  if (!who) $('#levelup').classList.add('chosen');   // Werkzeuge aus, sobald gewählt
   coopLvTick();
 }
+// Werkzeug (neu würfeln, bannen, sperren) als Eingabe; solange noch nicht gewählt. Nach Würfeln/Bannen bis zum neuen
+// Angebot (coopLevelUpdate) keine Wahl: sonst gälte ein Klick schon für Karten, die man noch nicht gesehen hat
+let waitOffer = 0;
+function coopAct(code) {
+  if (!run.lvl || picked[0] !== -1 || waitOffer > performance.now()) return;
+  pickInput(code, 0);
+  if (code === PICK.REROLL || (code >= PICK.BAN && code < PICK.LOCK)) waitOffer = performance.now() + 1500;
+}
+const coopBusy = () => !!run.lvl && (picked[0] !== -1 || waitOffer > performance.now());
+// eigene Karten und Werkzeuge mit der eigenen Ausrüstung zeichnen (Restwürfe, Banns, Sperre)
+function renderCoop() {
+  const L = run.lvl; if (!L) return;
+  const pi = run.pi; activate(run.me);
+  try { curChoices = L.offers[run.me] || []; lockIdx = L.locks ? L.locks[run.me] : -1; renderCards(); } finally { activate(pi); }
+}
+on('coopLevelUpdate', i => { if (i === run.me) { waitOffer = 0; if (picked[0] === -1) renderCoop(); sfx.cards(); } });
 // Karten eines Goblins (seine Ausrüstung muss für die Hinweise aktiv sein)
 function cardsOf(gi, offer) {
   const pi = run.pi; activate(gi);
   try { return offer.map(cardHtml).join(''); } finally { activate(pi); }
 }
 on('coopLevel', L => {
-  picked[0] = picked[1] = -1; mode = null; lockIdx = -1;
+  picked[0] = picked[1] = -1; mode = null; lockIdx = -1; waitOffer = 0;
   const mine = L.offers[run.me];
   $('#levelup').classList.add('coop');
   $('#lvTitle').innerHTML = L.kind === 'chest' ? chestSvg('iron', 'lvchest') + 'Schatztruhe!' : 'Level ' + P.lv + '!';
-  curChoices = mine || [];
-  $('#cards').innerHTML = mine ? cardsOf(run.me, mine) : '';
-  $('#cards').className = 'cards n' + curChoices.length;
+  $('#levelup').classList.remove('chosen'); $('#levelup').classList.toggle('mine', !!mine);
+  if (mine) renderCoop(); else { curChoices = []; $('#cards').innerHTML = ''; $('#cards').className = 'cards n0'; }
   let c2 = $('#cards2');
   const other = 1 - run.me, theirs = localCoop ? L.offers[other] : null;
   if (theirs) {
@@ -151,7 +172,7 @@ on('coopLevel', L => {
   coopLvTick();
   $('#levelup').hidden = false; sfx.cards();
 });
-function coopClose() { $('#levelup').classList.remove('coop'); const c2 = $('#cards2'); if (c2) c2.hidden = true; }
+function coopClose() { $('#levelup').classList.remove('coop', 'mine', 'chosen'); const c2 = $('#cards2'); if (c2) c2.hidden = true; }
 on('coopLevelDone', () => { $('#levelup').hidden = true; coopClose(); });
 on('runStart', coopClose);   // Lauf mitten im Koop-Level-Up verlassen: nichts davon in den nächsten Lauf mitnehmen
 // Restzeit und Partner-Status (jedes Bild, scenes/run.js)
@@ -159,5 +180,7 @@ export function coopLvTick() {
   const L = run && run.lvl; if (!L) return;
   const other = 1 - run.me, waitMe = L.picks[run.me] === -1 && picked[0] < 0, waitThem = L.picks[other] === -1;
   const name = run.players[other].prof.name || 'Partner';
+  // Bannen/Sperren gewählt: deren Hinweis zeigen (renderCards), nur die Zeit davor
+  if (mode) { $('#lvCardNote').textContent = `Noch ${Math.max(0, Math.ceil(L.t))} s · ` + (mode === 'ban' ? 'Welche Karte bannen? Sie kommt in diesem Lauf nie wieder.' : 'Welche Karte sperren? Sie bleibt fürs nächste Level-Up liegen.'); return; }
   $('#lvCardNote').textContent = `Noch ${Math.max(0, Math.ceil(L.t))} s · ` + (waitMe ? 'Wähl deine Karte' : waitThem ? `Warte auf ${name} …` : 'Gleich geht es weiter');
 }

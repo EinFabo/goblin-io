@@ -136,9 +136,10 @@ on('abilUse', ({ i, id }) => {
   for (let k = 0; k < 14; k++) { const a = k * Math.PI * 2 / 14; part(P.x, P.y - 12, Math.cos(a) * 240, Math.sin(a) * 240, .35, col, 3.5); }
 });
 
-// Koop (Phase 14b): Partner unter der Uhr – Name, Leben, gestürzt
+// Koop (Phase 14b): Partner unter der Uhr – Name, Leben, gestürzt; selbst gestürzt: Hinweis mit Fortschritt (Phase 16)
 function updPartner() {
   let box = document.getElementById('partnerBox');
+  updDown();
   if (!run.coop) { if (box) box.hidden = true; return; }
   const p = run.players[1 - run.me];
   if (!box) {
@@ -150,4 +151,14 @@ function updPartner() {
   setTxt('#ptName', p.gone ? `${p.prof.name || 'Partner'} ist weg` : p.down ? `${p.prof.name || 'Partner'} · gestürzt!` : p.prof.name || 'Partner');
   box.classList.toggle('down', !!p.down);
   setW('#ptFill', p.gone ? 0 : p.down ? (p.reviveT || 0) / REVIVE_T : Math.max(0, p.hp / p.maxHp));
+}
+function updDown() {
+  let el = document.getElementById('downNote');
+  const me = run.coop && run.players[run.me], on = !!(me && me.down && !run.over);
+  if (!on) { if (el) el.hidden = true; return; }
+  if (!el) { el = document.createElement('div'); el.id = 'downNote'; el.innerHTML = '<b>Gestürzt!</b><span id="downTxt"></span><div class="pbar"><i id="downFill"></i></div>'; $('#hud').append(el); }
+  el.hidden = false;
+  const p = run.players[1 - run.me], name = (p && p.prof.name) || 'Dein Partner';
+  setTxt('#downTxt', p && p.gone ? 'Dein Partner ist weg.' : me.reviveNear ? `${name} belebt dich wieder …` : `${name} kann dich wiederbeleben – der Pfeil zeigt, wo.`);
+  setW('#downFill', (me.reviveT || 0) / REVIVE_T);
 }

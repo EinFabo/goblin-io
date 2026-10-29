@@ -15,7 +15,7 @@ import { nmHp, nmRageAt } from '../data/nightmare.js';
 import { cycleHp } from '../data/souls.js';
 import { boltFx, dropGem, part, puff, ring } from './fx.js';
 import { hint } from './run.js';
-import { P, run, viewC } from './state.js';
+import { P, arenaC, ownP, run } from './state.js';
 import { W, ZOOM } from '../render/canvas.js';
 import { banner } from '../ui/hud.js';
 
@@ -32,7 +32,7 @@ export { bossOnKill, portalWarp, shadeDown, spinHaz } from './boss-mech.js';
 const tempo = b => (phase(b).spd || 1) * (b.rage ? 1.5 : 1);
 
 // Ein Boss als Gegner-Objekt (auch für Malvorns Schatten)
-export function makeBoss(id, { x = viewC().x, y = viewC().y - 300 } = {}) {
+export function makeBoss(id, { x = arenaC().x, y = arenaC().y - 300 } = {}) {
   // Endlose Nacht: jeder weitere Boss ist stärker (Runde = besiegte Bosse; ein Boss springt nicht mitten im Kampf)
   const st = run.st, B = BOSSES[id], lf = 1 + run.loop * 1.5;
   const b = {
@@ -55,7 +55,7 @@ export function spawnBoss(loot = true) {
   for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); if (loot) dropGem(e.x, e.y, e.xp); }
   run.eproj.length = 0; run.haz.length = 0;
   clearBossWorld();
-  run.arena = { x: viewC().x, y: viewC().y, r: 470, burn: 0 };   // Koop: um die Mitte beider Goblins
+  const c = arenaC(); run.arena = { x: c.x, y: c.y, r: 470, burn: 0 };   // Koop: um die Mitte beider Goblins (ein Sog zieht sie hinein, player.js)
   const b = makeBoss(id);
   run.enemies.push(b); run.boss = b;
   startCut('intro', b);
@@ -104,7 +104,7 @@ export function updCut(dt) {
   // Kamera: zum Boss, heranzoomen, am Ende zurück zum Spieler
   const back = c.dur - (c.kind === 'intro' ? .7 : .4), out = c.t > back, tz = out ? 1 : c.kind === 'intro' ? 1.3 : 1.2;
   // Beim Auftritt steht der Boss rechts der Mitte, links unten ist Platz für das Namensschild
-  const tx = out ? viewC().x : b.x - (c.kind === 'intro' ? W * .16 / (ZOOM * tz) : 0), ty = out ? viewC().y : b.y - 30;
+  const tx = out ? ownP().x : b.x - (c.kind === 'intro' ? W * .16 / (ZOOM * tz) : 0), ty = out ? ownP().y : b.y - 30;
   const k = 1 - Math.pow(out ? .86 : .9, dt * 60);
   cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k; cam.z += (tz - cam.z) * k;
   b.face = 'down'; b.fa = Math.PI / 2;

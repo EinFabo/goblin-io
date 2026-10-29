@@ -7,7 +7,7 @@ import { frand, rand, rnd } from '../core/rng.js';
 import { TAU } from '../core/util.js';
 import { addHaz, hazWarnCount } from './hazards.js';
 import { addNum, part, puff, ring } from './fx.js';
-import { P, clampToArena, onScreen, query, run } from './state.js';
+import { P, clampToArena, heard, query, run } from './state.js';
 
 export const PROJ_CAP = () => 6 + run.si * 2;      // gegnerische Geschosse gleichzeitig
 export const WARN_CAP = 4;                         // Bodenwarnungen gleichzeitig
@@ -167,7 +167,7 @@ export const CASTS = {
     release(e) {
       let n = 0;
       query(e.x, e.y, 170, o => { if (o !== e && !o.boss && !o.obj && o.hp < o.maxHp) { const h = o.maxHp * .3; o.hp = Math.min(o.maxHp, o.hp + h); n++; addNum(o.x, o.y - 26, '+' + Math.round(h), '#8dff7a'); for (let i = 0; i < 3; i++) part(o.x + frand(-10, 10), o.y, 0, -60, .5, 'rgba(140,255,130,.9)', 3); } });
-      ring(e.x, e.y, 10, 170, .5, 'rgba(140,255,130,.8)', 5); if (n && onScreen(e.x, e.y)) sfx.eheal();
+      ring(e.x, e.y, 10, 170, .5, 'rgba(140,255,130,.8)', 5); if (n && heard(e.x, e.y)) sfx.eheal();
     },
   },
   shield: {

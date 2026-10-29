@@ -3,7 +3,7 @@ import { emit } from '../core/events.js';
 import { sfx } from '../core/audio.js';
 import { BOONS, PASSIVES, WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
-import { drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
+import { canBan, drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
 import { P, eachPlayer, heal, run } from './state.js';
 import { part, ring } from './fx.js';
 import { TAU } from '../core/util.js';
@@ -41,26 +41,35 @@ export function choose(offer, i, lockIdx = -1) {
 // Koop (Phase 14b): Level-Up gemeinsam. Die Welt steht, jeder wählt seine eigene Karte (Eingabe pick, core/input.js),
 // nach COOP_LV_T s gilt die erste. Truhe mit Auswahl (Mini-Boss): nur wer sie aufgehoben hat (run.chestBy).
 // Angebote der Reihe nach aus RNG.lvl (Goblin 0, dann 1), damit beide Rechner dasselbe würfeln.
-export const COOP_LV_T = 15;
+// Eingabe pick (Phase 16: wie allein): 0–3 Karte · 10 Gold / 11 Heilen statt Karte · 20 neu würfeln · 30+i bannen · 40+i sperren
+export const COOP_LV_T = 20, PICK = { GOLD: 10, HEAL: 11, REROLL: 20, BAN: 30, LOCK: 40 };
 export function startCoopLevel(kind) {
   const who = kind === 'chest' ? [(run.chestBy && run.chestBy.shift()) ?? 0] : run.players.map((p, i) => i);
   const offers = [];
   eachPlayer((p, i) => { offers[i] = who.includes(i) ? genChoices() : null; });
-  run.lvl = { kind, offers, picks: offers.map(o => (o ? -1 : null)), t: COOP_LV_T }; run.lvOpen = false;
+  run.lvl = { kind, offers, picks: offers.map(o => (o ? -1 : null)), locks: offers.map(() => -1), t: COOP_LV_T }; run.lvOpen = false;
   emit('coopLevel', run.lvl);
 }
 export function coopLevelTick(dt, inps) {
   const L = run.lvl;
   L.t -= dt;
-  L.offers.forEach((o, i) => {
+  eachPlayer((p, i) => {
+    const o = L.offers[i];
     if (!o || L.picks[i] !== -1) return;
-    if (run.players[i].gone) { L.picks[i] = 0; return; }   // Partner weg: seine Karte gilt sofort
+    if (p.gone) { L.picks[i] = 0; return; }   // Partner weg: seine Karte gilt sofort
     const k = inps[i] ? inps[i].pick : -1;
-    if (k >= 0 && k < o.length) L.picks[i] = k; else if (L.t <= 0) L.picks[i] = 0;
+    // Werkzeuge: neu würfeln, bannen, sperren (aus der eigenen Ausrüstung; RNG.lvl wie allein, beide Rechner gleich)
+    if (k === PICK.REROLL && run.rerolls > 0) { L.offers[i] = reroll(o); L.locks[i] = -1; emit('coopLevelUpdate', i); return; }
+    if (k >= PICK.BAN && k < PICK.BAN + o.length && run.bans > 0 && canBan(o[k - PICK.BAN])) { L.offers[i] = ban(o, k - PICK.BAN); if (L.locks[i] === k - PICK.BAN) L.locks[i] = -1; emit('coopLevelUpdate', i); return; }
+    if (k >= PICK.LOCK && k < PICK.LOCK + o.length && run.locks > 0) { L.locks[i] = L.locks[i] === k - PICK.LOCK ? -1 : k - PICK.LOCK; emit('coopLevelUpdate', i); return; }
+    if (k >= 0 && k < o.length) L.picks[i] = k;
+    else if (k === PICK.GOLD) L.picks[i] = 'gold';
+    else if (k === PICK.HEAL) L.picks[i] = 'heal';
+    else if (L.t <= 0) L.picks[i] = 0;
   });
   if (L.picks.includes(-1)) return;
   run.lvl = null;
-  eachPlayer((p, i) => { if (L.offers[i]) choose(L.offers[i], L.picks[i]); });
+  eachPlayer((p, i) => { if (L.offers[i]) choose(L.offers[i], L.picks[i], L.locks[i]); });
   emit('coopLevelDone', L);
 }
 

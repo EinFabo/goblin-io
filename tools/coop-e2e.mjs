@@ -64,14 +64,18 @@ await Promise.all(pages.map((p, me) => p.evaluate(({ delay, trace, me, profs, si
 
 // Beide laufen in Kreisen (andere Richtung), rollen ab und zu, wählen Karten
 const keys = [['KeyD', 'KeyS', 'KeyA', 'KeyW'], ['KeyA', 'KeyW', 'KeyD', 'KeyS']];
-let picks = 0;
+let picks = 0, rerolls = 0;
 const t0 = Date.now();
 for (let s = 0; Date.now() - t0 < secs * 1000; s++) {
   for (const [i, p] of pages.entries()) {
     const k = keys[i][s % 4], prev = keys[i][(s + 3) % 4];
     await p.keyboard.up(prev); await p.keyboard.down(k);
     if (s % 3 === i) await p.keyboard.press('Space');
-    if (await p.evaluate(() => !document.getElementById('levelup').hidden && !!GOBLIN.run.lvl)) { await p.keyboard.press('Digit1'); picks++; }
+    if (await p.evaluate(() => !document.getElementById('levelup').hidden && !!GOBLIN.run.lvl)) {
+      // Anna würfelt vorher neu (Phase 16: Werkzeuge im Koop als Eingabe), dann nehmen beide Karte 1
+      if (i === 0 && await p.evaluate(() => !document.getElementById('rerollBtn').disabled)) { await p.keyboard.press('KeyR'); rerolls++; await p.waitForTimeout(200); }
+      await p.keyboard.press('Digit1'); picks++;
+    }
   }
   await pages[0].waitForTimeout(700);
 }
@@ -101,7 +105,7 @@ if (args.trace) {
 await pages[0].evaluate(() => { document.getElementById('pauseBtn').click(); document.getElementById('quitBtn').click(); document.getElementById('quitBtn').click(); });   // Aufgeben fragt nach (zweiter Klick)
 await pages[0].waitForTimeout(2500);
 const after = await state();
-console.log(JSON.stringify({ mid, after, picks, sent, errs: errs.slice(0, 3) }, null, 1));
+console.log(JSON.stringify({ mid, after, picks, rerolls, sent, errs: errs.slice(0, 3) }, null, 1));
 await b.close();
 const ok = !errs.length && mid.every(s => !s.note && s.tick > secs * 30) && Math.abs(mid[0].tick - mid[1].tick) < 120 && (picks > 0 || !!args.server)
   && after[1].gone[0] && !after[1].over && after[1].tick > mid[1].tick + 60;

@@ -7,9 +7,9 @@ import { hitDamage, endlessCap } from './balance.js';
 import { bomberBoom, damageRules, deathRules } from './enemies.js';
 import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
-import { addItem, addNum, animFx, dissolve, dropGem, later, puff, sparks } from './fx.js';
+import { addItem, addNum, animFx, dissolve, dropGem, later, puff, ring, sparks } from './fx.js';
 import { addEvents } from './run.js';
-import { P, abSrc, aoeId, eachPlayer, hasMut, heal, isBig, pR, run, wsrc } from './state.js';
+import { P, abSrc, aoeId, eachPlayer, hasMut, heal, isBig, pR, run, wsrc, query } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
@@ -146,7 +146,9 @@ export function damagePlayer(d, src = 'contact', by = null) {
   }
 }
 // Koop: gestürzt liegen bleiben, bis der Partner REVIVE_T s daneben steht (game/run.js reviveTick)
-export const REVIVE_T = 3, REVIVE_R = 70;
+// Phase 16 (Wunsch Fabi: „Wiederbeleben fühlte sich schlecht an“): größerer Kreis, kürzer, Fortschritt fällt nur langsam,
+// beim Aufstehen stößt eine Druckwelle die Gegner weg und der Goblin ist kurz unverwundbar
+export const REVIVE_T = 2, REVIVE_R = 105, REVIVE_PUSH = 190;
 function fall() {
   P.down = true; P.reviveT = 0; P.dashT = 0; P.sprinting = false; P.moving = false; P.shieldT = 0; P.mechT = 0;
   // Laufende Zustände enden (sonst frieren sie ein und gehen nach dem Wiederbeleben weiter)
@@ -154,9 +156,19 @@ function fall() {
   addNum(P.x, P.y - 52, 'Gestürzt!', '#ff5d55', true);
 }
 export function reviveTick(p, dt) {
-  const near = run.players.some(o => o !== p && !o.down && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 < REVIVE_R * REVIVE_R);
-  p.reviveT = near ? p.reviveT + dt : Math.max(0, p.reviveT - dt * .5);
+  // gleiche Fläche wie der gezeichnete Kreis (Ellipse in Draufsicht, 10 tiefer; render/draw-world.js drawDown)
+  const near = run.players.some(o => o !== p && !o.down && ((o.x - p.x) / REVIVE_R) ** 2 + ((o.y - p.y - 10) / (REVIVE_R * .72)) ** 2 < 1);
+  if (near && !p.reviveT) sfx.tab();   // es geht los
+  p.reviveT = near ? p.reviveT + dt : Math.max(0, p.reviveT - dt * .25);
+  p.reviveNear = near;   // für die Anzeige (Ring leuchtet)
   if (p.reviveT < REVIVE_T) return;
-  p.down = false; p.reviveT = 0; p.hp = p.maxHp / 2; p.inv = 1.5;
+  p.down = false; p.reviveT = 0; p.hp = p.maxHp / 2; p.inv = 2;
+  // Druckwelle: Gegner (außer Bossen) weg und kurz betäubt, damit man nicht gleich wieder fällt
+  query(p.x, p.y, REVIVE_PUSH, e => {
+    if (e.boss || e.obj) return;
+    const dx = e.x - p.x, dy = e.y - p.y, d = Math.hypot(dx, dy) || 1;
+    e.kx += dx / d * 520; e.ky += dy / d * 520; e.freezeT = Math.max(e.freezeT || 0, .6);
+  });
+  ring(p.x, p.y, 10, REVIVE_PUSH, .45, 'rgba(125,255,122,.9)', 8);
   addNum(p.x, p.y - 52, 'Wieder da!', '#7dff7a', true); sfx.heal();
 }

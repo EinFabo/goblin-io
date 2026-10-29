@@ -19,7 +19,7 @@ import { PROC, mk } from './proc.js';
 import { drawGround } from './tiles.js';
 import { ABIL_OBJ, drawAbilGround, drawAbilObj, drawAbilTop, drawBrewAura, drawBurrow } from './draw-abilities.js';
 import { potionGiant } from '../game/abilities.js';
-import { daggerTint, partnerSpr } from './sprites.js';
+import { SPR, daggerTint, partnerSpr } from './sprites.js';
 // Koop: der Partner hat eigene Bilder (render/sprites.js loadPartner)
 const gobSpr = name => (run.pi !== run.me ? partnerSpr(name) : name);
 import { drawProj2, drawWfxGround, drawWfxTop } from './draw-weapons2.js';
@@ -87,8 +87,6 @@ function drawRun(now) {
   const sh = save.settings.shake ? run.shake : 0;
   const sx = (Math.random() - .5) * sh, sy = (Math.random() - .5) * sh;
   let zm = ZOOM * run.cam.z;
-  // Koop: nur so weit herauszoomen, dass beide Goblins mit Rand ins Bild passen
-  if (run.coop && !run.players.some(p => p.gone)) { const [a, b] = run.players; zm = Math.min(zm, W / 2 / (Math.abs(a.x - b.x) / 2 + 110), H / 2 / (Math.abs(a.y - b.y) / 2 + 130)); }
   const camX = run.cam.x + sx, camY = run.cam.y + sy, z = zm * DPR;
   ctx.setTransform(z, 0, 0, z, cv.width / 2 - camX * z, cv.height / 2 - camY * z);
   const hw = W / 2 / zm, hh = H / 2 / zm;
@@ -448,11 +446,19 @@ function drawNameTag() {
 }
 // Koop: gestürzter Goblin liegt, Ring zeigt das Wiederbeleben (Partner muss REVIVE_R nah stehen)
 function drawDown(t) {
-  const d = P.face, q = (P.reviveT || 0) / REVIVE_T;
-  ctx.strokeStyle = `rgba(255,90,80,${.35 + .2 * Math.sin(t * 6)})`; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
-  ctx.beginPath(); ctx.ellipse(P.x, P.y + 10, REVIVE_R, REVIVE_R * .72, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-  drawSpr(gobSpr(`gob.death.${d}.5`), P.x, P.y - 8, 1, 0, null, .8);
-  if (q > 0) { ctx.strokeStyle = '#7dff7a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(P.x, P.y - 70, 14, -Math.PI / 2, -Math.PI / 2 + q * TAU); ctx.stroke(); }
+  // Kreis zum Wiederbeleben: rot gestrichelt, grün sobald der Partner drin steht; außen füllt sich der Fortschritt
+  const d = P.face, q = Math.min(1, (P.reviveT || 0) / REVIVE_T), near = P.reviveNear;
+  ctx.fillStyle = near ? 'rgba(125,255,122,.12)' : `rgba(255,90,80,${.06 + .04 * Math.sin(t * 6)})`;
+  ctx.beginPath(); ctx.ellipse(P.x, P.y + 10, REVIVE_R, REVIVE_R * .72, 0, 0, TAU); ctx.fill();
+  ctx.strokeStyle = near ? 'rgba(125,255,122,.8)' : `rgba(255,90,80,${.45 + .2 * Math.sin(t * 6)})`; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
+  ctx.lineDashOffset = -t * 30; ctx.beginPath(); ctx.ellipse(P.x, P.y + 10, REVIVE_R, REVIVE_R * .72, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  if (q > 0) { ctx.strokeStyle = '#7dff7a'; ctx.lineWidth = 7; ctx.beginPath(); ctx.ellipse(P.x, P.y + 10, REVIVE_R, REVIVE_R * .72, 0, -Math.PI / 2, -Math.PI / 2 + q * TAU); ctx.stroke(); }
+  // liegend; sind die Sterbe-Bilder (zweiter Ladeteil) noch nicht da, das Ruhe-Bild gekippt
+  const dn = gobSpr(`gob.death.${d}.5`);
+  if (SPR[dn]) drawSpr(dn, P.x, P.y - 8, 1, 0, null, .85); else drawSpr(gobSpr('gob.idle.down.1'), P.x, P.y + 4, 1, Math.PI / 2, null, .75);
+  ctx.font = '900 14px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,15,6,.85)';
+  const txt = near ? `Wiederbeleben … ${Math.round(q * 100)} %` : 'Hilfe!';
+  ctx.strokeText(txt, P.x, P.y - 74); ctx.fillStyle = near ? '#7dff7a' : '#ff7a6e'; ctx.fillText(txt, P.x, P.y - 74);
 }
 export function drawPlayer(t) {
   if (P.burrowT > 0 && !run.over) { drawBurrow(t); return; }   // Maulwurfsgang: nur der wandernde Erdhügel

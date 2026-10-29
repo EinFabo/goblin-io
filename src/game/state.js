@@ -1,4 +1,5 @@
 import { H, W, ZOOM } from '../render/canvas.js';
+import { RNG } from '../core/rng.js';
 
 // ---------- Spielzustand ----------
 // run = aktueller Lauf, P = Spieler. Zuweisen nur über setRun/activate (ES-Module sind read-only von außen).
@@ -96,8 +97,21 @@ export const isBig = e => !!(e.boss || e.link || e.elite || e.miniboss);
 // (run.fixedView) und um die Mitte beider Goblins (run.vc), damit beide Rechner gleich rechnen.
 export const viewHW = () => (run && run.fixedView ? run.fixedView[0] : W / 2 / ZOOM);
 export const viewHH = () => (run && run.fixedView ? run.fixedView[1] : H / 2 / ZOOM);
-export const viewC = () => (run && run.vc) || P;
+// Logik-Sicht: die des gerade gerechneten Goblins (Koop, Phase 16: jeder hat seine eigene, frei bewegen)
+export const viewC = () => P;
+// Mitte der Boss-Arena: im Koop zwischen beiden Goblins (run.vc), allein der Goblin
+export const arenaC = () => (run && run.vc) || P;
+// Wo Gegner erscheinen: allein um den Goblin, im Koop um einen stehenden Goblin, gewählt über RNG.spawn (beide Rechner gleich)
+export function spawnC() {
+  if (!run || !run.coop) return viewC();
+  const live = run.players.filter(p => !p.down);
+  return live.length ? live[(RNG.spawn.next() * live.length) | 0] : run.vc || P;
+}
+// Kamera und Bildschirm-Effekte: der eigene Goblin (im Koop nicht der gerade gerechnete)
+export const ownP = () => (run && run.players ? run.players[run.me] : P);
 export const viewR = () => Math.hypot(viewHW(), viewHH());
+// Töne/Optik in der Sim: im Bild des eigenen Goblins (im Koop nicht des gerade gerechneten; nur Ton, nie Logik)
+export const heard = (x, y, m = 0) => { const c = ownP(); return Math.abs(x - c.x) < viewHW() + m && Math.abs(y - c.y) < viewHH() + m; };
 export const onScreen = (x, y, m = 0) => { const c = viewC(); return Math.abs(x - c.x) < viewHW() + m && Math.abs(y - c.y) < viewHH() + m; };
 export { xpNeed } from './balance.js';
 export const pR = (p = P) => p.mechT > 0 ? 26 : 16;

@@ -75,7 +75,7 @@ window.addEventListener('keydown', e => {
   if (!$('#levelup').hidden && ['Digit1', 'Digit2', 'Digit3', 'Digit4'].includes(e.code)) { const b = $('#cards').children[+e.code.slice(5) - 1]; if (b) b.click(); }
   if (!$('#levelup').hidden && e.code === 'KeyR') $('#rerollBtn').click();
   if (!$('#levelup').hidden && e.code === 'KeyB') $('#banBtn').click();
-  if (!$('#levelup').hidden && e.code === 'KeyL') $('#lockBtn').click();
+  if (!$('#levelup').hidden && e.code === 'KeyL' && own(e.code)) $('#lockBtn').click();   // (im Testmodus ist L die Fähigkeit von Spieler 2)
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
 cv.addEventListener('pointerdown', e => {

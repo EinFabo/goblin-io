@@ -161,7 +161,7 @@ function renderNote0(show = true) {
   if (n.endless) {
     const best = stageBest(n.si);
     note.innerHTML = `<div class="nh"><span class="lbl">∞</span><h3>${st.name}</h3></div><p>${st.sub}</p>
-      <p class="rec">${best ? 'Rekord: ' + fmtTime(best) : 'Noch nicht gespielt'}</p>${open ? clsHtml() : ''}${altarHtml()}${open ? '<button class="btn primary go" data-go>Los!</button>' : '<p class="lock">Besiege zuerst den letzten Boss.</p>'}`;
+      <p class="rec">${best ? 'Rekord: ' + fmtTime(best) : 'Noch nicht gespielt'}</p>${open ? clsHtml() : ''}${altarHtml()}${open ? '<div class="gorow"><button class="btn primary go" data-go>Los!</button><button class="btn go" data-coop title="Zu zweit spielen">Koop</button></div>' : '<p class="lock">Besiege zuerst den letzten Boss.</p>'}`;
     return;
   }
   const K = LEVEL_KIND[n.li], boss = n.li === LEVELS - 1, info = levelInfo(n.si, n.li);
@@ -257,10 +257,12 @@ $('#lvNote').addEventListener('click', e => {
   audioInit(); sfx.pickCard(); start(n.si, n.li, nmOn(n.si));
 });
 $('#lvNote').addEventListener('click', e => {
-  // Koop (Phase 14d): Raum für dieses Level (Weltkarte-Level inkl. Albtraum, nicht die Endlose Nacht)
+  // Koop (Phase 14d): Raum für dieses Level (Weltkarte-Level inkl. Albtraum und die Endlose Nacht)
   if (e.target.closest('[data-coop]')) {
-    const n = M.nodes[M.gob.sel]; if (!n || !nodeOpen(n) || n.endless) return;
-    audioInit(); sfx.click(); openCoop({ si: n.si, li: n.li, nm: nmOn(n.si), label: levelLabel(n.si, n.li) + (nmOn(n.si) ? ` · Albtraum ${nmOn(n.si)}` : '') });
+    const n = M.nodes[M.gob.sel]; if (!n || !nodeOpen(n)) return;
+    audioInit(); sfx.click();
+    if (n.endless) openCoop({ si: n.si, li: 0, nm: 0, label: STAGES[n.si].name, endless: true });   // Endlose Nacht zu zweit (Wunsch Fabi 2026-10-29)
+    else openCoop({ si: n.si, li: n.li, nm: nmOn(n.si), label: levelLabel(n.si, n.li) + (nmOn(n.si) ? ` · Albtraum ${nmOn(n.si)}` : '') });
     return;
   }
   if (e.target.closest('[data-altar]')) { openAltar(() => { renderMap(); }); return; }
