@@ -55,7 +55,7 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
     r.coop = true; r.coopHp = COOP_HP; r.coopDmg = COOP_DMG; r.noCont = true;   // kein Weitermachen für Juwelen im Koop
     r.fixedView = COOP_VIEW; r.vc = { x: 0, y: 0 };      // gleiche Sicht auf beiden Rechnern (state.js viewHW)
   }
-  r.cycle = cycle(save);   // Wiedergeburt: Zyklus (Gegner stärker, mehr Gold und XP)
+  r.cycle = cycle(co ? co.profs[0] : save);   // Wiedergeburt: Zyklus (Gegner stärker, mehr Gold und XP); Koop: der von Goblin 0
   r.mut = [...(opts.mut || [])]; r.forceAbil = opts.abil || null; r.mode = opts.mode || null; r.day = dayKey();
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
   ensureDaily(save);
@@ -71,6 +71,13 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   if (co) { P.x = -COOP_GAP; for (const pr of co.profs.slice(1)) addPlayer(pr); activate(r.me); }
   if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ` unten: ${dn}, ${sn} und deine Fähigkeiten.` : `<b>Tipp</b> WASD laufen · Leertaste ${dn} · Shift ${sn} · Q und E Fähigkeiten`);
   emit('runStart', run);
+}
+// Koop: Partner hat den Lauf verlassen (net/lockstep.js, Abschied oder lange still). Ab hier rechnet nur noch dieser
+// Rechner: der Goblin des Partners liegt und zählt nicht mehr (kein Ziel, kein Wiederbeleben, Kamera nur auf den eigenen).
+export function partnerGone() {
+  const p = run.players[1 - run.me]; if (!p || p.gone) return;
+  p.gone = p.down = true; p.hp = 0;
+  if (run.players[run.me].down) endRun(false);
 }
 // Koop: Gegner haben mehr Leben und treffen härter (Ausgleich fürs Wiederbeleben), Sicht in Welt-Einheiten fest (wie ein 16:9-Fenster bei ZOOM 1), Abstand beim Start
 export const COOP_HP = 1.8, COOP_DMG = 1.5, COOP_VIEW = [800, 450], COOP_LEASH = [450, 260], COOP_GAP = 40;
@@ -114,19 +121,19 @@ export function recalc() {
   // Klasse (Phase 9): Leben, Tempo, Abklingzeit; Klassen-Level: kleine Boni
   const C = classOf(run.cls), cl = k => hasPerk(run.clsLv || 1, k);
   const glass = hasMut('glass');   // Mutator Glaskanone
-  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1) * (glass ? 1.6 : 1) * (1 + .05 * soulRank(save, 'w_dmg'));
-  P.cdMult = Math.pow(.92, pl('book')) * C.cd * (1 - .04 * soulRank(save, 'm_cd'));
+  P.dmgMult = (1 + .12 * pl('whet')) * (1 + .03 * sh('atk')) * bn('dmg') * (cl('dmg') ? 1.05 : 1) * (glass ? 1.6 : 1) * (1 + .05 * soulRank(pr, 'w_dmg'));
+  P.cdMult = Math.pow(.92, pl('book')) * C.cd * (1 - .04 * soulRank(pr, 'm_cd'));
   P.area = 1 + .12 * pl('amulet');
   P.armorMult = Math.pow(.93, pl('armor'));
   const old = P.maxHp;
-  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1) * (glass ? .5 : 1) * (1 + .05 * soulRank(save, 'w_hp'));
+  P.maxHp = (100 + 20 * pl('heart') + 6 * sh('hp')) * charmHp() * bn('hp') * C.hp * (cl('hp') ? 1.05 : 1) * (glass ? .5 : 1) * (1 + .05 * soulRank(pr, 'w_hp'));
   if (old) P.hp += Math.max(0, P.maxHp - old);
   P.regen = .4 * pl('herbs');
   P.speed = 165 * (1 + .08 * pl('boots')) * (1 + .02 * sh('spd')) * C.speed;
-  P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .06 * sh('mag')) * (1 + .15 * soulRank(save, 'c_mag'));
+  P.magnet = 90 * (1 + .35 * pl('magnet')) * (1 + .06 * sh('mag')) * (1 + .15 * soulRank(pr, 'c_mag'));
   P.xpMult = (1 + .03 * sh('xp')) * (cl('xp') ? 1.1 : 1);
   P.proj = 1 + .12 * pl('oil');
-  P.crit = .08 + .06 * pl('powder') + .03 * soulRank(save, 'w_crit');
+  P.crit = .08 + .06 * pl('powder') + .03 * soulRank(pr, 'w_crit');
   // zweite Reihe (2026-10-14)
   P.flatArmor = pl('helmet');
   P.atkSpd = (1 + .07 * pl('horn')) * bn('spd');
@@ -137,10 +144,10 @@ export function recalc() {
   P.leech = .004 * pl('fang');
   P.aoeMult = 1 + .1 * pl('ember');
   P.xpMult *= 1 + .08 * pl('clover');
-  P.goldMult = (1 + .15 * pl('bag')) * (hasMut('gold') ? 2 : 1) * (1 + .1 * soulRank(save, 'c_gold')) * cycleReward(run.cycle);
+  P.goldMult = (1 + .15 * pl('bag')) * (hasMut('gold') ? 2 : 1) * (1 + .1 * soulRank(pr, 'c_gold')) * cycleReward(run.cycle);
   // Sprint-Baum: Ausdauer, Erholung, Tempo, Leichtfüßig, Windschatten
   const sp = run.abMods.sprint;
-  P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow) * (1 + .15 * soulRank(save, 'm_stam'));
+  P.stamMax = 100 * (1 + .075 * sh('stam')) * (1 + .08 * sp.r.pow) * (1 + .15 * soulRank(pr, 'm_stam'));
   P.stamRegen = 26 * (1 + .08 * sp.r.cd); P.sprintMul = 1.55 * (1 + .04 * sp.r.area) * (C.sprint === 'charge' ? 1.1 : 1);   // Sturmangriff etwas schneller
   P.stamDrain = 34 * (1 - .08 * sp.s1); P.sprintMag = 1 + .15 * sp.s3; P.secondWind = sp.a; P.tireless = sp.m;
 }
@@ -192,15 +199,15 @@ function step(dt, inps) {
   run.time += dt;
   while (run.ei < run.events.length && run.time >= run.events[run.ei].t) doEvent(run.events[run.ei++]);
   eachPlayer((p, i) => {
-    if (p.down) { if (run.arena) clampToArena(p, 22); reviveTick(p, dt); return; }   // Koop: gestürzt (in der Arena erreichbar)
+    if (p.down) { if (!p.gone) { if (run.arena) clampToArena(p, 22); reviveTick(p, dt); } return; }   // Koop: gestürzt (in der Arena erreichbar)
     updPlayer(dt, inps[i] || NO_INPUT);
     if (P.maxHp) run.minHp = Math.min(run.minHp, P.hp / P.maxHp);
   });
   // Koop: Spawns, Sicht und Kamera um die Mitte aller Goblins (auch gestürzter: der Partner soll sie sehen und nicht weglaufen)
   if (run.players.length > 1) {
-    let x = 0, y = 0;
-    for (const p of run.players) { x += p.x; y += p.y; }
-    run.vc = { x: x / run.players.length, y: y / run.players.length };
+    let x = 0, y = 0, n = 0;
+    for (const p of run.players) if (!p.gone) { x += p.x; y += p.y; n++; }
+    run.vc = { x: x / n, y: y / n };
     // Leine: beide bleiben nah genug, dass sie auch am Handy groß im Bild sind (höchstens 2 × COOP_LEASH auseinander)
     const [hw, hh] = COOP_LEASH, c = run.vc;
     for (const p of run.players) if (!p.down) { p.x = Math.max(c.x - hw, Math.min(c.x + hw, p.x)); p.y = Math.max(c.y - hh, Math.min(c.y + hh, p.y)); }
@@ -208,14 +215,20 @@ function step(dt, inps) {
   updCamera(dt);
   if (run.over) return;
   run.lures = [];   // Strohgoblins melden sich jeden Schritt neu an (game/enemies.js)
-  let world = true;
-  eachPlayer(() => { updAbilities(dt, world); world = false; }, true);
+  let world = true;   // Gestürzte: Aufladung und laufende Effekte gehen weiter, nur einsetzen können sie nichts
+  eachPlayer(() => { updAbilities(dt, world); world = false; });
   spawnTick(dt);
   buildGrid();
-  // Koop: jeder Gegner rechnet mit dem nächsten sichtbaren Goblin als P (zielen, angreifen, Schaden)
-  const multi = run.players.length > 1;
-  for (const e of run.enemies) if (!e.dead && !run.cut) { if (multi) activate(nearestGob(e.x, e.y, true)); updEnemy(e, dt); }   // Phasenwechsel mitten im Schritt: niemand zaubert mehr
-  if (multi) activate(0);
+  // Phasenwechsel mitten im Schritt (run.cut): niemand zaubert mehr
+  if (run.players.length === 1) { for (const e of run.enemies) if (!e.dead && !run.cut) updEnemy(e, dt); }
+  else {
+    // Koop: jeder Gegner rechnet mit dem nächsten sichtbaren Goblin als P (zielen, angreifen, Schaden). Je Goblin ein
+    // Durchgang, damit nicht für jeden Gegner umgeschaltet wird; wer dabei übrig bleibt (geschubst), danach einzeln.
+    const up = e => { e.ut = run.tick; updEnemy(e, dt); };
+    for (let i = 0; i < run.players.length; i++) { activate(i); for (const e of run.enemies) if (!e.dead && !run.cut && e.ut !== run.tick && nearestGob(e.x, e.y, true) === i) up(e); }
+    for (const e of run.enemies) if (!e.dead && !run.cut && e.ut !== run.tick) { activate(nearestGob(e.x, e.y, true)); up(e); }
+    activate(0);
+  }
   for (const e of run.enemies) {
     if (e.dead || e.boss || e.obj || (e.traits && e.traits.includes('float'))) continue;
     query(e.x, e.y, e.r * .9, o => {
@@ -265,7 +278,7 @@ export function simHash() {
   let h = 2166136261;
   const mix = x => { f64[0] = x; h = Math.imul(h ^ u32[0], 16777619); h = Math.imul(h ^ u32[1], 16777619); };
   mix(run.tick); mix(run.time); mix(run.kills); mix(run.gold); mix(run.enemies.length);
-  mix(P.x); mix(P.y); mix(P.hp); mix(P.lv); mix(P.xp);
+  for (const p of run.players) { mix(p.x); mix(p.y); mix(p.hp); mix(p.lv); mix(p.xp); }   // alle Goblins, nicht P (das ist außerhalb des Schritts der eigene)
   for (const e of run.enemies) { mix(e.x); mix(e.y); mix(e.hp); }
   for (const k of ['game', 'spawn', 'loot', 'lvl']) mix(RNG[k].s);
   return h >>> 0;

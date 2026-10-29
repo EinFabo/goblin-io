@@ -85,7 +85,7 @@ function drawRun(now) {
   const sx = (Math.random() - .5) * sh, sy = (Math.random() - .5) * sh;
   let zm = ZOOM * run.cam.z;
   // Koop: nur so weit herauszoomen, dass beide Goblins mit Rand ins Bild passen
-  if (run.coop) { const [a, b] = run.players; zm = Math.min(zm, W / 2 / (Math.abs(a.x - b.x) / 2 + 110), H / 2 / (Math.abs(a.y - b.y) / 2 + 130)); }
+  if (run.coop && !run.players.some(p => p.gone)) { const [a, b] = run.players; zm = Math.min(zm, W / 2 / (Math.abs(a.x - b.x) / 2 + 110), H / 2 / (Math.abs(a.y - b.y) / 2 + 130)); }
   const camX = run.cam.x + sx, camY = run.cam.y + sy, z = zm * DPR;
   ctx.setTransform(z, 0, 0, z, cv.width / 2 - camX * z, cv.height / 2 - camY * z);
   const hw = W / 2 / zm, hh = H / 2 / zm;
@@ -152,6 +152,7 @@ function drawRun(now) {
   for (const e of run.enemies) if (onScreen(e.x, e.y, 120 * e.sc)) list.push(e);
   for (const pl of run.pillars) list.push(pl);
   eachPlayer((p, i) => {
+    if (p.gone) return;   // Koop: Partner hat verlassen
     const add = o => { list.push(o); owner.set(o, i); };
     for (const al of run.allies) add(al);
     for (const al of run.tmpAllies) add(al);
@@ -171,7 +172,8 @@ function drawRun(now) {
     else if (!o.type) drawPillar(o, t);
     else drawEnemy(o, t);
   }
-  eachPlayer(() => { if (!P.down) drawPlayerBars(); drawAbilTop(t); if (run.coop) drawNameTag(); });
+  activate(run.me);   // Bildschirm-Effekte unten (roter Rand, Wut, Dunkelheit) gehören zum eigenen Goblin
+  eachPlayer(() => { if (P.gone) return; if (!P.down) drawPlayerBars(); drawAbilTop(t); if (run.coop) drawNameTag(); });
   for (const e of run.enemies) if (e.state === 'cast' && !e.boss && e.ft < e.charge + .05 && onScreen(e.x, e.y, 60)) drawCharge(e, t);
   for (const e of run.enemies) if (e.boss && !e.dead && e.ai.st === 'cast' && e.ft < e.charge) drawCharge(e, t);   // Boss und seine Teile
   eachPlayer(drawOwnShots);

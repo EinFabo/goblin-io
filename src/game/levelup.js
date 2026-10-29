@@ -54,6 +54,7 @@ export function coopLevelTick(dt, inps) {
   L.t -= dt;
   L.offers.forEach((o, i) => {
     if (!o || L.picks[i] !== -1) return;
+    if (run.players[i].gone) { L.picks[i] = 0; return; }   // Partner weg: seine Karte gilt sofort
     const k = inps[i] ? inps[i].pick : -1;
     if (k >= 0 && k < o.length) L.picks[i] = k; else if (L.t <= 0) L.picks[i] = 0;
   });

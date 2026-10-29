@@ -140,7 +140,7 @@ function updPartner() {
     $('.hudmid').append(box);
   }
   box.hidden = false;
-  setTxt('#ptName', p.down ? `${p.prof.name || 'Partner'} · gestürzt!` : p.prof.name || 'Partner');
+  setTxt('#ptName', p.gone ? `${p.prof.name || 'Partner'} ist weg` : p.down ? `${p.prof.name || 'Partner'} · gestürzt!` : p.prof.name || 'Partner');
   box.classList.toggle('down', !!p.down);
-  setW('#ptFill', p.down ? (p.reviveT || 0) / REVIVE_T : Math.max(0, p.hp / p.maxHp));
+  setW('#ptFill', p.gone ? 0 : p.down ? (p.reviveT || 0) / REVIVE_T : Math.max(0, p.hp / p.maxHp));
 }

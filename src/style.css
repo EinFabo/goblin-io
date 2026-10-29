@@ -261,6 +261,8 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 @keyframes blink{to{opacity:.35}}
 .cards.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .card .tagx.why{background:rgba(10,15,6,.7);color:var(--gold)}
+/* Koop übers Netz (Phase 14c): Hinweis, solange die Eingabe des Partners fehlt */
+#netWait{position:fixed;left:50%;top:22%;transform:translateX(-50%);z-index:30;padding:8px 16px;border-radius:12px;background:rgba(10,15,6,.85);color:#ffd84a;font-weight:800;pointer-events:none}
 /* Koop-Partner im HUD (Phase 14b) */
 .partner{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:4px;font-size:12px;font-weight:800;color:#8fd0ff}
 .partner .pbar{width:90px;height:7px;border-radius:4px;background:rgba(10,15,6,.8);overflow:hidden}

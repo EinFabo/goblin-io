@@ -16,6 +16,7 @@ Fabi spricht Deutsch; Antworten, Commit-Texte und Kommentare auf Deutsch. Aufbau
 - `npm test` für Logik, `npm run smoke` nach Render-Änderungen (die Sim zeichnet nicht).
 - `npm run perf` nach Änderungen an Laden/Zeichnen/Sprites (Ladezeit, Ruckler im Hub, Speicher). Headless hat keine GPU: FPS dort nur als Vergleich, echte Geräte über `?perf` → „Test 300 Gegner“.
 - Sprites liegen zugeschnitten auf eigenen Flächen (`render/sprites.js`): nie `e.c` direkt zeichnen, sondern `blit`/`blitPart`. Keinen gemeinsamen Atlas mit großen Seiten bauen – Chrome zeichnet daraus auf dem Haupt-Thread (3.0.1 ruckelte).
+- Koop (Phase 14): `node tools/coop-check.mjs` (Prüfsummen allein/Koop, ohne Zeichnen) und `node tools/coop-e2e.mjs` (zwei Browserseiten mit eigenem Spielstand über eine Node-Verbindung; `--trace` zeigt den ersten Unterschied). Koop-Balance: `npm run sim -- --coop`.
 - Balance: `npm run sim` (60 Hz, Zielwerte `LEVEL_TARGET`, `--par 5`, `--loadout a,b`, `--seed 101`). Bei 100 Läufen schwanken Siegquoten um ±7 Punkte → vor Schlüssen mit zweitem Seed-Satz gegenprüfen. Vorher/Nachher: alte Version per `git stash` bauen, wegkopieren, `--html` darauf zeigen.
 - Sprites entstehen zur Laufzeit (`src/gen/`); ansehen mit `node tools/gen/dump.mjs build/sprites --png`.
 - Screenshots von Menü-Screens per Playwright mit `GOBLIN.go('menu', '#profile')` usw., in Desktop- und Handygröße. Browser-Uhr: `p.clock.install`.
@@ -23,6 +24,7 @@ Fabi spricht Deutsch; Antworten, Commit-Texte und Kommentare auf Deutsch. Aufbau
 ## Stolperfallen
 
 - **Determinismus:** Bei gleichen Seeds muss die Sim gleich ausgehen. Im Spielablauf nie `rnd()`/`rand()` für Optik und nie `Math.random()` für Logik. Prüfen: zwei gleiche Sim-Aufrufe vergleichen.
+- **Koop-Gleichlauf:** Die Sim darf nur von Eingaben und Profilen (`P.prof`) abhängen – nie vom eigenen Spielstand (`save`), vom aktiven Goblin außerhalb des Schritts (`P` ist dann der eigene), vom Ladestand der Bilder oder von der Fenstergröße. Ein Fehler fiel nur in `coop-e2e` auf, nicht in der Sim.
 - Globale CSS-Klasse `.lv` ist vom HUD belegt.
 - Playwright bleibt auf 1.58.2 gepinnt (passt zu chromium-1208).
 - Jede Chromium-Seite der Sim braucht ~550 MB; `run-sims.mjs` begrenzt die Parallelität nach freiem Speicher.

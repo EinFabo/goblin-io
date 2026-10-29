@@ -2,7 +2,7 @@ import { RNG, frand, rand } from '../core/rng.js';
 import { sfx } from '../core/audio.js';
 import { DIR8, TAU, face8 } from '../core/util.js';
 import { ETYPES, SCHOOL_COL } from '../data/enemies.js';
-import { MAGE_OFF, U } from '../render/sprites.js';
+import { U, mageOff } from '../render/sprites.js';
 import { STAGE_LEN } from '../data/stages.js';
 import { nmHp, nmMinis } from '../data/nightmare.js';
 import { cycleHp } from '../data/souls.js';
@@ -29,7 +29,7 @@ export const mageKey = (school, master, clone) => 'm.' + school + (master ? '.m'
 export const typeSprite = T => T.sprite ? 'n.' + T.sprite : T.draw ? null : mageKey(T.school, T.role === 'master', T.clone);
 export const mspr = (e, anim, n, face = e.face) => `${e.pre}.${anim}.${face}.${n}`;
 // Stabspitze im Abschuss-Frame (aus dem Generator), skaliert wie das Sprite
-export const tipPos = e => { const o = MAGE_OFF[e.pre] && MAGE_OFF[e.pre][e.face]; if (!o) return [e.x, e.y - 20 * e.sc]; const s = U * e.sc; return [e.x + o[0] * s, e.y + o[1] * s]; };
+export const tipPos = e => { const m = mageOff(e.pre), o = m && m[e.face]; if (!o) return [e.x, e.y - 20 * e.sc]; const s = U * e.sc; return [e.x + o[0] * s, e.y + o[1] * s]; };
 
 export function spawnEnemy(type, opt = {}) {
   const T = ETYPES[type], st = run.st;

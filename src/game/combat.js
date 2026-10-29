@@ -141,6 +141,8 @@ export function damagePlayer(d, src = 'contact', by = null) {
 export const REVIVE_T = 3, REVIVE_R = 70;
 function fall() {
   P.down = true; P.reviveT = 0; P.dashT = 0; P.sprinting = false; P.moving = false; P.shieldT = 0; P.mechT = 0;
+  // Laufende Zustände enden (sonst frieren sie ein und gehen nach dem Wiederbeleben weiter)
+  P.rageT = P.smokeT = P.burrowT = P.slowT = P.iceT = P.hasteT = P.spinT = P.rollT = P.hitT = 0; P.trail = [];
   addNum(P.x, P.y - 52, 'Gestürzt!', '#ff5d55', true);
 }
 export function reviveTick(p, dt) {

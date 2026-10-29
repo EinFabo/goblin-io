@@ -10,7 +10,9 @@ import { slotHtml } from './hud.js';
 // ---------- Pause ----------
 export function openPause() {
   if (!run || run.over) return;
-  run.paused = true; Music.stop(); setSprintHeld(false);
+  // Koop: das Spiel läuft weiter (der Partner spielt ja), nur das Fenster geht auf
+  if (!run.coop) { run.paused = true; Music.stop(); }
+  setSprintHeld(false);
   const st = [
     ['Leben', Math.ceil(P.hp) + ' / ' + Math.round(P.maxHp)], ['Schaden', '+' + Math.round((P.dmgMult - 1) * 100) + ' %'], ['Abklingzeit', '−' + Math.round((1 - P.cdMult) * 100) + ' %'],
     ['Fläche', '+' + Math.round((P.area - 1) * 100) + ' %'], ['Tempo', Math.round(P.speed)], ['Sammelradius', Math.round(P.magnet)],

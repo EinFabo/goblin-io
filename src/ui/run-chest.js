@@ -6,6 +6,7 @@
 // Zufall nur für die Optik (Math.random), nie das Sim-rand.
 import { sfx } from '../core/audio.js';
 import { on } from '../core/events.js';
+import { pressInput } from '../core/input.js';
 import { WEAPONS, BOONS } from '../data/weapons.js';
 import { run } from '../game/state.js';
 import { icon } from '../render/icons.js';
@@ -51,12 +52,15 @@ function start(picks, src, dur) {
 }
 function hideEl() { if (el) { el.className = ''; el.innerHTML = ''; } }
 function stopWatch() { clearInterval(watch); watch = 0; }
-// Alles überspringen: Welt läuft sofort weiter
+// Alles überspringen: Welt läuft sofort weiter. Im Koop als Eingabe (scenes/run.js simStep), damit beide gleich lange
+// stehen; die Sim meldet es dann mit freezeSkip zurück, auch an den Partner.
 function finish() {
-  for (const t of timers) clearTimeout(t);
-  timers = []; stopWatch(); hideEl();
+  if (run && run.coop && !run.over && run.megaFreeze > 0) { pressInput('skip'); return; }
+  clearShow();
   if (run) run.megaFreeze = 0;
 }
+function clearShow() { for (const t of timers) clearTimeout(t); timers = []; stopWatch(); hideEl(); }
+on('freezeSkip', clearShow);
 // Tastatur: vor der normalen Eingabe abfangen, sonst öffnet Esc die Pause unter der Truhe
 window.addEventListener('keydown', e => {
   if (!showing() || !['Space', 'Enter', 'Escape', 'KeyP'].includes(e.code)) return;

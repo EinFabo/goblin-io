@@ -28,7 +28,7 @@ function take(who) {
   let mx, my, sprint;
   if (who === 1) { mx = axis(keys.ArrowLeft, keys.ArrowRight); my = axis(keys.ArrowUp, keys.ArrowDown); sprint = !!keys.ShiftRight; }
   else {
-    const arrows = !localCoop;   // allein steuern auch die Pfeile und beide Shift-Tasten den Goblin
+    const arrows = !(localCoop && run && run.coop);   // allein steuern auch die Pfeile und beide Shift-Tasten den Goblin
     mx = axis(keys.KeyA || (arrows && keys.ArrowLeft), keys.KeyD || (arrows && keys.ArrowRight));
     my = axis(keys.KeyW || (arrows && keys.ArrowUp), keys.KeyS || (arrows && keys.ArrowDown));
     if (joy.id !== null) { const jx = (joy.x - joy.ox) / 55, jy = (joy.y - joy.oy) / 55; if (Math.hypot(jx, jy) > .15) { mx += jx; my += jy; } }
@@ -54,7 +54,9 @@ window.addEventListener('keydown', e => {
     if (e.code === 'Enter') { e.preventDefault(); pressInput('dash', 1); }
     if (e.code === 'KeyK') pressInput('ab0', 1);
     if (e.code === 'KeyL') pressInput('ab1', 1);
-    const k2 = ['Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(e.code); if (k2 >= 0) pickInput(k2, 1);
+    // Karten für Spieler 2 über die zweite Reihe (ui/levelup.js coopPick markiert sie dort)
+    const k2 = ['Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(e.code), c2 = document.getElementById('cards2');
+    if (k2 >= 0 && c2 && !c2.hidden && c2.children[k2]) c2.children[k2].click();
   }
   if (e.code === 'Space') { e.preventDefault(); pressInput('dash'); }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();

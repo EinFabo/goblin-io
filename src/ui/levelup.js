@@ -151,7 +151,9 @@ on('coopLevel', L => {
   coopLvTick();
   $('#levelup').hidden = false; sfx.cards();
 });
-on('coopLevelDone', () => { $('#levelup').hidden = true; $('#levelup').classList.remove('coop'); });
+function coopClose() { $('#levelup').classList.remove('coop'); const c2 = $('#cards2'); if (c2) c2.hidden = true; }
+on('coopLevelDone', () => { $('#levelup').hidden = true; coopClose(); });
+on('runStart', coopClose);   // Lauf mitten im Koop-Level-Up verlassen: nichts davon in den nächsten Lauf mitnehmen
 // Restzeit und Partner-Status (jedes Bild, scenes/run.js)
 export function coopLvTick() {
   const L = run && run.lvl; if (!L) return;

@@ -281,6 +281,12 @@ function loadUnit(key, anim, dirs = Object.keys(DRAWN)) {
     return pr;
   }));
 }
+// Stabspitze je Richtung für die Logik (game/enemies.js tipPos). Reine Rechnung, unabhängig davon, ob die Bilder schon
+// geladen sind: sonst hinge die Sim am Ladestand (Koop: ein Rechner hatte die Magier schon, der andere nicht → auseinander).
+export function mageOff(pre) {
+  if (!MAGE_OFF[pre] && pre && pre.startsWith('m.')) { const [school, opt] = variantOf(pre.slice(2)); MAGE_OFF[pre] = castOffsets(school, opt); }
+  return MAGE_OFF[pre];
+}
 const loadVariant = key => Promise.all(Object.keys(MAGE_ANIMS).map(a => loadUnit(key, a)));
 
 // Was ein Gegnertyp an Bildern braucht, inkl. allem, was er beschwört

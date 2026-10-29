@@ -137,7 +137,7 @@ export function stepWeapon2(w, L, dm, dt, rate) {
     }
     case 'glob': {
       w.t -= dt * rate; if (w.t > 0) break;
-      const c = randomEnemyInView(40), throwAt = (rad, zdur, dmg) => { const e = c.length ? pick(c) : null; run.tele.push({ k: 'flask', zk: 'acid', sx: P.x, sy: P.y - 10, x: e ? e.x : P.x + rand(-200, 200), y: e ? e.y : P.y + rand(-160, 160), t: 0, dur: .5, rad, zdur, dmg }); };
+      const c = randomEnemyInView(40), throwAt = (rad, zdur, dmg) => { const e = c.length ? pick(c) : null; run.tele.push({ pi: run.pi, k: 'flask', zk: 'acid', sx: P.x, sy: P.y - 10, x: e ? e.x : P.x + rand(-200, 200), y: e ? e.y : P.y + rand(-160, 160), t: 0, dur: .5, rad, zdur, dmg }); };
       if (w.evo) { w.t = 1.2 * P.cdMult; for (let i = 0; i < 4; i++) throwAt(75 * P.area, 3.5, 12 * dm); }
       else {
         w.t = [2.2, 2.1, 2, 1.9, 1.8][L] * P.cdMult;

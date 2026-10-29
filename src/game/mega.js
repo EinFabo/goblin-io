@@ -60,7 +60,7 @@ function fire(id, dm) {
       break;
     case 'comet': {
       const e = target(), x = e ? e.x : P.x + rand(-200, 200), y = e ? e.y : P.y + rand(-150, 150);
-      run.tele.push({ k: 'meteor', x, y, t: .8, dur: .8, rad: 160 * P.area, dmg: 120 * dm, burn: 15 * dm });
+      run.tele.push({ pi: run.pi, k: 'meteor', x, y, t: .8, dur: .8, rad: 160 * P.area, dmg: 120 * dm, burn: 15 * dm });
       later(.8, () => { query(x, y, 220 * P.area, o => { if (!o.boss) o.freezeT = Math.max(o.freezeT || 0, 1.5); else o.slowT = 2; }); ring(x, y, 20, 220 * P.area, .5, 'rgba(160,230,255,.9)', 12); sfx.frost(); });
       break;
     }
@@ -77,7 +77,7 @@ function fire(id, dm) {
       }
       run.shake = Math.max(run.shake, 6); sfx.zap(); break;
     case 'plague':
-      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + rnd(), r = 160 + rnd() * 120; run.zones.push({ k: i % 2 ? 'acid' : 'poison', x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r * .8, r: 75 * P.area, t: 4, dur: 4, tick: 0, dmg: 14 * dm }); }
+      for (let i = 0; i < 8; i++) { const a = i * TAU / 8 + rnd(), r = 160 + rnd() * 120; run.zones.push({ pi: run.pi, k: i % 2 ? 'acid' : 'poison', x: P.x + Math.cos(a) * r, y: P.y + Math.sin(a) * r * .8, r: 75 * P.area, t: 4, dur: 4, tick: 0, dmg: 14 * dm }); }
       sfx.throw(); break;
     case 'avalanche':
       for (let i = 0; i < 6; i++) shootRaw('boomer', i * TAU / 6 + rnd() * .3, 45 * dm, 999, 420 * P.proj, 5, { out: 340 * P.proj, dist: 0, back: false, sc: 2.2, r: 32 });
@@ -85,7 +85,7 @@ function fire(id, dm) {
       sfx.whoosh(); break;
     case 'armageddon': {
       const a = rnd() * TAU, cx = Math.cos(a), cy = Math.sin(a);
-      for (let i = 0; i < 11; i++) { const d = (i - 5) * 80, x = P.x + cx * d, y = P.y + cy * d * .8; run.tele.push({ k: 'mini', sx: x, sy: y - 300, x, y, t: 0, dur: .35 + i * .07, rad: 75 * P.area, dmg: 60 * dm }); }
+      for (let i = 0; i < 11; i++) { const d = (i - 5) * 80, x = P.x + cx * d, y = P.y + cy * d * .8; run.tele.push({ pi: run.pi, k: 'mini', sx: x, sy: y - 300, x, y, t: 0, dur: .35 + i * .07, rad: 75 * P.area, dmg: 60 * dm }); }
       sfx.throw(); break;
     }
     case 'warmachine': {
