@@ -261,6 +261,17 @@ h2{font-family:var(--font-display);font-weight:400;font-size:30px;letter-spacing
 @keyframes blink{to{opacity:.35}}
 .cards.n4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .card .tagx.why{background:rgba(10,15,6,.7);color:var(--gold)}
+/* Koop-Partner im HUD (Phase 14b) */
+.partner{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:4px;font-size:12px;font-weight:800;color:#8fd0ff}
+.partner .pbar{width:90px;height:7px;border-radius:4px;background:rgba(10,15,6,.8);overflow:hidden}
+.partner .pbar i{display:block;height:100%;width:100%;background:#6fc23a;transform-origin:left}
+.partner.down{color:#ff7a6e}.partner.down .pbar i{background:#7dff7a}
+/* Koop-Level-Up (Phase 14b): keine Werkzeuge, gewählte Karte leuchtet, die anderen treten zurück */
+#levelup.coop .lvtools{display:none}
+#cards2{margin-top:10px}
+#levelup.coop .card.off{opacity:.4}
+#levelup.coop:has(#cards2:not([hidden])) .card :is(.d,.hint,.tagx){display:none}
+.card.picked{border-color:#7dff7a;box-shadow:0 6px 0 var(--edge),0 0 18px rgba(125,255,122,.5)}
 .card.locked{border-color:#6fc3ff;box-shadow:0 6px 0 var(--edge),0 0 18px rgba(111,195,255,.5)}
 .card.locked::after{content:'bleibt liegen';position:absolute;right:8px;top:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6fc3ff}
 .cards.mode-ban .card:not(.off){border-color:#d24a4a;animation:none}

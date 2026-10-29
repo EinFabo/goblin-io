@@ -15,7 +15,7 @@ import { nmHp, nmRageAt } from '../data/nightmare.js';
 import { cycleHp } from '../data/souls.js';
 import { boltFx, dropGem, part, puff, ring } from './fx.js';
 import { hint } from './run.js';
-import { P, run } from './state.js';
+import { P, run, viewC } from './state.js';
 import { W, ZOOM } from '../render/canvas.js';
 import { banner } from '../ui/hud.js';
 
@@ -32,12 +32,12 @@ export { bossOnKill, portalWarp, shadeDown, spinHaz } from './boss-mech.js';
 const tempo = b => (phase(b).spd || 1) * (b.rage ? 1.5 : 1);
 
 // Ein Boss als Gegner-Objekt (auch für Malvorns Schatten)
-export function makeBoss(id, { x = P.x, y = P.y - 300 } = {}) {
+export function makeBoss(id, { x = viewC().x, y = viewC().y - 300 } = {}) {
   // Endlose Nacht: jeder weitere Boss ist stärker (Runde = besiegte Bosse; ein Boss springt nicht mitten im Kampf)
   const st = run.st, B = BOSSES[id], lf = 1 + run.loop * 1.5;
   const b = {
     type: 'boss', boss: true, id, B, pre: 'm.' + bossVariant(id), name: B.name, x, y, r: 38, sc: 2.7, spd: 52 * (B.spd || 1), dmg: 13 * st.dmg * lf,
-    hp: 2500 * stageHp(run.si) * lf * (st.bossHp || 1) * (B.hp || 1) * nmHp(run.nm) * cycleHp(run.cycle), xp: 150, tint: B.tint || null, state: 'walk', face: 'down', fa: Math.PI / 2, at: 0, ft: 0, fired: false, charge: .7, ck: 'fire',
+    hp: 2500 * stageHp(run.si) * lf * (st.bossHp || 1) * (B.hp || 1) * nmHp(run.nm) * cycleHp(run.cycle) * (run.coopHp || 1), xp: 150, tint: B.tint || null, state: 'walk', face: 'down', fa: Math.PI / 2, at: 0, ft: 0, fired: false, charge: .7, ck: 'fire',
     kx: 0, ky: 0, slowT: 0, freezeT: 0, flash: 0, oh: 0, dead: false,
     ph: 0, phT: 0, fightT: 0, rage: false, inv: 0, ice: 0, iceT: 0, iceCd: 0, blkT: 0, stunT: 0, armor: 0, mount: !!B.mount,
     ai: { st: 'chase', t: 2.2, i: 0, atk: null, reps: 0, ring2: 0, ax: 0, ay: 0, chan: 0, spin: null },
@@ -55,7 +55,7 @@ export function spawnBoss(loot = true) {
   for (const e of run.enemies) if (!e.dead) { e.dead = true; puff(e.x, e.y, e.sc); if (loot) dropGem(e.x, e.y, e.xp); }
   run.eproj.length = 0; run.haz.length = 0;
   clearBossWorld();
-  run.arena = { x: P.x, y: P.y, r: 470, burn: 0 };
+  run.arena = { x: viewC().x, y: viewC().y, r: 470, burn: 0 };   // Koop: um die Mitte beider Goblins
   const b = makeBoss(id);
   run.enemies.push(b); run.boss = b;
   startCut('intro', b);
@@ -75,7 +75,7 @@ export function restartBoss() {
 const CUT_T = { intro: 3.4, phase: 1.6 };
 export function startCut(kind, b) {
   run.cut = { kind, t: 0, dur: CUT_T[kind], b, shown: false };
-  P.dashT = 0; P.sprinting = false;
+  for (const p of run.players) { p.dashT = 0; p.sprinting = false; }
   if (kind === 'intro') {
     b.hidden = true;
     emit('bossIntro', b);
@@ -104,7 +104,7 @@ export function updCut(dt) {
   // Kamera: zum Boss, heranzoomen, am Ende zurück zum Spieler
   const back = c.dur - (c.kind === 'intro' ? .7 : .4), out = c.t > back, tz = out ? 1 : c.kind === 'intro' ? 1.3 : 1.2;
   // Beim Auftritt steht der Boss rechts der Mitte, links unten ist Platz für das Namensschild
-  const tx = out ? P.x : b.x - (c.kind === 'intro' ? W * .16 / (ZOOM * tz) : 0), ty = out ? P.y : b.y - 30;
+  const tx = out ? viewC().x : b.x - (c.kind === 'intro' ? W * .16 / (ZOOM * tz) : 0), ty = out ? viewC().y : b.y - 30;
   const k = 1 - Math.pow(out ? .86 : .9, dt * 60);
   cam.x += (tx - cam.x) * k; cam.y += (ty - cam.y) * k; cam.z += (tz - cam.z) * k;
   b.face = 'down'; b.fa = Math.PI / 2;

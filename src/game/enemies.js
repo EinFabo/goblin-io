@@ -13,7 +13,7 @@ import { damagePlayer, hurt } from './combat.js';
 import { addItem, animFx, part, puff, ring } from './fx.js';
 import { hint, startClear } from './run.js';
 import { affixDamage, affixNames, affixOnDeath, rollAffixes, updAffixes } from './affixes.js';
-import { P, hasMut, onScreen, pR, query, run, viewHH, viewHW, viewR, hidden } from './state.js';
+import { P, eachPlayer, hasMut, onScreen, pR, query, run, viewC, viewHH, viewHW, viewR, hidden } from './state.js';
 import { banner } from '../ui/hud.js';
 
 export { eShot } from './casts.js';
@@ -36,10 +36,10 @@ export function spawnEnemy(type, opt = {}) {
   // Runde (nur Endlos): Schaden wächst glatt mit der Zeit, Leben über enemyHp (balance.js)
   const tf = st.endless ? endlessDmg(run.time) : 1 + run.time / 400;
   let x = opt.x, y = opt.y;
-  if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60; x = P.x + Math.cos(a) * R; y = P.y + Math.sin(a) * R; }
+  if (x === undefined) { const a = RNG.spawn.next() * TAU, R = viewR() + 60, c = viewC(); x = c.x + Math.cos(a) * R; y = c.y + Math.sin(a) * R; }
   const e = {
     type, pre: typeSprite(T), x, y, r: T.r, sc: T.sc, spd: T.spd * RNG.spawn.range(.9, 1.1), dmg: T.dmg * st.dmg * tf,
-    hp: enemyHp(T.hp, run.si, run.time + (st.hpT || 0)) * (st.endless ? boonHp(run.cnt.boon || 0) : 1) * (st.hpMul || 1) * nmHp(run.nm) * cycleHp(run.cycle), xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
+    hp: enemyHp(T.hp, run.si, run.time + (st.hpT || 0)) * (st.endless ? boonHp(run.cnt.boon || 0) : 1) * (st.hpMul || 1) * nmHp(run.nm) * cycleHp(run.cycle) * (run.coopHp || 1), xp: T.xp, tint: null, school: T.school, ai: T.ai, keep: T.keep || 0, traits: T.traits || null, melee: T.melee || null,
     casts: (T.casts || []).map(c => ({ ...c, t: RNG.spawn.range(1.5, c.cd[1]) })),
     bomber: has(T, 'bomber'), obj: !!T.draw, clone: !!T.clone, side: RNG.spawn.next() < .5 ? 1 : -1,
     state: 'walk', face: 'down', at: RNG.spawn.next() * 5, ft: 0, fired: false, ck: null, charge: 0, chain: null, fuse: 0,
@@ -128,13 +128,13 @@ function swarm({ type, extra, count = 30, shape = 'ring', side }) {
     for (let i = 0; i < m; i++) {
       const f = m > 1 ? i / (m - 1) * 2 - 1 : 0;
       const x = s === 0 ? hw + 50 : s === 2 ? -hw - 50 : f * hw * 1.1, y = s === 1 ? hh + 50 : s === 3 ? -hh - 50 : f * hh * 1.1;
-      spawnEnemy(kind(k0 + i), { x: P.x + x, y: P.y + y, portal: false });
+      spawnEnemy(kind(k0 + i), { x: viewC().x + x, y: viewC().y + y, portal: false });
     }
   };
   const pickSide = () => side === undefined ? (RNG.spawn.next() * 4) | 0 : side;
   if (shape === 'ring') {
     const R = viewR() * .85;
-    for (let i = 0; i < n; i++) { const a = i * TAU / n; spawnEnemy(kind(i), { x: P.x + Math.cos(a) * R, y: P.y + Math.sin(a) * R }); }
+    for (let i = 0; i < n; i++) { const a = i * TAU / n, c = viewC(); spawnEnemy(kind(i), { x: c.x + Math.cos(a) * R, y: c.y + Math.sin(a) * R }); }
   } else if (shape === 'wall') wall(pickSide(), n, 0);
   else if (shape === 'pincer') { const s = pickSide() % 2; wall(s, n >> 1, 0); wall(s + 2, n - (n >> 1), n >> 1); }
   else if (shape === 'stream') {
@@ -148,7 +148,7 @@ export function spawnTick(dt) {
   // Warteschlange (Ströme) läuft auch während Ereignissen weiter
   while (run.spawnQ.length && run.spawnQ[0].t <= run.time) {
     const q = run.spawnQ.shift(), R = viewR() + 40;
-    if (!run.boss) spawnEnemy(q.type, { x: P.x + Math.cos(q.a) * R, y: P.y + Math.sin(q.a) * R, portal: false });
+    if (!run.boss) spawnEnemy(q.type, { x: viewC().x + Math.cos(q.a) * R, y: viewC().y + Math.sin(q.a) * R, portal: false });
   }
   if (run.boss) return;
   const t = localT(), w = phaseAt(t, true);
@@ -300,7 +300,7 @@ export function updBomber(e, dt, dx, dy, d) {
 export function bomberBoom(e, hurtPlayer) {
   if (e.boomed) return; e.boomed = true;
   const R = 80;
-  if (hurtPlayer && Math.hypot(P.x - e.x, P.y - e.y) < R + pR()) damagePlayer(14 * run.st.dmg * (1 + run.time / 400), 'bomb');
+  if (hurtPlayer) eachPlayer(() => { if (Math.hypot(P.x - e.x, P.y - e.y) < R + pR()) damagePlayer(14 * run.st.dmg * (1 + run.time / 400), 'bomb'); }, true);
   e.dead = true;
   query(e.x, e.y, R, o => { if (o !== e) { const d = Math.hypot(o.x - e.x, o.y - e.y) || 1; hurt(o, (25 + run.time * .12) * (hurtPlayer ? .5 : 1.5), 220, (o.x - e.x) / d, (o.y - e.y) / d, '#ffb35c'); } });
   animFx('f_fireball_hit_', 5, e.x, e.y, R / 16); sfx.boom(); run.shake = Math.max(run.shake, 6);

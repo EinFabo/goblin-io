@@ -16,11 +16,25 @@ export function activate(i) {
   for (const k of KIT) { a[k] = run[k]; run[k] = b[k]; }
   run.pi = i; P = run.players[i];
 }
-// fn für jeden Goblin, danach ist wieder der vorige aktiv
-export function eachPlayer(fn) {
+// fn für jeden Goblin (live: nur die stehenden), danach ist wieder der vorige aktiv.
+// Liefert fn true, hört die Schleife auf (z. B. Geschoss hat getroffen).
+export function eachPlayer(fn, live = false) {
   const pi = run.pi;
-  for (let i = 0; i < run.players.length; i++) { activate(i); fn(P, i); }
+  for (let i = 0; i < run.players.length; i++) { if (live && run.players[i].down) continue; activate(i); if (fn(P, i) === true) break; }
   activate(pi);
+}
+// Index des nächsten stehenden Goblins zu (x, y); seen: sichtbare zuerst (Rauchbombe, eingegraben). Allein immer 0.
+export function nearestGob(x, y, seen = false) {
+  const ps = run.players; if (ps.length === 1) return 0;
+  let best = -1, bd = Infinity;
+  for (const vis of seen ? [true, false] : [false]) {
+    for (let i = 0; i < ps.length; i++) {
+      const p = ps[i]; if (p.down || (vis && (p.smokeT > 0 || p.burrowT > 0))) continue;
+      const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = i; }
+    }
+    if (best >= 0) return best;
+  }
+  return run.pi;
 }
 // Welt steht für eine Animation (Mega-Verschmelzung, Truhe im Lauf). run.megaFreeze sind Sekunden Sim-Zeit,
 // heruntergezählt je Schritt in scenes/run.js (nicht die Wanduhr: im Koop stehen beide gleich lange).
@@ -82,7 +96,7 @@ export const viewC = () => (run && run.vc) || P;
 export const viewR = () => Math.hypot(viewHW(), viewHH());
 export const onScreen = (x, y, m = 0) => { const c = viewC(); return Math.abs(x - c.x) < viewHW() + m && Math.abs(y - c.y) < viewHH() + m; };
 export { xpNeed } from './balance.js';
-export const pR = () => P.mechT > 0 ? 26 : 16;
+export const pR = (p = P) => p.mechT > 0 ? 26 : 16;
 // Unsichtbar für die Gegner: Rauchbombe oder eingegraben (Maulwurfsgang); sie suchen dann bei run.decoy
 export const hidden = () => P.smokeT > 0 || P.burrowT > 0;
 // Punkt bzw. Objekt in die Boss-Arena zurückschieben (margin = Abstand zum Rand)

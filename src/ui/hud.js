@@ -1,3 +1,4 @@
+import { REVIVE_T } from '../game/combat.js';
 import { $, clamp, fmtTime, restart } from '../core/util.js';
 import { P, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
@@ -62,6 +63,7 @@ export function updHud(dt) {
   setCount('#dashBtn', P.dashMax > 1 ? String(P.dashN) : '');
   setAbil('#sprintBtn', P.stam / P.stamMax, !P.exhaust, P.sprinting, !!lockOf('sprint'));
   if (run.boss) setW('#bossFill', Math.max(0, run.boss.hp / run.boss.maxHp));
+  updPartner();
   // Mini-Boss: eigene Leiste, solange er lebt
   const mini = run.mini && !run.mini.dead ? run.mini : null;
   if (hudCache.mini !== mini) { hudCache.mini = mini; $('#miniBar').hidden = !mini; if (mini) $('#miniName').textContent = 'Mini-Boss · ' + ETYPES[mini.type].name; }
@@ -126,3 +128,19 @@ on('abilUse', ({ i, id }) => {
   ring(P.x, P.y, 12, 110, .35, col, 7);
   for (let k = 0; k < 14; k++) { const a = k * Math.PI * 2 / 14; part(P.x, P.y - 12, Math.cos(a) * 240, Math.sin(a) * 240, .35, col, 3.5); }
 });
+
+// Koop (Phase 14b): Partner unter der Uhr – Name, Leben, gestürzt
+function updPartner() {
+  let box = document.getElementById('partnerBox');
+  if (!run.coop) { if (box) box.hidden = true; return; }
+  const p = run.players[1 - run.me];
+  if (!box) {
+    box = document.createElement('div'); box.id = 'partnerBox'; box.className = 'partner';
+    box.innerHTML = '<span id="ptName"></span><div class="pbar"><i id="ptFill"></i></div>';
+    $('.hudmid').append(box);
+  }
+  box.hidden = false;
+  setTxt('#ptName', p.down ? `${p.prof.name || 'Partner'} · gestürzt!` : p.prof.name || 'Partner');
+  box.classList.toggle('down', !!p.down);
+  setW('#ptFill', p.down ? (p.reviveT || 0) / REVIVE_T : Math.max(0, p.hp / p.maxHp));
+}

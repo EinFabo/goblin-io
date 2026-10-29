@@ -9,7 +9,7 @@ import { bodyOf, bossHurt, bossOnKill, shadeDown } from './boss.js';
 import { clearBossWorld } from './boss-mech.js';
 import { addItem, addNum, animFx, dissolve, dropGem, later, puff, sparks } from './fx.js';
 import { addEvents } from './run.js';
-import { P, abSrc, aoeId, hasMut, heal, isBig, pR, run } from './state.js';
+import { P, abSrc, aoeId, eachPlayer, hasMut, heal, isBig, pR, run } from './state.js';
 import { banner } from '../ui/hud.js';
 import { endRun, offerContinue, startClear } from './run.js';
 import { count } from './progress.js';
@@ -72,7 +72,7 @@ export function kill(e, xpMul = 1) {
   // Mutator Explosive Tode: kleine Explosion, die nur den Goblin trifft (keine Kettenreaktion unter Gegnern)
   if (hasMut('boom') && !e.boss && !e.obj && !e.bomber) {
     animFx('f_fireball_hit_', 5, e.x, e.y, 3.5);
-    if (Math.hypot(P.x - e.x, P.y - e.y) < 55 + pR()) damagePlayer(6 * run.st.dmg * (1 + run.time / 400), 'bomb');
+    eachPlayer(() => { if (Math.hypot(P.x - e.x, P.y - e.y) < 55 + pR()) damagePlayer(6 * run.st.dmg * (1 + run.time / 400), 'bomb'); }, true);
   }
   dropGem(e.x, e.y, e.xp * xpMul);
   dissolve(e);
@@ -118,16 +118,35 @@ export function damagePlayer(d, src = 'contact', by = null) {
   if (P.inv > 0 || P.dashT > 0 || run.over || run.clearT > 0) return;
   // Schattenmantel: ausweichen
   if (P.dodge && rnd() < P.dodge) { P.inv = .3; addNum(P.x, P.y - 40, 'Ausgewichen', '#d9c8ff', false); return; }
-  d = hitDamage(d, P.maxHp, src, run.st.endless ? endlessCap(run.time) : 1) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult() * nmDmg(run.nm) * cycleDmg(run.cycle);   // Albtraum-Stufe, Zyklus der Wiedergeburt
+  d = hitDamage(d, P.maxHp, src, run.st.endless ? endlessCap(run.time) : 1) * P.armorMult * (P.mechT > 0 ? P.mechArmor : 1) * takenMult() * nmDmg(run.nm) * cycleDmg(run.cycle) * (run.coopDmg || 1);   // Albtraum-Stufe, Zyklus der Wiedergeburt
   if (P.flatArmor) d = Math.max(d * .4, d - P.flatArmor);   // Eisenhelm, nie unter 40 %
   d = shieldAbsorb(d);
   if (d <= 0) { P.inv = .5; return; }
-  P.hp -= d; P.inv = .5; P.hitT = .25; run.hurtT = .25; run.shake = Math.max(run.shake, 6);
+  P.hp -= d; P.inv = .5; P.hitT = .25; if (run.pi === run.me) run.hurtT = .25;   // roter Rand nur für den eigenen Goblin (Koop)
+  run.shake = Math.max(run.shake, 6);
   if (run.boss && !run.boss.dead) run.bossHits = (run.bossHits || 0) + 1;   // Kopfgeld „ohne Treffer im Bosskampf“
   chargeAbil('hurt', d / P.maxHp * 100);   // Goblin-Groll lädt mit eingestecktem Schaden
   if (by && !by.dead) run.foe = by;        // Racheblick: wer zuletzt traf
   addNum(P.x, P.y - 40, Math.round(d), '#ff5d55', false);
   sfx.hurt();
   emit('playerHurt', { amount: d, src: run.boss ? 'boss.' + src : src });   // im Bosskampf mit Vorsilbe (Sim: Schaden je Boss-Angriff)
-  if (P.hp <= 0 && !tryRevive()) { P.hp = 0; if (!offerContinue()) endRun(false); }
+  if (P.hp <= 0 && !tryRevive()) {
+    P.hp = 0;
+    // Koop: Sturz, der Partner kann wiederbeleben; fallen beide, ist der Lauf vorbei (ohne Weitermachen)
+    if (run.players.length > 1) { fall(); if (run.players.every(p => p.down)) endRun(false); }
+    else if (!offerContinue()) endRun(false);
+  }
+}
+// Koop: gestürzt liegen bleiben, bis der Partner REVIVE_T s daneben steht (game/run.js reviveTick)
+export const REVIVE_T = 3, REVIVE_R = 70;
+function fall() {
+  P.down = true; P.reviveT = 0; P.dashT = 0; P.sprinting = false; P.moving = false; P.shieldT = 0; P.mechT = 0;
+  addNum(P.x, P.y - 52, 'Gestürzt!', '#ff5d55', true);
+}
+export function reviveTick(p, dt) {
+  const near = run.players.some(o => o !== p && !o.down && (o.x - p.x) ** 2 + (o.y - p.y) ** 2 < REVIVE_R * REVIVE_R);
+  p.reviveT = near ? p.reviveT + dt : Math.max(0, p.reviveT - dt * .5);
+  if (p.reviveT < REVIVE_T) return;
+  p.down = false; p.reviveT = 0; p.hp = p.maxHp / 2; p.inv = 1.5;
+  addNum(p.x, p.y - 52, 'Wieder da!', '#7dff7a', true); sfx.heal();
 }

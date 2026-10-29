@@ -4,7 +4,7 @@ import { sfx } from '../core/audio.js';
 import { BOONS, PASSIVES, WEAPONS } from '../data/weapons.js';
 import { addWeapon, recalc } from './run.js';
 import { drawOffer, itemKey, replaceCard, settleOffer } from './offer.js';
-import { P, heal, run } from './state.js';
+import { P, eachPlayer, heal, run } from './state.js';
 import { part, ring } from './fx.js';
 import { TAU } from '../core/util.js';
 import { count } from './progress.js';
@@ -38,6 +38,31 @@ export function choose(offer, i, lockIdx = -1) {
   else applyChoice(offer[i]);
 }
 
+// Koop (Phase 14b): Level-Up gemeinsam. Die Welt steht, jeder wählt seine eigene Karte (Eingabe pick, core/input.js),
+// nach COOP_LV_T s gilt die erste. Truhe mit Auswahl (Mini-Boss): nur wer sie aufgehoben hat (run.chestBy).
+// Angebote der Reihe nach aus RNG.lvl (Goblin 0, dann 1), damit beide Rechner dasselbe würfeln.
+export const COOP_LV_T = 15;
+export function startCoopLevel(kind) {
+  const who = kind === 'chest' ? [(run.chestBy && run.chestBy.shift()) ?? 0] : run.players.map((p, i) => i);
+  const offers = [];
+  eachPlayer((p, i) => { offers[i] = who.includes(i) ? genChoices() : null; });
+  run.lvl = { kind, offers, picks: offers.map(o => (o ? -1 : null)), t: COOP_LV_T }; run.lvOpen = false;
+  emit('coopLevel', run.lvl);
+}
+export function coopLevelTick(dt, inps) {
+  const L = run.lvl;
+  L.t -= dt;
+  L.offers.forEach((o, i) => {
+    if (!o || L.picks[i] !== -1) return;
+    const k = inps[i] ? inps[i].pick : -1;
+    if (k >= 0 && k < o.length) L.picks[i] = k; else if (L.t <= 0) L.picks[i] = 0;
+  });
+  if (L.picks.includes(-1)) return;
+  run.lvl = null;
+  eachPlayer((p, i) => { if (L.offers[i]) choose(L.offers[i], L.picks[i]); });
+  emit('coopLevelDone', L);
+}
+
 // Truhe ohne Auswahl: n Aufwertungen eigener Waffen (Entwicklung zuerst), sonst Passiv, sonst Gold.
 // Die Öffnung zeigt die UI (ui/run-chest.js hängt sich an das Ereignis autoChest); src (elite/boss) bestimmt nur ihr Aussehen
 export function autoChest(n, src = 'elite') {
@@ -63,6 +88,7 @@ export function autoUp() {
     const n = WEAPONS[w.id].auto;
     if (!n || w.evo || w.lv >= 5 || P.lv % n) continue;
     w.lv++;
+    if (run.pi !== run.me) continue;   // Koop: Anzeige nur für die eigenen Waffen
     banner(`${WEAPONS[w.id].name} Stufe ${w.lv}!`, 'auto');
     sfx.bladeUp();
     ring(P.x, P.y - 8, 8, 120, .4, 'rgba(220,235,255,.95)', 6);
@@ -85,11 +111,11 @@ function swapPassive(from, to, quiet) {
 export function applyChoice(c, quiet = false) {
   if (c.k === 'newW') addWeapon(c.id);
   else if (c.k === 'upW') run.weapons.find(w => w.id === c.id).lv++;
-  else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; if (!quiet) banner(WEAPONS[c.id].evo + '!', ''); count(run, 'evo'); }
+  else if (c.k === 'evo') { run.weapons.find(w => w.id === c.id).evo = true; if (!quiet && run.pi === run.me) banner(WEAPONS[c.id].evo + '!', ''); count(run, 'evo'); }
   else if (c.k === 'newP' || c.k === 'upP') run.passives[c.id] = (run.passives[c.id] || 0) + 1;
-  else if (c.k === 'swap') swapPassive(c.from, c.id, quiet);
+  else if (c.k === 'swap') swapPassive(c.from, c.id, quiet || run.pi !== run.me);
   else if (c.k === 'boon') { run.boons[c.id] = (run.boons[c.id] || 0) + 1; count(run, 'boon'); }
   else if (c.k === 'heal') heal(P.maxHp * .4);
   else if (c.k === 'gold') run.gold += 25;
-  recalc(); refreshSlots();
+  recalc(); if (run.pi === run.me) refreshSlots();   // HUD zeigt die eigene Ausrüstung
 }

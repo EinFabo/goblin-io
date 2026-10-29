@@ -10,7 +10,8 @@ import { SPAWN_T, tipPos } from '../game/enemies.js';
 import { part } from '../game/fx.js';
 import { gemTier } from '../game/items.js';
 import { ROLL_T, curPlayerSpr } from '../game/player.js';
-import { P, hasMut, onScreen, run } from '../game/state.js';
+import { P, activate, eachPlayer, hasMut, onScreen, run } from '../game/state.js';
+import { REVIVE_T, REVIVE_R } from '../game/combat.js';
 import { DPR, H, W, ZOOM, ctx, cv, drawImgC, drawSpr } from './canvas.js';
 import { iconCanvas } from './icons.js';
 import { PROC, mk } from './proc.js';
@@ -66,13 +67,15 @@ const CHIEF_LOOK = { sc: .95 };  // Häuptling (Meister des Goblin-Rufs)
 // alpha: Anteil zwischen letztem und nächstem Logikschritt. Spieler, Gegner und Kumpel
 // werden für das Bild dazwischen gesetzt und danach zurückgesetzt.
 export function renderRun(now, alpha = 1) {
-  const moved = [P, run.cam, ...run.enemies, ...run.allies, ...run.tmpAllies], saved = new Array(moved.length * 2);
+  // Koop: alle Goblins mit ihren Helfern (die des Partners liegen in seinem kit, state.js activate)
+  const own = run.players.flatMap(p => [p, ...(p === P ? run.allies : p.kit.allies), ...(p === P ? run.tmpAllies : p.kit.tmpAllies)]);
+  const moved = [run.cam, ...run.enemies, ...own], saved = new Array(moved.length * 2);
   moved.forEach((o, i) => {
     saved[i * 2] = o.x; saved[i * 2 + 1] = o.y;
     if (o.px !== undefined) { o.x = o.px + (o.x - o.px) * alpha; o.y = o.py + (o.y - o.py) * alpha; }
   });
   try { drawRun(now); }
-  finally { moved.forEach((o, i) => { o.x = saved[i * 2]; o.y = saved[i * 2 + 1]; }); }
+  finally { activate(run.me); moved.forEach((o, i) => { o.x = saved[i * 2]; o.y = saved[i * 2 + 1]; }); }
 }
 function drawRun(now) {
   const t = now / 1000;
@@ -80,7 +83,10 @@ function drawRun(now) {
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   const sh = save.settings.shake ? run.shake : 0;
   const sx = (Math.random() - .5) * sh, sy = (Math.random() - .5) * sh;
-  const zm = ZOOM * run.cam.z, camX = run.cam.x + sx, camY = run.cam.y + sy, z = zm * DPR;
+  let zm = ZOOM * run.cam.z;
+  // Koop: nur so weit herauszoomen, dass beide Goblins mit Rand ins Bild passen
+  if (run.coop) { const [a, b] = run.players; zm = Math.min(zm, W / 2 / (Math.abs(a.x - b.x) / 2 + 110), H / 2 / (Math.abs(a.y - b.y) / 2 + 130)); }
+  const camX = run.cam.x + sx, camY = run.cam.y + sy, z = zm * DPR;
   ctx.setTransform(z, 0, 0, z, cv.width / 2 - camX * z, cv.height / 2 - camY * z);
   const hw = W / 2 / zm, hh = H / 2 / zm;
   drawGround(run.si, camX - hw - 4, camY - hh - 4, hw * 2 + 8, hh * 2 + 8);
@@ -93,16 +99,18 @@ function drawRun(now) {
     ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(zn.x, zn.y, zn.r, zn.r * .75, 0, 0, TAU); ctx.fill();
   }
   drawHaz(t, false);
-  drawAbilGround(t);
-  drawWfxGround(t);
-  const pw = run.weapons.find(w => w.id === 'poison' && w.evo);
-  if (pw) {
-    const R = 125 * P.area, g = ctx.createRadialGradient(P.x, P.y, R * .3, P.x, P.y, R);
-    g.addColorStop(0, 'rgba(140,230,70,0)'); g.addColorStop(.75, 'rgba(140,230,70,.22)'); g.addColorStop(1, 'rgba(140,230,70,0)');
-    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(P.x, P.y, R, 0, TAU); ctx.fill();
-    ctx.strokeStyle = 'rgba(170,255,110,.35)'; ctx.lineWidth = 3; ctx.setLineDash([10, 14]); ctx.lineDashOffset = -t * 40;
-    ctx.beginPath(); ctx.arc(P.x, P.y, R * .92, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
-  }
+  eachPlayer(() => {
+    drawAbilGround(t);
+    drawWfxGround(t);
+    const pw = run.weapons.find(w => w.id === 'poison' && w.evo);
+    if (pw) {
+      const R = 125 * P.area, g = ctx.createRadialGradient(P.x, P.y, R * .3, P.x, P.y, R);
+      g.addColorStop(0, 'rgba(140,230,70,0)'); g.addColorStop(.75, 'rgba(140,230,70,.22)'); g.addColorStop(1, 'rgba(140,230,70,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(P.x, P.y, R, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'rgba(170,255,110,.35)'; ctx.lineWidth = 3; ctx.setLineDash([10, 14]); ctx.lineDashOffset = -t * 40;
+      ctx.beginPath(); ctx.arc(P.x, P.y, R * .92, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    }
+  });
   for (const tl of run.tele) {
     if (tl.k === 'meteor') {
       const p = 1 - tl.t / tl.dur;
@@ -139,51 +147,34 @@ function drawRun(now) {
     }
   }
   // Figuren nach y sortiert
-  const list = [];
+  // Figuren der Goblins merken sich ihren Besitzer (Koop: beim Zeichnen ist er aktiv)
+  const list = [], owner = new Map();
   for (const e of run.enemies) if (onScreen(e.x, e.y, 120 * e.sc)) list.push(e);
-  for (const al of run.allies) list.push(al);
-  for (const al of run.tmpAllies) list.push(al);
   for (const pl of run.pillars) list.push(pl);
-  for (const f of run.abfx) if (ABIL_OBJ.has(f.k)) list.push(f);   // Strohpuppe, Flammenturm, Kanone
-  list.push(P);
+  eachPlayer((p, i) => {
+    const add = o => { list.push(o); owner.set(o, i); };
+    for (const al of run.allies) add(al);
+    for (const al of run.tmpAllies) add(al);
+    for (const f of run.abfx) if (ABIL_OBJ.has(f.k)) add(f);   // Strohpuppe, Flammenturm, Kanone
+    add(P);
+    const trT = (TRAIL[P.prof.look.trail] || TRAIL.dust).tint;
+    for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, trT, tr.t * 2.4);
+  });
   list.sort((a, b) => a.y - b.y);
-  const trT = (TRAIL[save.look.trail] || TRAIL.dust).tint;
-  for (const tr of P.trail) drawSpr(tr.spr, tr.x, tr.y - 8, 1, 0, trT, tr.t * 2.4);
-  const gang = run.weapons.find(w => w.id === 'gang');
+  let gang = null;
   for (const o of list) {
-    if (o === P) { if (P.mechT > 0) drawMech(); else drawPlayer(t); }
+    const oi = owner.get(o);
+    if (oi !== undefined && oi !== run.pi) { activate(oi); gang = run.weapons.find(w => w.id === 'gang'); }
+    if (o === P) { if (P.down) drawDown(t); else if (P.mechT > 0) drawMech(); else drawPlayer(t); }
     else if (ABIL_OBJ.has(o.k) && !o.type) drawAbilObj(o, t);
-    else if (o.ally) drawAlly(o, o.big ? CHIEF_LOOK : o.tmp ? CALL_LOOK : gang);
+    else if (o.ally) drawAlly(o, o.big ? CHIEF_LOOK : o.tmp ? CALL_LOOK : gang || run.weapons.find(w => w.id === 'gang'));
     else if (!o.type) drawPillar(o, t);
     else drawEnemy(o, t);
   }
-  drawPlayerBars();
-  drawAbilTop(t);
+  eachPlayer(() => { if (!P.down) drawPlayerBars(); drawAbilTop(t); if (run.coop) drawNameTag(); });
   for (const e of run.enemies) if (e.state === 'cast' && !e.boss && e.ft < e.charge + .05 && onScreen(e.x, e.y, 60)) drawCharge(e, t);
   for (const e of run.enemies) if (e.boss && !e.dead && e.ai.st === 'cast' && e.ft < e.charge) drawCharge(e, t);   // Boss und seine Teile
-  for (const w of run.weapons) if (w.id === 'orbit') {
-    ctx.strokeStyle = w.evo ? 'rgba(255,230,120,.25)' : 'rgba(255,255,255,.14)'; ctx.lineWidth = 10;
-    ctx.beginPath(); ctx.arc(P.x, P.y - 8, w.r || 80, 0, TAU); ctx.stroke();
-    for (const [bx, by, a] of w.blades) drawSpr('dagger', bx, by, w.evo ? 1.5 : 1.25, a + Math.PI / 2, daggerTint());
-  }
-  // Geschosse
-  for (const p of run.pproj) {
-    if (drawProj2(p)) continue;
-    if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a, daggerTint());
-    else if (!onScreen(p.x, p.y, 100)) continue;
-    else if (p.k === 'spear') glowTail('frost', p.x, p.y, p.vx, p.vy, 4, .7), drawSpr('e_frostbolt_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.25, p.a);
-    else if (p.k === 'fireball') glowTail('fire', p.x, p.y, p.vx, p.vy, 6, .8), drawSpr('f_fireball_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.3, p.a);
-    else if (p.k === 'boomer') drawImgC(PROC.bone, p.x, p.y, 40 * p.sc, p.t * 16);
-    else if (p.k === 'saw') drawImgC(PROC.saw, p.x, p.y, 44 * p.sc, p.t * 22);
-    else if (p.k === 'bullet') { ctx.strokeStyle = '#fff2a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * .025, p.y - p.vy * .025); ctx.stroke(); }
-    else if (p.k === 'rocket') {
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.atan2(p.vy, p.vx));
-      ctx.fillStyle = '#d6dde2'; ctx.strokeStyle = '#0a0f06'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-9, -3.5, 14, 7, 2); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.moveTo(5, -3.5); ctx.lineTo(11, 0); ctx.lineTo(5, 3.5); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#ffb02e'; ctx.beginPath(); ctx.arc(-11, 0, 3 + Math.random() * 2, 0, TAU); ctx.fill();
-      ctx.restore();
-    }
-  }
+  eachPlayer(drawOwnShots);
   for (const tl of run.tele) {
     if (tl.k === 'flask') {
       const p = tl.t / tl.dur, x = tl.sx + (tl.x - tl.sx) * p, y = tl.sy + (tl.y - tl.sy) * p - Math.sin(p * Math.PI) * 90;
@@ -197,7 +188,7 @@ function drawRun(now) {
       } else { ctx.fillStyle = '#2b2f36'; ctx.beginPath(); ctx.arc(x, y, 7, 0, TAU); ctx.fill(); ctx.fillStyle = '#ffb02e'; ctx.beginPath(); ctx.arc(x + 4, y - 6, 2.5, 0, TAU); ctx.fill(); }
     }
   }
-  drawWfxTop(t);
+  eachPlayer(() => drawWfxTop(t));
   for (const p of run.eproj) {
     if (!onScreen(p.x, p.y, 60)) continue;
     if (p.lob) {
@@ -378,6 +369,46 @@ export function drawAlly(al, w) {
     ctx.strokeStyle = `rgba(255,255,255,${al.slash / .15})`; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.arc(al.x + Math.cos(al.sa) * 16, al.y - 6 + Math.sin(al.sa) * 16, 14, al.sa - 1.2, al.sa + 1.2); ctx.stroke();
   }
+}
+// Waffen-Klingen und Geschosse des aktiven Goblins (Koop: je Goblin aufgerufen)
+function drawOwnShots() {
+  for (const w of run.weapons) if (w.id === 'orbit') {
+    ctx.strokeStyle = w.evo ? 'rgba(255,230,120,.25)' : 'rgba(255,255,255,.14)'; ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.arc(P.x, P.y - 8, w.r || 80, 0, TAU); ctx.stroke();
+    for (const [bx, by, a] of w.blades) drawSpr('dagger', bx, by, w.evo ? 1.5 : 1.25, a + Math.PI / 2, daggerTint());
+  }
+  for (const p of run.pproj) {
+  if (drawProj2(p)) continue;
+  if (p.k === 'dagger') drawSpr('dagger', p.x, p.y, 1.05, p.a, daggerTint());
+  else if (!onScreen(p.x, p.y, 100)) continue;
+  else if (p.k === 'spear') glowTail('frost', p.x, p.y, p.vx, p.vy, 4, .7), drawSpr('e_frostbolt_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.25, p.a);
+  else if (p.k === 'fireball') glowTail('fire', p.x, p.y, p.vx, p.vy, 6, .8), drawSpr('f_fireball_' + ((Math.floor(p.t * 14) % 4) + 1), p.x, p.y, 1.3, p.a);
+  else if (p.k === 'boomer') drawImgC(PROC.bone, p.x, p.y, 40 * p.sc, p.t * 16);
+  else if (p.k === 'saw') drawImgC(PROC.saw, p.x, p.y, 44 * p.sc, p.t * 22);
+  else if (p.k === 'bullet') { ctx.strokeStyle = '#fff2a0'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * .025, p.y - p.vy * .025); ctx.stroke(); }
+  else if (p.k === 'rocket') {
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(Math.atan2(p.vy, p.vx));
+    ctx.fillStyle = '#d6dde2'; ctx.strokeStyle = '#0a0f06'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(-9, -3.5, 14, 7, 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#e5484d'; ctx.beginPath(); ctx.moveTo(5, -3.5); ctx.lineTo(11, 0); ctx.lineTo(5, 3.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#ffb02e'; ctx.beginPath(); ctx.arc(-11, 0, 3 + Math.random() * 2, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  }
+}
+// Koop: Name über dem Goblin (der eigene in Grün, der Partner in Blau)
+function drawNameTag() {
+  const me = run.pi === run.me, y = P.y - (P.mechT > 0 ? 112 : 62);
+  ctx.font = '900 13px Nunito, system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.lineJoin = 'round';
+  ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(10,15,6,.85)'; ctx.strokeText(P.prof.name || 'Goblin', P.x, y);
+  ctx.fillStyle = me ? '#9be36a' : '#8fd0ff'; ctx.fillText(P.prof.name || 'Goblin', P.x, y);
+}
+// Koop: gestürzter Goblin liegt, Ring zeigt das Wiederbeleben (Partner muss REVIVE_R nah stehen)
+function drawDown(t) {
+  const d = P.face, q = (P.reviveT || 0) / REVIVE_T;
+  ctx.strokeStyle = `rgba(255,90,80,${.35 + .2 * Math.sin(t * 6)})`; ctx.lineWidth = 3; ctx.setLineDash([8, 8]);
+  ctx.beginPath(); ctx.ellipse(P.x, P.y + 10, REVIVE_R, REVIVE_R * .72, 0, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  drawSpr(`gob.death.${d}.5`, P.x, P.y - 8, 1, 0, null, .8);
+  if (q > 0) { ctx.strokeStyle = '#7dff7a'; ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(P.x, P.y - 70, 14, -Math.PI / 2, -Math.PI / 2 + q * TAU); ctx.stroke(); }
 }
 export function drawPlayer(t) {
   if (P.burrowT > 0 && !run.over) { drawBurrow(t); return; }   // Maulwurfsgang: nur der wandernde Erdhügel

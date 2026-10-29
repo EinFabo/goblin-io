@@ -1,16 +1,18 @@
 import { on } from '../core/events.js';
-import { clearInput } from '../core/input.js';
+import { clearInput, localCoop } from '../core/input.js';
+import { profileOf } from '../game/profile.js';
 import { Music } from '../core/music.js';
 import { defineScene, go } from '../core/scenes.js';
 import { $ } from '../core/util.js';
 import { levelLabel } from '../data/levels.js';
 import { MUTATORS, mutNames } from '../data/mutators.js';
 import { hint, lvToBonus, newRun, update } from '../game/run.js';
+import { startCoopLevel } from '../game/levelup.js';
 import { run } from '../game/state.js';
 import { renderRun } from '../render/draw-world.js';
 import { pauseBackground } from '../render/sprites.js';
 import { banner, refreshSlots, setupAbilButtons, updHud } from '../ui/hud.js';
-import { openLevelUp } from '../ui/levelup.js';
+import { coopLvTick, openLevelUp } from '../ui/levelup.js';
 import '../ui/run-chest.js';   // Truhe im Lauf: hängt sich an das Ereignis autoChest
 import { hideOverlays, showScreen } from '../ui/menus.js';
 
@@ -20,9 +22,11 @@ function endCine() { document.body.classList.remove('cine'); $('#bossCard').hidd
 
 defineScene('run', {
   // mut/abil/mode (Phase 12): Mutatoren, feste Fähigkeiten und Art des Laufs (Herausforderung, Kopfgeld)
-  enter({ si, li = 0, seed, nm = false, mut, abil, mode }) {
+  // coop (Phase 14b): { profs, me } – zwei Goblins; im Testmodus ?coop=local spielt der zweite an derselben Tastatur
+  enter({ si, li = 0, seed, nm = false, mut, abil, mode, coop }) {
     pauseBackground(true);   // im Lauf kein Hintergrund-Laden
-    newRun(si, seed, li, nm, { mut, abil, mode }); clearInput();   // Knöpfe aus dem Menü nicht in den Lauf mitnehmen
+    if (!coop && localCoop && !mode) coop = { profs: [profileOf(), { ...profileOf(), name: 'Goblin 2' }], me: 0 };
+    newRun(si, seed, li, nm, { mut, abil, mode, coop }); clearInput();   // Knöpfe aus dem Menü nicht in den Lauf mitnehmen
     showScreen(null); hideOverlays();
     $('#hud').hidden = false; $('#ctrl').hidden = false; $('#bossBar').hidden = true; $('#hint').hidden = true; endCine();
     $('#stageTxt').textContent = (run.nm ? `☠${run.nm} ` : '') + (run.st.endless ? run.st.name : `${levelLabel(si, run.li)} ${run.st.lvName}`);
@@ -60,9 +64,9 @@ defineScene('run', {
       run.lvDelay -= step;
       if (run.lvDelay > 0) update(step * .25);
       // Level zu Ende, während die Zeitlupe lief: kein Kartenfenster mehr, das Level-Up wird Bonus-Level
-      else if (!run.over) { if (run.clearT > 0) lvToBonus(); else { run.lvOpen = false; openLevelUp(run.lvKind === 'chest'); } }
+      else if (!run.over) { if (run.clearT > 0) lvToBonus(); else if (run.coop) startCoopLevel(run.lvKind); else { run.lvOpen = false; openLevelUp(run.lvKind === 'chest'); } }
     } else if (run.slowT > 0) { run.slowT -= step; update(step * .3); }
     else update(step);
   },
-  render(now, alpha, dt) { renderRun(now, alpha); updHud(dt); },
+  render(now, alpha, dt) { renderRun(now, alpha); updHud(dt); if (run.lvl) coopLvTick(); },
 });

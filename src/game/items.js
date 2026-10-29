@@ -7,11 +7,12 @@ import { fuseMega, megaReady } from './mega.js';
 import { chargeAbil, xpBonus } from './abilities.js';
 import { hurt } from './combat.js';
 import { addNum, part, ring } from './fx.js';
-import { P, aoeScope, heal, onScreen, pR, run, xpNeed } from './state.js';
+import { P, activate, aoeScope, eachPlayer, heal, nearestGob, onScreen, pR, run, xpNeed } from './state.js';
 import { GEM_COL } from '../render/proc.js';
 
 export const gemTier = v => v >= 100 ? 3 : v >= 20 ? 2 : v >= 5 ? 1 : 0;
 export function updItems(dt) {
+  const pi = run.pi;
   tickGemCombo(dt);
   for (const it of run.items) {
     it.t += dt;
@@ -20,14 +21,17 @@ export function updItems(dt) {
       if (it.z <= 0) { it.z = 0; it.vz = 0; }
       continue;
     }
-    const dx = P.x - it.x, dy = P.y - 6 - it.y, d = Math.hypot(dx, dy) || 1;
-    if (!it.mag && pullable(it) && d < P.magnet * (P.sprinting ? P.sprintMag : 1)) it.mag = true;
+    // Koop: zum Goblin, der es angezogen hat, sonst zum nächsten stehenden (jeder mit eigenem Magnet)
+    const gi = it.to !== undefined && !run.players[it.to].down ? it.to : nearestGob(it.x, it.y), g = run.players[gi];
+    const dx = g.x - it.x, dy = g.y - 6 - it.y, d = Math.hypot(dx, dy) || 1;
+    if (!it.mag && pullable(it) && d < g.magnet * (g.sprinting ? g.sprintMag : 1)) it.mag = true;
     if (it.mag) {
+      it.to = gi;
       it.sp = Math.min(1300, it.sp + 1500 * dt);
       const s = Math.min(d, it.sp * dt); it.x += dx / d * s; it.y += dy / d * s;
       if (it.k === 'gem' && Math.random() < .5) part(it.x, it.y, 0, 0, .18, GEM_COL[gemTier(it.v)][0], 3);
     }
-    if (d < pR() + 12) collect(it);
+    if (d < pR(g) + 12) { activate(gi); collect(it); activate(pi); }
   }
   run.items = run.items.filter(i => !i.got);
   run.gemN = 0; for (const i of run.items) if (i.k === 'gem') run.gemN++;
@@ -67,14 +71,21 @@ export function collect(it) {
       if (run.clearT > 0) { for (let i = it.v === 'boss' ? 3 : it.v === 'elite' ? 1 : 2; i > 0; i--) bonusLevel(); sfx.chest(); }
       // Mega-Truhe: hat man zwei passende Entwicklungen, verschmelzen sie (Elite, Mini-Boss, Boss)
       else if ((it.v === 'elite' || it.v === 'boss' || it.v === 'mini') && (mega = megaReady())) { fuseMega(mega); if (it.v === 'boss') autoChest(2, 'boss'); }
-      else if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1, it.v); else run.pendingChest++;
+      else if (it.v === 'elite' || it.v === 'boss') autoChest(it.v === 'boss' ? 3 : 1, it.v);
+      else { run.pendingChest++; if (run.coop) (run.chestBy = run.chestBy || []).push(run.pi); }   // Koop: wählen darf, wer sie aufhob
       break;
     }
   }
 }
+// Koop: eine gemeinsame Leiste – wer sammelt, zählt mit seinem XP-Bonus, Level und XP gelten danach für beide
 export function addXp(v) {
   P.xp += v * P.xpMult * xpBonus() * xpCatchUp(run.time, P.lv);
-  while (P.xp >= P.need) { P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv); if (run.clearT > 0) bonusLevel(); else { run.pendingLv++; autoUp(); } }
+  while (P.xp >= P.need) {
+    P.xp -= P.need; P.lv++; P.need = xpNeed(P.lv);
+    for (const p of run.players) if (p !== P) { p.lv = P.lv; p.need = P.need; }
+    if (run.clearT > 0) bonusLevel(); else { run.pendingLv++; eachPlayer(() => autoUp()); }
+  }
+  for (const p of run.players) if (p !== P) p.xp = P.xp;
 }
 // Bonus-Level nach „Level geschafft“: „+1“ über dem Goblin, Ton steigt mit jedem weiteren
 function bonusLevel() {

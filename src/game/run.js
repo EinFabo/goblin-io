@@ -1,7 +1,7 @@
 import { sfx } from '../core/audio.js';
 import { emit } from '../core/events.js';
 import { RNG, mulberry32, newSeed, seedRun } from '../core/rng.js';
-import { takeInput } from '../core/input.js';
+import { takeInputs } from '../core/input.js';
 import { abilState, clsState, gainAbilXp, gainAccountXp, gainClassXp, levelDone, persist, recordLevel, save } from '../core/save.js';
 import { ABILITIES, ABILITY_IDS, SLOT2_ACCT } from '../data/abilities.js';
 import { accountXp, bonusReward } from './balance.js';
@@ -15,6 +15,7 @@ import { part, ring } from './fx.js';
 import { updEProj, updTele } from './hazards.js';
 import { pullable, updItems } from './items.js';
 import { updPlayer } from './player.js';
+import { reviveTick } from './combat.js';
 import { newOfferState } from './offer.js';
 import { BOONS, cardIdOf } from '../data/weapons.js';
 import { NM_MAX, nmGems, nmGold, nmXp } from '../data/nightmare.js';
@@ -28,7 +29,8 @@ import { grantCosmetic } from './cosmetics.js';
 import { count, ensureDaily, mergeRun } from './progress.js';
 import { checkBounties, finishChallenge } from './quests.js';
 import { dayKey } from './shop.js';
-import { P, buildGrid, eachPlayer, grid, hasMut, query, run, setRun, setSrc, xpNeed } from './state.js';
+import { P, activate, buildGrid, clampToArena, eachPlayer, grid, nearestGob, hasMut, query, run, setRun, setSrc, xpNeed } from './state.js';
+import { coopLevelTick } from './levelup.js';
 import { profileOf } from './profile.js';
 import { updAllies, updPProj, updWeapons } from './weapons.js';
 import { updWfx } from './weapons2.js';
@@ -38,6 +40,7 @@ import { updMegas } from './mega.js';
 // si = Welt (Stage), li = Level in der Welt (0–4, das letzte ist das Boss-Level)
 // nm: Albtraum-Stufe 0–10 (6.1, Phase 12), nur in Welten, deren Boss schon besiegt ist
 // opts (Phase 12): mut = Mutatoren, abil = feste Fähigkeiten für diesen Lauf (Herausforderung), mode = 'challenge' | 'bounty'
+// opts.coop (Phase 14b): { profs: [Profil 0, Profil 1], me: eigener Index } – zwei Goblins, beide Rechner gleich
 export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   const st = levelStage(si, li);
   seedRun(seed);
@@ -46,8 +49,12 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
     spawnAcc: 0, spawnQ: [], ei: 0, events: [], loop: 0, boss: null, arena: null, seen: new Set(), hints: [], hintT: 0,
     pendingLv: 0, pendingChest: 0, lowT: 0, lvDelay: 0, lvKind: 'lv', paused: false, over: false, shake: 0, hurtT: 0, clearT: 0, flashT: 0, cut: null, storm: 0, portals: [], pillars: [], wind: null, bonusLv: 0, clearAge: 0,
   };
-  const p = newPlayer(profileOf());
-  r.players = [p]; r.pi = 0; r.me = 0;   // Koop (Phase 14b): alle Goblins, der gerade gerechnete, der eigene
+  const co = opts.coop || null, p = newPlayer(co ? co.profs[0] : profileOf());
+  r.players = [p]; r.pi = 0; r.me = co ? co.me : 0;   // Koop (Phase 14b): alle Goblins, der gerade gerechnete, der eigene
+  if (co) {
+    r.coop = true; r.coopHp = COOP_HP; r.coopDmg = COOP_DMG; r.noCont = true;   // kein Weitermachen für Juwelen im Koop
+    r.fixedView = COOP_VIEW; r.vc = { x: 0, y: 0 };      // gleiche Sicht auf beiden Rechnern (state.js viewHW)
+  }
   r.cycle = cycle(save);   // Wiedergeburt: Zyklus (Gegner stärker, mehr Gold und XP)
   r.mut = [...(opts.mut || [])]; r.forceAbil = opts.abil || null; r.mode = opts.mode || null; r.day = dayKey();
   r.cnt = {};   // Zähler für Erfolge/Tagesaufgaben (game/progress.js)
@@ -61,8 +68,21 @@ export function newRun(si, seed = newSeed(), li = 0, nm = false, opts = {}) {
   recalc(); P.hp = P.maxHp; P.stam = P.stamMax; r.healed = 0; r.bossHits = 0;   // Kopfgeld: Heilung (state.js heal) und Treffer im Bosskampf
   const C = classOf(r.cls), dn = DASH_KIND[C.dash].name, sn = SPRINT_KIND[C.sprint].name;
   addWeapon(C.weapon, hasPerk(r.clsLv, 'start2') || soulRank(P.prof, 'w_start') > 0);
+  if (co) { P.x = -COOP_GAP; for (const pr of co.profs.slice(1)) addPlayer(pr); activate(r.me); }
   if (si === 0 && st.li === 0 && !levelDone(0, 0)) hint(isTouch() ? '<b>Tipp</b> Ziehe irgendwo auf dem Bildschirm zum Laufen. ' + (save.settings.lefty ? 'Links' : 'Rechts') + ` unten: ${dn}, ${sn} und deine Fähigkeiten.` : `<b>Tipp</b> WASD laufen · Leertaste ${dn} · Shift ${sn} · Q und E Fähigkeiten`);
   emit('runStart', run);
+}
+// Koop: Gegner haben mehr Leben und treffen härter (Ausgleich fürs Wiederbeleben), Sicht in Welt-Einheiten fest (wie ein 16:9-Fenster bei ZOOM 1), Abstand beim Start
+export const COOP_HP = 1.8, COOP_DMG = 1.5, COOP_VIEW = [800, 450], COOP_LEASH = [450, 260], COOP_GAP = 40;
+// Weiterer Goblin (Koop): eigene Ausrüstung aus seinem Profil, startet rechts neben Goblin 0
+function addPlayer(prof) {
+  const i = run.players.length, p = newPlayer(prof);
+  run.players.push(p); activate(i);
+  newKit(); initAbilities(); recalc(); P.hp = P.maxHp; P.stam = P.stamMax;
+  const C = classOf(run.cls);
+  addWeapon(C.weapon, hasPerk(run.clsLv, 'start2') || soulRank(prof, 'w_start') > 0);
+  P.x = COOP_GAP * (2 * i - 1);
+  activate(0);
 }
 // Ein Goblin mit seinem Profil (game/profile.js); kit hält seine Ausrüstung, solange ein anderer aktiv ist (state.js activate)
 function newPlayer(prof) {
@@ -146,12 +166,18 @@ export function startClear(t) {
 }
 
 // ---------- Haupt-Update ----------
-const NO_INPUT = { mx: 0, my: 0, sprint: false, dash: false, ab0: false, ab1: false, skip: false };
+const NO_INPUT = { mx: 0, my: 0, sprint: false, dash: false, ab0: false, ab1: false, skip: false, pick: -1 };
 // Ein fester Simulationsschritt (60 Hz, siehe core/loop.js)
 // inp: Eingabe dieses Ticks (core/input.js). Bot und Smoke rufen update(dt) ohne und lösen Rolle/Fähigkeiten direkt aus.
 // inps: je Goblin ein Datensatz (Koop); fehlt einer, steht der Goblin.
-export function update(dt, inps = [takeInput()]) {
+// Im Schritt ist Goblin 0 aktiv (beide Rechner gleich), danach wieder der eigene (HUD, Zeichnen).
+export function update(dt, inps = takeInputs()) {
+  activate(0);
+  try { step(dt, inps); } finally { activate(run.me); }
+}
+function step(dt, inps) {
   run.tick++;
+  if (run.lvl) { coopLevelTick(dt, inps); return; }   // Koop-Level-Up: die Welt steht, bis beide gewählt haben
   // Knöpfe vor allem anderen, wie früher direkt aus dem Tasten-Handler (Teleport-Rolle ohne Zwischenbild)
   eachPlayer((p, i) => {
     const inp = inps[i] || NO_INPUT;
@@ -159,23 +185,37 @@ export function update(dt, inps = [takeInput()]) {
     if (inp.dash) doDash();
     if (inp.ab0) useAbility(0);
     if (inp.ab1) useAbility(1);
-  });
+  }, true);
   savePrev();
   // Boss-Szene (Auftritt, Phasenwechsel): die Welt steht, nur Kamera, Boss und Effekte laufen
   if (run.cut) { updCut(dt); updFx(dt); return; }
   run.time += dt;
   while (run.ei < run.events.length && run.time >= run.events[run.ei].t) doEvent(run.events[run.ei++]);
   eachPlayer((p, i) => {
+    if (p.down) { if (run.arena) clampToArena(p, 22); reviveTick(p, dt); return; }   // Koop: gestürzt (in der Arena erreichbar)
     updPlayer(dt, inps[i] || NO_INPUT);
     if (P.maxHp) run.minHp = Math.min(run.minHp, P.hp / P.maxHp);
   });
+  // Koop: Spawns, Sicht und Kamera um die Mitte aller Goblins (auch gestürzter: der Partner soll sie sehen und nicht weglaufen)
+  if (run.players.length > 1) {
+    let x = 0, y = 0;
+    for (const p of run.players) { x += p.x; y += p.y; }
+    run.vc = { x: x / run.players.length, y: y / run.players.length };
+    // Leine: beide bleiben nah genug, dass sie auch am Handy groß im Bild sind (höchstens 2 × COOP_LEASH auseinander)
+    const [hw, hh] = COOP_LEASH, c = run.vc;
+    for (const p of run.players) if (!p.down) { p.x = Math.max(c.x - hw, Math.min(c.x + hw, p.x)); p.y = Math.max(c.y - hh, Math.min(c.y + hh, p.y)); }
+  }
   updCamera(dt);
   if (run.over) return;
   run.lures = [];   // Strohgoblins melden sich jeden Schritt neu an (game/enemies.js)
-  eachPlayer((p, i) => updAbilities(dt, i === 0));
+  let world = true;
+  eachPlayer(() => { updAbilities(dt, world); world = false; }, true);
   spawnTick(dt);
   buildGrid();
-  for (const e of run.enemies) if (!e.dead && !run.cut) updEnemy(e, dt);   // Phasenwechsel mitten im Schritt: niemand zaubert mehr
+  // Koop: jeder Gegner rechnet mit dem nächsten sichtbaren Goblin als P (zielen, angreifen, Schaden)
+  const multi = run.players.length > 1;
+  for (const e of run.enemies) if (!e.dead && !run.cut) { if (multi) activate(nearestGob(e.x, e.y, true)); updEnemy(e, dt); }   // Phasenwechsel mitten im Schritt: niemand zaubert mehr
+  if (multi) activate(0);
   for (const e of run.enemies) {
     if (e.dead || e.boss || e.obj || (e.traits && e.traits.includes('float'))) continue;
     query(e.x, e.y, e.r * .9, o => {
@@ -185,7 +225,7 @@ export function update(dt, inps = [takeInput()]) {
     });
   }
   buildGrid();
-  eachPlayer(() => { updWeapons(dt); updAllies(dt); updPProj(dt); updWfx(dt); updMegas(dt); });
+  eachPlayer(p => { if (!p.down) updWeapons(dt); updAllies(dt); updPProj(dt); updWfx(dt); updMegas(dt); });   // Gestürzt: keine neuen Angriffe
   updTele(dt);
   updEProj(dt);
   run.enemies = run.enemies.filter(e => !e.dead);
@@ -245,6 +285,7 @@ export function savePrev() {
 // Lauf beenden: Belohnung, Spielstand, Statistik. Die Szene zeigt danach das Ergebnis.
 export function endRun(win) {
   if (run.over) return;
+  activate(run.me);   // Belohnung aus der eigenen Ausrüstung (Klasse, Fähigkeiten-XP)
   run.over = true; run.paused = true;
   ensureDaily(save);   // Tagesbeginn der Aufgaben festhalten, bevor dieser Lauf irgendetwas verbucht
   const boss = !run.st.endless && run.li === LEVELS - 1;
@@ -347,8 +388,9 @@ export function doContinue() {
 
 // Kamera zieht weich nach und schaut in Laufrichtung voraus, beim Sprinten weiter und 4 % herausgezoomt
 function updCamera(dt) {
-  const c = run.cam, look = P.sprinting ? 40 : P.moving ? 16 : 0;
-  const a = 1 - Math.pow(.85, dt * 60);
+  const c = run.cam, a = 1 - Math.pow(.85, dt * 60);
+  if (run.vc) { c.x += (run.vc.x - c.x) * a; c.y += (run.vc.y - c.y) * a; c.z += (1 - c.z) * a; return; }   // Koop: Mitte, kein Vorausschauen
+  const look = P.sprinting ? 40 : P.moving ? 16 : 0;
   c.x += (P.x + P.aimX * look - c.x) * a; c.y += (P.y + P.aimY * look - c.y) * a;
   c.z += ((P.sprinting ? .96 : 1) - c.z) * (1 - Math.pow(.92, dt * 60));
 }

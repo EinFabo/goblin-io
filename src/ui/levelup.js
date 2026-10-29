@@ -1,11 +1,12 @@
 import { sfx } from '../core/audio.js';
-import { setSprintHeld } from '../core/input.js';
+import { localCoop, pickInput, setSprintHeld } from '../core/input.js';
+import { on } from '../core/events.js';
 import { Music } from '../core/music.js';
 import { $ } from '../core/util.js';
 import { BOONS, MEGAS, PASSIVES, WEAPONS, megaOf, weaponOf } from '../data/weapons.js';
 import { SKIP_GOLD, SKIP_HEAL, ban, choose, genChoices, reroll } from '../game/levelup.js';
 import { MAX_P, MAX_W, canBan } from '../game/offer.js';
-import { P, ownIds, run } from '../game/state.js';
+import { P, activate, ownIds, run } from '../game/state.js';
 import { icon } from '../render/icons.js';
 import { chestSvg } from './cardart.js';
 import { openTree } from './evotree.js';
@@ -93,6 +94,7 @@ $('#cards').addEventListener('click', e => {
   if (pk && !mode) { openTree(pk.dataset.peek, true); return; }   // beim Bannen/Sperren zählt der Klick für die Karte
   const b = e.target.closest('.card'); if (!b) return;
   const i = +b.dataset.i, c = curChoices[i];
+  if (run.lvl) { coopPick(i, 0); return; }
   if (mode === 'ban') {
     if (!canBan(c)) return;
     curChoices = ban(curChoices, i); mode = null; if (lockIdx === i) lockIdx = -1;
@@ -101,13 +103,59 @@ $('#cards').addEventListener('click', e => {
   if (mode === 'lock') { lockIdx = lockIdx === i ? -1 : i; mode = null; renderCards(); return; }
   close(i);
 });
-$('#rerollBtn').addEventListener('click', () => { if (run.rerolls <= 0 || mode) return; curChoices = reroll(curChoices); lockIdx = -1; renderCards(); sfx.cards(); });
-$('#banBtn').addEventListener('click', () => { if (run.bans <= 0) return; mode = mode === 'ban' ? null : 'ban'; renderCards(); });
+$('#rerollBtn').addEventListener('click', () => { if (run.lvl || run.rerolls <= 0 || mode) return; curChoices = reroll(curChoices); lockIdx = -1; renderCards(); sfx.cards(); });
+$('#banBtn').addEventListener('click', () => { if (run.lvl || run.bans <= 0) return; mode = mode === 'ban' ? null : 'ban'; renderCards(); });
 $('#lockBtn').addEventListener('click', () => {
-  if (run.locks <= 0) return;
+  if (run.lvl || run.locks <= 0) return;
   if (lockIdx >= 0 && !mode) lockIdx = -1; else mode = mode === 'lock' ? null : 'lock';
   renderCards();
 });
 $('#lvEvoBtn').addEventListener('click', () => openTree(null, true));
 $('#skipGold').addEventListener('click', () => close('gold'));
 $('#skipHeal').addEventListener('click', () => close('heal'));
+
+// ---------- Koop (Phase 14b): gemeinsames Level-Up ----------
+// Angebote kommen aus der Sim (run.lvl, game/levelup.js startCoopLevel); die Wahl geht als Eingabe pick hinein,
+// angewandt wird sie erst, wenn beide gewählt haben. Würfeln, Bannen, Sperren und Überspringen gibt es im Koop nicht.
+// who: 0 = eigener Goblin, 1 = Spieler 2 im Testmodus ?coop=local (zweite Kartenreihe, Tasten 7–0)
+const picked = [-1, -1];
+function coopPick(i, who) {
+  const L = run.lvl, gi = who ? 1 - run.me : run.me;
+  if (!L || !L.offers[gi] || picked[who] >= 0) return;
+  picked[who] = i; pickInput(i, who); sfx.pickCard();
+  const box = who ? $('#cards2') : $('#cards');
+  box.querySelectorAll('.card').forEach((b, j) => b.classList.toggle(j === i ? 'picked' : 'off', true));
+  coopLvTick();
+}
+// Karten eines Goblins (seine Ausrüstung muss für die Hinweise aktiv sein)
+function cardsOf(gi, offer) {
+  const pi = run.pi; activate(gi);
+  try { return offer.map(cardHtml).join(''); } finally { activate(pi); }
+}
+on('coopLevel', L => {
+  picked[0] = picked[1] = -1; mode = null; lockIdx = -1;
+  const mine = L.offers[run.me];
+  $('#levelup').classList.add('coop');
+  $('#lvTitle').innerHTML = L.kind === 'chest' ? chestSvg('iron', 'lvchest') + 'Schatztruhe!' : 'Level ' + P.lv + '!';
+  curChoices = mine || [];
+  $('#cards').innerHTML = mine ? cardsOf(run.me, mine) : '';
+  $('#cards').className = 'cards n' + curChoices.length;
+  let c2 = $('#cards2');
+  const other = 1 - run.me, theirs = localCoop ? L.offers[other] : null;
+  if (theirs) {
+    if (!c2) { c2 = document.createElement('div'); c2.id = 'cards2'; $('#cards').after(c2); c2.addEventListener('click', e => { const b = e.target.closest('.card'); if (b) coopPick(+b.dataset.i, 1); }); }
+    // Tasten 7–0 statt 1–4
+    c2.innerHTML = cardsOf(other, theirs).replace(/<span class="k">(\d)<\/span>/g, (m, d) => `<span class="k">${(+d + 6) % 10}</span>`);
+    c2.className = 'cards n' + theirs.length; c2.hidden = false;
+  } else if (c2) c2.hidden = true;
+  coopLvTick();
+  $('#levelup').hidden = false; sfx.cards();
+});
+on('coopLevelDone', () => { $('#levelup').hidden = true; $('#levelup').classList.remove('coop'); });
+// Restzeit und Partner-Status (jedes Bild, scenes/run.js)
+export function coopLvTick() {
+  const L = run && run.lvl; if (!L) return;
+  const other = 1 - run.me, waitMe = L.picks[run.me] === -1 && picked[0] < 0, waitThem = L.picks[other] === -1;
+  const name = run.players[other].prof.name || 'Partner';
+  $('#lvCardNote').textContent = `Noch ${Math.max(0, Math.ceil(L.t))} s · ` + (waitMe ? 'Wähl deine Karte' : waitThem ? `Warte auf ${name} …` : 'Gleich geht es weiter');
+}

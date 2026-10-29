@@ -6,7 +6,7 @@ import { animFx, boltFx, explode, part, ring } from './fx.js';
 import { bulwark, perfectRoll, reflect } from './abilities.js';
 import { affixOnHitPlayer } from './affixes.js';
 import { portalWarp, spinHaz } from './boss.js';
-import { P, hasMut, onScreen, pR, query, run, setSrc } from './state.js';
+import { P, eachPlayer, hasMut, onScreen, pR, query, run, setSrc } from './state.js';
 
 // Einschlag-Animation je Geschossart
 const HIT_FX = { fire: 'f_fireball_hit_', frost: 'e_frostbolt_hit_', void: 'p.shade_hit.', toxic: 'p.glob_hit.', storm: 'p.spark_hit.', necro: 'p.soul_hit.', earth: 'p.rock_hit.', light: 'p.lance_hit.' };
@@ -73,15 +73,19 @@ export function updEProj(dt) {
     p.x += p.vx * dt * pm; p.y += p.vy * dt * pm;
     if (p.warp && run.portals.length) portalWarp(p);   // Spiegelmeister: durch das Spiegeltor
     if (run.arena && Math.hypot(p.x - run.arena.x, p.y - run.arena.y) > run.arena.r + 40) p.life = 0;
-    const dx = p.x - P.x, dy = p.y - (P.y - 6), rr = p.r + pR() * .85;
-    if (p.fake && dx * dx + dy * dy < rr * rr) { p.life = 0; part(p.x, p.y, 0, -30, .3, 'rgba(200,160,255,.6)', 5); continue; }
-    if (dx * dx + dy * dy < rr * rr && P.shieldT > 0 && !p.fake) { p.life = 0; reflect(p); continue; }
-    if (dx * dx + dy * dy < rr * rr && P.dashT <= 0 && P.inv <= 0) {
-      const before = P.hp; damagePlayer(p.dmg, 'proj', p.owner); affixOnHitPlayer(p.owner, before - P.hp);
-      if (p.kind === 'frost' && P.mechT <= 0 && !bulwark()) P.slowT = 1.2;
-      p.life = 0;
-      animFx(HIT_FX[p.kind] || 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
-    } else if (!p.fake && P.dashT > 0 && dx * dx + dy * dy < rr * rr * P.perfectR * P.perfectR) perfectRoll(p.x, p.y);   // Trugbilder zählen nicht
+    // Koop: gegen jeden stehenden Goblin, bis es einen trifft
+    eachPlayer(() => {
+      const dx = p.x - P.x, dy = p.y - (P.y - 6), rr = p.r + pR() * .85;
+      if (p.fake && dx * dx + dy * dy < rr * rr) { p.life = 0; part(p.x, p.y, 0, -30, .3, 'rgba(200,160,255,.6)', 5); return true; }
+      if (dx * dx + dy * dy < rr * rr && P.shieldT > 0 && !p.fake) { p.life = 0; reflect(p); return true; }
+      if (dx * dx + dy * dy < rr * rr && P.dashT <= 0 && P.inv <= 0) {
+        const before = P.hp; damagePlayer(p.dmg, 'proj', p.owner); affixOnHitPlayer(p.owner, before - P.hp);
+        if (p.kind === 'frost' && P.mechT <= 0 && !bulwark()) P.slowT = 1.2;
+        p.life = 0;
+        animFx(HIT_FX[p.kind] || 'e_frostbolt_hit_', 5, p.x, p.y, 1.2);
+        return true;
+      } else if (!p.fake && P.dashT > 0 && dx * dx + dy * dy < rr * rr * P.perfectR * P.perfectR) perfectRoll(p.x, p.y);   // Trugbilder zählen nicht
+    }, true);
   }
   run.eproj = run.eproj.filter(p => p.life > 0);
 }
@@ -123,6 +127,17 @@ export function hazDist(h, x, y) {
   return [1e9, 0, 0];
 }
 const hazHitsPlayer = h => hazDist(h, P.x, P.y)[0] < pR() * .6;
+// Treffer der Gefahr an jedem stehenden Goblin darin (Koop); gibt zurück, ob einer getroffen wurde
+function hazHit(h) {
+  let any = false;
+  eachPlayer(() => {
+    if (!hazHitsPlayer(h)) return;
+    any = true;
+    const before = P.hp; damagePlayer(h.dmg, h.src, h.owner); affixOnHitPlayer(h.owner, before - P.hp);
+    if (h.drain && !h.drain.dead) { const got = before - P.hp; h.drain.hp = Math.max(h.drain.hp, Math.min(h.drainMax ?? h.drain.maxHp, h.drain.hp + got * 3)); }
+  }, true);
+  return any;
+}
 
 function hazFx(h) {
   const x = h.shape === 'circle' ? h.x : h.shape === 'cone' ? h.x + Math.cos(h.a) * h.len * .5 : h.shape === 'beam' ? (h.a.x + h.b.x) / 2 : (h.x + h.x2) / 2;
@@ -151,17 +166,13 @@ function updHaz(dt) {
       h.warn -= dt;
       if (h.warn > 0) continue;
       hazFx(h);
-      if (h.act <= 0) { if (h.dmg > 0 && hazHitsPlayer(h)) { const b0 = P.hp; damagePlayer(h.dmg, h.src, h.owner); affixOnHitPlayer(h.owner, b0 - P.hp); } h.done = true; continue; }
+      if (h.act <= 0) { if (h.dmg > 0) hazHit(h); h.done = true; continue; }
     }
     h.act -= dt; h.tk -= dt;
     if (h.r1 !== undefined) h.r = h.r1 + (h.r0 - h.r1) * Math.max(0, h.act / h.act0);   // Käfig zieht sich zu
     // Eisfleck: rutschig, solange man drauf steht
-    if (h.kind === 'ice' && hazDist(h, P.x, P.y)[0] < 0) P.iceT = .12;
-    if (h.tk <= 0 && h.dmg > 0 && hazHitsPlayer(h)) {
-      h.tk = h.tick;
-      const before = P.hp; damagePlayer(h.dmg, h.src, h.owner); affixOnHitPlayer(h.owner, before - P.hp);
-      if (h.drain && !h.drain.dead) { const got = before - P.hp; h.drain.hp = Math.max(h.drain.hp, Math.min(h.drainMax ?? h.drain.maxHp, h.drain.hp + got * 3)); }
-    }
+    if (h.kind === 'ice') for (const p of run.players) if (!p.down && hazDist(h, p.x, p.y)[0] < 0) p.iceT = .12;
+    if (h.tk <= 0 && h.dmg > 0 && hazHit(h)) h.tk = h.tick;
     if (h.act <= 0) h.done = true;
   }
   run.haz = run.haz.filter(h => !h.done);

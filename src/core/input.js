@@ -13,19 +13,34 @@ export function setSprintHeld(v) { sprintHeld = v; }
 // Eingabe je Tick (Phase 14a, Grundlage für Koop im Gleichschritt): Tasten und Touch schreiben nur hierher,
 // die Sim holt sich einmal je Schritt einen Datensatz (game/run.js update → takeInput).
 // Knöpfe zählen als „gedrückt seit dem letzten Tick“, Bewegung und Sprint als aktueller Zustand.
-const press = { dash: false, ab0: false, ab1: false, skip: false };
+// pick: gewählte Karte im Koop-Level-Up (game/levelup.js coopLevelTick), -1 = keine
+// Testmodus ?coop=local (Phase 14b): zwei Goblins an einer Tastatur. Spieler 1: WASD, Leertaste, Shift links, Q/E, Karten 1–4.
+// Spieler 2: Pfeile, Enter Rolle, Shift rechts Sprint, K/L Fähigkeiten, Karten 7–0.
+export const localCoop = typeof location !== 'undefined' && new URLSearchParams(location.search).get('coop') === 'local';
+const newPress = () => ({ dash: false, ab0: false, ab1: false, skip: false, pick: -1 });
+const press = [newPress(), newPress()];
 // Rolle/Fähigkeiten nur, wenn die Welt läuft (früher prüfte das der direkte Aufruf); sonst würden sie nach Pause/Animation nachgeholt
-export function pressInput(k) { if (run && !run.over && (k === 'skip' || (!run.paused && !uiFrozen()))) press[k] = true; }
-export function clearInput() { for (const k in press) press[k] = false; }
-export function takeInput() {
-  let mx = 0, my = 0;
-  if (keys.KeyA || keys.ArrowLeft) mx -= 1; if (keys.KeyD || keys.ArrowRight) mx += 1;
-  if (keys.KeyW || keys.ArrowUp) my -= 1; if (keys.KeyS || keys.ArrowDown) my += 1;
-  if (joy.id !== null) { const jx = (joy.x - joy.ox) / 55, jy = (joy.y - joy.oy) / 55; if (Math.hypot(jx, jy) > .15) { mx += jx; my += jy; } }
-  const inp = { mx, my, sprint: !!(keys.ShiftLeft || keys.ShiftRight || sprintHeld), ...press };
-  clearInput();
+export function pressInput(k, who = 0) { if (run && !run.over && (k === 'skip' || (!run.paused && !uiFrozen()))) press[who][k] = true; }
+export function clearInput() { for (const p of press) Object.assign(p, newPress()); }
+export function pickInput(i, who = 0) { if (run && run.lvl) press[who].pick = i; }
+const axis = (neg, pos) => (neg ? -1 : 0) + (pos ? 1 : 0);
+function take(who) {
+  let mx, my, sprint;
+  if (who === 1) { mx = axis(keys.ArrowLeft, keys.ArrowRight); my = axis(keys.ArrowUp, keys.ArrowDown); sprint = !!keys.ShiftRight; }
+  else {
+    const arrows = !localCoop;   // allein steuern auch die Pfeile und beide Shift-Tasten den Goblin
+    mx = axis(keys.KeyA || (arrows && keys.ArrowLeft), keys.KeyD || (arrows && keys.ArrowRight));
+    my = axis(keys.KeyW || (arrows && keys.ArrowUp), keys.KeyS || (arrows && keys.ArrowDown));
+    if (joy.id !== null) { const jx = (joy.x - joy.ox) / 55, jy = (joy.y - joy.oy) / 55; if (Math.hypot(jx, jy) > .15) { mx += jx; my += jy; } }
+    sprint = !!(keys.ShiftLeft || (arrows && keys.ShiftRight) || sprintHeld);
+  }
+  const inp = { mx, my, sprint, ...press[who] };
+  Object.assign(press[who], newPress());
   return inp;
 }
+export const takeInput = () => take(0);
+// Ein Datensatz je Goblin, den dieser Rechner steuert (allein einer, im Testmodus zwei)
+export const takeInputs = () => (localCoop && run && run.coop ? [take(0), take(1)] : [take(0)]);
 window.addEventListener('keydown', e => {
   keys[e.code] = true;
   audioInit();
@@ -35,6 +50,12 @@ window.addEventListener('keydown', e => {
   if (!$('#evoTree').hidden) { if (e.code === 'Escape') closeTree(); return; }
   if (!$('#options').hidden || !$('#howto').hidden) { if (e.code === 'Escape') $(!$('#howto').hidden ? '#howto' : '#options').hidden = true; return; }
   if (run.cut && !run.paused && (e.code === 'Space' || e.code === 'Enter')) { e.preventDefault(); pressInput('skip'); return; }
+  if (localCoop && run.coop) {
+    if (e.code === 'Enter') { e.preventDefault(); pressInput('dash', 1); }
+    if (e.code === 'KeyK') pressInput('ab0', 1);
+    if (e.code === 'KeyL') pressInput('ab1', 1);
+    const k2 = ['Digit7', 'Digit8', 'Digit9', 'Digit0'].indexOf(e.code); if (k2 >= 0) pickInput(k2, 1);
+  }
   if (e.code === 'Space') { e.preventDefault(); pressInput('dash'); }
   if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') e.preventDefault();
   if (e.code === 'KeyQ') pressInput('ab0');

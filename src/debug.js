@@ -7,7 +7,9 @@ import { persist, save, setSave } from './core/save.js';
 import { go, sceneName } from './core/scenes.js';
 import { STAGES } from './data/stages.js';
 import { abilReady, doDash, useAbility } from './game/abilities.js';
-import { applyChoice, autoChest, choose, genChoices } from './game/levelup.js';
+import { applyChoice, autoChest, choose, genChoices, startCoopLevel } from './game/levelup.js';
+import { profileOf } from './game/profile.js';
+import { activate } from './game/state.js';
 import { endRun, newRun, simHash, update } from './game/run.js';
 import { P, run } from './game/state.js';
 import { dangerVec } from './game/hazards.js';
@@ -25,7 +27,7 @@ import { stressTest } from './stress.js';
 
 const api = {
   STEP, loopStats, STAGES, events, joy, keys, RNG, MAP,
-  stress: stressTest, persist, newRun, update, simHash, endRun, genChoices, applyChoice, autoChest, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, WEAPONS, hurt, damagePlayer, COMBOS, BOSSES, ATTACKS, ATK,
+  stress: stressTest, persist, newRun, update, simHash, profileOf, startCoopLevel, activate, endRun, genChoices, applyChoice, autoChest, choose, doDash, useAbility, abilReady, go, setSave, loadMinions, SPR, dangerVec, spawnEnemy, ETYPES, WEAPONS, hurt, damagePlayer, COMBOS, BOSSES, ATTACKS, ATK,
 };
 Object.defineProperties(api, {
   // Speicher der Bild-Flächen in Bytes (RGBA) und ihre Anzahl, für npm run perf
